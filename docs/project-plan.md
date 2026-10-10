@@ -9,6 +9,7 @@ The intended workflow is that the user pastes a JD, the app analyzes what the co
 The main product goal is truthful tailoring, not fake optimization. The AI may draft new resume bullet points by combining or reframing facts from one or more existing job or project achievement points in light of the JD. Every claim must remain supported by its source points, and each generated bullet must be traceable to one or more achievement IDs. The AI may include JD-relevant skills that are missing from the current resume when those skills are present in the user's skill data or evidenced by their achievements. It must not invent jobs, projects, companies, dates, metrics, certificates, or unsupported skills or responsibilities.
 
 For the first version, this is a personal local tool rather than a hosted SaaS product. The app should run locally, store data in JSON files, and keep the user's resume data, job descriptions, generated LaTeX, PDFs, and history on the user's machine. The technical stack for v1 is Next.js, TypeScript, JSON-backed storage, Zod validation, a Jake-style LaTeX rendering pipeline, local PDF compilation, and a Gemini-first AI provider adapter. The AI layer should be built behind a provider interface so Gemini can be used first while leaving room to add DeepSeek or another provider later without rewriting the rest of the application.
+
 ## 2. Core Architecture
 
 - Frontend: Next.js App Router, TypeScript, Tailwind CSS.
@@ -64,6 +65,8 @@ Use proportionate coverage: a pure utility may need normal, invalid, and boundar
 
 ## 5. Task Roadmap
 
+Task boundaries represent cohesive deliverables, not arbitrary layers. Build a complete user-facing workflow in one task when its screens and supporting behavior naturally belong together; keep tasks separate when they establish independently useful foundations, isolate meaningful risks, or represent distinct AI stages.
+
 ### Task 01: Initialize The Next.js Application
 
 Create the base Next.js project with TypeScript, App Router, Tailwind CSS, ESLint, Prettier or equivalent formatting rules, and a clean default folder structure. The goal is to establish a stable foundation that every later task can build on without debating framework setup. Remove starter content that does not belong to the product and replace it with a minimal app shell placeholder.
@@ -108,95 +111,63 @@ Implement functions for loading profile data, achievement data, template metadat
 
 Required workflow: update `main`, create `codex/task-05-personal-data-loaders`, create and validate the ignored personal library locally, implement typed loaders and synthetic-only tests in the appropriate test folder, verify `git status` does not include personal data, run lint/typecheck/unit tests, review edge cases, then push or merge only after checks pass.
 
-### Task 06: Create The Application Shell
+### Task 06: Build The Application Shell And JD Workspace
 
-Build the first real UI shell with a restrained, work-focused layout. The app should have navigation for JD input, achievement library, resume generation, history, and settings. This task should not implement the full behavior of those pages yet; it should create the structure that later tasks will fill in.
+Create the first usable application shell and the complete local-first JD entry workflow together. Add navigation for the JD workspace, achievement library, resume generation, history, and settings, plus a responsive work-focused layout with useful empty states. The JD workspace must collect the job description, company, role title, and optional job link, and persist drafts locally.
 
-The UI should feel like a productivity tool, not a landing page. Use a sidebar or top navigation, a main workspace area, responsive layout behavior, and simple empty states. Add a Playwright smoke test that confirms the app loads and the main navigation destinations are reachable. The task is complete when users can move around the skeleton app cleanly on desktop and mobile.
+Show character count and an estimated token count, validate empty and oversized JD input, and support restoring or clearing a saved draft. Do not call an AI provider or analyze the JD in this task; this task ends when the user can enter, save, and revisit JD context inside the real application shell. Add Playwright coverage for navigation, responsive rendering, input validation, draft persistence, and clearing.
 
-Required workflow: update `main`, create `codex/task-06-app-shell`, implement only layout/navigation/empty states, add unit or Playwright tests for navigation, run all quality commands, visually inspect the app, then push or merge only after checks pass.
+Required workflow: update `main`, create `codex/task-06-app-shell-jd-workspace`, implement the shell and JD workflow as one usable feature, add focused unit and Playwright tests, run all quality commands, inspect desktop/mobile behavior, then push or merge only after checks pass.
 
-### Task 07: Add JD Input Workspace
+### Task 07: Build The Searchable Achievement Library
 
-Create the page where the user pastes a job description. The page should support a large text area, company name, role title, optional job link, and local draft persistence. It should also show basic stats such as character count and estimated token count so the user understands how large the input is.
+Create one read-only library browsing experience that groups jobs and their achievement points, projects and their points, credentials, and skills, while making search and filtering part of that same experience. Show point IDs, source provenance, tags, linked skills, and enabled/disabled status so users can inspect what the library contains before editing or AI selection is available.
 
-Implementation should keep the JD state local-first and avoid calling AI yet. Add validation for empty JD text and overly large inputs. Tests should cover text entry, draft persistence, clearing the JD, and validation messages. The task is complete when a user can reliably enter and save the JD context that later generation tasks will consume.
+Load the owner's validated personal library by default in local development and show actionable missing/invalid-data errors. Provide an intentional switch to the fictional demo library; never silently fall back. Search point text, tags, skills, job names, project names, and credential names. Add source type, enabled status, skill, tag, and job/project filters; results should update immediately, retain stable ordering, show active filters, and offer a reset action. Automated tests must use synthetic data only and cover grouped/empty states, source switching, combined filters, no results, errors, reset, and responsive behavior.
 
-Required workflow: update `main`, create `codex/task-07-jd-input`, implement the JD page and tests, run lint/typecheck/unit tests/Playwright tests, inspect form behavior manually, then push or merge only after checks pass.
+The task is complete when the owner can browse either data source and narrow a large library without editing JSON. Required workflow: update `main`, create `codex/task-07-achievement-library-search`, implement browsing and search together, add unit and Playwright tests, verify personal data remains outside tests and Git, run all quality commands, inspect desktop/mobile behavior, then push or merge only after checks pass.
 
-### Task 08: Add Achievement Library Viewer
-
-Build a read-only UI for browsing the Achievement Points Hashmap. The viewer should group points by jobs, projects, certificates/licenses, and skills. It should show enough detail for the user to understand what each point is about without editing anything yet.
-
-Implementation should load the owner's validated personal library by default in local development through the data loader layer and render schema errors clearly if the JSON is invalid or missing. Provide an intentional way to switch to the fictional demo library; do not silently fall back from personal data to demo data. The viewer should display point IDs, source names, tags, skills, and enabled/disabled status. Automated tests must use synthetic data only and cover grouped rendering, empty groups, invalid/missing data states, source switching, and responsive layout. The task is complete when the owner can inspect their real achievement library in the app and can separately preview the demo library.
-
-Required workflow: update `main`, create `codex/task-08-achievement-viewer`, implement read-only display and tests, verify the local view uses personal data while automated tests remain synthetic, run all quality commands, manually inspect both data sources, then push or merge only after checks pass.
-
-### Task 09: Add Achievement Search And Filters
-
-Implement search and filtering for the achievement library. A new engineer doing this task should add text search across point text, tags, skills, job names, project names, and certificate names. Filters should include source type, enabled status, skill, tag, and job/project source.
-
-The goal is to help users quickly find which points may match a JD before AI selection exists. The UI should update results immediately, show active filters, and provide a clear reset action. Tests must cover search matching, no-result states, combined filters, reset behavior, and stable result ordering. The task is complete when a user can narrow hundreds of achievement points without touching JSON manually.
-
-Required workflow: update `main`, create `codex/task-09-achievement-search`, add pure filter/search functions with unit tests, connect them to the UI, add Playwright coverage for common filter flows, run all quality commands, review UX on desktop/mobile, then push or merge only after checks pass.
-
-### Task 10: Add Local Achievement Editing
+### Task 08: Add Local Achievement Editing
 
 Create an editing experience for adding and updating achievement points in the local JSON-backed library. The editor should allow changing text, tags, skills, metrics, enabled status, and source assignment. It must validate changes before saving and show friendly errors instead of corrupting the data file.
 
 Implementation should use server-side write actions or API routes with schema validation. The task should include a backup or safe-write strategy so failed saves do not destroy existing data. Tests must cover successful edits, validation failures, duplicate IDs, cancelled edits, and persistence after reload. The task is complete when users can maintain their achievement library from the app.
 
-Required workflow: update `main`, create `codex/task-10-achievement-editing`, implement safe local editing with tests, run all quality commands, manually test save/reload/error cases, then push or merge only after checks pass.
+Required workflow: update `main`, create `codex/task-08-achievement-editing`, implement safe local editing with tests, run all quality commands, manually test save/reload/error cases, then push or merge only after checks pass.
 
-### Task 11: Add Jake-Style LaTeX Template
+### Task 09: Add The Jake-Style Template And Deterministic Renderer
 
-Add the base Jake-style resume template as a local template file with controlled placeholders for contact details, education, experience, projects, skills, and certificates. The template must preserve the compact single-page resume style and avoid AI-generated structural drift. This is where the app establishes the resume format that all later generation must respect.
+Add the local Jake-style LaTeX template and its deterministic renderer as one rendering capability. Define controlled placeholders for contact details, education, experience, projects, skills, and certificates; preserve the compact single-page structure and keep template markup separate from resume content so later AI work cannot introduce structural drift.
 
-Implementation should separate template structure from resume content so the AI does not need to write boilerplate every time. Add tests that render the template with known data and verify required sections exist. The task is complete when the app can generate deterministic LaTeX from structured data without using AI.
+Expose a typed function such as `renderResumeLatex(input)` that resolves selected achievement IDs, follows section preferences, groups skills, omits empty optional sections, and centralizes LaTeX escaping. Tests must cover required sections, normal output, empty optional sections, special characters, unknown IDs, disabled points, and stable rendering. The task is complete when structured data can produce valid LaTeX without an AI call.
 
-Required workflow: update `main`, create `codex/task-11-latex-template`, add the template and rendering tests, run lint/typecheck/unit tests, inspect rendered LaTeX manually, then push or merge only after checks pass.
+Required workflow: update `main`, create `codex/task-09-latex-template-renderer`, add the template, renderer, and focused tests together, run all quality commands, inspect rendered LaTeX manually, then push or merge only after checks pass.
 
-### Task 12: Build Deterministic Resume Renderer
+### Task 10: Add Manual Generation And LaTeX Preview
 
-Implement a non-AI renderer that takes selected achievement IDs and structured profile data, then produces a complete LaTeX resume. This creates a reliable baseline before AI is introduced. The renderer should handle section ordering, bullet escaping, skill grouping, and missing optional sections.
+Complete the first end-to-end manual generation flow using the existing JD workspace and achievement library. Let the user select enabled achievement points, submit JD metadata and selected IDs to a server endpoint, and receive LaTeX from the deterministic renderer. Do not call AI or compile a PDF in this task.
 
-Implementation should expose a typed function such as `renderResumeLatex(input)` and keep all string escaping centralized. Tests must cover normal rendering, empty optional sections, LaTeX special characters, unknown achievement IDs, disabled points, and stable output snapshots where useful. The task is complete when the app can produce valid `.tex` from manually selected points.
+Validate request payloads, reject unknown or disabled IDs, return structured errors, and include basic generation metadata. The page must show loading, success, and error states; display the generated LaTeX; and support copying or downloading the `.tex` file while preserving the user's selection. Tests must cover API validation and renderer failures plus the user flow from selecting points through viewing/downloading output. The task is complete when a user can manually create and export a complete LaTeX resume from local data.
 
-Required workflow: update `main`, create `codex/task-12-deterministic-renderer`, implement renderer utilities and tests, run all quality commands, review sample output, then push or merge only after checks pass.
+Required workflow: update `main`, create `codex/task-10-manual-generation-preview`, implement the endpoint and connected UI as one workflow, add API/unit/Playwright tests, run all quality commands, inspect the request/response and browser flow, then push or merge only after checks pass.
 
-### Task 13: Add Manual Resume Generation Endpoint
-
-Create a server endpoint that accepts JD metadata and manually selected achievement IDs, then returns generated LaTeX using the deterministic renderer. This endpoint becomes the first backend contract between the UI and resume generation system. It should not call AI yet.
-
-Implementation must validate request payloads, reject unknown IDs, return structured errors, and include basic generation metadata. Add API route tests for success, invalid payloads, missing data, and renderer failures. The task is complete when the frontend can request LaTeX from selected local data through a stable API.
-
-Required workflow: update `main`, create `codex/task-13-manual-generation-api`, add API route and tests, run lint/typecheck/unit/integration tests, inspect request/response contracts, then push or merge only after checks pass.
-
-### Task 14: Add LaTeX Preview And Download UI
-
-Build the UI that displays generated LaTeX and lets the user download it as a `.tex` file. The page should connect the JD input, achievement selection, and manual generation endpoint. It should show loading states, error states, and a clear copy/download action.
-
-Implementation should keep the first version simple: no PDF compile yet, only LaTeX output. Tests should cover generating from selected points, displaying errors, copying or downloading output, and preserving selected IDs. The task is complete when users can manually select points and export a complete LaTeX resume.
-
-Required workflow: update `main`, create `codex/task-14-latex-preview-download`, implement UI and tests, run all quality commands, manually test the browser flow, then push or merge only after checks pass.
-
-### Task 15: Add Local PDF Compilation Service
+### Task 11: Add Local PDF Compilation Service
 
 Implement server-side PDF compilation from generated LaTeX. Use a local compiler such as Tectonic and run it in a temporary working directory with strict timeout and captured logs. The service should return the compiled PDF path or a structured compile error.
 
 Implementation must protect against unsafe compiler options and should not enable shell escape. Verify the resulting PDF page count and treat more than one page as a generation failure that can return a structured layout diagnostic. Do not solve overflow by shrinking text below the approved template typography. Tests should include a known-good one-page template, an overflowing two-page document, invalid LaTeX, timeout handling, missing compiler behavior, and cleanup of temporary files. The task is complete when the app can turn generated `.tex` into a PDF locally, enforce the one-page cap, and report actionable failures.
 
-Required workflow: update `main`, create `codex/task-15-pdf-compile-service`, implement compiler wrapper and tests, run all quality commands, verify compilation manually on the sample resume, then push or merge only after checks pass.
+Required workflow: update `main`, create `codex/task-11-pdf-compile-service`, implement compiler wrapper and tests, run all quality commands, verify compilation manually on the sample resume, then push or merge only after checks pass.
 
-### Task 16: Add Browser PDF Preview
+### Task 12: Add Browser PDF Preview
 
 Create the UI for previewing the compiled PDF inside the web app. The preview should update after a successful compile and show helpful error output when compilation fails. Users should be able to download the PDF and return to the LaTeX view if they need to inspect source.
 
-Implementation should use the compilation service from Task 15 and avoid duplicating compile logic in the UI. Add Playwright coverage for successful preview, failed compile state, and PDF download availability. The task is complete when the local app feels like an end-to-end resume generator without AI.
+Implementation should use the compilation service from Task 11 and avoid duplicating compile logic in the UI. Add Playwright coverage for successful preview, failed compile state, and PDF download availability. The task is complete when the local app feels like an end-to-end resume generator without AI.
 
-Required workflow: update `main`, create `codex/task-16-pdf-preview`, implement preview UI and tests, run all quality commands, manually verify PDF rendering in the browser, then push or merge only after checks pass.
+Required workflow: update `main`, create `codex/task-12-pdf-preview`, implement preview UI and tests, run all quality commands, manually verify PDF rendering in the browser, then push or merge only after checks pass.
 
-### Task 17: Add AI Provider Interface And Gemini Adapter
+### Task 13: Add AI Provider Interface And Gemini Adapter
 
 Create a provider abstraction that hides the specific AI vendor from the rest of the app. The first implementation should use Gemini through an environment variable API key. The interface should support JD analysis, achievement selection, resume drafting, and LaTeX repair as separate operations.
 
@@ -204,25 +175,25 @@ Implementation should include strict request/response types, a mock provider, an
 
 The task is complete when Gemini can be called from isolated server-side code, prompt content is assembled from testable modules and runtime data, and the rest of the app depends only on the generic provider interface.
 
-Required workflow: update `main`, create `codex/task-17-ai-provider-gemini`, add adapter and tests with mocked network calls, document required env vars, run all quality commands, avoid committing secrets, then push or merge only after checks pass.
+Required workflow: update `main`, create `codex/task-13-ai-provider-gemini`, add adapter and tests with mocked network calls, document required env vars, run all quality commands, avoid committing secrets, then push or merge only after checks pass.
 
-### Task 18: Add JD Analysis AI Step
+### Task 14: Add JD Analysis AI Step
 
 Implement the first AI-powered operation: analyzing a JD into structured role signals. The output should include target title, seniority, required and preferred qualifications, responsibilities, tools/platforms, domain concepts, and important ATS terms, while distinguishing explicit requirements from inferred context. This lets the app reason about the JD before selecting resume points.
 
 Implementation must force structured JSON output and validate it with Zod. Capture useful synonyms and equivalent terminology for matching, but do not instruct the model to stuff keywords or claim qualifications. The product goal is truthful relevance and ATS-readable wording, not evading or gaming screening systems. The UI should show the analysis result so the user can inspect what the AI understood. Tests should use the mock provider and cover valid analysis, invalid model output, missing fields, required-versus-preferred distinctions, and retry/error states.
 
-Required workflow: update `main`, create `codex/task-18-jd-analysis`, implement AI operation and tests, run all quality commands, manually test with a sample JD, then push or merge only after checks pass.
+Required workflow: update `main`, create `codex/task-14-jd-analysis`, implement AI operation and tests, run all quality commands, manually test with a sample JD, then push or merge only after checks pass.
 
-### Task 19: Add AI Achievement Selection
+### Task 15: Add AI Achievement Selection
 
 Implement AI selection of the most relevant job and project achievement points for the JD. The AI should receive the JD analysis and validated library, compare direct keyword matches and meaning-level evidence, then return selected achievement IDs, section allocation, requirement coverage, confidence, and concise reasoning. Selection should be driven by relevance and available one-page content budget, not a fixed number of bullets per role. A skill absent from the current resume may be selected from the skills library only when the user's data supports it.
 
 Implementation must validate that every returned ID exists and is enabled. Add fallback behavior when the AI selects too many, too few, or invalid points, while preserving coverage of the strongest requirements. The UI should show selected source points and let the user review the reasoning before drafting. Tests must cover semantic and exact-term matches, missing requirements, invalid IDs, duplicate IDs, disabled points, source diversity, content-budget limits, and mock provider failures. The task is complete when the app can recommend supported content from the library and explain its match to the JD.
 
-Required workflow: update `main`, create `codex/task-19-ai-achievement-selection`, implement selection logic and tests, run all quality commands, manually review selected sample points against a sample JD, then push or merge only after checks pass.
+Required workflow: update `main`, create `codex/task-15-ai-achievement-selection`, implement selection logic and tests, run all quality commands, manually review selected sample points against a sample JD, then push or merge only after checks pass.
 
-### Task 20: Add AI Resume Draft Generation
+### Task 16: Add AI Resume Draft Generation
 
 Implement AI-assisted resume drafting that turns selected points and JD analysis into concise, resume-ready bullets. The prompt must state the objective, input definitions, matching rules, evidence limits, output schema, section rules, and one-page content budget as distinct labeled instructions. It should improve truthful JD alignment and machine readability without promising to bypass ATS or stuffing unrelated terms. The Jake-style template is loaded by the prompt builder at runtime as a separate context input; the AI returns structured content and source IDs, and the deterministic renderer produces the final LaTeX.
 
@@ -230,87 +201,79 @@ Use an accomplishment pattern informed by career-center guidance: action, specif
 
 Define a one-page content budget based on the actual template's section and typography constraints. AI may prioritize, combine, and shorten points to fit, but may not omit required facts silently, alter the template's font to an unreadable size, or claim success before PDF page-count validation. Tests must cover normal drafts, supported multi-point synthesis, missing or invalid source IDs, fabricated metrics or skills, overlong bullets, budget handling, unsupported sections, and malformed responses. Career writing references: [MIT Career Advising & Professional Development](https://capd.mit.edu/resources/career-toolkit-crafting-an-effective-resume/) and [UC San Diego Career Center](https://careers.ucsd.edu/resources/guides/resume.html).
 
-Required workflow: update `main`, create `codex/task-20-ai-resume-draft`, implement drafting and validation with tests, run all quality commands, manually inspect sample output for truthfulness and formatting, then push or merge only after checks pass.
+Required workflow: update `main`, create `codex/task-16-ai-resume-draft`, implement drafting and validation with tests, run all quality commands, manually inspect sample output for truthfulness and formatting, then push or merge only after checks pass.
 
-### Task 21: Add LaTeX Validation Layer
+### Task 17: Add LaTeX Validation Layer
 
 Create validation checks for generated LaTeX before compilation. The validator should check required sections, balanced braces where practical, forbidden commands, missing contact block, unsafe LaTeX commands, and obvious template corruption. This reduces compile failures and protects the local environment.
 
 Implementation should run automatically before PDF compilation and return actionable messages. Tests must include valid LaTeX, missing sections, unsafe commands, broken placeholders, special characters, and malformed output. The task is complete when unsafe or structurally broken LaTeX is blocked before reaching the compiler.
 
-Required workflow: update `main`, create `codex/task-21-latex-validation`, implement validator and tests, run all quality commands, manually test bad examples, then push or merge only after checks pass.
+Required workflow: update `main`, create `codex/task-17-latex-validation`, implement validator and tests, run all quality commands, manually test bad examples, then push or merge only after checks pass.
 
-### Task 22: Add AI LaTeX Repair Loop
+### Task 18: Add AI LaTeX Repair Loop
 
 Implement a limited repair loop that sends compile or validation errors back to the AI provider and asks for a corrected version. The loop should have a small maximum attempt count and should preserve the same selected achievements and template structure. The app must show the user when a repair was needed.
 
 Implementation should include structured repair prompts, error log trimming, retry limits, and failure reporting when repair cannot fix the document. Preserve the selected evidence and one-page cap during repair. If compilation reports multiple pages, first reduce lower-ranked content or tighten wording within supported facts; do not silently shrink typography or drop essential evidence. Tests must cover successful first compile, repair after validation error, repair after compile error, page overflow, repeated failure, and no infinite retries. The task is complete when common LaTeX and layout issues can be fixed without hiding serious failures or exceeding one page.
 
-Required workflow: update `main`, create `codex/task-22-latex-repair-loop`, implement repair orchestration and tests, run all quality commands, manually test with intentionally broken LaTeX, then push or merge only after checks pass.
+Required workflow: update `main`, create `codex/task-18-latex-repair-loop`, implement repair orchestration and tests, run all quality commands, manually test with intentionally broken LaTeX, then push or merge only after checks pass.
 
-### Task 23: Build The End-To-End Review Workspace
+### Task 19: Build The Review Workspace And Manual Overrides
 
-Create a review screen that shows the JD analysis, selected achievement points, generated resume content, LaTeX source, and PDF preview in one workflow. For every generated bullet, show the source achievement IDs (and enough source context to inspect them), especially when a bullet synthesizes multiple points. The user should be able to understand why the resume was generated the way it was before exporting it. This is the main working screen of the product.
+Create the main review workspace as the point where the AI-assisted flow becomes understandable and correctable. Show the JD analysis, selected source achievements, generated resume content, LaTeX, and PDF preview together. For each generated bullet, show its source achievement IDs and enough source context to inspect them, especially when it synthesizes multiple points.
 
-Implementation should organize information clearly without heavy decoration. The screen should support loading, error, and completed states for each generation step. Playwright tests should cover the happy path with a mocked provider, source-ID visibility for synthesized bullets, and the failure path for AI or compile errors. The task is complete when the app has a coherent JD-to-PDF workflow and the user can audit generated claims back to their source data.
+In this same workspace, let the user include or exclude generated bullets, reorder bullets within a job or project, and choose whether projects or credentials appear. Apply overrides to generation state and refresh the LaTeX/PDF without losing the review context. Provide loading, error, and completed states for each stage. Playwright tests should cover the mocked happy path, source-ID visibility for synthesized bullets, AI/compile failures, include/exclude, reorder, section toggles, and regeneration after edits. The task is complete when users can audit and correct the generated resume before exporting it.
 
-Required workflow: update `main`, create `codex/task-23-review-workspace`, implement workflow UI and tests, run all quality commands, manually inspect the full flow, then push or merge only after checks pass.
+Required workflow: update `main`, create `codex/task-19-review-and-overrides`, implement the review screen and correction controls together, add unit and Playwright coverage, run all quality commands, manually inspect the full flow, then push or merge only after checks pass.
 
-### Task 24: Add Manual Override Controls
-
-Allow the user to override AI decisions before final PDF generation. The user should be able to include or exclude selected bullets, reorder bullets inside a job/project, and choose whether certificates or projects appear in the final resume. This keeps the AI helpful but not fully in control.
-
-Implementation should update the generation input state and rerender LaTeX/PDF after changes. Tests must cover include/exclude behavior, reorder behavior, regeneration after overrides, and persistence while staying on the page. The task is complete when the user can correct AI selection without editing JSON manually.
-
-Required workflow: update `main`, create `codex/task-24-manual-overrides`, implement controls and tests, run all quality commands, manually test override flows, then push or merge only after checks pass.
-
-### Task 25: Add Export Package
+### Task 20: Add Export Package
 
 Implement export actions for the final `.tex`, `.pdf`, and generation metadata. Metadata should include JD title/company, timestamp, selected achievement IDs, AI provider name, and validation/repair status. This makes each generated resume reproducible later.
 
 Implementation should provide clear file names and avoid leaking API keys or internal logs into exported metadata. Tests must cover export file naming, metadata shape, missing PDF behavior, and generated content availability. The task is complete when a user can save everything needed to understand or reproduce a resume generation.
 
-Required workflow: update `main`, create `codex/task-25-export-package`, implement export logic and tests, run all quality commands, manually verify downloaded files, then push or merge only after checks pass.
+Required workflow: update `main`, create `codex/task-20-export-package`, implement export logic and tests, run all quality commands, manually verify downloaded files, then push or merge only after checks pass.
 
-### Task 26: Add Local Generation History
+### Task 21: Add Local Generation History
 
 Store generation history locally so the user can revisit previous outputs. Each history item should include company, role, date, selected achievement IDs, generated LaTeX path or content reference, PDF reference, provider used, and final status. The history should be searchable and safe to delete.
 
 Implementation should use JSON storage for v1 and validate history entries with the same schema discipline as other data. Tests must cover saving history, loading history, corrupted history handling, deleting an entry, and opening a previous generation. The task is complete when users do not lose previous resume versions between sessions.
 
-Required workflow: update `main`, create `codex/task-26-generation-history`, implement history storage/UI/tests, run all quality commands, manually verify persistence across app reloads, then push or merge only after checks pass.
+Required workflow: update `main`, create `codex/task-21-generation-history`, implement history storage/UI/tests, run all quality commands, manually verify persistence across app reloads, then push or merge only after checks pass.
 
-### Task 27: Expand Unit And Integration Test Coverage
+### Task 22: Expand Unit And Integration Test Coverage
 
 Review the codebase and add missing tests for critical logic built so far. This task is intentionally focused on quality rather than new features. Areas to prioritize are schema validation, file loaders, template rendering, AI response validation, compiler handling, and generation orchestration.
 
 Implementation should identify risky untested modules and add tests that catch regressions before future UI polish begins. Update test utilities and fixtures if they make the suite easier to maintain. The task is complete when core business logic has meaningful coverage and the test suite is stable enough for CI.
 
-Required workflow: update `main`, create `codex/task-27-test-coverage`, add tests only unless a small bug fix is required to make tests pass, run all quality commands, inspect coverage output if configured, then push or merge only after checks pass.
+Required workflow: update `main`, create `codex/task-22-test-coverage`, add tests only unless a small bug fix is required to make tests pass, run all quality commands, inspect coverage output if configured, then push or merge only after checks pass.
 
-### Task 28: Add Playwright End-To-End Coverage
+### Task 23: Add Playwright End-To-End Coverage
 
 Create browser-level tests for the most important user flows. These should use mocked AI responses so the tests are reliable and do not consume API credits. Cover entering a JD, viewing JD analysis, reviewing selected achievements, generating LaTeX, compiling PDF, applying manual overrides, and exporting output.
 
 Implementation should make tests deterministic with stable fixtures and isolated local data. Add CI-friendly Playwright configuration and avoid relying on real external APIs. The task is complete when the main user journey is protected by automated browser tests.
 
-Required workflow: update `main`, create `codex/task-28-playwright-e2e`, implement E2E tests and fixtures, run all quality commands including Playwright, review failure screenshots if any, then push or merge only after checks pass.
+Required workflow: update `main`, create `codex/task-23-playwright-e2e`, implement E2E tests and fixtures, run all quality commands including Playwright, review failure screenshots if any, then push or merge only after checks pass.
 
-### Task 29: Add CI Pipeline
+### Task 24: Add CI Pipeline
 
 Create the continuous integration pipeline for the repository. The CI should install dependencies, check formatting if configured, lint, typecheck, run unit/integration tests, and run Playwright smoke tests. It should fail fast on broken code and give clear logs.
 
 Implementation should use GitHub Actions unless the repo later chooses another platform. Cache dependencies where appropriate, but keep the workflow easy to understand. The task is complete when every PR gets automatic quality feedback before merge.
 
-Required workflow: update `main`, create `codex/task-29-ci-pipeline`, add CI config and any needed scripts, run the same commands locally first, push the branch, confirm CI runs successfully, then merge only after checks pass.
+Required workflow: update `main`, create `codex/task-24-ci-pipeline`, add CI config and any needed scripts, run the same commands locally first, push the branch, confirm CI runs successfully, then merge only after checks pass.
 
-### Task 30: Add Setup Guide For Real Gemini Usage And Future DeepSeek Support
+### Task 25: Add Setup Guide For Real Gemini Usage And Future DeepSeek Support
 
 Write the final v1 setup guide for configuring the Gemini API key, running the app, compiling PDFs, and understanding cost/token behavior. Include a short explanation of how to switch to another provider later, especially DeepSeek, through the provider interface. This task should make the project usable by the owner without reading source code.
 
 Implementation should document environment variables, local compiler installation, troubleshooting common API errors, missing compiler errors, and how to keep private resume data out of Git. Add a sample `.env.example` without secrets. The task is complete when a user can set up the real app locally and generate a resume from their own data.
 
-Required workflow: update `main`, create `codex/task-30-setup-provider-docs`, add docs and sample env files only, run all quality commands, manually follow the setup guide on a clean checkout if possible, then push or merge only after checks pass.
+Required workflow: update `main`, create `codex/task-25-setup-provider-docs`, add docs and sample env files only, run all quality commands, manually follow the setup guide on a clean checkout if possible, then push or merge only after checks pass.
 
 ## 6. Definition Of Done For V1
 
@@ -328,7 +291,7 @@ The v1 application is complete when a user can run the app locally, paste a JD, 
 
 ## 8. Future Feature Plan
 
-These ideas are outside v1 and should be considered only after the 30 planned tasks are complete and reviewed.
+These ideas are outside v1 and should be considered only after the 25 planned tasks are complete and reviewed.
 
 ### Import An Existing Resume PDF
 

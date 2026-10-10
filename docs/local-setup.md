@@ -55,7 +55,7 @@ The current placeholder does not require an API key or personal data. Task 05 wi
 - Commit only a sanitized `.env.example` when configuration documentation is added; it must contain placeholders, never real credentials.
 - Review `git status` before staging so private files are not included accidentally.
 
-The project plan's Task 30 adds the complete provider and PDF compiler setup instructions after those features exist.
+The project plan's Task 25 adds the complete provider and PDF compiler setup instructions after those features exist.
 
 ## Common Problems
 
