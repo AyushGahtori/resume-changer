@@ -82,9 +82,11 @@ Required workflow: update `main`, create `codex/task-02-docs-foundation`, edit d
 
 ### Task 03: Define JSON Schemas For Resume Data
 
-Create the formal data contracts for profile, jobs, projects, achievement points, skills, licenses, certificates, and generation history. Use Zod schemas and TypeScript inferred types so the same contract can validate JSON files and power app code. This gives the whole app a reliable shape before UI or AI features begin.
+Create the formal data contracts for profile and contact information, education, jobs, projects, achievement points, skills, licenses, certificates, resume preferences, and generation history. Use Zod schemas and inferred TypeScript types so the same contract validates local JSON and powers app code. Education must support a joint program listing multiple institutions, and skills must be stored separately from the subset currently shown on the resume.
 
-Implementation must define stable IDs for all entities, required fields, optional fields, and validation errors that are understandable to a human editing JSON. Include schema tests for valid data, missing required fields, duplicate IDs, invalid dates, empty achievement text, and unsupported section types. The task is complete when JSON contracts are tested and exported from a clear module that future tasks can import.
+Each job and project owns an ordered list of source achievement points. Points may store tags, links to skill IDs, optional source-backed metrics, enabled status, and provenance identifying whether the information came from a resume, LinkedIn, user notes, project documentation, or direct user input. A metric must retain its supporting evidence; an empty metric list is valid. Skill records must indicate whether the skill appears on the current resume and may link to achievement evidence. Generated bullets belong to generation history and must reference the source achievement IDs used to compose them.
+
+Define stable IDs, required and optional fields, month-precision career dates, ISO credential dates, and human-readable validation messages. Include a closed resume-section type and a one-page maximum preference. Add schema tests for valid data, joint education, skills omitted from the current resume but present in the library, missing fields, duplicate IDs, invalid or reversed dates, blank achievement text, missing metric evidence, invalid cross-references, unsupported section types, and generated bullets with unselected sources. Do not add the user's private resume as a fixture; use clearly synthetic test data. The task is complete when the contracts and inferred types are exported from a clear module for later app tasks.
 
 Required workflow: update `main`, create `codex/task-03-json-schemas`, add schemas and focused tests, run lint/typecheck/unit tests, review generated types and error messages, then push or merge only after checks pass.
 
@@ -180,7 +182,7 @@ Required workflow: update `main`, create `codex/task-14-latex-preview-download`,
 
 Implement server-side PDF compilation from generated LaTeX. Use a local compiler such as Tectonic and run it in a temporary working directory with strict timeout and captured logs. The service should return the compiled PDF path or a structured compile error.
 
-Implementation must protect against unsafe compiler options and should not enable shell escape. Tests should include a known-good template, invalid LaTeX, timeout handling, missing compiler behavior, and cleanup of temporary files. The task is complete when the app can turn generated `.tex` into a PDF locally and report failures clearly.
+Implementation must protect against unsafe compiler options and should not enable shell escape. Verify the resulting PDF page count and treat more than one page as a generation failure that can return a structured layout diagnostic. Do not solve overflow by shrinking text below the approved template typography. Tests should include a known-good one-page template, an overflowing two-page document, invalid LaTeX, timeout handling, missing compiler behavior, and cleanup of temporary files. The task is complete when the app can turn generated `.tex` into a PDF locally, enforce the one-page cap, and report actionable failures.
 
 Required workflow: update `main`, create `codex/task-15-pdf-compile-service`, implement compiler wrapper and tests, run all quality commands, verify compilation manually on the sample resume, then push or merge only after checks pass.
 
@@ -196,31 +198,35 @@ Required workflow: update `main`, create `codex/task-16-pdf-preview`, implement 
 
 Create a provider abstraction that hides the specific AI vendor from the rest of the app. The first implementation should use Gemini through an environment variable API key. The interface should support JD analysis, achievement selection, resume drafting, and LaTeX repair as separate operations.
 
-Implementation should include strict request/response types and a mock provider for tests. Do not wire AI into the main generation flow yet; this task only establishes the adapter layer. Tests must cover provider selection, missing API key behavior, mock responses, failed API calls, and response parsing. The task is complete when Gemini can be called from isolated server-side code and all app logic depends on the generic interface.
+Implementation should include strict request/response types, a mock provider, and a server-only prompt builder that composes short, versioned instruction modules with typed task inputs. Keep base instructions in source files; load the Jake-style LaTeX template from its dedicated template file at runtime and supply it as a separate request context when needed. Do not paste the full template into a monolithic prompt source file. The model should return validated structured content for the deterministic renderer, rather than owning uncontrolled template structure. Do not wire AI into the main generation flow yet; this task establishes the adapter and prompt-construction boundaries. Tests must cover provider selection, missing API key behavior, mock responses, failed API calls, prompt assembly, and response parsing.
+
+The task is complete when Gemini can be called from isolated server-side code, prompt content is assembled from testable modules and runtime data, and the rest of the app depends only on the generic provider interface.
 
 Required workflow: update `main`, create `codex/task-17-ai-provider-gemini`, add adapter and tests with mocked network calls, document required env vars, run all quality commands, avoid committing secrets, then push or merge only after checks pass.
 
 ### Task 18: Add JD Analysis AI Step
 
-Implement the first AI-powered operation: analyzing a JD into structured role signals. The output should include target title, seniority, required skills, preferred skills, responsibilities, domain keywords, tools/platforms, and ATS terms. This lets the app reason about the JD before selecting resume points.
+Implement the first AI-powered operation: analyzing a JD into structured role signals. The output should include target title, seniority, required and preferred qualifications, responsibilities, tools/platforms, domain concepts, and important ATS terms, while distinguishing explicit requirements from inferred context. This lets the app reason about the JD before selecting resume points.
 
-Implementation must force structured JSON output and validate it with Zod. The UI should show the analysis result so the user can inspect what the AI understood. Tests should use the mock provider and cover valid analysis, invalid model output, missing fields, and retry/error states. The task is complete when a pasted JD can produce a validated, inspectable analysis.
+Implementation must force structured JSON output and validate it with Zod. Capture useful synonyms and equivalent terminology for matching, but do not instruct the model to stuff keywords or claim qualifications. The product goal is truthful relevance and ATS-readable wording, not evading or gaming screening systems. The UI should show the analysis result so the user can inspect what the AI understood. Tests should use the mock provider and cover valid analysis, invalid model output, missing fields, required-versus-preferred distinctions, and retry/error states.
 
 Required workflow: update `main`, create `codex/task-18-jd-analysis`, implement AI operation and tests, run all quality commands, manually test with a sample JD, then push or merge only after checks pass.
 
 ### Task 19: Add AI Achievement Selection
 
-Implement AI selection of the most relevant achievement points for the JD. The AI should receive the JD analysis and the validated achievement library, then return selected achievement IDs, section allocation, confidence, and short reasoning for each selected point. It should not invent new achievements.
+Implement AI selection of the most relevant job and project achievement points for the JD. The AI should receive the JD analysis and validated library, compare direct keyword matches and meaning-level evidence, then return selected achievement IDs, section allocation, requirement coverage, confidence, and concise reasoning. Selection should be driven by relevance and available one-page content budget, not a fixed number of bullets per role. A skill absent from the current resume may be selected from the skills library only when the user's data supports it.
 
-Implementation must validate that every returned ID exists and is enabled. Add fallback behavior when the AI selects too many, too few, or invalid points. The UI should show selected points and let the user review the reasoning before generating the final resume. Tests must cover valid selection, invalid IDs, duplicate IDs, disabled points, and mock provider failures. The task is complete when the app can recommend resume content from the library.
+Implementation must validate that every returned ID exists and is enabled. Add fallback behavior when the AI selects too many, too few, or invalid points, while preserving coverage of the strongest requirements. The UI should show selected source points and let the user review the reasoning before drafting. Tests must cover semantic and exact-term matches, missing requirements, invalid IDs, duplicate IDs, disabled points, source diversity, content-budget limits, and mock provider failures. The task is complete when the app can recommend supported content from the library and explain its match to the JD.
 
 Required workflow: update `main`, create `codex/task-19-ai-achievement-selection`, implement selection logic and tests, run all quality commands, manually review selected sample points against a sample JD, then push or merge only after checks pass.
 
 ### Task 20: Add AI Resume Draft Generation
 
-Implement AI-assisted resume drafting that turns selected points and the JD analysis into resume-ready bullet text while staying within the Jake-style structure. The AI should improve wording and keyword alignment but must stay grounded in the selected source achievements. It should return structured content, not raw final LaTeX if the deterministic renderer can produce the final `.tex`.
+Implement AI-assisted resume drafting that turns selected points and JD analysis into concise, resume-ready bullets. The prompt must state the objective, input definitions, matching rules, evidence limits, output schema, section rules, and one-page content budget as distinct labeled instructions. It should improve truthful JD alignment and machine readability without promising to bypass ATS or stuffing unrelated terms. The Jake-style template is loaded by the prompt builder at runtime as a separate context input; the AI returns structured content and source IDs, and the deterministic renderer produces the final LaTeX.
 
-Implementation should define constraints for bullet count, length, metrics, section order, and no invented facts. Add validation to compare generated bullets against selected source IDs. Tests must cover normal drafts, overlong bullets, missing source IDs, hallucinated sections, and invalid response structure. The task is complete when the app can generate polished resume content that remains tied to real achievement points.
+Use an accomplishment pattern informed by career-center guidance: action, specific task or method, and result or impact. Quantify only when a source point provides a metric; when no number is supported, write a concrete qualitative result rather than inventing one. A generated bullet may synthesize multiple existing job or project points, but must cite every supporting point and may not add employers, roles, dates, certificates, metrics, or unsupported skills. Relevant skills omitted from the current resume may be added only from the user's library or evidence.
+
+Define a one-page content budget based on the actual template's section and typography constraints. AI may prioritize, combine, and shorten points to fit, but may not omit required facts silently, alter the template's font to an unreadable size, or claim success before PDF page-count validation. Tests must cover normal drafts, supported multi-point synthesis, missing or invalid source IDs, fabricated metrics or skills, overlong bullets, budget handling, unsupported sections, and malformed responses. Career writing references: [MIT Career Advising & Professional Development](https://capd.mit.edu/resources/career-toolkit-crafting-an-effective-resume/) and [UC San Diego Career Center](https://careers.ucsd.edu/resources/guides/resume.html).
 
 Required workflow: update `main`, create `codex/task-20-ai-resume-draft`, implement drafting and validation with tests, run all quality commands, manually inspect sample output for truthfulness and formatting, then push or merge only after checks pass.
 
@@ -236,15 +242,15 @@ Required workflow: update `main`, create `codex/task-21-latex-validation`, imple
 
 Implement a limited repair loop that sends compile or validation errors back to the AI provider and asks for a corrected version. The loop should have a small maximum attempt count and should preserve the same selected achievements and template structure. The app must show the user when a repair was needed.
 
-Implementation should include structured repair prompts, error log trimming, retry limits, and failure reporting when repair cannot fix the document. Tests must cover successful first compile, repair after validation error, repair after compile error, repeated failure, and no infinite retries. The task is complete when common LaTeX issues can be fixed automatically without hiding serious failures.
+Implementation should include structured repair prompts, error log trimming, retry limits, and failure reporting when repair cannot fix the document. Preserve the selected evidence and one-page cap during repair. If compilation reports multiple pages, first reduce lower-ranked content or tighten wording within supported facts; do not silently shrink typography or drop essential evidence. Tests must cover successful first compile, repair after validation error, repair after compile error, page overflow, repeated failure, and no infinite retries. The task is complete when common LaTeX and layout issues can be fixed without hiding serious failures or exceeding one page.
 
 Required workflow: update `main`, create `codex/task-22-latex-repair-loop`, implement repair orchestration and tests, run all quality commands, manually test with intentionally broken LaTeX, then push or merge only after checks pass.
 
 ### Task 23: Build The End-To-End Review Workspace
 
-Create a review screen that shows the JD analysis, selected achievement points, generated resume content, LaTeX source, and PDF preview in one workflow. The user should be able to understand why the resume was generated the way it was before exporting it. This is the main working screen of the product.
+Create a review screen that shows the JD analysis, selected achievement points, generated resume content, LaTeX source, and PDF preview in one workflow. For every generated bullet, show the source achievement IDs (and enough source context to inspect them), especially when a bullet synthesizes multiple points. The user should be able to understand why the resume was generated the way it was before exporting it. This is the main working screen of the product.
 
-Implementation should organize information clearly without heavy decoration. The screen should support loading, error, and completed states for each generation step. Playwright tests should cover the happy path with a mocked provider and the failure path for AI or compile errors. The task is complete when the app has a coherent JD-to-PDF workflow.
+Implementation should organize information clearly without heavy decoration. The screen should support loading, error, and completed states for each generation step. Playwright tests should cover the happy path with a mocked provider, source-ID visibility for synthesized bullets, and the failure path for AI or compile errors. The task is complete when the app has a coherent JD-to-PDF workflow and the user can audit generated claims back to their source data.
 
 Required workflow: update `main`, create `codex/task-23-review-workspace`, implement workflow UI and tests, run all quality commands, manually inspect the full flow, then push or merge only after checks pass.
 
@@ -317,3 +323,17 @@ The v1 application is complete when a user can run the app locally, paste a JD, 
 - Gemini is the first provider, but the code should not be hardwired to Gemini everywhere.
 - Every new feature must include tests in the same task that creates the feature.
 - The project should grow task by task, not through one large uncontrolled implementation.
+
+## 8. Future Feature Plan
+
+These ideas are outside v1 and should be considered only after the 30 planned tasks are complete and reviewed.
+
+### Import An Existing Resume PDF
+
+Add a website flow that accepts a user's existing resume PDF, extracts its text and section structure, and helps convert the content into the app's profile, education, work, project, skill, credential, and achievement records. For Jake-style input, inspect the visual layout and identify reusable template characteristics so the user can keep their preferred format. Show extracted content for user correction before saving; never treat OCR or parsing output as verified facts without review.
+
+Keep the original PDF and imported data private. Local cache/storage is the initial option consistent with v1. Firebase or another signed-in cloud store is an unresolved future architecture choice, not a commitment; decide it only after defining authentication, data ownership, encryption, deletion, and migration requirements.
+
+### Resume Template Import And Conversion
+
+Explore converting an uploaded resume into editable LaTeX and preserving the selected Jake-style template as a reusable user template. Evaluate parser accuracy, visual comparison, unsupported layouts, and user correction before choosing whether to generate LaTeX directly or map the PDF into the existing deterministic template. Keep this feature separate from the core generation prompt: load an approved template at runtime through the prompt builder only when model context is needed.
