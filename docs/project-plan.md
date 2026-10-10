@@ -44,7 +44,25 @@ npm test
 npm run test:e2e
 ```
 
-## 4. Task Roadmap
+## 4. What A Good Test Should Check
+
+A good test checks one clear behavior and makes a failure understandable. Use the points below when deciding what to test; not every individual test needs to cover every point. Choose the checks that fit the code and risk being tested.
+
+- **Expected result:** Does the code return or display the right result for normal input?
+- **Important edge cases:** What happens with empty or missing input, unusually large values, and boundary conditions?
+- **Invalid input:** Is invalid or unsupported input rejected or handled safely and clearly?
+- **Side effects:** Does the code save, send, or change only what it is supposed to?
+- **Errors:** Does a failure produce the expected error result instead of crashing or appearing successful?
+- **Permissions and privacy:** Can users access only what they are allowed to, and are secrets and private data kept out of outputs?
+- **Connections between parts:** Do components, API routes, storage, and external dependencies work together correctly?
+- **User-visible behavior:** Can a user complete the important flow and understand its result?
+- **Regression risk:** Would the test catch a previously fixed bug if it returned?
+- **Repeatability:** Does the test give the same result each run without depending on real APIs, timing, or leftover data?
+- **Useful scope:** Does the test focus on observable behavior instead of copying the implementation line by line?
+
+Use proportionate coverage: a pure utility may need normal, invalid, and boundary inputs; a feature spanning storage and UI may also need integration, error, privacy, and end-to-end checks. A passing test is evidence for the behavior it covers, not proof that the whole application is bug-free.
+
+## 5. Task Roadmap
 
 ### Task 01: Initialize The Next.js Application
 
@@ -286,11 +304,11 @@ Implementation should document environment variables, local compiler installatio
 
 Required workflow: update `main`, create `codex/task-30-setup-provider-docs`, add docs and sample env files only, run all quality commands, manually follow the setup guide on a clean checkout if possible, then push or merge only after checks pass.
 
-## 5. Definition Of Done For V1
+## 6. Definition Of Done For V1
 
 The v1 application is complete when a user can run the app locally, paste a JD, load their JSON achievement library, ask Gemini to select relevant points, review and override the selection, generate Jake-style LaTeX, compile a PDF, preview it, export the result, and find the generation later in local history. The system must preserve truthfulness by grounding every generated bullet in selected achievement IDs and must provide tests around the important business logic.
 
-## 6. Important Product Rules
+## 7. Important Product Rules
 
 - The AI must not invent jobs, projects, certificates, companies, dates, metrics, or skills that are not present in the user's data.
 - The final resume should stay close to the provided Jake-style structure.
