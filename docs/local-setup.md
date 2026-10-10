@@ -46,11 +46,12 @@ Playwright's browser installation is normally needed only once per machine (or w
 
 ## Local Files And Secrets
 
-The current placeholder does not require an API key or personal data. When future tasks add those features:
+The current placeholder does not require an API key or personal data. Task 05 will create the owner's real resume library locally at `/data/resume-library.json`; later development tasks should use it by default. The tracked `examples/sample-resume-library.json` remains fictional and is for tests or intentional demo mode only. When future tasks add those features:
 
 - Keep API keys in a local `.env.local` file; never commit the real file or paste a key into source code.
 - Keep personal resume data and generated files in local-only data/storage directories. These paths are ignored by Git.
 - Use fake demo content in tests and examples. Do not use a real resume as a fixture.
+- Do not silently use demo content when the local personal file is missing or fails validation; surface a clear setup or data error instead.
 - Commit only a sanitized `.env.example` when configuration documentation is added; it must contain placeholders, never real credentials.
 - Review `git status` before staging so private files are not included accidentally.
 

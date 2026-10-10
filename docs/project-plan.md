@@ -100,11 +100,13 @@ Required workflow: update `main`, create `codex/task-04-sample-achievements`, ad
 
 ### Task 05: Build Data Loading And Validation Utilities
 
-Implement server-side utilities that load local JSON files, validate them with the schemas, and return typed data or clear validation errors. These utilities are the only layer that should read raw data files directly, so later features do not duplicate parsing logic. The goal is to make local JSON storage feel reliable even before a database exists.
+Implement server-side utilities that load local JSON files, validate them with the schemas, and return typed data or clear validation errors. These utilities are the only layer that should read raw data files directly, so later features do not duplicate parsing logic. Support two deliberately separate sources: the tracked fictional `examples/sample-resume-library.json` for automated tests and an explicit demo mode, and the owner's ignored `/data/resume-library.json` for local development with real resume information. When the personal file is missing or invalid, show an actionable error; never silently substitute fictional data.
 
-Implementation should include functions for loading profile data, achievement data, template metadata, and generation history. Tests must cover valid files, malformed JSON, missing files, schema failures, duplicate IDs, and friendly error formatting. The task is complete when all app code can depend on typed loader results instead of raw JSON imports.
+As part of this task, create `/data/resume-library.json` locally from the owner's supplied resume PDF, LinkedIn screenshots, and written work notes. Extract supported profile, education, job, project, skill, and credential details with source provenance. Preserve metrics only when a supplied source supports them; do not invent achievements or numbers. If sources disagree about a title, date, metric, or other fact, keep the conflict visible for the owner to resolve instead of silently choosing a value. The owner's explicitly clarified joint education details should be represented in the private file. Review the resulting data with the owner before treating it as verified.
 
-Required workflow: update `main`, create `codex/task-05-data-loaders`, implement utilities with tests in the appropriate test folder, run lint/typecheck/unit tests, review edge cases, then push or merge only after checks pass.
+Implement functions for loading profile data, achievement data, template metadata, and generation history, with an explicit personal-versus-demo source choice. Local development should use the personal library by default once it exists; demo mode should be an intentional choice. Unit tests must use only synthetic fixtures and must never read, snapshot, or commit `/data/resume-library.json`. Cover valid files, malformed JSON, missing files, schema failures, duplicate IDs, source selection, and friendly error formatting. The task is complete when app code can depend on typed loader results, the local personal library validates, and all personal data remains ignored by Git.
+
+Required workflow: update `main`, create `codex/task-05-personal-data-loaders`, create and validate the ignored personal library locally, implement typed loaders and synthetic-only tests in the appropriate test folder, verify `git status` does not include personal data, run lint/typecheck/unit tests, review edge cases, then push or merge only after checks pass.
 
 ### Task 06: Create The Application Shell
 
@@ -126,9 +128,9 @@ Required workflow: update `main`, create `codex/task-07-jd-input`, implement the
 
 Build a read-only UI for browsing the Achievement Points Hashmap. The viewer should group points by jobs, projects, certificates/licenses, and skills. It should show enough detail for the user to understand what each point is about without editing anything yet.
 
-Implementation should load validated sample data through the data loader layer and render schema errors clearly if the JSON is invalid. The viewer should display point IDs, source names, tags, skills, and enabled/disabled status. Tests should cover grouped rendering, empty groups, invalid data state, and responsive layout. The task is complete when the user can inspect the achievement library visually.
+Implementation should load the owner's validated personal library by default in local development through the data loader layer and render schema errors clearly if the JSON is invalid or missing. Provide an intentional way to switch to the fictional demo library; do not silently fall back from personal data to demo data. The viewer should display point IDs, source names, tags, skills, and enabled/disabled status. Automated tests must use synthetic data only and cover grouped rendering, empty groups, invalid/missing data states, source switching, and responsive layout. The task is complete when the owner can inspect their real achievement library in the app and can separately preview the demo library.
 
-Required workflow: update `main`, create `codex/task-08-achievement-viewer`, implement read-only display and tests, run all quality commands, manually inspect sample data rendering, then push or merge only after checks pass.
+Required workflow: update `main`, create `codex/task-08-achievement-viewer`, implement read-only display and tests, verify the local view uses personal data while automated tests remain synthetic, run all quality commands, manually inspect both data sources, then push or merge only after checks pass.
 
 ### Task 09: Add Achievement Search And Filters
 

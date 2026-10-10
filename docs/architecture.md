@@ -9,7 +9,7 @@ The current repository is the initial Next.js shell. The components below descri
 ## Main Components
 
 - **Web application:** Next.js App Router with TypeScript and Tailwind CSS. Pages and UI state live in the frontend; server-only work belongs in route handlers or server actions.
-- **Validated data layer:** JSON files are the planned v1 source of truth. Zod schemas will validate profile, joint-university education, jobs, projects, skills, credentials, achievement points, resume preferences, history, and AI response contracts before application code uses them.
+- **Validated data layer:** JSON files are the planned v1 source of truth. Zod schemas will validate profile, joint-university education, jobs, projects, skills, credentials, achievement points, resume preferences, history, and AI response contracts before application code uses them. Keep the tracked fictional example at `examples/sample-resume-library.json` separate from the owner's ignored `/data/resume-library.json`; local development uses the personal library by default, while demo mode is explicit and automated tests always use synthetic fixtures.
 - **Achievement library:** Stable IDs connect each achievement point to its source job or project. Skills are stored independently from whether they appear on the current resume; skill claims can link to achievement evidence. Optional metrics retain source evidence and are omitted when no supported number exists.
 - **AI provider boundary:** A provider interface keeps JD analysis, achievement selection, resume drafting, and limited LaTeX repair independent from a specific vendor. Gemini is the first planned adapter; tests should use a mock provider rather than real paid API calls.
 - **Prompt builder:** Server-only, versioned prompt modules combine the relevant instruction set, typed task data, and approved template context at request time. The full LaTeX template lives in its own file and is loaded by a helper; it is not duplicated inside a long base prompt. The model returns structured content for the deterministic renderer.
@@ -71,6 +71,7 @@ After v1, a user may upload an existing resume PDF for text/layout extraction, r
 ## Key Decisions
 
 - **Local-first v1:** Keep resume data, JDs, generated files, and history on the user's machine. Hosting and multi-user access are out of scope until explicitly reconsidered.
+- **Separate personal and demo data:** Use the owner's ignored local resume library during development. Keep tracked examples and automated test fixtures fictional, and never silently substitute demo data when personal data is missing or invalid.
 - **JSON before a database:** Use readable local JSON for the first version and validate it at the boundary. A database is not required for the initial personal workflow.
 - **Provider abstraction:** Use a Gemini adapter first, while keeping vendor-specific requests inside that adapter. Do not couple the selection or rendering logic to Gemini response formats.
 - **AI for judgment, code for guarantees:** AI may interpret a JD and rank or rewrite supported points; deterministic code validates IDs, applies the template, escapes content, and controls compilation.
