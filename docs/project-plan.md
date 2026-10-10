@@ -6,7 +6,7 @@ This project is a local-first resume tailoring web application that helps the us
 
 The intended workflow is that the user pastes a JD, the app analyzes what the company is asking for, compares those requirements against the achievement library, selects the strongest matching points, rewrites only those selected points into resume-ready language, places them into the existing Jake-style resume structure, compiles the LaTeX into a PDF, and shows the final result in the browser. The user should be able to review what was selected, understand why it was selected, override the AI's choices when needed, and export the final `.tex`, `.pdf`, and generation metadata for later reference.
 
-The main product goal is truthful tailoring, not fake optimization. The system should never create jobs, companies, dates, certificates, projects, skills, metrics, or responsibilities that are not already supported by the user's data. Its job is to reorganize, select, compress, and phrase existing facts so the final resume lines up better with the JD while staying grounded in the achievement library. Every AI-generated bullet should remain traceable back to one or more selected achievement IDs so the user can verify that the final resume is based on real experience.
+The main product goal is truthful tailoring, not fake optimization. The AI may draft new resume bullet points by combining or reframing facts from one or more existing job or project achievement points in light of the JD. Every claim must remain supported by its source points, and each generated bullet must be traceable to one or more achievement IDs. The AI may include JD-relevant skills that are missing from the current resume when those skills are present in the user's skill data or evidenced by their achievements. It must not invent jobs, projects, companies, dates, metrics, certificates, or unsupported skills or responsibilities.
 
 For the first version, this is a personal local tool rather than a hosted SaaS product. The app should run locally, store data in JSON files, and keep the user's resume data, job descriptions, generated LaTeX, PDFs, and history on the user's machine. The technical stack for v1 is Next.js, TypeScript, JSON-backed storage, Zod validation, a Jake-style LaTeX rendering pipeline, local PDF compilation, and a Gemini-first AI provider adapter. The AI layer should be built behind a provider interface so Gemini can be used first while leaving room to add DeepSeek or another provider later without rewriting the rest of the application.
 ## 2. Core Architecture
@@ -310,7 +310,7 @@ The v1 application is complete when a user can run the app locally, paste a JD, 
 
 ## 7. Important Product Rules
 
-- The AI must not invent jobs, projects, certificates, companies, dates, metrics, or skills that are not present in the user's data.
+- The AI must not invent new jobs or projects, companies, dates, metrics, certificates, or unsupported facts. It may draft new job or project resume points by combining or reframing existing achievement points against the JD; every new point must remain traceable to its supporting source IDs. It may add JD-relevant skills that are absent from the current resume when they are supported by the user's skills data or demonstrated achievements; a keyword appearing in the JD alone is not evidence that the user has that skill.
 - The final resume should stay close to the provided Jake-style structure.
 - JSON is the source of truth for v1.
 - The app should be local-first until the owner explicitly decides to deploy it.
