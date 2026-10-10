@@ -1,0 +1,436 @@
+{
+  "schemaVersion": 1,
+  "profile": {
+    "id": "profile-jordan-example",
+    "fullName": "Jordan Example",
+    "headline": "Software Engineer | Cloud Platforms",
+    "email": "jordan@example.com",
+    "location": "Example City",
+    "links": [
+      {
+        "label": "Portfolio",
+        "url": "https://example.com/jordan"
+      }
+    ],
+    "summary": "Fictional software engineer focused on reliable services and developer tooling.",
+    "education": [
+      {
+        "id": "education-example-university",
+        "institutions": ["Example State University"],
+        "degree": "Bachelor of Science",
+        "fieldOfStudy": "Computer Science",
+        "startDate": "2017-09",
+        "endDate": "2021-05"
+      }
+    ]
+  },
+  "jobs": [
+    {
+      "id": "job-example-cloud-labs",
+      "company": "Example Cloud Labs",
+      "title": "Platform Engineer",
+      "employmentType": "full-time",
+      "location": "Example City",
+      "startDate": "2023-01",
+      "endDate": null,
+      "description": "Fictional role supporting cloud services and internal developer tooling.",
+      "points": [
+        {
+          "id": "achievement-service-capacity-design",
+          "text": "Redesigned service boundaries and capacity planning for a multi-tenant processing platform.",
+          "tags": ["system-design", "scalability"],
+          "skillIds": ["skill-system-design", "skill-aws"],
+          "metrics": [
+            {
+              "id": "metric-demo-throughput-gain",
+              "label": "Throughput improvement",
+              "value": "28",
+              "unit": "%",
+              "context": "Synthetic benchmark scenario",
+              "evidence": "The fictional demo benchmark records 28% higher throughput after the service-boundary redesign."
+            }
+          ],
+          "source": {
+            "type": "project-document",
+            "label": "Synthetic demo scenario"
+          },
+          "enabled": true
+        },
+        {
+          "id": "achievement-cloud-deployment-platform",
+          "text": "Standardized AWS environment provisioning and deployment checks for three internal services.",
+          "tags": ["aws", "cloud", "reliability"],
+          "skillIds": ["skill-aws", "skill-infrastructure-as-code"],
+          "metrics": [],
+          "source": {
+            "type": "user-notes",
+            "label": "Synthetic demo scenario"
+          },
+          "enabled": true
+        },
+        {
+          "id": "achievement-ci-cd-pipeline",
+          "text": "Built reusable CI/CD workflows that let application teams validate and release services without maintaining deployment scripts individually.",
+          "tags": ["ci-cd", "automation", "developer-experience"],
+          "skillIds": ["skill-github-actions", "skill-automation"],
+          "metrics": [],
+          "source": {
+            "type": "project-document",
+            "label": "Synthetic demo scenario"
+          },
+          "enabled": true
+        },
+        {
+          "id": "achievement-service-observability",
+          "text": "Introduced service dashboards and alert runbooks to help on-call engineers diagnose production issues consistently.",
+          "tags": ["observability", "incident-response", "documentation"],
+          "skillIds": ["skill-observability", "skill-technical-writing"],
+          "metrics": [],
+          "source": {
+            "type": "user-notes",
+            "label": "Synthetic demo scenario"
+          },
+          "enabled": true
+        }
+      ]
+    },
+    {
+      "id": "job-sampleworks-studio",
+      "company": "SampleWorks Studio",
+      "title": "Software Engineer",
+      "employmentType": "full-time",
+      "location": "Example City",
+      "startDate": "2021-06",
+      "endDate": "2022-12",
+      "description": "Fictional product engineering role across APIs, web interfaces, and internal automation.",
+      "points": [
+        {
+          "id": "achievement-orders-api",
+          "text": "Designed versioned REST endpoints for order workflows and documented request validation for client teams.",
+          "tags": ["backend", "api-design", "documentation"],
+          "skillIds": ["skill-typescript", "skill-rest-apis"],
+          "metrics": [],
+          "source": {
+            "type": "user-notes",
+            "label": "Synthetic demo scenario"
+          },
+          "enabled": true
+        },
+        {
+          "id": "achievement-accessible-admin-ui",
+          "text": "Delivered accessible admin workflows with reusable form components and clear validation states.",
+          "tags": ["frontend", "accessibility", "user-experience"],
+          "skillIds": ["skill-react", "skill-accessibility"],
+          "metrics": [],
+          "source": {
+            "type": "project-document",
+            "label": "Synthetic demo scenario"
+          },
+          "enabled": true
+        },
+        {
+          "id": "achievement-release-check-automation",
+          "text": "Automated release readiness checks so teams could identify missing configuration before deployment.",
+          "tags": ["automation", "release-engineering", "quality"],
+          "skillIds": ["skill-automation", "skill-git"],
+          "metrics": [],
+          "source": {
+            "type": "user-notes",
+            "label": "Synthetic demo scenario"
+          },
+          "enabled": true
+        }
+      ]
+    }
+  ],
+  "projects": [
+    {
+      "id": "project-queueboard",
+      "name": "QueueBoard",
+      "role": "Backend and platform developer",
+      "description": "Fictional queue monitoring tool for asynchronous work in a demo environment.",
+      "startDate": "2024-02",
+      "endDate": "2024-08",
+      "points": [
+        {
+          "id": "achievement-queueboard-worker-model",
+          "text": "Implemented a worker model with bounded retries and idempotency keys for background jobs.",
+          "tags": ["distributed-systems", "reliability", "backend"],
+          "skillIds": ["skill-typescript", "skill-system-design"],
+          "metrics": [],
+          "source": {
+            "type": "project-document",
+            "label": "Synthetic demo project"
+          },
+          "enabled": true
+        },
+        {
+          "id": "achievement-queueboard-operations-view",
+          "text": "Created an operations view that groups queue health, retry counts, and recent failures for quick investigation.",
+          "tags": ["observability", "operations", "user-experience"],
+          "skillIds": ["skill-react", "skill-observability"],
+          "metrics": [
+            {
+              "id": "metric-demo-investigation-time",
+              "label": "Investigation time reduction",
+              "value": "20",
+              "unit": "%",
+              "context": "Synthetic usability exercise",
+              "evidence": "In the fictional usability exercise, participants completed the defined queue-failure investigation 20% faster with the operations view."
+            }
+          ],
+          "source": {
+            "type": "project-document",
+            "label": "Synthetic demo project"
+          },
+          "enabled": true
+        },
+        {
+          "id": "achievement-queueboard-deployment",
+          "text": "Packaged the service in containers and added a repeatable local development environment.",
+          "tags": ["containers", "developer-experience", "deployment"],
+          "skillIds": ["skill-docker", "skill-automation"],
+          "metrics": [],
+          "source": {
+            "type": "project-document",
+            "label": "Synthetic demo project"
+          },
+          "enabled": true
+        }
+      ]
+    },
+    {
+      "id": "project-fieldnotes",
+      "name": "FieldNotes",
+      "role": "Full-stack developer",
+      "description": "Fictional web application for exploring public environmental observations on a map.",
+      "startDate": "2022-03",
+      "endDate": "2022-11",
+      "points": [
+        {
+          "id": "achievement-fieldnotes-geospatial-search",
+          "text": "Built a geospatial search endpoint that filters observations by map bounds and selected categories.",
+          "tags": ["geospatial", "search", "backend"],
+          "skillIds": ["skill-python", "skill-rest-apis"],
+          "metrics": [],
+          "source": {
+            "type": "project-document",
+            "label": "Synthetic demo project"
+          },
+          "enabled": true
+        },
+        {
+          "id": "achievement-fieldnotes-map-interface",
+          "text": "Developed a responsive map interface with keyboard-accessible filters and loading states for large result sets.",
+          "tags": ["frontend", "accessibility", "mapping"],
+          "skillIds": ["skill-react", "skill-accessibility"],
+          "metrics": [],
+          "source": {
+            "type": "project-document",
+            "label": "Synthetic demo project"
+          },
+          "enabled": true
+        },
+        {
+          "id": "achievement-fieldnotes-import-pipeline",
+          "text": "Added a scheduled data-import pipeline with schema checks and a report for rejected records.",
+          "tags": ["data-pipeline", "quality", "automation"],
+          "skillIds": ["skill-python", "skill-github-actions"],
+          "metrics": [],
+          "source": {
+            "type": "project-document",
+            "label": "Synthetic demo project"
+          },
+          "enabled": true
+        }
+      ]
+    }
+  ],
+  "skills": [
+    {
+      "id": "skill-system-design",
+      "name": "System Design",
+      "category": "Architecture",
+      "aliases": ["Service Architecture"],
+      "sources": ["user-notes", "project-document"],
+      "isListedOnCurrentResume": true,
+      "evidenceAchievementIds": [
+        "achievement-service-capacity-design",
+        "achievement-queueboard-worker-model"
+      ]
+    },
+    {
+      "id": "skill-aws",
+      "name": "Amazon Web Services",
+      "category": "Cloud",
+      "aliases": ["AWS"],
+      "sources": ["user-notes"],
+      "isListedOnCurrentResume": true,
+      "evidenceAchievementIds": [
+        "achievement-service-capacity-design",
+        "achievement-cloud-deployment-platform"
+      ]
+    },
+    {
+      "id": "skill-infrastructure-as-code",
+      "name": "Infrastructure as Code",
+      "category": "Cloud",
+      "aliases": ["IaC"],
+      "sources": ["user-notes"],
+      "isListedOnCurrentResume": false,
+      "evidenceAchievementIds": ["achievement-cloud-deployment-platform"]
+    },
+    {
+      "id": "skill-github-actions",
+      "name": "GitHub Actions",
+      "category": "DevOps",
+      "aliases": [],
+      "sources": ["project-document"],
+      "isListedOnCurrentResume": true,
+      "evidenceAchievementIds": [
+        "achievement-ci-cd-pipeline",
+        "achievement-fieldnotes-import-pipeline"
+      ]
+    },
+    {
+      "id": "skill-automation",
+      "name": "Workflow Automation",
+      "category": "Engineering Practices",
+      "aliases": ["Automation"],
+      "sources": ["user-notes", "project-document"],
+      "isListedOnCurrentResume": true,
+      "evidenceAchievementIds": [
+        "achievement-ci-cd-pipeline",
+        "achievement-release-check-automation",
+        "achievement-queueboard-deployment"
+      ]
+    },
+    {
+      "id": "skill-observability",
+      "name": "Observability",
+      "category": "Reliability",
+      "aliases": ["Monitoring"],
+      "sources": ["user-notes", "project-document"],
+      "isListedOnCurrentResume": true,
+      "evidenceAchievementIds": [
+        "achievement-service-observability",
+        "achievement-queueboard-operations-view"
+      ]
+    },
+    {
+      "id": "skill-technical-writing",
+      "name": "Technical Documentation",
+      "category": "Collaboration",
+      "aliases": ["Runbooks"],
+      "sources": ["user-notes"],
+      "isListedOnCurrentResume": false,
+      "evidenceAchievementIds": ["achievement-service-observability"]
+    },
+    {
+      "id": "skill-typescript",
+      "name": "TypeScript",
+      "category": "Programming Languages",
+      "aliases": ["TS"],
+      "sources": ["user-notes", "project-document"],
+      "isListedOnCurrentResume": true,
+      "evidenceAchievementIds": [
+        "achievement-orders-api",
+        "achievement-queueboard-worker-model"
+      ]
+    },
+    {
+      "id": "skill-rest-apis",
+      "name": "REST API Design",
+      "category": "Backend",
+      "aliases": ["RESTful APIs"],
+      "sources": ["user-notes", "project-document"],
+      "isListedOnCurrentResume": true,
+      "evidenceAchievementIds": [
+        "achievement-orders-api",
+        "achievement-fieldnotes-geospatial-search"
+      ]
+    },
+    {
+      "id": "skill-react",
+      "name": "React",
+      "category": "Frontend",
+      "aliases": [],
+      "sources": ["user-notes", "project-document"],
+      "isListedOnCurrentResume": true,
+      "evidenceAchievementIds": [
+        "achievement-accessible-admin-ui",
+        "achievement-queueboard-operations-view",
+        "achievement-fieldnotes-map-interface"
+      ]
+    },
+    {
+      "id": "skill-accessibility",
+      "name": "Web Accessibility",
+      "category": "Frontend",
+      "aliases": ["a11y"],
+      "sources": ["project-document"],
+      "isListedOnCurrentResume": false,
+      "evidenceAchievementIds": [
+        "achievement-accessible-admin-ui",
+        "achievement-fieldnotes-map-interface"
+      ]
+    },
+    {
+      "id": "skill-git",
+      "name": "Git",
+      "category": "Developer Tools",
+      "aliases": [],
+      "sources": ["user-notes"],
+      "isListedOnCurrentResume": true,
+      "evidenceAchievementIds": ["achievement-release-check-automation"]
+    },
+    {
+      "id": "skill-docker",
+      "name": "Docker",
+      "category": "DevOps",
+      "aliases": ["Containers"],
+      "sources": ["project-document"],
+      "isListedOnCurrentResume": true,
+      "evidenceAchievementIds": ["achievement-queueboard-deployment"]
+    },
+    {
+      "id": "skill-python",
+      "name": "Python",
+      "category": "Programming Languages",
+      "aliases": [],
+      "sources": ["project-document"],
+      "isListedOnCurrentResume": false,
+      "evidenceAchievementIds": [
+        "achievement-fieldnotes-geospatial-search",
+        "achievement-fieldnotes-import-pipeline"
+      ]
+    }
+  ],
+  "credentials": [
+    {
+      "id": "certificate-example-cloud-fundamentals",
+      "kind": "certificate",
+      "name": "Cloud Deployment Foundations (Demo)",
+      "issuer": "Example Cloud Academy",
+      "issuedDate": "2024-05-15"
+    },
+    {
+      "id": "license-example-data-practitioner",
+      "kind": "license",
+      "name": "Data Handling Practitioner License (Demo)",
+      "issuer": "Example Standards Board",
+      "issuedDate": "2023-09-01",
+      "expiresDate": "2027-09-01"
+    }
+  ],
+  "preferences": {
+    "sectionOrder": [
+      "experience",
+      "projects",
+      "education",
+      "skills",
+      "credentials"
+    ],
+    "maxPages": 1
+  }
+}
