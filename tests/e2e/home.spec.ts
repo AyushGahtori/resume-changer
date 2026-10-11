@@ -118,10 +118,29 @@ test("persists the selected theme and remains usable on a narrow viewport", asyn
 test("fits the JD workspace within a standard desktop viewport", async ({
   page,
 }) => {
-  await page.setViewportSize({ width: 1440, height: 950 });
+  for (const height of [950, 700]) {
+    await page.setViewportSize({ width: 1440, height });
 
-  const pageHeight = await page.evaluate(
-    () => document.documentElement.scrollHeight - window.innerHeight,
-  );
-  expect(pageHeight).toBeLessThanOrEqual(0);
+    const pageHeight = await page.evaluate(() => {
+      const textarea = document
+        .querySelector(".jd-form textarea")!
+        .getBoundingClientRect();
+      const footer = document
+        .querySelector(".form-footer")!
+        .getBoundingClientRect();
+
+      return {
+        document: document.documentElement.scrollHeight - window.innerHeight,
+        textareaBottom: textarea.bottom,
+        textareaWidth: textarea.width,
+        footerBottom: footer.bottom,
+        footerTop: footer.top,
+      };
+    });
+    expect(pageHeight.document).toBeLessThanOrEqual(0);
+    expect(pageHeight.textareaBottom).toBeLessThanOrEqual(height);
+    expect(pageHeight.textareaWidth).toBeLessThanOrEqual(880);
+    expect(pageHeight.footerBottom).toBeLessThanOrEqual(height);
+    expect(pageHeight.footerTop).toBeGreaterThan(0);
+  }
 });
