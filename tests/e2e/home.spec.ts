@@ -114,3 +114,14 @@ test("persists the selected theme and remains usable on a narrow viewport", asyn
   );
   expect(pageWidth).toBeLessThanOrEqual(0);
 });
+
+test("fits the JD workspace within a standard desktop viewport", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 950 });
+
+  const pageHeight = await page.evaluate(
+    () => document.documentElement.scrollHeight - window.innerHeight,
+  );
+  expect(pageHeight).toBeLessThanOrEqual(0);
+});
