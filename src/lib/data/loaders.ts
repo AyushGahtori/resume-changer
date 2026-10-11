@@ -133,12 +133,17 @@ async function loadValidatedFile<T>(
 
 export async function loadResumeLibrary({
   source = "personal",
-  rootDir = process.cwd(),
+  rootDir,
 }: ResumeLibraryLoadOptions = {}) {
+  const dataRoot =
+    rootDir ??
+    (source === "personal"
+      ? (process.env.RESUME_LIBRARY_ROOT ?? process.cwd())
+      : process.cwd());
   return loadValidatedFile(
     getResumeLibraryPath(source),
     ResumeLibrarySchema,
-    rootDir,
+    dataRoot,
   );
 }
 

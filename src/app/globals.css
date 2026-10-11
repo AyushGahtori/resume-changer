@@ -886,6 +886,28 @@ a:focus-visible {
   color: var(--ink);
   font-weight: 600;
 }
+.point-metrics {
+  display: grid;
+  gap: 6px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.point-metrics li {
+  display: grid;
+  gap: 3px;
+  padding-left: 9px;
+  border-left: 2px solid var(--teal);
+  font-size: 10px;
+}
+.point-metrics strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+.point-metrics span {
+  color: var(--muted);
+  line-height: 1.4;
+}
 .point-facets {
   display: flex;
   flex-wrap: wrap;
@@ -996,6 +1018,176 @@ a:focus-visible {
   margin-top: 10px;
   color: var(--teal);
   font-size: 13px;
+}
+
+.library-edit-toolbar {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 14px;
+  margin: -10px 0 14px;
+}
+
+.library-edit-toolbar > span {
+  color: var(--teal);
+  font-size: 11px;
+}
+
+.point-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.point-editor {
+  display: grid;
+  gap: 17px;
+  margin: 18px 0 22px;
+  padding: 22px;
+  border: 1px solid var(--line-strong);
+  border-radius: 7px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.point-editor-heading,
+.metric-editor-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.point-editor-heading .eyebrow {
+  margin-bottom: 5px;
+}
+.point-editor-heading h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.icon-button {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 21px;
+  line-height: 1;
+}
+
+.editor-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 13px;
+}
+.editor-field {
+  display: grid;
+  min-width: 0;
+  gap: 6px;
+}
+.editor-field > span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+.editor-field input,
+.editor-field select,
+.editor-field textarea {
+  width: 100%;
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 5px;
+  outline: none;
+  background: var(--surface-soft);
+  color: var(--ink);
+  font-size: 12px;
+}
+.editor-field input,
+.editor-field select {
+  min-height: 38px;
+}
+.editor-field select[multiple] {
+  height: auto;
+  padding: 6px 8px;
+}
+.editor-field textarea {
+  resize: vertical;
+  line-height: 1.5;
+}
+.editor-field input:focus,
+.editor-field select:focus,
+.editor-field textarea:focus {
+  border-color: var(--focus);
+}
+.editor-field input[readonly] {
+  color: var(--muted);
+}
+.editor-skills {
+  max-width: 520px;
+}
+.metric-editor {
+  display: grid;
+  gap: 10px;
+}
+.metric-editor-heading {
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 9px;
+}
+.metric-editor-heading h3 {
+  margin: 0;
+  font-size: 13px;
+}
+.metric-fields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 11px;
+  margin: 0;
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+}
+.metric-fields legend {
+  padding: 0 5px;
+  color: var(--muted);
+  font-size: 10px;
+}
+.metric-evidence {
+  grid-column: 1 / -1;
+}
+.metric-remove {
+  justify-self: start;
+  grid-column: 1 / -1;
+}
+.editor-enabled {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink);
+  font-size: 12px;
+}
+.editor-enabled input {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--teal);
+}
+.editor-error {
+  margin: 0;
+  color: var(--danger);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.editor-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
 }
 
 @media (min-width: 1101px) and (min-height: 640px) {
@@ -1217,6 +1409,17 @@ a:focus-visible {
   .library-source-switch a {
     padding: 8px;
   }
+
+  .point-editor {
+    padding: 18px 15px;
+  }
+  .editor-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .metric-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 10px;
+  }
 }
 
 @media (max-width: 390px) {
@@ -1248,6 +1451,19 @@ a:focus-visible {
   }
   .library-filter-summary {
     align-items: flex-start;
+  }
+  .metric-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .metric-evidence,
+  .metric-remove {
+    grid-column: auto;
+  }
+  .editor-actions {
+    flex-direction: column-reverse;
+  }
+  .editor-actions > button {
+    width: 100%;
   }
 }
 
