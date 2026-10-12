@@ -1618,6 +1618,32 @@ a:focus-visible {
   max-height: min(58vh, 620px);
   overflow: auto;
   padding-right: 4px;
+  scrollbar-color: var(--accent) var(--surface-soft);
+  scrollbar-width: thin;
+}
+
+.generation-groups::-webkit-scrollbar,
+.latex-preview::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.generation-groups::-webkit-scrollbar-track,
+.latex-preview::-webkit-scrollbar-track {
+  border-radius: 5px;
+  background: var(--surface-soft);
+}
+
+.generation-groups::-webkit-scrollbar-thumb,
+.latex-preview::-webkit-scrollbar-thumb {
+  border: 2px solid var(--surface-soft);
+  border-radius: 5px;
+  background: var(--accent);
+}
+
+.generation-groups::-webkit-scrollbar-thumb:hover,
+.latex-preview::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-hover);
 }
 
 .generation-group {
@@ -1721,6 +1747,8 @@ a:focus-visible {
   line-height: 1.55;
   tab-size: 2;
   white-space: pre;
+  scrollbar-color: var(--accent) var(--surface-soft);
+  scrollbar-width: thin;
 }
 
 .generation-footer {
