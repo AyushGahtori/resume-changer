@@ -1,6 +1,6 @@
 # Local Setup
 
-This guide runs the current application foundation on your machine. Later tasks will add private resume data, AI calls, and PDF compilation; this guide does not configure those unfinished features.
+This guide runs the application locally, including the local LaTeX-to-PDF service. AI provider setup remains a later task.
 
 ## Requirements
 
@@ -8,6 +8,8 @@ This guide runs the current application foundation on your machine. Later tasks 
 - Node.js `^18.18.0`, `^19.8.0`, or `>=20.0.0`
 - npm (included with Node.js)
 - Chromium for Playwright browser tests
+- [Tectonic](https://tectonic-typesetting.github.io/book/latest/installation/), the local LaTeX compiler
+- Poppler's `pdfinfo` utility, used to verify the one-page limit
 
 The Node.js range comes from the installed Next.js package's engine declaration.
 
@@ -28,6 +30,10 @@ npm run dev
 ```
 
 Visit <http://localhost:3000>. Stop the development server with `Ctrl+C` in its terminal.
+
+Tectonic and `pdfinfo` must be available on `PATH`. If either executable has a nonstandard location, set `TECTONIC_BINARY` or `PDFINFO_BINARY` in `.env.local` to its full path and restart the app. The compiler runs with Tectonic's untrusted-input mode and uses locally cached package resources only; it does not enable shell escape or accept compiler options from the request. A missing compiler, unavailable cached package, invalid LaTeX, or page overflow is reported as a compile error.
+
+The service is available at `POST /api/compile` with a JSON body containing a `latex` string. A successful response is a one-page PDF. It is returned as the response body and is not persisted; temporary compilation files are removed after each request.
 
 ## Run Checks
 
