@@ -202,6 +202,30 @@ test("shows actionable PDF compile errors and keeps the LaTeX available", async 
   await expect(page.getByRole("tab", { name: "PDF" })).toBeDisabled();
 });
 
+test("rejects a successful HTTP response that is not a valid PDF", async ({
+  page,
+}) => {
+  await page.route("**/api/compile", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/pdf",
+      headers: { "X-PDF-Pages": "1" },
+      body: "not a PDF",
+    }),
+  );
+  await generateResume(page);
+
+  await page.getByRole("button", { name: "Create PDF" }).click();
+
+  await expect(page.locator(".generation-preview [role=alert]")).toContainText(
+    "server response was not a valid PDF",
+  );
+  await expect(page.getByRole("tab", { name: "PDF" })).toBeDisabled();
+  await expect(page.getByLabel("Generated LaTeX")).toContainText(
+    "Jordan Example",
+  );
+});
+
 test("keeps the generation layout within the viewport width on mobile", async ({
   page,
 }) => {
