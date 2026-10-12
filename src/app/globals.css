@@ -544,6 +544,17 @@ h1 {
   gap: 10px;
 }
 
+.form-save-feedback {
+  margin: 10px 0 0;
+  color: var(--teal);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.form-save-feedback.is-error {
+  color: var(--danger);
+}
+
 .clear-button,
 .primary-button {
   display: inline-flex;
