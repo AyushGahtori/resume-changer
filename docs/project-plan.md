@@ -293,6 +293,10 @@ The v1 application is complete when a user can run the app locally, paste a JD, 
 
 These ideas are outside v1 and should be considered only after the 25 planned tasks are complete and reviewed.
 
+### Achievement Point Quality Score And Suggestions
+
+Add an optional quality review for each achievement point. A transparent backend calculation should assess useful writing signals such as clarity, action, specificity, relevance to the target role, and whether a concrete outcome or supported metric is present, then show an understandable score with targeted suggestions for improving the point. Suggestions may help the user make a point clearer or more relevant, but must not fabricate responsibilities, skills, metrics, or outcomes; any suggested factual detail must be confirmed by the user before it is used. Treat the score as writing guidance, not a prediction of ATS ranking, hiring decisions, or guaranteed resume performance.
+
 ### Import An Existing Resume PDF
 
 Add a website flow that accepts a user's existing resume PDF, extracts its text and section structure, and helps convert the content into the app's profile, education, work, project, skill, credential, and achievement records. For Jake-style input, inspect the visual layout and identify reusable template characteristics so the user can keep their preferred format. Show extracted content for user correction before saving; never treat OCR or parsing output as verified facts without review.

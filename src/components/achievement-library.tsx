@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import AchievementPointEditor from "@/components/achievement-point-editor";
 import {
   EMPTY_LIBRARY_FILTERS,
   filterAchievementLibrary,
@@ -17,6 +19,8 @@ import type {
 import type { ResumeDataSource } from "@/lib/data/loaders";
 
 type Props = { library: ResumeLibrary; source: ResumeDataSource };
+type EditorState =
+  { mode: "create" } | { mode: "edit"; point: AchievementPoint } | null;
 
 function dateRange(start?: string, end?: string | null) {
   if (!start) return "";
@@ -32,22 +36,31 @@ function PointRow({
   library,
   onTag,
   onSkill,
+  onEdit,
 }: {
   point: AchievementPoint;
   library: ResumeLibrary;
   onTag: (tag: string) => void;
   onSkill: (skillId: string) => void;
+  onEdit?: () => void;
 }) {
   const skillsById = new Map(library.skills.map((skill) => [skill.id, skill]));
   return (
     <article className="library-point">
       <div className="library-point-heading">
         <code>{point.id}</code>
-        <span
-          className={`point-status ${point.enabled ? "is-enabled" : "is-disabled"}`}
-        >
-          {point.enabled ? "Enabled" : "Disabled"}
-        </span>
+        <div className="point-row-actions">
+          <span
+            className={`point-status ${point.enabled ? "is-enabled" : "is-disabled"}`}
+          >
+            {point.enabled ? "Enabled" : "Disabled"}
+          </span>
+          {onEdit && (
+            <button className="text-action" onClick={onEdit} type="button">
+              Edit
+            </button>
+          )}
+        </div>
       </div>
       <p className="library-point-text">{point.text}</p>
       <p className="point-provenance">
@@ -55,6 +68,20 @@ function PointRow({
         {point.source.label ? ` · ${point.source.label}` : ""}
         {point.source.reference ? ` · ${point.source.reference}` : ""}
       </p>
+      {point.metrics.length > 0 && (
+        <ul className="point-metrics" aria-label="Achievement metrics">
+          {point.metrics.map((metric) => (
+            <li key={metric.id}>
+              <strong>
+                {metric.label}: {metric.value}
+                {metric.unit ? ` ${metric.unit}` : ""}
+              </strong>
+              <span>{metric.evidence}</span>
+              {metric.context && <span>{metric.context}</span>}
+            </li>
+          ))}
+        </ul>
+      )}
       {(point.tags.length > 0 || point.skillIds.length > 0) && (
         <div className="point-facets">
           {point.tags.map((tag) => (
@@ -92,12 +119,14 @@ function ExperienceGroup({
   library,
   onTag,
   onSkill,
+  onEdit,
 }: {
   item: (Job | Project) & { points: AchievementPoint[] };
   kind: "job" | "project";
   library: ResumeLibrary;
   onTag: (tag: string) => void;
   onSkill: (skillId: string) => void;
+  onEdit?: (point: AchievementPoint) => void;
 }) {
   const isJob = kind === "job";
   const job = isJob ? (item as Job) : null;
@@ -130,6 +159,7 @@ function ExperienceGroup({
           library={library}
           onSkill={onSkill}
           onTag={onTag}
+          onEdit={onEdit ? () => onEdit(point) : undefined}
           point={point}
         />
       ))}
@@ -138,7 +168,10 @@ function ExperienceGroup({
 }
 
 export default function AchievementLibrary({ library, source }: Props) {
+  const router = useRouter();
   const [filters, setFilters] = useState<LibraryFilters>(EMPTY_LIBRARY_FILTERS);
+  const [editor, setEditor] = useState<EditorState>(null);
+  const [saveMessage, setSaveMessage] = useState("");
   const result = useMemo(
     () => filterAchievementLibrary(library, filters),
     [filters, library],
@@ -149,6 +182,19 @@ export default function AchievementLibrary({ library, source }: Props) {
   );
   const sourceLabel =
     source === "demo" ? "Fictional demo data" : "My resume data";
+  const canEdit = source === "personal";
+  const parentOptions = [
+    ...library.jobs.map((job) => ({
+      id: job.id,
+      label: `${job.title} · ${job.company}`,
+      type: "job" as const,
+    })),
+    ...library.projects.map((project) => ({
+      id: project.id,
+      label: project.name,
+      type: "project" as const,
+    })),
+  ];
 
   function updateFilter<Key extends keyof LibraryFilters>(
     key: Key,
@@ -183,6 +229,22 @@ export default function AchievementLibrary({ library, source }: Props) {
         </div>
       </div>
 
+      {canEdit && (
+        <div className="library-edit-toolbar">
+          <span>{saveMessage}</span>
+          <button
+            className="primary-button"
+            onClick={() => {
+              setSaveMessage("");
+              setEditor({ mode: "create" });
+            }}
+            type="button"
+          >
+            Add achievement
+          </button>
+        </div>
+      )}
+
       <section className="library-overview" aria-label="Library summary">
         <div className="library-owner">
           <span className="source-indicator">{sourceLabel}</span>
@@ -212,6 +274,21 @@ export default function AchievementLibrary({ library, source }: Props) {
           </div>
         </dl>
       </section>
+
+      {editor && (
+        <AchievementPointEditor
+          key={editor.mode === "edit" ? editor.point.id : "new-achievement"}
+          initialPoint={editor.mode === "edit" ? editor.point : undefined}
+          onCancel={() => setEditor(null)}
+          onSaved={() => {
+            setEditor(null);
+            setSaveMessage("Saved to your local library.");
+            router.refresh();
+          }}
+          parents={parentOptions}
+          skills={library.skills}
+        />
+      )}
 
       <section
         className="library-controls"
@@ -348,6 +425,11 @@ export default function AchievementLibrary({ library, source }: Props) {
               library={library}
               onSkill={(id) => updateFilter("skillId", id)}
               onTag={(tag) => updateFilter("tag", tag)}
+              onEdit={
+                canEdit
+                  ? (point) => setEditor({ mode: "edit", point })
+                  : undefined
+              }
             />
           ))}
           {result.projects.map((project) => (
@@ -358,6 +440,11 @@ export default function AchievementLibrary({ library, source }: Props) {
               library={library}
               onSkill={(id) => updateFilter("skillId", id)}
               onTag={(tag) => updateFilter("tag", tag)}
+              onEdit={
+                canEdit
+                  ? (point) => setEditor({ mode: "edit", point })
+                  : undefined
+              }
             />
           ))}
         </div>
