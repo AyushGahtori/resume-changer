@@ -16,6 +16,25 @@ test.beforeEach(async ({ page }) => {
   await page.goto("/library");
 });
 
+test("achievement library remains scrollable on a full desktop viewport", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 950 });
+  await page.reload();
+
+  const beforeScroll = await page.evaluate(() => ({
+    pageHeight: document.documentElement.scrollHeight,
+    viewportHeight: window.innerHeight,
+  }));
+  expect(beforeScroll.pageHeight).toBeGreaterThan(beforeScroll.viewportHeight);
+
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  await expect
+    .poll(() => page.evaluate(() => window.scrollY))
+    .toBeGreaterThan(0);
+  await expect(page.locator(".library-secondary")).toBeInViewport();
+});
+
 test("creates a point with a metric and persists it after reload", async ({
   page,
 }) => {
