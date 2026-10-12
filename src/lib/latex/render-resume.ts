@@ -102,12 +102,19 @@ function renderHeader(library: ResumeLibrary): string {
     );
   }
 
-  const subheading = [profile.headline, profile.summary]
-    .filter(Boolean)
-    .map((value) => escapeLatexText(value!))
-    .join("\\\\[-2pt]\n");
+  const summary = profile.summary ? escapeLatexText(profile.summary) : "";
+  const headline = profile.headline ? escapeLatexText(profile.headline) : "";
+  const profileSummary =
+    headline || summary
+      ? `\\ResumeProfileSummary{${headline}}{${summary}}`
+      : "";
 
-  return `\\ResumeHeader{${escapeLatexText(profile.fullName)}}{${contacts.join(" \\textbar{} ")}}{${subheading}}`;
+  return [
+    `\\ResumeHeader{${escapeLatexText(profile.fullName)}}{${contacts.join(" \\textbar{} ")}}`,
+    profileSummary,
+  ]
+    .filter(Boolean)
+    .join("\n");
 }
 
 function renderBullets(points: AchievementPoint[]): string {
@@ -220,7 +227,7 @@ function renderCredentials(library: ResumeLibrary): string {
       : credential.kind === "license"
         ? "License"
         : "Certificate";
-    return `\\ResumeEntry{${escapeLatexText(credential.name)}}{${issued}}{${escapeLatexText(credential.issuer)}}{}`;
+    return `\\ResumeCredential{${escapeLatexText(credential.name)}}{${escapeLatexText(credential.issuer)}}`;
   });
   return `\\section*{Licenses and Certifications}\n${entries.join("\n")}`;
 }
