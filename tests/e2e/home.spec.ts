@@ -28,7 +28,7 @@ test("renders the workspace shell and all primary destinations", async ({
   await page.getByRole("link", { name: "Resume builder" }).click();
   await expect(page).toHaveURL(/\/generate$/);
   await expect(
-    page.getByRole("heading", { name: "Resume builder" }),
+    page.getByRole("heading", { name: "Build your resume." }),
   ).toBeVisible();
 
   await page.getByRole("link", { name: "History" }).click();
@@ -48,9 +48,24 @@ test("saves and restores the JD and role details locally", async ({ page }) => {
     .getByLabel("Job description")
     .fill("Build reliable APIs and improve data services.");
 
-  await expect(page.getByRole("status")).toContainText("Saved locally");
+  await page.getByRole("button", { name: "Save draft" }).click();
+  await expect(
+    page.getByText(
+      "Draft saved in this browser. You can open Resume builder now.",
+    ),
+  ).toBeVisible();
+  await expect(page.locator(".draft-state")).toContainText("Saved locally");
   await expect(page.getByText("~12 tokens")).toBeVisible();
 
+  await page.getByRole("link", { name: "Resume builder" }).click();
+  await expect(page.locator(".generation-draft")).toContainText(
+    "Backend Engineer",
+  );
+  await expect(page.locator(".generation-draft")).toContainText(
+    "46 description characters",
+  );
+
+  await page.goto("/");
   await page.reload({ waitUntil: "domcontentloaded" });
   await expect(page.getByLabel("Company")).toHaveValue("Example Systems");
   await expect(page.getByLabel("Role title")).toHaveValue("Backend Engineer");

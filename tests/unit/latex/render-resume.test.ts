@@ -40,8 +40,14 @@ describe("resume LaTeX renderer", () => {
       "Redesigned service boundaries and capacity planning",
     );
     expect(output).toContain("\\ResumeSkillGroup{Cloud}{Amazon Web Services}");
+    expect(output).toContain(
+      "\\ResumeProfileSummary{Software Engineer | Cloud Platforms}{Fictional software engineer focused on reliable services and developer tooling.}",
+    );
     expect(output).toContain("\\href{mailto:jordan@example.com}");
     expect(output).toContain("\\href{https://example.com/jordan}{Portfolio}");
+    expect(output).toContain(
+      "\\ResumeCredential{Cloud Deployment Foundations (Demo)}{Example Cloud Academy}",
+    );
   });
 
   it("escapes LaTeX-special characters in user-controlled text", () => {

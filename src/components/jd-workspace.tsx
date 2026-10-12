@@ -24,6 +24,8 @@ export default function JDWorkspace() {
   const [isReady, setIsReady] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>("loading");
   const [restoreMessage, setRestoreMessage] = useState("");
+  const [saveFeedback, setSaveFeedback] = useState("");
+  const [saveFeedbackError, setSaveFeedbackError] = useState(false);
 
   useEffect(() => {
     const result = readDraft(window.localStorage);
@@ -59,16 +61,29 @@ export default function JDWorkspace() {
   function updateField(field: keyof DraftFields, value: string) {
     setDraft((current) => ({ ...current, [field]: value }));
     setErrors((current) => ({ ...current, [field]: undefined }));
+    setSaveFeedback("");
   }
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const nextErrors = validateDraft(draft);
     setErrors(nextErrors);
+    setSaveFeedback("");
 
-    if (Object.keys(nextErrors).length > 0) return;
+    if (Object.keys(nextErrors).length > 0) {
+      setSaveFeedbackError(true);
+      setSaveFeedback("Fix the highlighted fields before saving.");
+      return;
+    }
 
-    setSaveState(writeDraft(window.localStorage, draft) ? "saved" : "error");
+    const saved = writeDraft(window.localStorage, draft);
+    setSaveState(saved ? "saved" : "error");
+    setSaveFeedbackError(!saved);
+    setSaveFeedback(
+      saved
+        ? "Draft saved in this browser. You can open Resume builder now."
+        : "Could not save the draft. Check this browser's storage settings.",
+    );
   }
 
   function handleClear() {
@@ -76,6 +91,7 @@ export default function JDWorkspace() {
     setDraft(EMPTY_DRAFT);
     setErrors({});
     setRestoreMessage("");
+    setSaveFeedback("");
     setSaveState(cleared ? "idle" : "error");
   }
 
@@ -228,6 +244,14 @@ export default function JDWorkspace() {
             </button>
           </div>
         </div>
+        {saveFeedback && (
+          <p
+            className={`form-save-feedback${saveFeedbackError ? " is-error" : ""}`}
+            role="status"
+          >
+            {saveFeedback}
+          </p>
+        )}
       </form>
 
       <div className="workspace-note">
