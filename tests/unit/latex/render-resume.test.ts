@@ -52,6 +52,25 @@ describe("resume LaTeX renderer", () => {
     );
   });
 
+  it("keeps long education details and descriptions in separate flowing blocks", () => {
+    const copy = structuredClone(library);
+    copy.profile.education[0] = {
+      ...copy.profile.education[0],
+      degree: "Bachelor's degree",
+      fieldOfStudy: "Artificial Intelligence",
+      programName: "Joint Bachelor's Program in Artificial Intelligence",
+      description:
+        "Research-based bachelor's program jointly delivered by several universities.",
+    };
+
+    const output = render({ library: copy });
+
+    expect(output).toContain(
+      "\\ResumeEducationEntry{Example State University}{Sep 2017 -- May 2021}{Bachelor's degree in Artificial Intelligence --- Joint Bachelor's Program in Artificial Intelligence}{Research-based bachelor's program jointly delivered by several universities.}",
+    );
+    expect(output).not.toContain("\\ResumeEntry{Example State University}");
+  });
+
   it("escapes LaTeX-special characters in user-controlled text", () => {
     const copy = structuredClone(library);
     copy.profile.fullName = "A&B_100%";
