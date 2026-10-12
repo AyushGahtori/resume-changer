@@ -48,7 +48,9 @@ export default function WorkspaceShell({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="app-frame">
+    <div
+      className={`app-frame${pathname === "/" ? " jd-workspace-frame" : ""}`}
+    >
       <aside className="sidebar">
         <Link className="brand" href="/" aria-label="Resume Changer home">
           <span className="brand-mark" aria-hidden="true">

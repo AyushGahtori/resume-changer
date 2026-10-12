@@ -1191,20 +1191,20 @@ a:focus-visible {
 }
 
 @media (min-width: 1101px) and (min-height: 640px) {
-  .app-frame {
+  .jd-workspace-frame {
     height: 100dvh;
     min-height: 0;
     overflow: hidden;
   }
 
-  .main-column {
+  .jd-workspace-frame .main-column {
     display: flex;
     min-height: 0;
     flex-direction: column;
     height: 100dvh;
   }
 
-  .page-content {
+  .jd-workspace-frame .page-content {
     display: flex;
     min-height: 0;
     flex: 1;
@@ -1212,18 +1212,18 @@ a:focus-visible {
     padding: 34px 56px 26px;
   }
 
-  .jd-page {
+  .jd-workspace-frame .jd-page {
     display: flex;
     min-height: 0;
     flex: 1;
     flex-direction: column;
   }
 
-  .page-heading-row {
+  .jd-workspace-frame .page-heading-row {
     margin-bottom: 20px;
   }
 
-  .jd-form {
+  .jd-workspace-frame .jd-form {
     display: flex;
     min-height: 0;
     flex: 1;
@@ -1231,21 +1231,21 @@ a:focus-visible {
     padding: 24px 28px 20px;
   }
 
-  .form-topline {
+  .jd-workspace-frame .form-topline {
     margin-bottom: 18px;
   }
 
-  .form-divider {
+  .jd-workspace-frame .form-divider {
     margin: 18px 0 16px;
   }
 
-  .jd-form textarea {
+  .jd-workspace-frame .jd-form textarea {
     min-height: 0;
     flex: 1;
     resize: none;
   }
 
-  .workspace-note {
+  .jd-workspace-frame .workspace-note {
     margin-top: 12px;
   }
 }
