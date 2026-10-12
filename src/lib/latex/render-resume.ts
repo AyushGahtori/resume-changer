@@ -191,9 +191,9 @@ function renderEducation(library: ResumeLibrary): string {
       ? `${degree} --- ${escapeLatexText(education.programName)}`
       : degree;
     const description = education.description
-      ? `\\\\[-2pt]\n{\\small ${escapeLatexText(education.description)}}`
+      ? escapeLatexText(education.description)
       : "";
-    return `\\ResumeEntry{${institutions}}{${range}}{${subheading}}{}${description}`;
+    return `\\ResumeEducationEntry{${institutions}}{${range}}{${subheading}}{${description}}`;
   });
 
   return entries.length ? `\\section*{Education}\n${entries.join("\n")}` : "";

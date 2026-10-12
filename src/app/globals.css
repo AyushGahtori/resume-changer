@@ -1593,6 +1593,42 @@ a:focus-visible {
   gap: 7px;
 }
 
+.generation-output-actions {
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.generation-output-tabs {
+  display: inline-flex;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--surface-soft);
+}
+
+.generation-output-tabs button {
+  min-height: 26px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 10px;
+}
+
+.generation-output-tabs button[aria-selected="true"] {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 0 0 1px var(--line);
+}
+
+.generation-output-tabs button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
 .generation-selection-actions button,
 .generation-output-actions button {
   min-height: 30px;
@@ -1610,6 +1646,18 @@ a:focus-visible {
   border-color: var(--line-strong);
   background: var(--surface-hover);
   color: var(--ink);
+}
+
+.generation-output-actions .generation-compile-button {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-contrast);
+}
+
+.generation-output-actions .generation-compile-button:hover {
+  border-color: var(--accent-hover);
+  background: var(--accent-hover);
+  color: var(--accent-contrast);
 }
 
 .generation-groups {
@@ -1751,6 +1799,113 @@ a:focus-visible {
   scrollbar-width: thin;
 }
 
+.generation-preview .generation-error-message p {
+  margin: 0;
+}
+
+.generation-error-message details {
+  margin-top: 8px;
+  color: var(--ink);
+}
+
+.generation-error-message summary {
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.generation-error-message pre {
+  max-height: 220px;
+  overflow: auto;
+  margin: 8px 0 0;
+  color: var(--ink);
+  font-family: "Cascadia Code", Consolas, monospace;
+  font-size: 10px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.pdf-preview-workspace {
+  min-width: 0;
+}
+
+.pdf-preview-viewport {
+  display: flex;
+  height: min(72vh, 880px);
+  min-height: 420px;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--surface-soft);
+}
+
+.pdf-preview-toolbar {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 5px 9px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.pdf-preview-toolbar button {
+  min-height: 29px;
+  padding: 0 9px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 10px;
+}
+
+.pdf-preview-toolbar button:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--surface-hover);
+}
+
+.pdf-preview-toolbar button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.pdf-zoom-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.pdf-zoom-control button {
+  width: 30px;
+  padding: 0;
+  font-size: 16px;
+}
+
+.pdf-preview-frame {
+  display: block;
+  width: 100%;
+  min-height: 0;
+  flex: 1 1 auto;
+  border: 0;
+  background: var(--surface-soft);
+}
+
+.pdf-preview-viewport:fullscreen {
+  width: 100vw;
+  height: 100dvh;
+  max-height: none;
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+  background: var(--canvas);
+}
+
 .generation-footer {
   display: flex;
   align-items: center;
@@ -1813,7 +1968,13 @@ a:focus-visible {
   }
 
   .generation-output-actions {
-    align-self: flex-end;
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .pdf-preview-viewport {
+    height: min(68vh, 720px);
+    min-height: 360px;
   }
 
   .generation-groups {

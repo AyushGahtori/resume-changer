@@ -9,6 +9,7 @@ vi.mock("@/lib/pdf/compile-service", async (importOriginal) => {
 });
 
 import { POST } from "@/app/api/compile/route";
+import { PdfCompileError } from "@/lib/pdf/compile-service";
 
 describe("POST /api/compile", () => {
   beforeEach(() => compileMock.mockReset());
@@ -45,5 +46,65 @@ describe("POST /api/compile", () => {
 
     expect(response.status).toBe(400);
     expect(compileMock).not.toHaveBeenCalled();
+  });
+
+  it("returns a structured error when the request body is not valid JSON", async () => {
+    const response = await POST(
+      new Request("http://localhost/api/compile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{not-json",
+      }),
+    );
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({
+      error: "Request body must be valid JSON.",
+    });
+    expect(compileMock).not.toHaveBeenCalled();
+  });
+
+  it("preserves compiler diagnostics and status in structured failures", async () => {
+    compileMock.mockImplementationOnce(async () => {
+      throw new PdfCompileError(
+        "This resume must fit on one page; the compiled document has 2 pages.",
+        "PAGE_LIMIT_EXCEEDED",
+        "Compiled page count: 2.",
+      );
+    });
+    const response = await POST(
+      new Request("http://localhost/api/compile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ latex: "\\documentclass{article}" }),
+      }),
+    );
+
+    expect(response.status).toBe(422);
+    await expect(response.json()).resolves.toEqual({
+      error:
+        "This resume must fit on one page; the compiled document has 2 pages.",
+      code: "PAGE_LIMIT_EXCEEDED",
+      diagnostics: "Compiled page count: 2.",
+    });
+  });
+
+  it("hides unexpected internal errors behind a generic response", async () => {
+    compileMock.mockImplementationOnce(async () => {
+      throw new Error("private filesystem detail");
+    });
+    const response = await POST(
+      new Request("http://localhost/api/compile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ latex: "\\documentclass{article}" }),
+      }),
+    );
+
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toEqual({
+      error: "The resume PDF could not be compiled.",
+      code: "COMPILE_FAILED",
+    });
   });
 });

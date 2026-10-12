@@ -85,7 +85,9 @@ test("uses the Quora JD to generate expected LaTeX from three selected points", 
   await expect(latex).toContainText(
     "Redesigned service boundaries and capacity planning",
   );
-  await expect(await latex.innerText()).toMatchSnapshot(
-    "quora-manual-generation.tex",
-  );
+  const renderedLatex = await latex.innerText();
+  const snapshotLineEnding = process.platform === "win32" ? "\r\n" : "\n";
+  await expect(
+    renderedLatex.replace(/\n/g, snapshotLineEnding),
+  ).toMatchSnapshot("quora-manual-generation.tex");
 });
