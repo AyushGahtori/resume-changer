@@ -28,7 +28,7 @@ test("renders the workspace shell and all primary destinations", async ({
   await page.getByRole("link", { name: "Resume builder" }).click();
   await expect(page).toHaveURL(/\/generate$/);
   await expect(
-    page.getByRole("heading", { name: "Resume builder" }),
+    page.getByRole("heading", { name: "Build your resume." }),
   ).toBeVisible();
 
   await page.getByRole("link", { name: "History" }).click();
