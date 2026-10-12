@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import {
   EMPTY_DRAFT,
@@ -30,6 +30,11 @@ type PointGroup = {
 };
 
 type ApiResponse = ManualGenerationResult | { error?: string };
+type CompileErrorResponse = {
+  error?: string;
+  code?: string;
+  diagnostics?: string;
+};
 
 function getPointGroups(library: ResumeLibrary): PointGroup[] {
   return [
@@ -70,6 +75,17 @@ export default function ResumeGenerator({ library, source }: Props) {
   const [requestError, setRequestError] = useState("");
   const [copyMessage, setCopyMessage] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isCompiling, setIsCompiling] = useState(false);
+  const [compileError, setCompileError] = useState<CompileErrorResponse | null>(
+    null,
+  );
+  const [compileStatus, setCompileStatus] = useState("");
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [outputView, setOutputView] = useState<"latex" | "pdf">("latex");
+  const [pdfZoom, setPdfZoom] = useState(100);
+  const [isPdfFullscreen, setIsPdfFullscreen] = useState(false);
+  const compileAbortRef = useRef<AbortController | null>(null);
+  const pdfViewportRef = useRef<HTMLDivElement>(null);
   const groups = useMemo(() => getPointGroups(library), [library]);
   const enabledIds = useMemo(
     () => groups.flatMap((group) => group.points.map((point) => point.id)),
@@ -89,6 +105,40 @@ export default function ResumeGenerator({ library, source }: Props) {
     setDraftReady(true);
   }, []);
 
+  useEffect(() => {
+    return () => {
+      if (pdfUrl) URL.revokeObjectURL(pdfUrl);
+    };
+  }, [pdfUrl]);
+
+  useEffect(() => {
+    function syncFullscreenState() {
+      setIsPdfFullscreen(document.fullscreenElement === pdfViewportRef.current);
+    }
+
+    document.addEventListener("fullscreenchange", syncFullscreenState);
+    return () =>
+      document.removeEventListener("fullscreenchange", syncFullscreenState);
+  }, []);
+
+  useEffect(
+    () => () => {
+      compileAbortRef.current?.abort();
+    },
+    [],
+  );
+
+  function clearPdfOutput() {
+    compileAbortRef.current?.abort();
+    compileAbortRef.current = null;
+    setIsCompiling(false);
+    setPdfUrl(null);
+    setOutputView("latex");
+    setPdfZoom(100);
+    setCompileError(null);
+    setCompileStatus("");
+  }
+
   function changeSelection(id: string, checked: boolean) {
     setSelectedIds((current) =>
       checked
@@ -97,6 +147,7 @@ export default function ResumeGenerator({ library, source }: Props) {
           : [...current, id]
         : current.filter((selectedId) => selectedId !== id),
     );
+    clearPdfOutput();
     setResult(null);
     setCopyMessage("");
     setRequestError("");
@@ -104,6 +155,7 @@ export default function ResumeGenerator({ library, source }: Props) {
 
   function selectAll() {
     setSelectedIds(enabledIds);
+    clearPdfOutput();
     setResult(null);
     setCopyMessage("");
     setRequestError("");
@@ -111,6 +163,7 @@ export default function ResumeGenerator({ library, source }: Props) {
 
   function clearSelection() {
     setSelectedIds([]);
+    clearPdfOutput();
     setResult(null);
     setCopyMessage("");
     setRequestError("");
@@ -118,6 +171,8 @@ export default function ResumeGenerator({ library, source }: Props) {
 
   async function handleGenerate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    clearPdfOutput();
+    setResult(null);
     setRequestError("");
     setCopyMessage("");
 
@@ -163,6 +218,98 @@ export default function ResumeGenerator({ library, source }: Props) {
     } finally {
       setIsGenerating(false);
     }
+  }
+
+  async function compilePdf() {
+    if (!result || isCompiling) return;
+
+    const controller = new AbortController();
+    compileAbortRef.current = controller;
+    setIsCompiling(true);
+    setCompileError(null);
+    setCompileStatus("");
+
+    try {
+      const response = await fetch("/api/compile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ latex: result.latex }),
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        const payload = (await response.json()) as CompileErrorResponse;
+        setCompileError({
+          error: payload.error ?? "The PDF could not be created. Try again.",
+          diagnostics: payload.diagnostics,
+        });
+        return;
+      }
+
+      if (
+        !response.headers.get("Content-Type")?.includes("application/pdf") ||
+        response.headers.get("X-PDF-Pages") !== "1"
+      ) {
+        setCompileError({
+          error: "The server returned an unverified PDF. Try compiling again.",
+        });
+        return;
+      }
+
+      const pdf = await response.blob();
+      if (controller.signal.aborted) return;
+      if ((await pdf.slice(0, 5).text()) !== "%PDF-") {
+        setCompileError({
+          error: "The server response was not a valid PDF. Try again.",
+        });
+        return;
+      }
+      if (controller.signal.aborted) return;
+
+      setPdfUrl(URL.createObjectURL(pdf));
+      setPdfZoom(100);
+      setOutputView("pdf");
+      setCompileStatus("PDF ready · 1 page.");
+    } catch {
+      if (!controller.signal.aborted) {
+        setCompileError({
+          error: "The PDF service could not be reached. Try again.",
+        });
+      }
+    } finally {
+      if (compileAbortRef.current === controller) {
+        compileAbortRef.current = null;
+        setIsCompiling(false);
+      }
+    }
+  }
+
+  async function togglePdfFullscreen() {
+    const viewport = pdfViewportRef.current;
+    if (!viewport) return;
+
+    try {
+      if (document.fullscreenElement === viewport) {
+        await document.exitFullscreen();
+      } else {
+        await viewport.requestFullscreen();
+      }
+    } catch {
+      setCompileError({
+        error: "Full-screen preview is unavailable in this browser.",
+      });
+    }
+  }
+
+  function downloadPdf() {
+    if (!pdfUrl || !result) return;
+    const anchor = document.createElement("a");
+    anchor.href = pdfUrl;
+    anchor.download = createResumeFilename(
+      result.metadata.company,
+      result.metadata.roleTitle,
+    ).replace(/\.tex$/, ".pdf");
+    anchor.click();
   }
 
   async function copyLatex() {
@@ -317,27 +464,90 @@ export default function ResumeGenerator({ library, source }: Props) {
           >
             <div className="generation-section-heading">
               <div>
-                <h2 id="preview-title">LaTeX preview</h2>
-                <p>Generated from your selected points</p>
+                <h2 id="preview-title">
+                  {outputView === "pdf" ? "PDF preview" : "LaTeX preview"}
+                </h2>
+                <p>
+                  {outputView === "pdf"
+                    ? "Compiled from your generated LaTeX"
+                    : "Generated from your selected points"}
+                </p>
               </div>
               {result && (
                 <div className="generation-output-actions">
-                  <button
-                    aria-label="Copy LaTeX"
-                    onClick={copyLatex}
-                    title="Copy LaTeX"
-                    type="button"
+                  <div
+                    className="generation-output-tabs"
+                    role="tablist"
+                    aria-label="Resume output"
                   >
-                    Copy
-                  </button>
-                  <button
-                    aria-label="Download LaTeX file"
-                    onClick={downloadLatex}
-                    title="Download LaTeX file"
-                    type="button"
-                  >
-                    Download
-                  </button>
+                    <button
+                      id="resume-output-tab-latex"
+                      aria-selected={outputView === "latex"}
+                      aria-controls="resume-output-panel"
+                      onClick={() => setOutputView("latex")}
+                      role="tab"
+                      type="button"
+                    >
+                      LaTeX
+                    </button>
+                    <button
+                      id="resume-output-tab-pdf"
+                      aria-selected={outputView === "pdf"}
+                      aria-controls="resume-output-panel"
+                      disabled={!pdfUrl}
+                      onClick={() => setOutputView("pdf")}
+                      role="tab"
+                      type="button"
+                    >
+                      PDF
+                    </button>
+                  </div>
+                  {outputView === "pdf" && pdfUrl ? (
+                    <>
+                      <button
+                        aria-label="Download PDF"
+                        onClick={downloadPdf}
+                        title="Download PDF"
+                        type="button"
+                      >
+                        Download PDF
+                      </button>
+                      <button
+                        onClick={compilePdf}
+                        disabled={isCompiling}
+                        type="button"
+                      >
+                        {isCompiling ? "Compiling…" : "Recompile"}
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        aria-label="Copy LaTeX"
+                        onClick={copyLatex}
+                        title="Copy LaTeX"
+                        type="button"
+                      >
+                        Copy
+                      </button>
+                      <button
+                        aria-label="Download LaTeX file"
+                        onClick={downloadLatex}
+                        title="Download LaTeX file"
+                        type="button"
+                      >
+                        Download LaTeX
+                      </button>
+                      <button
+                        className="primary-button generation-compile-button"
+                        disabled={isCompiling || isGenerating}
+                        onClick={compilePdf}
+                        type="button"
+                      >
+                        {isCompiling ? "Creating PDF…" : "Create PDF"}
+                      </button>
+                    </>
+                  )}
                 </div>
               )}
             </div>
@@ -352,8 +562,29 @@ export default function ResumeGenerator({ library, source }: Props) {
                 {copyMessage}
               </p>
             )}
+            {compileError && (
+              <div className="generation-error-message" role="alert">
+                <p>{compileError.error}</p>
+                {compileError.diagnostics && (
+                  <details>
+                    <summary>Compiler details</summary>
+                    <pre>{compileError.diagnostics}</pre>
+                  </details>
+                )}
+              </div>
+            )}
+            {compileStatus && (
+              <p className="generation-notice" role="status">
+                {compileStatus}
+              </p>
+            )}
             {result ? (
-              <>
+              <div
+                className="generation-output-panel"
+                role="tabpanel"
+                id="resume-output-panel"
+                aria-labelledby={`resume-output-tab-${outputView}`}
+              >
                 <p className="generation-metadata" role="status">
                   Generated{" "}
                   {new Date(result.metadata.generatedAt).toLocaleString()} ·{" "}
@@ -362,14 +593,73 @@ export default function ResumeGenerator({ library, source }: Props) {
                     ? ""
                     : "s"}
                 </p>
-                <pre
-                  className="latex-preview"
-                  aria-label="Generated LaTeX"
-                  role="region"
-                >
-                  <code>{result.latex}</code>
-                </pre>
-              </>
+                {outputView === "pdf" && pdfUrl ? (
+                  <div className="pdf-preview-workspace">
+                    <div className="pdf-preview-viewport" ref={pdfViewportRef}>
+                      <div className="pdf-preview-toolbar">
+                        <div
+                          className="pdf-zoom-control"
+                          aria-label="PDF zoom controls"
+                        >
+                          <button
+                            aria-label="Zoom out"
+                            disabled={pdfZoom <= 50}
+                            onClick={() =>
+                              setPdfZoom((zoom) => Math.max(50, zoom - 10))
+                            }
+                            title="Zoom out"
+                            type="button"
+                          >
+                            −
+                          </button>
+                          <span aria-live="polite">{pdfZoom}%</span>
+                          <button
+                            aria-label="Zoom in"
+                            disabled={pdfZoom >= 200}
+                            onClick={() =>
+                              setPdfZoom((zoom) => Math.min(200, zoom + 10))
+                            }
+                            title="Zoom in"
+                            type="button"
+                          >
+                            +
+                          </button>
+                        </div>
+                        <button
+                          aria-label={
+                            isPdfFullscreen
+                              ? "Exit full screen"
+                              : "Open full screen"
+                          }
+                          onClick={togglePdfFullscreen}
+                          title={
+                            isPdfFullscreen
+                              ? "Exit full screen"
+                              : "Open full screen"
+                          }
+                          type="button"
+                        >
+                          {isPdfFullscreen ? "Exit full screen" : "Full screen"}
+                        </button>
+                      </div>
+                      <iframe
+                        className="pdf-preview-frame"
+                        key={`${pdfUrl}-${pdfZoom}`}
+                        src={`${pdfUrl}#zoom=${pdfZoom}`}
+                        title="Generated resume PDF"
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <pre
+                    className="latex-preview"
+                    aria-label="Generated LaTeX"
+                    role="region"
+                  >
+                    <code>{result.latex}</code>
+                  </pre>
+                )}
+              </div>
             ) : (
               <div className="generation-preview-empty" role="status">
                 <p>Your generated LaTeX will appear here.</p>
@@ -386,7 +676,7 @@ export default function ResumeGenerator({ library, source }: Props) {
           </span>
           <button
             className="primary-button"
-            disabled={isGenerating || !draftReady}
+            disabled={isGenerating || isCompiling || !draftReady}
             type="submit"
           >
             {isGenerating ? "Generating…" : "Generate LaTeX"}
