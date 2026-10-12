@@ -7,9 +7,6 @@ export const JAKE_STYLE_TEMPLATE = String.raw`\documentclass[letterpaper,10pt]{a
 \usepackage{tabularx}
 \usepackage{titlesec}
 \usepackage{lmodern}
-\input{glyphtounicode}
-\pdfgentounicode=1
-
 \pagestyle{empty}
 \setlength{\parindent}{0pt}
 \setlength{\tabcolsep}{0pt}

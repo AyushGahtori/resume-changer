@@ -30,6 +30,8 @@ describe("resume LaTeX renderer", () => {
     const output = render();
 
     expect(output).toContain("\\documentclass[letterpaper,10pt]{article}");
+    expect(output).not.toContain("\\pdfgentounicode");
+    expect(output).not.toContain("\\input{glyphtounicode}");
     expect(output).toContain("\\ResumeHeader{Jordan Example}");
     expect(output).toContain("\\section*{Experience}");
     expect(output).toContain("\\section*{Projects}");
