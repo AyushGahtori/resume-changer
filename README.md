@@ -6,7 +6,7 @@ The planned workflow is to provide a JD, analyze its requirements, select releva
 
 ## Current Status
 
-The repository currently contains the Next.js application foundation and a placeholder workspace. The data library, JD analysis, resume generation, AI integration, LaTeX rendering, and PDF compilation are planned tasks; they are not available yet. See the [project plan](docs/project-plan.md) for the implementation sequence.
+The app includes a local achievement library, job-description workspace, deterministic LaTeX generation, and local PDF preview. Task 13 establishes a server-side Gemini provider and versioned prompt foundation; AI operations are not yet connected to the resume-builder workflow. See the [project plan](docs/project-plan.md) for the implementation sequence.
 
 ## Quick Start
 

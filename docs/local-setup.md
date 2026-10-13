@@ -1,6 +1,6 @@
 # Local Setup
 
-This guide runs the application locally, including the local LaTeX-to-PDF service. AI provider setup remains a later task.
+This guide runs the application locally, including the Gemini provider boundary and local LaTeX-to-PDF service. AI operations are not yet connected to the resume-builder workflow.
 
 ## Requirements
 
@@ -33,6 +33,12 @@ Visit <http://localhost:3000>. Stop the development server with `Ctrl+C` in its 
 
 Tectonic and `pdfinfo` must be available on `PATH`. If either executable has a nonstandard location, set `TECTONIC_BINARY` or `PDFINFO_BINARY` in `.env.local` to its full path and restart the app. The compiler runs with Tectonic's untrusted-input mode and uses locally cached package resources only; it does not enable shell escape or accept compiler options from the request. A missing compiler, unavailable cached package, invalid LaTeX, or page overflow is reported as a compile error.
 
+## Gemini Provider Setup
+
+Copy `.env.example` to `.env.local`, then set `GEMINI_API_KEY` to a Google AI Studio key. The default model is `gemini-3.6-flash`; use `GEMINI_MODEL` to override it. Select `AI_PROVIDER=mock` to use deterministic local responses without an API key or network request. Restart the dev server after changing environment values. The key is server-only and `.env.local` is ignored by Git.
+
+Google's free tier has limited model access and may use submitted content to improve Google products. Check the current [Gemini API pricing and data-use terms](https://ai.google.dev/gemini-api/docs/pricing) before sending personal resume information. Usage limits can change; the app does not promise unlimited free requests.
+
 The service is available at `POST /api/compile` with a JSON body containing a `latex` string. A successful response is a one-page PDF. It is returned as the response body and is not persisted; temporary compilation files are removed after each request.
 
 ## Run Checks
@@ -52,7 +58,7 @@ Playwright's browser installation is normally needed only once per machine (or w
 
 ## Local Files And Secrets
 
-The current placeholder does not require an API key or personal data. Task 05 will create the owner's real resume library locally at `/data/resume-library.json`; later development tasks should use it by default. The tracked `examples/sample-resume-library.json` remains fictional and is for tests or intentional demo mode only. When future tasks add those features:
+The app can use a server-side Gemini key when `AI_PROVIDER=gemini`; keep it local. Task 05 created the owner's real resume library locally at `/data/resume-library.json`. The tracked `examples/sample-resume-library.json` remains fictional and is for tests or intentional demo mode only:
 
 - Keep API keys in a local `.env.local` file; never commit the real file or paste a key into source code.
 - Keep personal resume data and generated files in local-only data/storage directories. These paths are ignored by Git.
@@ -61,7 +67,7 @@ The current placeholder does not require an API key or personal data. Task 05 wi
 - Commit only a sanitized `.env.example` when configuration documentation is added; it must contain placeholders, never real credentials.
 - Review `git status` before staging so private files are not included accidentally.
 
-The project plan's Task 25 adds the complete provider and PDF compiler setup instructions after those features exist.
+The project plan's Task 25 can expand setup instructions after the remaining AI workflow tasks exist.
 
 ## Common Problems
 

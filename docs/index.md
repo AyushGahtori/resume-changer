@@ -8,4 +8,4 @@ Use these documents to understand, run, and contribute to Resume Changer.
 - [Contributing and task workflow](contributing.md): branch, implementation, testing, review, and pull request steps.
 - [README](../README.md): product summary, current status, quick start, and command reference.
 
-The Gemini key and PDF compiler setup guide is planned for Task 25 and will be linked here when the application supports those features.
+The [local setup guide](local-setup.md) covers Gemini key configuration and local PDF compilation. The provider foundation exists, but later roadmap tasks connect AI operations to the application workflow.
