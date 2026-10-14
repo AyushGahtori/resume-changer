@@ -49,7 +49,7 @@ jobs:
         run: |
           set -euo pipefail
           version=0.14.1
-          archive="tectonic-${version}-x86_64-unknown-linux-gnu.tar.gz"
+          archive="tectonic-${version}-x86_64-unknown-linux-musl.tar.gz"
           install_dir="$RUNNER_TEMP/tectonic-${version}"
           curl --fail --location --retry 3 \
             "https://github.com/tectonic-typesetting/tectonic/releases/download/tectonic%40${version}/${archive}" \
