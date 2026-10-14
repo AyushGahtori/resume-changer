@@ -22,7 +22,9 @@ import { buildAiPrompt } from "./prompt-builder";
 import { AiProviderError, type AiProvider } from "./provider";
 
 const DEFAULT_MODEL = "gemini-3.6-flash";
+const FALLBACK_MODEL = "gemini-2.5-flash";
 const REQUEST_TIMEOUT_MS = 30_000;
+const MAX_GENERATED_ARRAY_ITEMS = 20;
 
 type GeminiRequest = (request: {
   model: string;
@@ -69,6 +71,12 @@ function mapRequestError(error: unknown): AiProviderError {
       true,
     );
   }
+  if (status === 400 || status === 422) {
+    return new AiProviderError(
+      "Gemini could not process the request. Check the prompt and output schema.",
+      "INVALID_REQUEST",
+    );
+  }
   if (status !== undefined && status >= 500) {
     return new AiProviderError(
       "Gemini is temporarily unavailable. Try again shortly.",
@@ -81,6 +89,26 @@ function mapRequestError(error: unknown): AiProviderError {
     "REQUEST_FAILED",
     status === undefined || status >= 500,
   );
+}
+
+function boundSchemaArrays(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(boundSchemaArrays);
+  if (!value || typeof value !== "object") return value;
+
+  const schema = Object.fromEntries(
+    Object.entries(value).map(([key, child]) => [
+      key,
+      boundSchemaArrays(child),
+    ]),
+  );
+  if (
+    schema.type === "array" &&
+    typeof schema.maxItems === "number" &&
+    schema.maxItems > MAX_GENERATED_ARRAY_ITEMS
+  ) {
+    schema.maxItems = MAX_GENERATED_ARRAY_ITEMS;
+  }
+  return schema;
 }
 
 function ensureKnownIds(returnedIds: string[], allowedIds: Set<string>): void {
@@ -121,7 +149,7 @@ export function createGeminiProvider(
         contents: prompt,
         config: {
           responseMimeType: "application/json",
-          responseJsonSchema: outputSchema,
+          responseJsonSchema: boundSchemaArrays(outputSchema),
           maxOutputTokens: 4_096,
         },
       });
@@ -144,7 +172,19 @@ export function createGeminiProvider(
     try {
       responseText = await request({ model, prompt, outputSchema });
     } catch (error) {
-      throw mapRequestError(error);
+      const status = errorStatus(error);
+      if (status === undefined || status < 500 || model === FALLBACK_MODEL) {
+        throw mapRequestError(error);
+      }
+      try {
+        responseText = await request({
+          model: FALLBACK_MODEL,
+          prompt,
+          outputSchema,
+        });
+      } catch (fallbackError) {
+        throw mapRequestError(fallbackError);
+      }
     }
     if (!responseText?.trim()) {
       throw new AiProviderError(

@@ -171,6 +171,10 @@ describe("Gemini adapter", () => {
   it("classifies quota, authentication, timeout, and malformed response failures", async () => {
     const input = { jobDescription: "Platform role." };
     const failures = [
+      [
+        Object.assign(new Error("invalid schema"), { status: 400 }),
+        "INVALID_REQUEST",
+      ],
       [Object.assign(new Error("quota"), { status: 429 }), "RATE_LIMITED"],
       [
         Object.assign(new Error("unauthorized"), { status: 401 }),
@@ -208,6 +212,26 @@ describe("Gemini adapter", () => {
         provider.analyzeJobDescription(input),
       ).rejects.toBeInstanceOf(AiProviderError);
     }
+  });
+
+  it("falls back to Gemini 2.5 Flash only when the configured model is unavailable", async () => {
+    const models: string[] = [];
+    const provider = createGeminiProvider({
+      apiKey: "test-key",
+      model: "gemini-3.6-flash",
+      request: async ({ model }) => {
+        models.push(model);
+        if (model === "gemini-3.6-flash") {
+          throw Object.assign(new Error("unavailable"), { status: 503 });
+        }
+        return JSON.stringify(analysis);
+      },
+    });
+
+    await expect(
+      provider.analyzeJobDescription({ jobDescription: "Platform role." }),
+    ).resolves.toEqual(analysis);
+    expect(models).toEqual(["gemini-3.6-flash", "gemini-2.5-flash"]);
   });
 
   it("does not expose upstream error details in safe errors", async () => {

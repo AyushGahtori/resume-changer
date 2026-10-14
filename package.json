@@ -11,6 +11,7 @@
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\" \"tests/**/*.{ts,tsx}\" \"*.{json,mjs,ts}\"",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:ai-live": "node scripts/test-gemini-live.mjs",
     "test:e2e": "playwright test"
   },
   "dependencies": {

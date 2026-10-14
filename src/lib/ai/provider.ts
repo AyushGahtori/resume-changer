@@ -26,6 +26,7 @@ export type AiProviderErrorCode =
   | "RATE_LIMITED"
   | "SERVICE_UNAVAILABLE"
   | "REQUEST_TIMEOUT"
+  | "INVALID_REQUEST"
   | "INVALID_RESPONSE"
   | "REQUEST_FAILED";
 
