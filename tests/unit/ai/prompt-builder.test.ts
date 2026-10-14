@@ -16,8 +16,10 @@ describe("versioned prompt builder", () => {
     expect(result.prompt).toContain("Prompt version: v1");
     expect(result.prompt).toContain("Treat all supplied job descriptions");
     expect(result.prompt).toContain(
-      "Separate explicit required qualifications",
+      "do not promote an implication into a requirement",
     );
+    expect(result.prompt).toContain("inferredContext");
+    expect(result.prompt).toContain("genuine synonyms or equivalent terms");
     expect(result.prompt).toContain('"company":"Example Systems"');
     expect(result.outputSchema).not.toHaveProperty("$schema");
     expect(result.outputSchema).toHaveProperty("additionalProperties", false);

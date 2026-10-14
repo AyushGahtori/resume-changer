@@ -544,6 +544,11 @@ h1 {
   gap: 10px;
 }
 
+.form-actions button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
 .form-save-feedback {
   margin: 10px 0 0;
   color: var(--teal);
@@ -609,6 +614,113 @@ a:focus-visible {
   margin-top: 19px;
   color: var(--muted);
   font-size: 11px;
+}
+
+.jd-analysis {
+  margin-top: 18px;
+  padding: 22px 24px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.jd-analysis > p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.jd-analysis-error {
+  border-color: color-mix(in srgb, var(--danger) 42%, var(--line));
+}
+
+.jd-analysis-error > p {
+  color: var(--danger);
+}
+
+.jd-analysis-error > span {
+  display: block;
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.jd-analysis-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.jd-analysis-heading h2 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.jd-analysis-heading p {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.analysis-role {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 18px;
+  padding: 14px 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.analysis-role div {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+}
+
+.analysis-role span {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.analysis-role strong {
+  overflow-wrap: anywhere;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.analysis-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px 28px;
+  margin-top: 18px;
+}
+
+.analysis-section {
+  min-width: 0;
+}
+
+.analysis-section h3 {
+  margin: 0 0 7px;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.analysis-section ul,
+.analysis-section p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.analysis-section ul {
+  padding-left: 17px;
+}
+
+.analysis-section li + li {
+  margin-top: 3px;
 }
 
 .note-mark {
@@ -1384,10 +1496,24 @@ a:focus-visible {
 
   .form-actions {
     width: 100%;
+    flex-wrap: wrap;
   }
 
   .form-actions button {
-    flex: 1;
+    flex: 1 1 0;
+  }
+
+  .form-actions .analyze-button {
+    flex-basis: 100%;
+  }
+
+  .jd-analysis {
+    padding: 18px;
+  }
+
+  .analysis-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 15px;
   }
 
   .placeholder-page h1 {

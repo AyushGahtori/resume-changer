@@ -263,7 +263,7 @@ Required workflow: update `main`, create `codex/task-23-playwright-e2e`, impleme
 
 Create the continuous integration pipeline for the repository. The CI should install dependencies, check formatting if configured, lint, typecheck, run unit/integration tests, and run Playwright smoke tests. It should fail fast on broken code and give clear logs.
 
-Implementation should use GitHub Actions unless the repo later chooses another platform. Cache dependencies where appropriate, but keep the workflow easy to understand. The task is complete when every PR gets automatic quality feedback before merge.
+Implementation should use GitHub Actions unless the repo later chooses another platform. Cache dependencies where appropriate, but keep the workflow easy to understand. The live integration workflow should run the Gemini API smoke test with a repository secret and the real Tectonic/pdfinfo tests on pull requests; missing credentials or tools must fail rather than silently skip. Configure these named checks as required branch-protection checks. The task is complete when every PR gets automatic quality feedback before merge.
 
 Required workflow: update `main`, create `codex/task-24-ci-pipeline`, add CI config and any needed scripts, run the same commands locally first, push the branch, confirm CI runs successfully, then merge only after checks pass.
 

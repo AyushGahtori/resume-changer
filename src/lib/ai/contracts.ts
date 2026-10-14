@@ -23,6 +23,17 @@ export const JobAnalysisResultSchema = z
     toolsAndPlatforms: terms,
     domainConcepts: terms,
     atsTerms: terms,
+    inferredContext: terms,
+    terminology: z
+      .array(
+        z
+          .object({
+            term: shortText,
+            alternatives: z.array(shortText).max(10),
+          })
+          .strict(),
+      )
+      .max(100),
   })
   .strict();
 

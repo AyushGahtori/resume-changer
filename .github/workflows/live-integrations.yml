@@ -1,0 +1,57 @@
+name: Live integration checks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: live-integrations-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gemini-live:
+    name: Gemini live API
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GEMINI_LIVE_MODEL: gemini-2.5-flash-lite
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Verify live Gemini analysis
+        run: npm run test:ai-live
+
+  pdf-toolchain:
+    name: Real Tectonic and PDF toolchain
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install pdfinfo
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes poppler-utils
+      - uses: wtfjoke/setup-tectonic@v4
+        with:
+          tectonic-version: 0.14.1
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/Tectonic
+          key: ${{ runner.os }}-tectonic-0.14.1-${{ hashFiles('src/lib/latex/jake-template.ts') }}
+      - run: npm ci
+      - name: Verify real PDF compilation and page enforcement
+        run: npm run test:pdf-live

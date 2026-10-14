@@ -25,6 +25,8 @@ const DEFAULT_MODEL = "gemini-3.6-flash";
 const FALLBACK_MODEL = "gemini-2.5-flash";
 const REQUEST_TIMEOUT_MS = 30_000;
 const MAX_GENERATED_ARRAY_ITEMS = 20;
+const MAX_NESTED_ARRAY_ITEMS = 4;
+const MAX_ARRAYS_WITH_NESTED_VALUES = 6;
 
 type GeminiRequest = (request: {
   model: string;
@@ -91,22 +93,37 @@ function mapRequestError(error: unknown): AiProviderError {
   );
 }
 
-function boundSchemaArrays(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(boundSchemaArrays);
+function containsArray(value: unknown): boolean {
+  if (Array.isArray(value)) return value.some(containsArray);
+  if (!value || typeof value !== "object") return false;
+
+  const schema = value as Record<string, unknown>;
+  if (schema.type === "array") return true;
+  return Object.values(schema).some(containsArray);
+}
+
+function boundSchemaArrays(value: unknown, nesting = 0): unknown {
+  if (Array.isArray(value)) {
+    return value.map((item) => boundSchemaArrays(item, nesting));
+  }
   if (!value || typeof value !== "object") return value;
 
+  const isArray = (value as Record<string, unknown>).type === "array";
+  const childNesting = nesting + Number(isArray);
   const schema = Object.fromEntries(
     Object.entries(value).map(([key, child]) => [
       key,
-      boundSchemaArrays(child),
+      boundSchemaArrays(child, childNesting),
     ]),
   );
-  if (
-    schema.type === "array" &&
-    typeof schema.maxItems === "number" &&
-    schema.maxItems > MAX_GENERATED_ARRAY_ITEMS
-  ) {
-    schema.maxItems = MAX_GENERATED_ARRAY_ITEMS;
+  if (schema.type === "array" && typeof schema.maxItems === "number") {
+    const maxItems =
+      nesting > 0
+        ? MAX_NESTED_ARRAY_ITEMS
+        : containsArray(schema.items)
+          ? MAX_ARRAYS_WITH_NESTED_VALUES
+          : MAX_GENERATED_ARRAY_ITEMS;
+    schema.maxItems = Math.min(schema.maxItems, maxItems);
   }
   return schema;
 }
@@ -149,7 +166,7 @@ export function createGeminiProvider(
         contents: prompt,
         config: {
           responseMimeType: "application/json",
-          responseJsonSchema: boundSchemaArrays(outputSchema),
+          responseJsonSchema: outputSchema,
           maxOutputTokens: 4_096,
         },
       });
@@ -168,9 +185,17 @@ export function createGeminiProvider(
       );
     }
     const { prompt, outputSchema } = buildAiPrompt(task, input);
+    const boundedOutputSchema = boundSchemaArrays(outputSchema) as Record<
+      string,
+      unknown
+    >;
     let responseText: string | undefined;
     try {
-      responseText = await request({ model, prompt, outputSchema });
+      responseText = await request({
+        model,
+        prompt,
+        outputSchema: boundedOutputSchema,
+      });
     } catch (error) {
       const status = errorStatus(error);
       if (status === undefined || status < 500 || model === FALLBACK_MODEL) {
@@ -180,7 +205,7 @@ export function createGeminiProvider(
         responseText = await request({
           model: FALLBACK_MODEL,
           prompt,
-          outputSchema,
+          outputSchema: boundedOutputSchema,
         });
       } catch (fallbackError) {
         throw mapRequestError(fallbackError);

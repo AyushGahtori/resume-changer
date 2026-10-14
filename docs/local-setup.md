@@ -56,6 +56,15 @@ npm run build
 
 Playwright's browser installation is normally needed only once per machine (or when the Playwright version changes). The E2E script starts its own development server using the Playwright configuration.
 
+The external integrations are checked automatically by the `Live integration checks` GitHub Actions workflow on pull requests and pushes to `main`. To run them locally, configure `GEMINI_API_KEY`, install Tectonic and `pdfinfo`, then run:
+
+```bash
+npm run test:ai-live
+npm run test:pdf-live
+```
+
+These commands fail when their required credentials or tools are missing instead of reporting a skipped pass. The Gemini test sends only a synthetic job description. The PDF test compiles the real sample resume, checks page-limit rejection and invalid-LaTeX handling, and first warms Tectonic's package cache because the application compiler only uses cached packages. GitHub Actions reads `GEMINI_API_KEY` from repository secrets; never add it to workflow source or commit `.env.local`.
+
 ## Local Files And Secrets
 
 The app can use a server-side Gemini key when `AI_PROVIDER=gemini`; keep it local. Task 05 created the owner's real resume library locally at `/data/resume-library.json`. The tracked `examples/sample-resume-library.json` remains fictional and is for tests or intentional demo mode only:

@@ -19,6 +19,8 @@ export const mockAiProvider: AiProvider = {
       toolsAndPlatforms: [],
       domainConcepts: [],
       atsTerms: [],
+      inferredContext: [],
+      terminology: [],
     };
   },
   async selectAchievements(input) {

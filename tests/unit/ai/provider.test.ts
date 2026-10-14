@@ -16,6 +16,10 @@ const analysis = {
   toolsAndPlatforms: ["Python"],
   domainConcepts: ["Distributed systems"],
   atsTerms: ["Platform engineering"],
+  inferredContext: ["The role likely supports production workloads."],
+  terminology: [
+    { term: "machine learning platform", alternatives: ["ML infrastructure"] },
+  ],
 };
 
 describe("AI provider contracts and selection", () => {
@@ -38,6 +42,15 @@ describe("AI provider contracts and selection", () => {
       JobAnalysisResultSchema.safeParse({ ...analysis, invented: true })
         .success,
     ).toBe(false);
+    expect(
+      JobAnalysisResultSchema.safeParse({
+        ...analysis,
+        inferredContext: undefined,
+      }).success,
+    ).toBe(false);
+    expect(analysis.requiredQualifications).toEqual(["Python"]);
+    expect(analysis.preferredQualifications).toEqual(["Kubernetes"]);
+    expect(analysis.inferredContext).not.toContain("Kubernetes");
   });
 
   it("selects the deterministic mock provider and never needs a key", async () => {
@@ -91,7 +104,17 @@ describe("Gemini adapter", () => {
     expect(request.mock.calls[0][0].model).toBe("gemini-3.6-flash");
     expect(request.mock.calls[0][0].outputSchema).toMatchObject({
       type: "object",
-      properties: expect.any(Object),
+      properties: {
+        requiredQualifications: { maxItems: 20 },
+        terminology: {
+          maxItems: 6,
+          items: {
+            properties: {
+              alternatives: { maxItems: 4 },
+            },
+          },
+        },
+      },
     });
   });
 
