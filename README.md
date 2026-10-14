@@ -6,7 +6,7 @@ The planned workflow is to provide a JD, analyze its requirements, select releva
 
 ## Current Status
 
-The app includes a local achievement library, job-description workspace, deterministic LaTeX generation, and local PDF preview. Task 13 establishes a server-side Gemini provider and versioned prompt foundation; AI operations are not yet connected to the resume-builder workflow. See the [project plan](docs/project-plan.md) for the implementation sequence.
+The app includes a local achievement library, job-description workspace, Gemini-powered JD analysis and evidence-based achievement suggestions, deterministic LaTeX generation, and local PDF preview. AI suggestions are reviewed and can be overridden before manual resume generation. See the [project plan](docs/project-plan.md) for the implementation sequence.
 
 ## Quick Start
 
@@ -19,7 +19,7 @@ npm ci
 npm run dev
 ```
 
-Open <http://localhost:3000> in a browser. No API key or personal resume data is needed for the current placeholder app.
+Open <http://localhost:3000> in a browser. Demo data can be used without a personal resume library. Configure a Gemini API key in `.env.local` to use JD analysis and AI achievement suggestions; setup details are in the [local setup guide](docs/local-setup.md).
 
 For a clean checkout, install the Playwright Chromium browser once before running the browser test:
 

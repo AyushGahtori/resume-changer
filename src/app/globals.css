@@ -630,6 +630,12 @@ a:focus-visible {
   font-size: 13px;
 }
 
+.jd-analysis .analysis-cache-notice {
+  margin-top: 12px;
+  color: var(--accent);
+  font-size: 11px;
+}
+
 .jd-analysis-error {
   border-color: color-mix(in srgb, var(--danger) 42%, var(--line));
 }
@@ -1719,6 +1725,11 @@ a:focus-visible {
   gap: 7px;
 }
 
+.generation-selection-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .generation-output-actions {
   align-items: center;
   flex-wrap: wrap;
@@ -1772,6 +1783,161 @@ a:focus-visible {
   border-color: var(--line-strong);
   background: var(--surface-hover);
   color: var(--ink);
+}
+
+.generation-selection-actions .generation-ai-button {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+  background: var(--accent-soft);
+  color: var(--accent-hover);
+  font-weight: 650;
+}
+
+.generation-selection-actions .generation-ai-button:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent-soft) 70%, var(--surface));
+  color: var(--accent-hover);
+}
+
+.generation-selection-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.selection-analysis-notice {
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.selection-analysis-notice a {
+  color: var(--accent-hover);
+}
+
+.selection-recommendation {
+  margin-bottom: 14px;
+  padding-bottom: 13px;
+  border-bottom: 1px solid var(--line);
+}
+
+.selection-recommendation-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.selection-recommendation-heading h3,
+.selection-coverage h4,
+.selection-skill-recommendations h4 {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.selection-recommendation-heading p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.selection-recommendation-heading button {
+  min-height: 28px;
+  flex: 0 0 auto;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 9px;
+}
+
+.selection-budget,
+.selection-fallback-notice {
+  margin: 7px 0 0;
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.selection-fallback-notice {
+  color: var(--accent-hover);
+}
+
+.selection-coverage {
+  margin-top: 11px;
+}
+
+.selection-coverage ul {
+  display: grid;
+  gap: 5px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.selection-coverage li {
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr);
+  gap: 7px;
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.coverage-status {
+  color: var(--accent-hover);
+  font-size: 8px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.coverage-status.is-covered {
+  color: var(--teal);
+}
+
+.selection-coverage > p {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.selection-skill-recommendations {
+  display: grid;
+  gap: 7px;
+  margin-top: 11px;
+}
+
+.selection-skill-option {
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr);
+  align-items: start;
+  gap: 7px;
+  color: var(--ink);
+  font-size: 9px;
+}
+
+.selection-skill-option input {
+  width: 13px;
+  height: 13px;
+  margin: 1px 0 0;
+  accent-color: var(--accent);
+}
+
+.selection-skill-option span,
+.selection-skill-option small {
+  display: block;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.selection-skill-option small {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 8px;
+  line-height: 1.4;
 }
 
 .generation-output-actions .generation-compile-button {
@@ -1878,6 +2044,14 @@ a:focus-visible {
 
 .generation-point span {
   overflow-wrap: anywhere;
+}
+
+.selection-point-reason {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1.4;
 }
 
 .generation-preview {
@@ -2091,6 +2265,11 @@ a:focus-visible {
 
   .generation-section-heading {
     flex-direction: column;
+  }
+
+  .generation-selection-actions {
+    width: 100%;
+    justify-content: flex-start;
   }
 
   .generation-output-actions {

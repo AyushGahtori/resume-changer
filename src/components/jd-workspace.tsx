@@ -3,6 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import type { JobAnalysisResult } from "@/lib/ai/contracts";
 import {
+  clearJobAnalysisCache,
+  writeJobAnalysisCache,
+} from "@/lib/jd-analysis-cache";
+import {
   clearDraft,
   EMPTY_DRAFT,
   estimateTokenCount,
@@ -53,6 +57,7 @@ export default function JDWorkspace() {
   const [analysisState, setAnalysisState] = useState<AnalysisState>("idle");
   const [analysis, setAnalysis] = useState<JobAnalysisResult | null>(null);
   const [analysisError, setAnalysisError] = useState("");
+  const [analysisCacheSaved, setAnalysisCacheSaved] = useState(false);
   const analysisRequest = useRef<AbortController | null>(null);
 
   useEffect(() => {
@@ -87,6 +92,8 @@ export default function JDWorkspace() {
   }, [draft, isReady]);
 
   function updateField(field: keyof DraftFields, value: string) {
+    clearJobAnalysisCache(window.localStorage);
+    setAnalysisCacheSaved(false);
     analysisRequest.current?.abort();
     analysisRequest.current = null;
     setAnalysis(null);
@@ -140,6 +147,9 @@ export default function JDWorkspace() {
           result.error || "Job description analysis failed. Try again.",
         );
       }
+      setAnalysisCacheSaved(
+        writeJobAnalysisCache(window.localStorage, draft, result.analysis),
+      );
       setAnalysis(result.analysis);
       setAnalysisState("success");
     } catch (error) {
@@ -180,6 +190,8 @@ export default function JDWorkspace() {
   }
 
   function handleClear() {
+    clearJobAnalysisCache(window.localStorage);
+    setAnalysisCacheSaved(false);
     analysisRequest.current?.abort();
     analysisRequest.current = null;
     setAnalysis(null);
@@ -394,6 +406,12 @@ export default function JDWorkspace() {
               Reanalyze
             </button>
           </div>
+          {!analysisCacheSaved && (
+            <p className="analysis-cache-notice" role="status">
+              This analysis could not be saved in this browser. Resume builder
+              recommendations may require analyzing the job again.
+            </p>
+          )}
           <div className="analysis-role">
             <div>
               <span>Target title</span>

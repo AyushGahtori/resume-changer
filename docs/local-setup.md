@@ -1,6 +1,6 @@
 # Local Setup
 
-This guide runs the application locally, including the Gemini provider boundary and local LaTeX-to-PDF service. AI operations are not yet connected to the resume-builder workflow.
+This guide runs the application locally, including Gemini-powered JD analysis and achievement suggestions, plus the local LaTeX-to-PDF service.
 
 ## Requirements
 
@@ -35,7 +35,7 @@ Tectonic and `pdfinfo` must be available on `PATH`. If either executable has a n
 
 ## Gemini Provider Setup
 
-Copy `.env.example` to `.env.local`, then set `GEMINI_API_KEY` to a Google AI Studio key. The default model is `gemini-3.6-flash`; use `GEMINI_MODEL` to override it. Select `AI_PROVIDER=mock` to use deterministic local responses without an API key or network request. Restart the dev server after changing environment values. The key is server-only and `.env.local` is ignored by Git.
+Copy `.env.example` to `.env.local`, then set `GEMINI_API_KEY` to a Google AI Studio key. JD analysis and achievement suggestions use this server-side provider. The default model is `gemini-3.6-flash`; use `GEMINI_MODEL` to override it. Select `AI_PROVIDER=mock` to use deterministic local responses without an API key or network request. Restart the dev server after changing environment values. The key is server-only and `.env.local` is ignored by Git.
 
 Google's free tier has limited model access and may use submitted content to improve Google products. Check the current [Gemini API pricing and data-use terms](https://ai.google.dev/gemini-api/docs/pricing) before sending personal resume information. Usage limits can change; the app does not promise unlimited free requests.
 
@@ -67,7 +67,7 @@ These commands fail when their required credentials or tools are missing instead
 
 ## Local Files And Secrets
 
-The app can use a server-side Gemini key when `AI_PROVIDER=gemini`; keep it local. Task 05 created the owner's real resume library locally at `/data/resume-library.json`. The tracked `examples/sample-resume-library.json` remains fictional and is for tests or intentional demo mode only:
+The app uses a server-side Gemini key when `AI_PROVIDER=gemini`; keep it local. Task 05 created the owner's real resume library locally at `/data/resume-library.json`. The tracked `examples/sample-resume-library.json` remains fictional and is for tests or intentional demo mode only:
 
 - Keep API keys in a local `.env.local` file; never commit the real file or paste a key into source code.
 - Keep personal resume data and generated files in local-only data/storage directories. These paths are ignored by Git.

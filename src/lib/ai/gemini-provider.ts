@@ -246,10 +246,51 @@ export function createGeminiProvider(
         input,
         AchievementSelectionResultSchema,
       );
+      const achievementById = new Map(
+        input.achievements.map((achievement) => [achievement.id, achievement]),
+      );
       ensureKnownIds(
         result.selections.map((selection) => selection.achievementId),
-        new Set(input.achievements.map((achievement) => achievement.id)),
+        new Set(achievementById.keys()),
       );
+      if (
+        result.selections.some(
+          (selection) =>
+            achievementById.get(selection.achievementId)?.section !==
+            selection.section,
+        )
+      ) {
+        throw new AiProviderError(
+          "Gemini assigned an achievement to the wrong resume section.",
+          "INVALID_RESPONSE",
+        );
+      }
+      const selectedIds = new Set(
+        result.selections.map((selection) => selection.achievementId),
+      );
+      const skillById = new Map(input.skills.map((skill) => [skill.id, skill]));
+      ensureKnownIds(
+        result.skillRecommendations.map(
+          (recommendation) => recommendation.skillId,
+        ),
+        new Set(skillById.keys()),
+      );
+      if (
+        result.skillRecommendations.some((recommendation) =>
+          recommendation.supportingAchievementIds.some(
+            (id) =>
+              !selectedIds.has(id) ||
+              !skillById
+                .get(recommendation.skillId)
+                ?.evidenceAchievementIds.includes(id),
+          ),
+        )
+      ) {
+        throw new AiProviderError(
+          "Gemini recommended a skill without selected supporting resume evidence.",
+          "INVALID_RESPONSE",
+        );
+      }
       return result;
     },
     async draftResume(input: ResumeDraftInput): Promise<ResumeDraftResult> {

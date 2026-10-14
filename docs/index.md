@@ -8,4 +8,4 @@ Use these documents to understand, run, and contribute to Resume Changer.
 - [Contributing and task workflow](contributing.md): branch, implementation, testing, review, and pull request steps.
 - [README](../README.md): product summary, current status, quick start, and command reference.
 
-The [local setup guide](local-setup.md) covers Gemini key configuration and local PDF compilation. The provider foundation exists, but later roadmap tasks connect AI operations to the application workflow.
+The [local setup guide](local-setup.md) covers Gemini key configuration, AI-powered JD analysis and achievement suggestions, and local PDF compilation. Later roadmap tasks add AI resume drafting and repair.

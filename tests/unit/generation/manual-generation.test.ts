@@ -97,4 +97,33 @@ describe("manual resume generation", () => {
       ResumeRenderError,
     );
   });
+
+  it("allows a supported library skill to be added with its evidence point", () => {
+    const supportingPoint = "achievement-cloud-deployment-platform";
+    const result = createManualGeneration(library, {
+      ...validRequest,
+      selectedAchievementIds: [supportingPoint],
+      selectedSkillIds: ["skill-infrastructure-as-code"],
+    });
+
+    expect(result.latex).toContain("Infrastructure as Code");
+    expect(result.metadata.selectedSkillIds).toEqual([
+      "skill-infrastructure-as-code",
+    ]);
+  });
+
+  it("rejects an unlisted skill without selected evidence and unknown skills", () => {
+    expect(() =>
+      createManualGeneration(library, {
+        ...validRequest,
+        selectedSkillIds: ["skill-infrastructure-as-code"],
+      }),
+    ).toThrow(/needs a selected supporting achievement/);
+    expect(() =>
+      createManualGeneration(library, {
+        ...validRequest,
+        selectedSkillIds: ["skill-not-in-library"],
+      }),
+    ).toThrow(/Unknown skill ID/);
+  });
 });
