@@ -6,7 +6,9 @@ const { loadEnvConfig } = nextEnv;
 loadEnvConfig(process.cwd(), true);
 
 if (!process.env.GEMINI_API_KEY) {
-  console.error("Set GEMINI_API_KEY in .env.local before running this test.");
+  console.error(
+    "Set GEMINI_API_KEY in the environment or .env.local before running this test.",
+  );
   process.exit(1);
 }
 

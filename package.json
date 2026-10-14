@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:ai-live": "node scripts/test-gemini-live.mjs",
+    "test:pdf-live": "node scripts/test-pdf-live.mjs",
     "test:e2e": "playwright test"
   },
   "dependencies": {
