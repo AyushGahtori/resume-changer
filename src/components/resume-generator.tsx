@@ -8,6 +8,12 @@ import {
   readDraft,
   type JobDescriptionDraft,
 } from "@/lib/jd-draft";
+import {
+  AchievementSelectionResponseSchema,
+  type AchievementSelectionResponse,
+  type JobAnalysisResult,
+} from "@/lib/ai/contracts";
+import { readJobAnalysisCache } from "@/lib/jd-analysis-cache";
 import { createResumeFilename } from "@/lib/generation/resume-filename";
 import type { ManualGenerationResult } from "@/lib/generation/manual-generation";
 import type { ResumeDataSource } from "@/lib/data/loaders";
@@ -71,6 +77,14 @@ export default function ResumeGenerator({ library, source }: Props) {
   const [draftReady, setDraftReady] = useState(false);
   const [draftNotice, setDraftNotice] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [selectedSkillIds, setSelectedSkillIds] = useState<string[] | null>(
+    null,
+  );
+  const [analysis, setAnalysis] = useState<JobAnalysisResult | null>(null);
+  const [recommendation, setRecommendation] =
+    useState<AchievementSelectionResponse | null>(null);
+  const [selectionError, setSelectionError] = useState("");
+  const [isRecommending, setIsRecommending] = useState(false);
   const [result, setResult] = useState<ManualGenerationResult | null>(null);
   const [requestError, setRequestError] = useState("");
   const [copyMessage, setCopyMessage] = useState("");
@@ -85,16 +99,31 @@ export default function ResumeGenerator({ library, source }: Props) {
   const [pdfZoom, setPdfZoom] = useState(100);
   const [isPdfFullscreen, setIsPdfFullscreen] = useState(false);
   const compileAbortRef = useRef<AbortController | null>(null);
+  const selectionAbortRef = useRef<AbortController | null>(null);
   const pdfViewportRef = useRef<HTMLDivElement>(null);
   const groups = useMemo(() => getPointGroups(library), [library]);
   const enabledIds = useMemo(
     () => groups.flatMap((group) => group.points.map((point) => point.id)),
     [groups],
   );
+  const pointById = useMemo(
+    () =>
+      new Map(
+        groups.flatMap((group) =>
+          group.points.map((point) => [point.id, { point, group }] as const),
+        ),
+      ),
+    [groups],
+  );
+  const skillById = useMemo(
+    () => new Map(library.skills.map((skill) => [skill.id, skill])),
+    [library.skills],
+  );
 
   useEffect(() => {
     const saved = readDraft(window.localStorage);
     setDraft(saved.draft);
+    setAnalysis(readJobAnalysisCache(window.localStorage, saved.draft));
     setDraftNotice(
       saved.state === "invalid"
         ? "The saved job draft could not be restored. Return to Job description and save it again."
@@ -124,6 +153,7 @@ export default function ResumeGenerator({ library, source }: Props) {
   useEffect(
     () => () => {
       compileAbortRef.current?.abort();
+      selectionAbortRef.current?.abort();
     },
     [],
   );
@@ -140,12 +170,26 @@ export default function ResumeGenerator({ library, source }: Props) {
   }
 
   function changeSelection(id: string, checked: boolean) {
-    setSelectedIds((current) =>
-      checked
-        ? current.includes(id)
-          ? current
-          : [...current, id]
-        : current.filter((selectedId) => selectedId !== id),
+    const nextIds = checked
+      ? selectedIds.includes(id)
+        ? selectedIds
+        : [...selectedIds, id]
+      : selectedIds.filter((selectedId) => selectedId !== id);
+    setSelectedIds(nextIds);
+    setSelectedSkillIds(
+      (current) =>
+        current?.filter((skillId) => {
+          const suggestion =
+            recommendation?.recommendations.skillRecommendations.find(
+              (item) => item.skillId === skillId,
+            );
+          return (
+            !suggestion ||
+            suggestion.supportingAchievementIds.some((supportId) =>
+              nextIds.includes(supportId),
+            )
+          );
+        }) ?? null,
     );
     clearPdfOutput();
     setResult(null);
@@ -163,10 +207,121 @@ export default function ResumeGenerator({ library, source }: Props) {
 
   function clearSelection() {
     setSelectedIds([]);
+    setSelectedSkillIds(
+      library.skills
+        .filter((skill) => skill.isListedOnCurrentResume)
+        .map((skill) => skill.id),
+    );
     clearPdfOutput();
     setResult(null);
     setCopyMessage("");
     setRequestError("");
+  }
+
+  async function handleRecommend() {
+    if (!draft.jobDescription.trim()) {
+      setSelectionError(
+        "Save a job description before requesting recommendations.",
+      );
+      return;
+    }
+    if (!analysis) {
+      setSelectionError(
+        "Analyze this job description first, then return to the resume builder.",
+      );
+      return;
+    }
+
+    selectionAbortRef.current?.abort();
+    const controller = new AbortController();
+    selectionAbortRef.current = controller;
+    setIsRecommending(true);
+    setSelectionError("");
+    try {
+      const response = await fetch("/api/ai/select-achievements", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          dataSource: source,
+          jobDescription: draft.jobDescription,
+          analysis,
+        }),
+        signal: controller.signal,
+      });
+      const payload: unknown = await response.json();
+      if (!response.ok) {
+        const message =
+          payload &&
+          typeof payload === "object" &&
+          "error" in payload &&
+          typeof payload.error === "string"
+            ? payload.error
+            : "Achievement recommendations failed. Try again.";
+        throw new Error(message);
+      }
+      const parsed = AchievementSelectionResponseSchema.safeParse(payload);
+      if (!parsed.success) {
+        throw new Error(
+          "The recommendation service returned an invalid response. Try again.",
+        );
+      }
+
+      setRecommendation(parsed.data);
+      setSelectedIds(
+        parsed.data.recommendations.selections.map(
+          (item) => item.achievementId,
+        ),
+      );
+      setSelectedSkillIds([
+        ...new Set([
+          ...library.skills
+            .filter((skill) => skill.isListedOnCurrentResume)
+            .map((skill) => skill.id),
+          ...parsed.data.recommendations.skillRecommendations.map(
+            (item) => item.skillId,
+          ),
+        ]),
+      ]);
+      clearPdfOutput();
+      setResult(null);
+      setRequestError("");
+      setCopyMessage("");
+    } catch (error) {
+      if (controller.signal.aborted) return;
+      setSelectionError(
+        error instanceof Error
+          ? error.message
+          : "Achievement recommendations failed. Try again.",
+      );
+    } finally {
+      if (selectionAbortRef.current === controller) {
+        selectionAbortRef.current = null;
+        setIsRecommending(false);
+      }
+    }
+  }
+
+  function applyRecommendations() {
+    if (!recommendation) return;
+    setSelectedIds(
+      recommendation.recommendations.selections.map(
+        (item) => item.achievementId,
+      ),
+    );
+    setSelectedSkillIds([
+      ...new Set([
+        ...library.skills
+          .filter((skill) => skill.isListedOnCurrentResume)
+          .map((skill) => skill.id),
+        ...recommendation.recommendations.skillRecommendations.map(
+          (item) => item.skillId,
+        ),
+      ]),
+    ]);
+    clearPdfOutput();
+    setResult(null);
+    setRequestError("");
+    setCopyMessage("");
   }
 
   async function handleGenerate(event: FormEvent<HTMLFormElement>) {
@@ -197,6 +352,7 @@ export default function ResumeGenerator({ library, source }: Props) {
           jobUrl: draft.jobUrl,
           jobDescription: draft.jobDescription,
           selectedAchievementIds: selectedIds,
+          ...(selectedSkillIds ? { selectedSkillIds } : {}),
         }),
       });
       const payload = (await response.json()) as ApiResponse;
@@ -340,6 +496,21 @@ export default function ResumeGenerator({ library, source }: Props) {
 
   const hasJobDescription = Boolean(draft.jobDescription.trim());
   const safeJobUrl = getSafeJobUrl(draft.jobUrl);
+  const recommendedSelections =
+    recommendation?.recommendations.selections ?? [];
+  const recommendedIds = recommendedSelections.map(
+    (item) => item.achievementId,
+  );
+  const recommendedSkillIds =
+    recommendation?.recommendations.skillRecommendations.map(
+      (item) => item.skillId,
+    ) ?? [];
+  const hasRecommendationEdits =
+    JSON.stringify([...selectedIds].sort()) !==
+      JSON.stringify([...recommendedIds].sort()) ||
+    recommendedSkillIds.some(
+      (id) => selectedSkillIds !== null && !selectedSkillIds.includes(id),
+    );
 
   return (
     <section className="generation-page" aria-labelledby="page-title">
@@ -415,6 +586,24 @@ export default function ResumeGenerator({ library, source }: Props) {
                 </p>
               </div>
               <div className="generation-selection-actions">
+                <button
+                  className="generation-ai-button"
+                  disabled={
+                    !draftReady ||
+                    !hasJobDescription ||
+                    !analysis ||
+                    isRecommending ||
+                    enabledIds.length === 0
+                  }
+                  onClick={handleRecommend}
+                  type="button"
+                >
+                  {isRecommending
+                    ? "Finding matches…"
+                    : selectionError
+                      ? "Retry suggestions"
+                      : "Suggest points"}
+                </button>
                 <button type="button" onClick={selectAll}>
                   Select all
                 </button>
@@ -423,6 +612,150 @@ export default function ResumeGenerator({ library, source }: Props) {
                 </button>
               </div>
             </div>
+
+            {!analysis && draftReady && hasJobDescription && (
+              <p className="selection-analysis-notice">
+                Analyze this job description on the{" "}
+                <Link href="/">Job description</Link> page before requesting AI
+                recommendations.
+              </p>
+            )}
+            {selectionError && (
+              <p className="generation-error-message" role="alert">
+                {selectionError}
+              </p>
+            )}
+            {recommendation && (
+              <section
+                className="selection-recommendation"
+                aria-label="AI recommendations"
+                aria-live="polite"
+              >
+                <div className="selection-recommendation-heading">
+                  <div>
+                    <h3>
+                      {recommendation.mode === "ai"
+                        ? "AI recommendations"
+                        : "Local matching fallback"}
+                    </h3>
+                    <p>{recommendation.recommendations.summary}</p>
+                  </div>
+                  {hasRecommendationEdits && (
+                    <button onClick={applyRecommendations} type="button">
+                      Apply suggestions
+                    </button>
+                  )}
+                </div>
+                <p className="selection-budget" role="status">
+                  Confidence estimate:{" "}
+                  {Math.round(recommendation.recommendations.confidence * 100)}%
+                  <span aria-hidden="true"> · </span>
+                  Estimated content budget: {
+                    recommendation.budget.usedLines
+                  } / {recommendation.budget.availableLines} lines
+                </p>
+                {recommendation.notice && (
+                  <p className="selection-fallback-notice" role="status">
+                    {recommendation.notice}
+                  </p>
+                )}
+                <div className="selection-coverage">
+                  <h4>Requirement coverage</h4>
+                  {recommendation.recommendations.requirementCoverage.length ? (
+                    <ul>
+                      {recommendation.recommendations.requirementCoverage.map(
+                        ({ requirement, coveredByAchievementIds }) => {
+                          const currentIds = coveredByAchievementIds.filter(
+                            (id) => selectedIds.includes(id),
+                          );
+                          return (
+                            <li key={requirement}>
+                              <span
+                                className={
+                                  currentIds.length
+                                    ? "coverage-status is-covered"
+                                    : "coverage-status"
+                                }
+                              >
+                                {currentIds.length ? "Covered" : "Uncovered"}
+                              </span>
+                              <span>{requirement}</span>
+                            </li>
+                          );
+                        },
+                      )}
+                    </ul>
+                  ) : (
+                    <p>
+                      No explicit requirements or responsibilities were
+                      extracted.
+                    </p>
+                  )}
+                </div>
+                {recommendedSkillIds.length > 0 && (
+                  <div className="selection-skill-recommendations">
+                    <h4>Supported skills to add</h4>
+                    {recommendation.recommendations.skillRecommendations.map(
+                      (suggestion) => {
+                        const skill = skillById.get(suggestion.skillId);
+                        if (!skill) return null;
+                        const hasSupport =
+                          suggestion.supportingAchievementIds.some((id) =>
+                            selectedIds.includes(id),
+                          );
+                        const supportSources =
+                          suggestion.supportingAchievementIds
+                            .map((id) => pointById.get(id)?.group.title)
+                            .filter((title): title is string => Boolean(title));
+                        return (
+                          <label
+                            className="selection-skill-option"
+                            key={skill.id}
+                          >
+                            <input
+                              checked={
+                                selectedSkillIds?.includes(skill.id) ?? false
+                              }
+                              disabled={!hasSupport}
+                              onChange={(event) =>
+                                setSelectedSkillIds((current) => {
+                                  const base =
+                                    current ??
+                                    library.skills
+                                      .filter(
+                                        (item) => item.isListedOnCurrentResume,
+                                      )
+                                      .map((item) => item.id);
+                                  return event.target.checked
+                                    ? [...new Set([...base, skill.id])]
+                                    : base.filter((id) => id !== skill.id);
+                                })
+                              }
+                              type="checkbox"
+                            />
+                            <span>
+                              <strong>{skill.name}</strong>
+                              <small>{suggestion.rationale}</small>
+                              <small>
+                                Evidence:{" "}
+                                {supportSources.join(", ") ||
+                                  "Selected resume points"}
+                              </small>
+                              {!hasSupport && (
+                                <small>
+                                  Select a supporting point to include this
+                                  skill.
+                                </small>
+                              )}
+                            </span>
+                          </label>
+                        );
+                      },
+                    )}
+                  </div>
+                )}
+              </section>
+            )}
 
             {groups.length === 0 ? (
               <p className="generation-empty" role="status">
@@ -448,7 +781,22 @@ export default function ResumeGenerator({ library, source }: Props) {
                             }
                             type="checkbox"
                           />
-                          <span>{point.text}</span>
+                          <span>
+                            {point.text}
+                            {recommendation &&
+                              (() => {
+                                const suggestion = recommendedSelections.find(
+                                  (item) => item.achievementId === point.id,
+                                );
+                                return suggestion ? (
+                                  <small className="selection-point-reason">
+                                    {suggestion.rationale} ·{" "}
+                                    {Math.round(suggestion.confidence * 100)}%
+                                    confidence
+                                  </small>
+                                ) : null;
+                              })()}
+                          </span>
                         </label>
                       ))}
                     </div>

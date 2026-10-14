@@ -5,6 +5,19 @@ import {
 } from "../../../src/lib/ai/prompt-builder";
 import { JAKE_STYLE_TEMPLATE } from "../../../src/lib/latex/jake-template";
 
+const jobAnalysis = {
+  targetTitle: "Platform Engineer",
+  seniority: "Entry level",
+  requiredQualifications: ["Python"],
+  preferredQualifications: [],
+  responsibilities: ["Maintain platform services"],
+  toolsAndPlatforms: ["Python"],
+  domainConcepts: ["Distributed systems"],
+  atsTerms: ["Platform engineering"],
+  inferredContext: [],
+  terminology: [],
+};
+
 describe("versioned prompt builder", () => {
   it("assembles shared and operation-specific rules with JSON task data", () => {
     const result = buildAiPrompt("analyzeJobDescription", {
@@ -34,6 +47,9 @@ describe("versioned prompt builder", () => {
           text: "Built an API.",
           tags: [],
           skillIds: [],
+          section: "experience",
+          groupId: "job-platform",
+          groupTitle: "Platform Engineer",
         },
       ],
       templateContext: "Approved template body: \\documentclass{article}",
@@ -51,17 +67,51 @@ describe("versioned prompt builder", () => {
     ).toThrow();
   });
 
+  it("builds grounded selection prompts from analysis, source evidence, and line budget", () => {
+    const result = buildAiPrompt("selectAchievements", {
+      jobDescription: "Provision AWS infrastructure.",
+      analysis: jobAnalysis,
+      achievements: [
+        {
+          id: "achievement-cloud-deployment",
+          text: "Standardized AWS provisioning.",
+          tags: ["deployment"],
+          skillIds: ["skill-aws"],
+          section: "experience",
+          groupId: "job-platform",
+          groupTitle: "Platform Engineer",
+          groupSubtitle: "Example Systems",
+        },
+      ],
+      skills: [],
+      contentBudgetLines: 18,
+    });
+
+    expect(result.prompt).toContain("meaning-level evidence");
+    expect(result.prompt).toContain("contentBudgetLines");
+    expect(result.prompt).toContain('"section":"experience"');
+    expect(result.prompt).toContain('"targetTitle":"Platform Engineer"');
+    expect(result.prompt).toContain("untrusted data");
+    expect(result.outputSchema).toHaveProperty("required");
+  });
+
   it("loads the approved template from its dedicated source and bounds prompt size", () => {
     expect(loadApprovedTemplateContext()).toBe(JAKE_STYLE_TEMPLATE);
     expect(() =>
       buildAiPrompt("selectAchievements", {
         jobDescription: "Platform role.",
+        analysis: jobAnalysis,
         achievements: Array.from({ length: 20 }, (_, index) => ({
           id: `achievement-${index}`,
           text: "x".repeat(7_000),
           tags: [],
           skillIds: [],
+          section: "experience" as const,
+          groupId: `job-${index}`,
+          groupTitle: "Platform Engineer",
         })),
+        skills: [],
+        contentBudgetLines: 24,
       }),
     ).toThrow(expect.objectContaining({ code: "INPUT_TOO_LARGE" }));
   });

@@ -25,7 +25,13 @@ export const mockAiProvider: AiProvider = {
   },
   async selectAchievements(input) {
     AchievementSelectionInputSchema.parse(input);
-    return { selections: [] };
+    return {
+      selections: [],
+      requirementCoverage: [],
+      skillRecommendations: [],
+      confidence: 0,
+      summary: "The mock provider does not produce AI recommendations.",
+    };
   },
   async draftResume(input) {
     ResumeDraftInputSchema.parse(input);

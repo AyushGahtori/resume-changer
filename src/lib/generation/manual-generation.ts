@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import type { ResumeDataSource } from "../data/loaders";
 import { MAX_JD_CHARACTERS } from "../jd-draft";
-import { renderResumeLatex } from "../latex/render-resume";
+import { renderResumeLatex, ResumeRenderError } from "../latex/render-resume";
 import { StableIdSchema } from "../schemas/resume-data";
 import type { ResumeLibrary } from "../schemas/resume-data";
 
@@ -30,6 +30,7 @@ export const ManualGenerationRequestSchema = z
       .min(1, "Enter a job description before generating.")
       .max(MAX_JD_CHARACTERS),
     selectedAchievementIds: z.array(StableIdSchema).min(1),
+    selectedSkillIds: z.array(StableIdSchema).optional(),
   })
   .strict();
 
@@ -45,6 +46,7 @@ export type ManualGenerationMetadata = {
   roleTitle: string;
   jobUrl: string;
   selectedAchievementIds: string[];
+  selectedSkillIds?: string[];
 };
 
 export type ManualGenerationResult = {
@@ -57,9 +59,31 @@ export function createManualGeneration(
   request: ManualGenerationRequest,
   options: { id?: string; now?: Date } = {},
 ): ManualGenerationResult {
+  if (request.selectedSkillIds) {
+    const selectedAchievementIds = new Set(request.selectedAchievementIds);
+    const skillsById = new Map(
+      library.skills.map((skill) => [skill.id, skill]),
+    );
+    for (const skillId of request.selectedSkillIds) {
+      const skill = skillsById.get(skillId);
+      if (!skill) throw new ResumeRenderError(`Unknown skill ID: ${skillId}.`);
+      if (
+        !skill.isListedOnCurrentResume &&
+        !skill.evidenceAchievementIds.some((id) =>
+          selectedAchievementIds.has(id),
+        )
+      ) {
+        throw new ResumeRenderError(
+          `Skill "${skill.name}" needs a selected supporting achievement point.`,
+        );
+      }
+    }
+  }
+
   const latex = renderResumeLatex({
     library,
     selectedAchievementIds: request.selectedAchievementIds,
+    selectedSkillIds: request.selectedSkillIds,
   });
 
   return {
@@ -72,6 +96,9 @@ export function createManualGeneration(
       roleTitle: request.roleTitle,
       jobUrl: request.jobUrl,
       selectedAchievementIds: request.selectedAchievementIds,
+      ...(request.selectedSkillIds
+        ? { selectedSkillIds: request.selectedSkillIds }
+        : {}),
     },
   };
 }

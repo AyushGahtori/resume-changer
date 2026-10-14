@@ -22,6 +22,45 @@ const analysis = {
   ],
 };
 
+const selectionResult = {
+  selections: [
+    {
+      achievementId: "achievement-api",
+      section: "experience",
+      confidence: 0.9,
+      rationale: "Direct API platform experience.",
+    },
+  ],
+  requirementCoverage: [
+    {
+      requirement: "Maintain platform services",
+      coveredByAchievementIds: ["achievement-api"],
+    },
+  ],
+  skillRecommendations: [],
+  confidence: 0.9,
+  summary: "The selected point directly supports the role.",
+};
+
+const point = {
+  id: "achievement-api",
+  text: "Built an API.",
+  tags: ["backend"],
+  skillIds: [],
+  section: "experience" as const,
+  groupId: "job-platform",
+  groupTitle: "Platform Engineer",
+  groupSubtitle: "Example Systems",
+};
+
+const selectionInput = {
+  jobDescription: "Platform role.",
+  analysis,
+  achievements: [point],
+  skills: [],
+  contentBudgetLines: 20,
+};
+
 describe("AI provider contracts and selection", () => {
   it("rejects extra request fields and invalid model response shapes", () => {
     expect(
@@ -122,13 +161,7 @@ describe("Gemini adapter", () => {
     const request = vi
       .fn()
       .mockResolvedValueOnce(JSON.stringify(analysis))
-      .mockResolvedValueOnce(
-        JSON.stringify({
-          selections: [
-            { achievementId: "achievement-api", rationale: "API work" },
-          ],
-        }),
-      )
+      .mockResolvedValueOnce(JSON.stringify(selectionResult))
       .mockResolvedValueOnce(
         JSON.stringify({
           summary: "Platform engineer.",
@@ -146,22 +179,12 @@ describe("Gemini adapter", () => {
         }),
       );
     const provider = createGeminiProvider({ apiKey: "test-key", request });
-    const point = {
-      id: "achievement-api",
-      text: "Built an API.",
-      tags: ["backend"],
-      skillIds: [],
-    };
-
     await expect(
       provider.analyzeJobDescription({ jobDescription: "Platform role." }),
     ).resolves.toEqual(analysis);
-    await expect(
-      provider.selectAchievements({
-        jobDescription: "Platform role.",
-        achievements: [point],
-      }),
-    ).resolves.toMatchObject({ selections: [{ achievementId: point.id }] });
+    await expect(provider.selectAchievements(selectionInput)).resolves.toEqual(
+      selectionResult,
+    );
     await expect(
       provider.draftResume({
         jobDescription: "Platform role.",
@@ -279,24 +302,56 @@ describe("Gemini adapter", () => {
       apiKey: "test-key",
       request: async () =>
         JSON.stringify({
+          ...selectionResult,
           selections: [
-            { achievementId: "achievement-invented", rationale: "No source." },
+            {
+              ...selectionResult.selections[0],
+              achievementId: "achievement-invented",
+            },
           ],
         }),
     });
 
     await expect(
       provider.selectAchievements({
-        jobDescription: "Platform role.",
-        achievements: [
-          {
-            id: "achievement-real",
-            text: "Built an API.",
-            tags: [],
-            skillIds: [],
-          },
-        ],
+        ...selectionInput,
+        achievements: [{ ...point, id: "achievement-real" }],
       }),
     ).rejects.toMatchObject({ code: "INVALID_RESPONSE" });
+  });
+
+  it("rejects duplicate IDs, incorrect section allocation, and unsupported skills", async () => {
+    const outputs = [
+      {
+        ...selectionResult,
+        selections: [
+          selectionResult.selections[0],
+          selectionResult.selections[0],
+        ],
+      },
+      {
+        ...selectionResult,
+        selections: [{ ...selectionResult.selections[0], section: "projects" }],
+      },
+      {
+        ...selectionResult,
+        skillRecommendations: [
+          {
+            skillId: "skill-unlisted",
+            rationale: "No evidence.",
+            supportingAchievementIds: ["achievement-api"],
+          },
+        ],
+      },
+    ];
+    for (const output of outputs) {
+      const provider = createGeminiProvider({
+        apiKey: "test-key",
+        request: async () => JSON.stringify(output),
+      });
+      await expect(
+        provider.selectAchievements(selectionInput),
+      ).rejects.toMatchObject({ code: "INVALID_RESPONSE" });
+    }
   });
 });

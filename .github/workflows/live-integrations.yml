@@ -48,6 +48,10 @@ jobs:
       - uses: wtfjoke/setup-tectonic@v4
         with:
           tectonic-version: 0.14.1
+      - name: Verify Tectonic installation
+        run: |
+          tectonic --version
+          echo "TECTONIC_BINARY=$(command -v tectonic)" >> "$GITHUB_ENV"
       - uses: actions/cache@v4
         with:
           path: ~/.cache/Tectonic
