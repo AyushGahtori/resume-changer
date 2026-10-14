@@ -30,6 +30,8 @@ describe("resume LaTeX renderer", () => {
     const output = render();
 
     expect(output).toContain("\\documentclass[letterpaper,10pt]{article}");
+    expect(output).not.toContain("\\pdfgentounicode");
+    expect(output).not.toContain("\\input{glyphtounicode}");
     expect(output).toContain("\\ResumeHeader{Jordan Example}");
     expect(output).toContain("\\section*{Experience}");
     expect(output).toContain("\\section*{Projects}");
@@ -48,6 +50,25 @@ describe("resume LaTeX renderer", () => {
     expect(output).toContain(
       "\\ResumeCredential{Cloud Deployment Foundations (Demo)}{Example Cloud Academy}",
     );
+  });
+
+  it("keeps long education details and descriptions in separate flowing blocks", () => {
+    const copy = structuredClone(library);
+    copy.profile.education[0] = {
+      ...copy.profile.education[0],
+      degree: "Bachelor's degree",
+      fieldOfStudy: "Artificial Intelligence",
+      programName: "Joint Bachelor's Program in Artificial Intelligence",
+      description:
+        "Research-based bachelor's program jointly delivered by several universities.",
+    };
+
+    const output = render({ library: copy });
+
+    expect(output).toContain(
+      "\\ResumeEducationEntry{Example State University}{Sep 2017 -- May 2021}{Bachelor's degree in Artificial Intelligence --- Joint Bachelor's Program in Artificial Intelligence}{Research-based bachelor's program jointly delivered by several universities.}",
+    );
+    expect(output).not.toContain("\\ResumeEntry{Example State University}");
   });
 
   it("escapes LaTeX-special characters in user-controlled text", () => {

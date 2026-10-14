@@ -7,9 +7,6 @@ export const JAKE_STYLE_TEMPLATE = String.raw`\documentclass[letterpaper,10pt]{a
 \usepackage{tabularx}
 \usepackage{titlesec}
 \usepackage{lmodern}
-\input{glyphtounicode}
-\pdfgentounicode=1
-
 \pagestyle{empty}
 \setlength{\parindent}{0pt}
 \setlength{\tabcolsep}{0pt}
@@ -37,6 +34,15 @@ export const JAKE_STYLE_TEMPLATE = String.raw`\documentclass[letterpaper,10pt]{a
     \textbf{#1} & {\small #2}\\
     {\small\textit{#3}} & {\small\textit{#4}}
   \end{tabularx}\vspace{-4pt}
+}
+\newcommand{\ResumeEducationEntry}[4]{%
+  \begin{tabularx}{\textwidth}{@{}Xr@{}}
+    \textbf{#1} & {\small #2}\\
+    {\small\textit{#3}} & {}
+  \end{tabularx}%
+  \if\relax\detokenize{#4}\relax\else
+    \par{\small #4\par}
+  \fi
 }
 \newcommand{\ResumeBulletListStart}{\begin{itemize}}
 \newcommand{\ResumeBulletListEnd}{\end{itemize}\vspace{-4pt}}
