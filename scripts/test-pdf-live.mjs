@@ -4,13 +4,14 @@ import { fileURLToPath } from "node:url";
 function checkExecutable(executable, name, args) {
   const result = spawnSync(executable, args, {
     encoding: "utf8",
-    timeout: 5_000,
+    timeout: 20_000,
     windowsHide: true,
   });
   if (result.error || result.status !== 0) {
-    console.error(
-      `${name} was not found or could not run. Install it or set its *_BINARY environment variable.`,
-    );
+    const detail = result.error
+      ? `${result.error.code ?? "spawn error"}: ${result.error.message}`
+      : (result.stderr || result.stdout || `exit code ${result.status}`).trim();
+    console.error(`${name} could not run: ${detail}`);
     process.exit(1);
   }
 }
