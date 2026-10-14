@@ -1,0 +1,1 @@
+export const ANALYZE_JOB_DESCRIPTION_INSTRUCTIONS = `Analyze the job description. Separate explicit required qualifications from preferred qualifications. Summarize responsibilities, tools/platforms, domain concepts, and useful ATS terms without inventing requirements. Mark an unknown title or seniority as "Not specified".`;

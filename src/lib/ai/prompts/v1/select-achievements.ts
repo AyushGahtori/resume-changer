@@ -1,0 +1,1 @@
+export const SELECT_ACHIEVEMENTS_INSTRUCTIONS = `Select only supplied achievement IDs that have relevant evidence for the role. Match meaning as well as terminology. Do not infer that an achievement proves a skill unless its text or tags support that connection. Give a brief evidence-based rationale for each selection. Do not rewrite the achievement.`;
