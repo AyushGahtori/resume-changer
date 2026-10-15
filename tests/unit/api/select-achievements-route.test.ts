@@ -139,7 +139,7 @@ describe("POST /api/ai/select-achievements", () => {
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toMatchObject({
       mode: "local-fallback",
-      notice: expect.stringContaining("Configure the AI provider"),
+      notice: expect.stringContaining("Set GEMINI_API_KEY"),
       recommendations: {
         selections: expect.arrayContaining([
           expect.objectContaining({ achievementId: selectedId }),

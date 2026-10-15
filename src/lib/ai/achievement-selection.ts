@@ -7,7 +7,7 @@ import {
   type JobAnalysisResult,
   type SkillEvidence,
 } from "./contracts";
-import type { AiProviderError } from "./provider";
+import { AiProviderError } from "./provider";
 import type { ResumeLibrary } from "../schemas/resume-data";
 
 const PAGE_LINE_ESTIMATE = 58;
@@ -50,6 +50,33 @@ export type SelectionRecommendation = {
   budget: SelectionBudget;
   notice?: string;
 };
+
+function getFallbackNotice(error: unknown): string {
+  if (!(error instanceof AiProviderError)) {
+    return "AI recommendations returned an invalid response; showing local matches instead. Review these lower-confidence matches before using them.";
+  }
+
+  switch (error.code) {
+    case "MISSING_API_KEY":
+      return "Gemini is not configured. Set GEMINI_API_KEY to enable AI recommendations; showing local matches meanwhile.";
+    case "AUTHENTICATION_FAILED":
+      return "Gemini rejected the configured API key or its permissions; showing local matches meanwhile.";
+    case "RATE_LIMITED":
+      return "Gemini's request limit was reached. Wait and retry AI recommendations; showing local matches meanwhile.";
+    case "REQUEST_TIMEOUT":
+      return "Gemini did not respond in time. Retry AI recommendations; showing local matches meanwhile.";
+    case "SERVICE_UNAVAILABLE":
+      return "Gemini is temporarily unavailable. Retry AI recommendations shortly; showing local matches meanwhile.";
+    case "INPUT_TOO_LARGE":
+      return "The resume library is too large for one AI request. Reduce the library context and retry; showing local matches meanwhile.";
+    case "INVALID_REQUEST":
+      return "Gemini rejected the recommendation request. Check the configured model and request schema; showing local matches meanwhile.";
+    case "INVALID_RESPONSE":
+      return "Gemini returned recommendations in an unexpected format. Retry; showing local matches meanwhile.";
+    default:
+      return "The Gemini request failed. Check the server log code and retry; showing local matches meanwhile.";
+  }
+}
 
 function wrappedLines(text: string) {
   return Math.ceil(text.trim().length / CHARACTERS_PER_LINE_ESTIMATE);
@@ -562,6 +589,21 @@ export async function recommendAchievements(args: {
     aiFailure = error;
   }
 
+  if (aiFailure) {
+    console.warn("AI achievement selection failed; using local fallback.", {
+      code:
+        aiFailure instanceof AiProviderError
+          ? aiFailure.code
+          : "INVALID_RESPONSE",
+      diagnostic:
+        aiFailure instanceof AiProviderError
+          ? (aiFailure.diagnosticCode ?? aiFailure.code)
+          : "OUTPUT_SCHEMA_MISMATCH",
+      retryable:
+        aiFailure instanceof AiProviderError ? aiFailure.retryable : false,
+    });
+  }
+
   const recommendations = aiResult
     ? normalizeAiResult(args.input, aiResult)
     : makeFallbackResult(args.input);
@@ -574,11 +616,7 @@ export async function recommendAchievements(args: {
   const isFallback = !aiResult;
   const notice = isFallback
     ? aiFailure
-      ? `AI recommendations were unavailable; showing local matches instead. ${
-          (aiFailure as Partial<AiProviderError>).code === "MISSING_API_KEY"
-            ? "Configure the AI provider to enable Gemini recommendations."
-            : "Review these lower-confidence matches before using them."
-        }`
+      ? getFallbackNotice(aiFailure)
       : "Showing local matches because the AI returned no recommendations."
     : usedLines > availableLines
       ? "Recommendations exceeded the estimated content budget and were trimmed."

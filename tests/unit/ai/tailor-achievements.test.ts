@@ -128,6 +128,28 @@ describe("Guided Tailor response validation", () => {
     });
   });
 
+  it("adds a short analyzed term when linked skill evidence supports it", () => {
+    const response = createTailoringResponse({
+      input,
+      result: {
+        summary: "The point is aligned to the role.",
+        achievementText: [
+          {
+            achievementId: "achievement-terraform",
+            text: "Provisioned AWS resources with Terraform modules.",
+          },
+        ],
+      },
+    });
+
+    expect(response.proposals[0]).toMatchObject({
+      proposedText:
+        "Provisioned AWS resources with Terraform modules, with experience in Infrastructure as Code.",
+      rationale: expect.stringContaining("supported by skills linked"),
+      addedTerms: ["Infrastructure as Code"],
+    });
+  });
+
   it("rejects duplicate, missing, or unknown achievement responses", () => {
     const proposal = {
       achievementId: "achievement-terraform",

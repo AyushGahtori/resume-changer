@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   buildAchievementSelectionInput,
   estimateAchievementContentBudget,
@@ -9,6 +9,7 @@ import type {
   AchievementSelectionResult,
   JobAnalysisResult,
 } from "../../../src/lib/ai/contracts";
+import { AiProviderError } from "../../../src/lib/ai/provider";
 import sampleLibrary from "../../../examples/sample-resume-library.json";
 import type { ResumeLibrary } from "../../../src/lib/schemas/resume-data";
 
@@ -223,6 +224,38 @@ describe("AI achievement selection service", () => {
       requirement: "idempotency keys",
       coveredByAchievementIds: ["achievement-queueboard-worker-model"],
     });
+  });
+
+  it("explains retryable provider failures and logs only safe diagnostics", async () => {
+    const input = makeInput({ contentBudgetLines: 40 });
+    const warning = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    try {
+      const response = await recommendAchievements({
+        input,
+        selectWithAi: async () => {
+          throw new AiProviderError(
+            "do not expose this detail",
+            "RATE_LIMITED",
+            true,
+          );
+        },
+      });
+
+      expect(response.mode).toBe("local-fallback");
+      expect(response.notice).toContain("request limit was reached");
+      expect(response.notice).not.toContain("do not expose this detail");
+      expect(warning).toHaveBeenCalledWith(
+        "AI achievement selection failed; using local fallback.",
+        {
+          code: "RATE_LIMITED",
+          diagnostic: "RATE_LIMITED",
+          retryable: true,
+        },
+      );
+    } finally {
+      warning.mockRestore();
+    }
   });
 
   it("does not claim coverage when the library has no supporting point", async () => {

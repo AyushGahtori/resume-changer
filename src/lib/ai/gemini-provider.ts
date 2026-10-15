@@ -1,5 +1,6 @@
 import "server-only";
 import { GoogleGenAI } from "@google/genai";
+import { z } from "zod";
 import {
   AchievementSelectionInputSchema,
   AchievementSelectionResultSchema,
@@ -22,7 +23,7 @@ import { buildAiPrompt } from "./prompt-builder";
 import { AiProviderError, type AiProvider } from "./provider";
 
 const DEFAULT_MODEL = "gemini-3.6-flash";
-const FALLBACK_MODEL = "gemini-2.5-flash";
+const FALLBACK_MODEL = "gemini-2.5-flash-lite";
 const REQUEST_TIMEOUT_MS = 30_000;
 const MAX_GENERATED_ARRAY_ITEMS = 20;
 const MAX_NESTED_ARRAY_ITEMS = 4;
@@ -58,12 +59,15 @@ function mapRequestError(error: unknown): AiProviderError {
       "Gemini did not respond before the request timed out. Try again.",
       "REQUEST_TIMEOUT",
       true,
+      "REQUEST_TIMEOUT",
     );
   }
   if (status === 401 || status === 403) {
     return new AiProviderError(
       "Gemini rejected the API key or its permissions.",
       "AUTHENTICATION_FAILED",
+      false,
+      `HTTP_${status}`,
     );
   }
   if (status === 429) {
@@ -71,12 +75,15 @@ function mapRequestError(error: unknown): AiProviderError {
       "Gemini's free-tier request limit was reached. Wait and try again.",
       "RATE_LIMITED",
       true,
+      "HTTP_429",
     );
   }
   if (status === 400 || status === 422) {
     return new AiProviderError(
       "Gemini could not process the request. Check the prompt and output schema.",
       "INVALID_REQUEST",
+      false,
+      `HTTP_${status}`,
     );
   }
   if (status !== undefined && status >= 500) {
@@ -84,12 +91,14 @@ function mapRequestError(error: unknown): AiProviderError {
       "Gemini is temporarily unavailable. Try again shortly.",
       "SERVICE_UNAVAILABLE",
       true,
+      `HTTP_${status}`,
     );
   }
   return new AiProviderError(
     "The Gemini request failed. Check your connection and try again.",
     "REQUEST_FAILED",
     status === undefined || status >= 500,
+    status === undefined ? "NETWORK_OR_UNKNOWN_ERROR" : `HTTP_${status}`,
   );
 }
 
@@ -136,6 +145,8 @@ function ensureKnownIds(returnedIds: string[], allowedIds: Set<string>): void {
     throw new AiProviderError(
       "Gemini returned achievement IDs that were missing or duplicated in the supplied evidence.",
       "INVALID_RESPONSE",
+      false,
+      "UNKNOWN_OR_DUPLICATE_ACHIEVEMENT_ID",
     );
   }
 }
@@ -189,46 +200,92 @@ export function createGeminiProvider(
       string,
       unknown
     >;
-    let responseText: string | undefined;
-    try {
-      responseText = await request({
-        model,
-        prompt,
-        outputSchema: boundedOutputSchema,
-      });
-    } catch (error) {
-      const status = errorStatus(error);
-      if (status === undefined || status < 500 || model === FALLBACK_MODEL) {
-        throw mapRequestError(error);
-      }
+    const models = model === FALLBACK_MODEL ? [model] : [model, FALLBACK_MODEL];
+    let lastError: AiProviderError | undefined;
+    for (const [index, requestedModel] of models.entries()) {
       try {
-        responseText = await request({
-          model: FALLBACK_MODEL,
+        const responseText = await request({
+          model: requestedModel,
           prompt,
           outputSchema: boundedOutputSchema,
         });
-      } catch (fallbackError) {
-        throw mapRequestError(fallbackError);
+        if (!responseText?.trim()) {
+          throw new AiProviderError(
+            "Gemini returned an empty response. Try again.",
+            "INVALID_RESPONSE",
+            true,
+            "EMPTY_RESPONSE",
+          );
+        }
+
+        let decoded: unknown;
+        try {
+          decoded = JSON.parse(responseText);
+        } catch {
+          throw new AiProviderError(
+            "Gemini returned invalid JSON. Try again.",
+            "INVALID_RESPONSE",
+            true,
+            "MALFORMED_JSON",
+          );
+        }
+        try {
+          return schema.parse(decoded);
+        } catch (error) {
+          const issuePaths =
+            error instanceof z.ZodError
+              ? [
+                  ...new Set(
+                    error.issues.slice(0, 8).map((issue) => {
+                      const path = issue.path
+                        .map((part) =>
+                          typeof part === "number" ? "[]" : String(part),
+                        )
+                        .join(".");
+                      return `${path || "$"}:${issue.code}`;
+                    }),
+                  ),
+                ].join(",")
+              : "unknown-schema-error";
+          throw new AiProviderError(
+            "Gemini returned a response that did not match the required format.",
+            "INVALID_RESPONSE",
+            true,
+            `OUTPUT_SCHEMA_MISMATCH:${issuePaths}`,
+          );
+        }
+      } catch (error) {
+        const providerError =
+          error instanceof AiProviderError ? error : mapRequestError(error);
+        lastError = providerError;
+        const status = errorStatus(error);
+        const errorName = error instanceof Error ? error.name : "";
+        const recoverable =
+          providerError.code === "INVALID_RESPONSE" ||
+          status === 400 ||
+          status === 404 ||
+          (status !== undefined && status >= 500) ||
+          errorName === "AbortError" ||
+          errorName === "TimeoutError";
+        if (index === 0 && models.length > 1 && recoverable) {
+          console.warn("Gemini request retrying with fallback model.", {
+            task,
+            diagnostic: providerError.diagnosticCode ?? providerError.code,
+            fallbackModel: FALLBACK_MODEL,
+          });
+          continue;
+        }
+        throw providerError;
       }
     }
-    if (!responseText?.trim()) {
-      throw new AiProviderError(
-        "Gemini returned an empty response. Try again.",
-        "INVALID_RESPONSE",
+    throw (
+      lastError ??
+      new AiProviderError(
+        "Gemini could not complete the request. Try again.",
+        "REQUEST_FAILED",
         true,
-      );
-    }
-    let decoded: unknown;
-    try {
-      decoded = JSON.parse(responseText);
-      return schema.parse(decoded);
-    } catch {
-      throw new AiProviderError(
-        "Gemini returned a response that did not match the required format.",
-        "INVALID_RESPONSE",
-        true,
-      );
-    }
+      )
+    );
   }
 
   return {
@@ -263,35 +320,40 @@ export function createGeminiProvider(
         throw new AiProviderError(
           "Gemini assigned an achievement to the wrong resume section.",
           "INVALID_RESPONSE",
+          false,
+          "ACHIEVEMENT_SECTION_MISMATCH",
         );
       }
       const selectedIds = new Set(
         result.selections.map((selection) => selection.achievementId),
       );
       const skillById = new Map(input.skills.map((skill) => [skill.id, skill]));
-      ensureKnownIds(
-        result.skillRecommendations.map(
-          (recommendation) => recommendation.skillId,
-        ),
-        new Set(skillById.keys()),
+      const seenSkillIds = new Set<string>();
+      const skillRecommendations = result.skillRecommendations.flatMap(
+        (recommendation) => {
+          const skill = skillById.get(recommendation.skillId);
+          if (!skill || seenSkillIds.has(skill.id)) return [];
+
+          const supportingAchievementIds = [
+            ...new Set(
+              recommendation.supportingAchievementIds.filter(
+                (id) =>
+                  selectedIds.has(id) &&
+                  skill.evidenceAchievementIds.includes(id),
+              ),
+            ),
+          ];
+          if (supportingAchievementIds.length === 0) return [];
+
+          seenSkillIds.add(skill.id);
+          return [{ ...recommendation, supportingAchievementIds }];
+        },
       );
-      if (
-        result.skillRecommendations.some((recommendation) =>
-          recommendation.supportingAchievementIds.some(
-            (id) =>
-              !selectedIds.has(id) ||
-              !skillById
-                .get(recommendation.skillId)
-                ?.evidenceAchievementIds.includes(id),
-          ),
-        )
-      ) {
-        throw new AiProviderError(
-          "Gemini recommended a skill without selected supporting resume evidence.",
-          "INVALID_RESPONSE",
-        );
-      }
-      return result;
+
+      return {
+        ...result,
+        skillRecommendations,
+      };
     },
     async draftResume(input: ResumeDraftInput): Promise<ResumeDraftResult> {
       ResumeDraftInputSchema.parse(input);

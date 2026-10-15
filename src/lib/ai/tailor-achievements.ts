@@ -135,6 +135,44 @@ function normalizeTerm(value: string): string {
     .trim();
 }
 
+function containsTerm(text: string, term: string): boolean {
+  const normalizedText = normalizeTerm(text);
+  const normalizedTerm = normalizeTerm(term);
+  return (
+    normalizedTerm.length > 0 &&
+    ` ${normalizedText} `.includes(` ${normalizedTerm} `)
+  );
+}
+
+function ensureSupportedTerms(
+  proposedText: string,
+  source: AchievementEvidence,
+  analyzedTerms: string[],
+): { text: string; addedTerms: string[] } {
+  const linkedSkills = new Set(
+    (source.supportedSkills ?? []).map(normalizeTerm),
+  );
+  const missingTerms = analyzedTerms
+    .filter((term) => {
+      const normalized = normalizeTerm(term);
+      const wordCount = normalized.split(" ").filter(Boolean).length;
+      const supported =
+        containsTerm(source.text, term) || linkedSkills.has(normalized);
+      return supported && wordCount <= 6 && !containsTerm(proposedText, term);
+    })
+    .slice(0, 2);
+
+  if (missingTerms.length === 0) {
+    return { text: proposedText, addedTerms: [] };
+  }
+
+  const trimmed = proposedText.trim().replace(/[.!?]+$/, "");
+  return {
+    text: `${trimmed}, with experience in ${missingTerms.join(" and ")}.`,
+    addedTerms: missingTerms,
+  };
+}
+
 function getAnalyzedTerms(analysis: JobAnalysisResult): string[] {
   return [
     ...analysis.requiredQualifications,
@@ -280,20 +318,24 @@ export function createTailoringResponse(args: {
         "INVALID_AI_OUTPUT",
       );
     }
-    const original = normalizeTerm(source.text);
-    const proposed = normalizeTerm(generated.text);
-    const addedTerms = terms.filter((term) => {
-      const normalized = normalizeTerm(term);
-      return proposed.includes(normalized) && !original.includes(normalized);
-    });
+    const { text: proposedText, addedTerms: guaranteedTerms } =
+      ensureSupportedTerms(generated.text, source, terms);
+    const addedTerms = terms.filter(
+      (term) =>
+        containsTerm(proposedText, term) && !containsTerm(source.text, term),
+    );
+    for (const term of guaranteedTerms) {
+      if (!addedTerms.includes(term)) addedTerms.push(term);
+    }
 
     return {
       achievementId: source.id,
       originalText: source.text,
-      proposedText: generated.text,
-      rationale:
-        generated.rationale ||
-        "Review the source wording above to confirm this job-aligned phrasing is accurate.",
+      proposedText,
+      rationale: guaranteedTerms.length
+        ? "Any added JD terms are supported by skills linked to this source achievement."
+        : generated.rationale ||
+          "Review the source wording above to confirm this job-aligned phrasing is accurate.",
       addedTerms,
     };
   });
