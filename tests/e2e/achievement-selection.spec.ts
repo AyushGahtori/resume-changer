@@ -21,6 +21,16 @@ const skillId = "skill-infrastructure-as-code";
 const selectionResponse = {
   mode: "ai",
   budget: { availableLines: 30, usedLines: 9 },
+  requirementEvidence: [
+    {
+      requirement: "AWS provisioning",
+      availableAchievementIds: [cloudAchievementId],
+    },
+    {
+      requirement: "Standardize deployment checks",
+      availableAchievementIds: [cloudAchievementId],
+    },
+  ],
   recommendations: {
     selections: [
       {
@@ -138,6 +148,14 @@ test("analyzes a saved JD, retries point suggestions, and allows grounded overri
   });
   await expect(recommendation).toContainText("Requirement coverage");
   await expect(recommendation).toContainText("AWS provisioning");
+  await expect(recommendation).toContainText("2 / 2 supported");
+  await expect(
+    recommendation.getByRole("progressbar", {
+      name: "Requirements covered by selected achievements",
+    }),
+  ).toHaveAttribute("value", "2");
+  await recommendation.getByText("AWS provisioning").click();
+  await expect(recommendation).toContainText("Example Cloud Labs");
   await expect(
     page
       .locator(".generation-point")
@@ -162,7 +180,16 @@ test("analyzes a saved JD, retries point suggestions, and allows grounded overri
   });
   await expect(suggestedSkill).toBeChecked();
   await page.getByLabel(`Select achievement ${cloudAchievementId}`).uncheck();
+  await expect(recommendation).toContainText("0 / 2 supported");
+  await expect(recommendation).toContainText("Not selected");
   await expect(suggestedSkill).toBeDisabled();
   await expect(suggestedSkill).not.toBeChecked();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(recommendation).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
   expect(attempts).toBe(2);
 });

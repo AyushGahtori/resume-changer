@@ -39,6 +39,12 @@ type Candidate = {
   text: string;
 };
 
+type ScoredCandidate = {
+  candidate: Candidate;
+  matches: Map<string, number>;
+  score: number;
+};
+
 export type SelectionBudget = {
   availableLines: number;
   usedLines: number;
@@ -48,6 +54,10 @@ export type SelectionRecommendation = {
   recommendations: AchievementSelectionResult;
   mode: "ai" | "local-fallback";
   budget: SelectionBudget;
+  requirementEvidence: Array<{
+    requirement: string;
+    availableAchievementIds: string[];
+  }>;
   notice?: string;
 };
 
@@ -93,23 +103,7 @@ export function estimateAchievementContentBudget(
   const listedSkills = library.skills.filter(
     (skill) => skill.isListedOnCurrentResume,
   );
-  const skillGroups = new Map<string, string[]>();
-  for (const skill of listedSkills) {
-    const category = skill.category?.trim() || "Other";
-    skillGroups.set(category, [
-      ...(skillGroups.get(category) ?? []),
-      skill.name,
-      ...skill.aliases.slice(0, 1),
-    ]);
-  }
-  const skillsLines =
-    skillGroups.size > 0
-      ? 1 +
-        [...skillGroups.values()].reduce(
-          (total, names) => total + Math.max(1, wrappedLines(names.join(", "))),
-          0,
-        )
-      : 0;
+  const skillsLines = listedSkills.length > 0 ? 3 : 0;
   const credentialLines =
     library.credentials.length > 0 ? 1 + library.credentials.length : 0;
   const fixed = fixedLines + educationLines + skillsLines + credentialLines;
@@ -195,6 +189,26 @@ function requirementMatchScore(evidence: string, requirement: string) {
     return 1;
   }
 
+  const technologies = ["python", "go", "c++", "java", "typescript"];
+  const mentioned = technologies.filter((name) =>
+    new RegExp(`(^|[^a-z+#])${name.replace(/[+]/g, "\\+")}($|[^a-z+#])`).test(
+      normalizedRequirement,
+    ),
+  );
+  if (mentioned.length > 0) {
+    return mentioned.some((name) =>
+      new RegExp(`(^|[^a-z+#])${name.replace(/[+]/g, "\\+")}($|[^a-z+#])`).test(
+        normalizedEvidence,
+      ),
+    )
+      ? 1
+      : 0;
+  }
+
+  if (normalizedRequirement.includes("feature store")) {
+    return /feature stores?\b/.test(normalizedEvidence) ? 1 : 0;
+  }
+
   const tokens = [...new Set(normalizedTokens(requirement))];
   if (tokens.length === 0) return 0;
   const evidenceTokens = new Set(normalizedTokens(evidence));
@@ -220,13 +234,7 @@ function buildCandidates(input: AchievementSelectionInput): Candidate[] {
       .flatMap((skill) => [skill.name, ...skill.aliases]);
     return {
       evidence,
-      text: [
-        evidence.text,
-        ...evidence.tags,
-        evidence.groupTitle,
-        evidence.groupSubtitle ?? "",
-        ...linkedSkills,
-      ].join(" "),
+      text: [evidence.text, ...evidence.tags, ...linkedSkills].join(" "),
     };
   });
 }
@@ -255,7 +263,7 @@ function budgetCost(candidates: Candidate[]) {
   return lines;
 }
 
-function scoredCandidates(input: AchievementSelectionInput) {
+function scoredCandidates(input: AchievementSelectionInput): ScoredCandidate[] {
   const required = input.analysis.requiredQualifications;
   const responsibilities = input.analysis.responsibilities;
   const preferred = input.analysis.preferredQualifications;
@@ -312,36 +320,101 @@ function emptyResult(summary: string): AchievementSelectionResult {
   };
 }
 
-function selectWithinBudget(
-  candidates: Candidate[],
+function selectBalancedCandidates(
+  ranked: ScoredCandidate[],
   availableLines: number,
-  initialSelected: Candidate[] = [],
 ): Candidate[] {
-  const selected = [...initialSelected];
-  const added: Candidate[] = [];
-  for (const candidate of candidates) {
+  const selected: Candidate[] = [];
+  const groupKey = (item: ScoredCandidate) =>
+    `${item.candidate.evidence.section}:${item.candidate.evidence.groupId}`;
+  const groups = new Map<string, ScoredCandidate[]>();
+  for (const item of ranked) {
+    const key = groupKey(item);
+    groups.set(key, [...(groups.get(key) ?? []), item]);
+  }
+  const byStrength = (left: ScoredCandidate[], right: ScoredCandidate[]) =>
+    Math.max(...right.map((item) => item.score)) -
+    Math.max(...left.map((item) => item.score));
+  const experienceGroups = [...groups.values()]
+    .filter((items) => items[0].candidate.evidence.section === "experience")
+    .sort(byStrength);
+  const projectGroups = [...groups.values()]
+    .filter((items) => items[0].candidate.evidence.section === "projects")
+    .sort(byStrength);
+
+  const addIfFits = (item: ScoredCandidate) => {
     if (
-      selected.some(({ evidence }) => evidence.id === candidate.evidence.id)
+      selected.some(
+        ({ evidence }) => evidence.id === item.candidate.evidence.id,
+      )
     ) {
-      continue;
+      return false;
     }
-    const next = [...selected, candidate];
-    if (budgetCost(next) <= availableLines) {
-      selected.push(candidate);
-      added.push(candidate);
+    if (budgetCost([...selected, item.candidate]) > availableLines)
+      return false;
+    selected.push(item.candidate);
+    return true;
+  };
+
+  for (const items of [...experienceGroups, ...projectGroups]) {
+    const best = [...items].sort((left, right) => right.score - left.score);
+    for (const item of best) {
+      if (addIfFits(item)) break;
     }
   }
-  return added;
+
+  while (true) {
+    const covered = new Set(
+      selected.flatMap((candidate) =>
+        Array.from(
+          ranked
+            .find(
+              (item) => item.candidate.evidence.id === candidate.evidence.id,
+            )
+            ?.matches.keys() ?? [],
+        ),
+      ),
+    );
+    const groupCounts = new Map<string, number>();
+    for (const candidate of selected) {
+      const key = `${candidate.evidence.section}:${candidate.evidence.groupId}`;
+      groupCounts.set(key, (groupCounts.get(key) ?? 0) + 1);
+    }
+    const next = ranked
+      .filter(
+        (item) =>
+          !selected.some(
+            ({ evidence }) => evidence.id === item.candidate.evidence.id,
+          ) && budgetCost([...selected, item.candidate]) <= availableLines,
+      )
+      .map((item) => {
+        const count = groupCounts.get(groupKey(item)) ?? 0;
+        const newCoverage = [...item.matches.entries()].reduce(
+          (sum, [requirement, score]) =>
+            sum + (covered.has(requirement) ? 0 : score * 2),
+          0,
+        );
+        const target = item.candidate.evidence.section === "projects" ? 2 : 4;
+        return {
+          item,
+          value:
+            item.score +
+            newCoverage +
+            (count === 0 ? 3 : 0) -
+            Math.max(0, count - target + 1) * 4,
+        };
+      })
+      .sort((left, right) => right.value - left.value)[0];
+    if (!next || !addIfFits(next.item)) break;
+  }
+  return selected;
 }
 
 function makeFallbackResult(
   input: AchievementSelectionInput,
 ): AchievementSelectionResult {
   const ranked = scoredCandidates(input);
-  const selected = selectWithinBudget(
-    ranked.map(({ candidate }) => candidate),
-    input.contentBudgetLines,
-  );
+  const selected = selectBalancedCandidates(ranked, input.contentBudgetLines);
   const selectedIds = new Set(selected.map(({ evidence }) => evidence.id));
   const coverageRequirements = getRequirements(input.analysis);
 
@@ -425,34 +498,32 @@ function normalizeAiResult(
     aiCoverage.set(coverage.requirement, ids);
   }
 
-  const rank = (candidate: Candidate) => {
-    let coverageScore = 0;
-    for (const requirement of input.analysis.requiredQualifications) {
-      if (aiCoverage.get(requirement)?.has(candidate.evidence.id)) {
-        coverageScore += 8;
-      }
-    }
-    for (const requirement of input.analysis.responsibilities) {
-      if (aiCoverage.get(requirement)?.has(candidate.evidence.id)) {
-        coverageScore += 4;
-      }
-    }
-    for (const requirement of input.analysis.preferredQualifications) {
-      if (aiCoverage.get(requirement)?.has(candidate.evidence.id)) {
-        coverageScore += 2;
-      }
-    }
-    const modelConfidence =
-      result.selections.find(
-        (item) => item.achievementId === candidate.evidence.id,
-      )?.confidence ?? 0;
-    return coverageScore + modelConfidence;
-  };
-
-  const aiRanked = [...uniqueSelections.values()].sort(
-    (left, right) => rank(right) - rank(left),
+  const scoredById = new Map(
+    rankedCandidates.map((item) => [item.candidate.evidence.id, item]),
   );
-  const selected = selectWithinBudget(aiRanked, input.contentBudgetLines);
+  const eligible = candidates.flatMap((candidate) => {
+    const local = scoredById.get(candidate.evidence.id);
+    const model = uniqueSelections.has(candidate.evidence.id)
+      ? result.selections.find(
+          (item) =>
+            item.achievementId === candidate.evidence.id &&
+            item.section === candidate.evidence.section,
+        )
+      : undefined;
+    if (!local && !model) return [];
+    const matches = local?.matches ?? new Map<string, number>();
+    const verifiedModelCoverage = [...aiCoverage.entries()].filter(
+      ([requirement, ids]) =>
+        ids.has(candidate.evidence.id) &&
+        requirementMatchScore(candidate.text, requirement) > 0,
+    );
+    const score =
+      (local?.score ?? 0) +
+      (model?.confidence ?? 0) * 5 +
+      verifiedModelCoverage.length * 3;
+    return [{ candidate, matches, score }];
+  });
+  const selected = selectBalancedCandidates(eligible, input.contentBudgetLines);
   const selectedIds = new Set(selected.map(({ evidence }) => evidence.id));
   const matchedSelectionIds = new Set(
     result.selections
@@ -465,33 +536,6 @@ function normalizeAiResult(
       .map((item) => item.achievementId),
   );
 
-  const fallbackRanked = rankedCandidates
-    .filter(({ candidate }) => !selectedIds.has(candidate.evidence.id))
-    .map(({ candidate, score, matches }) => {
-      let coverageGain = 0;
-      for (const [requirement, matchScore] of matches) {
-        if (
-          input.analysis.requiredQualifications.includes(requirement) &&
-          !selected.some((item) =>
-            requirementMatchScore(item.text, requirement),
-          )
-        ) {
-          coverageGain += 8 * matchScore;
-        } else if (
-          !selected.some((item) =>
-            requirementMatchScore(item.text, requirement),
-          )
-        ) {
-          coverageGain += matchScore;
-        }
-      }
-      return { candidate, value: coverageGain + score / 10 };
-    })
-    .sort((left, right) => right.value - left.value)
-    .map(({ candidate }) => candidate);
-  selected.push(
-    ...selectWithinBudget(fallbackRanked, input.contentBudgetLines, selected),
-  );
   const finalSelectedIds = new Set(selected.map(({ evidence }) => evidence.id));
   const byId = new Map(
     result.selections.map((item) => [item.achievementId, item]),
@@ -521,7 +565,14 @@ function normalizeAiResult(
         .map(({ candidate }) => candidate.evidence.id);
       const coveredByAchievementIds = [
         ...new Set([
-          ...[...modelIds].filter((id) => finalSelectedIds.has(id)),
+          ...[...modelIds].filter(
+            (id) =>
+              finalSelectedIds.has(id) &&
+              requirementMatchScore(
+                candidateById.get(id)?.text ?? "",
+                requirement,
+              ) > 0,
+          ),
           ...deterministicIds,
         ]),
       ];
@@ -607,25 +658,54 @@ export async function recommendAchievements(args: {
   const recommendations = aiResult
     ? normalizeAiResult(args.input, aiResult)
     : makeFallbackResult(args.input);
-  const selectedCandidates = buildCandidates(args.input).filter((candidate) =>
+  const allCandidates = buildCandidates(args.input);
+  const selectedCandidates = allCandidates.filter((candidate) =>
     recommendations.selections.some(
       (selection) => selection.achievementId === candidate.evidence.id,
     ),
   );
   const usedLines = budgetCost(selectedCandidates);
   const isFallback = !aiResult;
-  const notice = isFallback
+  const relevantGroups = new Set(
+    scoredCandidates(args.input).map(
+      ({ candidate }) =>
+        `${candidate.evidence.section}:${candidate.evidence.groupId}`,
+    ),
+  );
+  const chosenGroups = new Set(
+    selectedCandidates.map(
+      ({ evidence }) => `${evidence.section}:${evidence.groupId}`,
+    ),
+  );
+  const sourceNotice = [...relevantGroups].some(
+    (group) => !chosenGroups.has(group),
+  )
+    ? "The estimated page budget left some relevant source groups out. Review the selected points."
+    : undefined;
+  const providerNotice = isFallback
     ? aiFailure
       ? getFallbackNotice(aiFailure)
       : "Showing local matches because the AI returned no recommendations."
     : usedLines > availableLines
       ? "Recommendations exceeded the estimated content budget and were trimmed."
       : undefined;
+  const requirementEvidence = getRequirements(args.input.analysis).map(
+    (requirement) => ({
+      requirement,
+      availableAchievementIds: allCandidates
+        .filter((candidate) =>
+          requirementMatchScore(candidate.text, requirement),
+        )
+        .map(({ evidence }) => evidence.id),
+    }),
+  );
 
   return {
     recommendations,
     mode: isFallback ? "local-fallback" : "ai",
     budget: { availableLines, usedLines },
-    notice,
+    requirementEvidence,
+    notice:
+      [providerNotice, sourceNotice].filter(Boolean).join(" ") || undefined,
   };
 }

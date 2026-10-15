@@ -637,6 +637,57 @@ export default function ResumeGenerator({ library, source }: Props) {
     recommendation?.recommendations.skillRecommendations.map(
       (item) => item.skillId,
     ) ?? [];
+  const availableEvidence = new Map(
+    recommendation?.requirementEvidence?.map((item) => [
+      item.requirement,
+      item.availableAchievementIds,
+    ]) ?? [],
+  );
+  const coverageCategories = new Map<string, string>();
+  for (const [title, requirements] of [
+    ["Required qualifications", analysis?.requiredQualifications ?? []],
+    ["Responsibilities", analysis?.responsibilities ?? []],
+    ["Preferred qualifications", analysis?.preferredQualifications ?? []],
+  ] as const) {
+    for (const requirement of requirements) {
+      if (!coverageCategories.has(requirement)) {
+        coverageCategories.set(requirement, title);
+      }
+    }
+  }
+  const coverageItems =
+    recommendation?.recommendations.requirementCoverage.map((item) => {
+      const availableIds =
+        availableEvidence.get(item.requirement) ?? item.coveredByAchievementIds;
+      return {
+        requirement: item.requirement,
+        category: coverageCategories.get(item.requirement) ?? "Other signals",
+        availableIds,
+        selectedEvidenceIds: availableIds.filter((id) =>
+          selectedIds.includes(id),
+        ),
+      };
+    }) ?? [];
+  const coveredCount = coverageItems.filter(
+    (item) => item.selectedEvidenceIds.length > 0,
+  ).length;
+  const visibleProposals =
+    tailoring?.proposals.filter((proposal) =>
+      selectedIds.includes(proposal.achievementId),
+    ) ?? [];
+  const bulkApprovableIds = visibleProposals
+    .filter(
+      (proposal) =>
+        (tailoredText[proposal.achievementId] ?? proposal.proposedText) ===
+        proposal.proposedText,
+    )
+    .map((proposal) => proposal.achievementId);
+  const hasUnapprovedBulkProposals = bulkApprovableIds.some(
+    (id) => !approvedTailoredIds.includes(id),
+  );
+  const requestedSkillCount =
+    result?.metadata.selectedSkillIds?.length ??
+    library.skills.filter((skill) => skill.isListedOnCurrentResume).length;
   const hasRecommendationEdits =
     JSON.stringify([...selectedIds].sort()) !==
       JSON.stringify([...recommendedIds].sort()) ||
@@ -813,31 +864,73 @@ export default function ResumeGenerator({ library, source }: Props) {
                   </p>
                 )}
                 <div className="selection-coverage">
-                  <h4>Requirement coverage</h4>
-                  {recommendation.recommendations.requirementCoverage.length ? (
-                    <ul>
-                      {recommendation.recommendations.requirementCoverage.map(
-                        ({ requirement, coveredByAchievementIds }) => {
-                          const currentIds = coveredByAchievementIds.filter(
-                            (id) => selectedIds.includes(id),
-                          );
-                          return (
-                            <li key={requirement}>
-                              <span
-                                className={
-                                  currentIds.length
-                                    ? "coverage-status is-covered"
-                                    : "coverage-status"
-                                }
-                              >
-                                {currentIds.length ? "Covered" : "Uncovered"}
-                              </span>
-                              <span>{requirement}</span>
-                            </li>
-                          );
-                        },
-                      )}
-                    </ul>
+                  <div className="selection-coverage-heading">
+                    <h4>Requirement coverage</h4>
+                    <strong>
+                      {coveredCount} / {coverageItems.length} supported
+                    </strong>
+                  </div>
+                  {coverageItems.length ? (
+                    <>
+                      <progress
+                        aria-label="Requirements covered by selected achievements"
+                        max={coverageItems.length}
+                        value={coveredCount}
+                      />
+                      {[
+                        ...new Set(coverageItems.map((item) => item.category)),
+                      ].map((category) => (
+                        <div className="coverage-category" key={category}>
+                          <h5>{category}</h5>
+                          <ul>
+                            {coverageItems
+                              .filter((item) => item.category === category)
+                              .map((item) => {
+                                const status = item.selectedEvidenceIds.length
+                                  ? "Covered"
+                                  : item.availableIds.length
+                                    ? "Not selected"
+                                    : "No match found";
+                                const evidenceIds = item.selectedEvidenceIds
+                                  .length
+                                  ? item.selectedEvidenceIds
+                                  : item.availableIds;
+                                return (
+                                  <li key={item.requirement}>
+                                    <details>
+                                      <summary>
+                                        <span
+                                          className={
+                                            status === "Covered"
+                                              ? "coverage-status is-covered"
+                                              : "coverage-status"
+                                          }
+                                        >
+                                          {status}
+                                        </span>
+                                        <span>{item.requirement}</span>
+                                      </summary>
+                                      <p>
+                                        {evidenceIds.length
+                                          ? `${item.selectedEvidenceIds.length ? "Selected evidence" : "Available evidence"}: ${evidenceIds
+                                              .map((id) => {
+                                                const source =
+                                                  pointById.get(id);
+                                                return source
+                                                  ? `${source.group.title}${source.group.subtitle ? `, ${source.group.subtitle}` : ""}: ${source.point.text}`
+                                                  : id;
+                                              })
+                                              .join("; ")}`
+                                          : "No supporting achievement was identified in the enabled library."}
+                                      </p>
+                                    </details>
+                                  </li>
+                                );
+                              })}
+                          </ul>
+                        </div>
+                      ))}
+                    </>
                   ) : (
                     <p>
                       No explicit requirements or responsibilities were
@@ -870,7 +963,7 @@ export default function ResumeGenerator({ library, source }: Props) {
                                 selectedSkillIds?.includes(skill.id) ?? false
                               }
                               disabled={!hasSupport}
-                              onChange={(event) =>
+                              onChange={(event) => {
                                 setSelectedSkillIds((current) => {
                                   const base =
                                     current ??
@@ -882,8 +975,12 @@ export default function ResumeGenerator({ library, source }: Props) {
                                   return event.target.checked
                                     ? [...new Set([...base, skill.id])]
                                     : base.filter((id) => id !== skill.id);
-                                })
-                              }
+                                });
+                                clearPdfOutput();
+                                setResult(null);
+                                setRequestError("");
+                                setCopyMessage("");
+                              }}
                               type="checkbox"
                             />
                             <span>
@@ -935,6 +1032,32 @@ export default function ResumeGenerator({ library, source }: Props) {
                     }{" "}
                     approved
                   </span>
+                </div>
+                <div className="guided-tailor-actions">
+                  <button
+                    disabled={!hasUnapprovedBulkProposals}
+                    onClick={() => {
+                      setApprovedTailoredIds((current) => [
+                        ...new Set([...current, ...bulkApprovableIds]),
+                      ]);
+                      clearPdfOutput();
+                      setResult(null);
+                    }}
+                    type="button"
+                  >
+                    Approve all unchanged
+                  </button>
+                  <button
+                    disabled={approvedTailoredIds.length === 0}
+                    onClick={() => {
+                      setApprovedTailoredIds([]);
+                      clearPdfOutput();
+                      setResult(null);
+                    }}
+                    type="button"
+                  >
+                    Revoke all
+                  </button>
                 </div>
                 <p className="guided-tailor-note">
                   Review each change. Only approved wording for selected points
@@ -1250,6 +1373,17 @@ export default function ResumeGenerator({ library, source }: Props) {
                   {result.metadata.selectedAchievementIds.length === 1
                     ? ""
                     : "s"}
+                  {" · "}
+                  {result.metadata.renderedSkillIds.length} skills shown
+                  {requestedSkillCount >
+                    result.metadata.renderedSkillIds.length && (
+                    <>
+                      {" · "}
+                      {requestedSkillCount -
+                        result.metadata.renderedSkillIds.length}{" "}
+                      omitted to keep two rows
+                    </>
+                  )}
                 </p>
                 {outputView === "pdf" && pdfUrl ? (
                   <div className="pdf-preview-workspace">

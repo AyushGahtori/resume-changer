@@ -52,6 +52,19 @@ describe("resume LaTeX renderer", () => {
     );
   });
 
+  it("keeps dense skills to two short rows and prioritizes JD terms", () => {
+    const output = render({
+      jobDescription:
+        "Build AWS platform services with Python and Infrastructure as Code.",
+    });
+    const rows = output.match(/\\ResumeSkillGroup\{[^\n]+/g) ?? [];
+
+    expect(rows).toHaveLength(2);
+    expect(output).toContain("\\ResumeSkillGroup{Cloud}{Amazon Web Services}");
+    expect(rows.every((row) => row.length < 110)).toBe(true);
+    expect(output).not.toContain("\\ResumeSkillGroup{Frontend}");
+  });
+
   it("keeps long education details and descriptions in separate flowing blocks", () => {
     const copy = structuredClone(library);
     copy.profile.education[0] = {

@@ -79,6 +79,7 @@ describe("manual resume generation", () => {
       roleTitle: "Platform Engineer",
       jobUrl: "https://jobs.example/platform",
       selectedAchievementIds: [firstPoint.id],
+      renderedSkillIds: expect.any(Array),
     });
     expect(JSON.stringify(result)).not.toContain(validRequest.jobDescription);
   });
@@ -123,6 +124,30 @@ describe("manual resume generation", () => {
     expect(result.metadata.selectedSkillIds).toEqual([
       "skill-infrastructure-as-code",
     ]);
+  });
+
+  it("sends the active JD into two-row skill selection", () => {
+    const result = createManualGeneration(library, {
+      ...validRequest,
+      jobDescription: "Build reliable AWS services using Python.",
+      selectedAchievementIds: [
+        firstPoint.id,
+        "achievement-fieldnotes-geospatial-search",
+      ],
+      selectedSkillIds: [
+        ...library.skills
+          .filter((skill) => skill.isListedOnCurrentResume)
+          .map((skill) => skill.id),
+        "skill-python",
+      ],
+    });
+    const rows = result.latex.match(/\\ResumeSkillGroup\{[^\n]+/g) ?? [];
+    expect(rows).toHaveLength(2);
+    expect(result.latex).toContain("Amazon Web Services");
+    expect(result.latex).toContain("Python");
+    expect(result.metadata.renderedSkillIds).toEqual(
+      expect.arrayContaining(["skill-aws", "skill-python"]),
+    );
   });
 
   it("rejects an unlisted skill without selected evidence and unknown skills", () => {

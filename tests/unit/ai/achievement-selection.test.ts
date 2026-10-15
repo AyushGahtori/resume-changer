@@ -333,4 +333,177 @@ describe("AI achievement selection service", () => {
 
     expect(sections).toEqual(new Set(["experience", "projects"]));
   });
+
+  it("balances two relevant jobs and a project while reporting honest requirement evidence", async () => {
+    const base = makeInput();
+    const template = base.achievements[0];
+    const achievements: AchievementSelectionInput["achievements"] = [
+      {
+        ...template,
+        id: "achievement-ml-api",
+        text: "Built distributed machine learning infrastructure with Python services.",
+        skillIds: ["skill-python"],
+        tags: ["distributed systems"],
+        groupId: "job-cloud-one",
+        groupTitle: "Platform Engineer",
+      },
+      {
+        ...template,
+        id: "achievement-ml-observability",
+        text: "Improved distributed machine learning infrastructure reliability.",
+        skillIds: [],
+        tags: [],
+        groupId: "job-cloud-one",
+        groupTitle: "Platform Engineer",
+      },
+      {
+        ...template,
+        id: "achievement-feature-store",
+        text: "Modernized a feature store for faster feature deployment.",
+        skillIds: [],
+        tags: [],
+        groupId: "job-ml-two",
+        groupTitle: "ML Engineer",
+      },
+      {
+        ...template,
+        id: "achievement-project-queue",
+        text: "Built a distributed model-serving queue for machine learning workloads.",
+        section: "projects",
+        skillIds: [],
+        tags: [],
+        groupId: "project-model-queue",
+        groupTitle: "Model Queue",
+      },
+    ];
+    const fixtureAnalysis: JobAnalysisResult = {
+      ...analysis,
+      requiredQualifications: [
+        "Familiarity or ability to learn Python, Go, or C++",
+        "Availability during coordination hours in Pacific Time",
+      ],
+      responsibilities: [
+        "Modernize feature store for faster feature deployment",
+        "Build distributed machine learning infrastructure",
+      ],
+      preferredQualifications: [],
+      toolsAndPlatforms: [],
+      domainConcepts: [],
+      atsTerms: [],
+      terminology: [],
+    };
+    const input = makeInput({
+      jobDescription:
+        "Example ML platform role with Python and feature store work.",
+      analysis: fixtureAnalysis,
+      achievements,
+      skills: [
+        {
+          id: "skill-python",
+          name: "Python",
+          aliases: [],
+          isListedOnCurrentResume: true,
+          evidenceAchievementIds: ["achievement-ml-api"],
+        },
+      ],
+      contentBudgetLines: 22,
+    });
+    const response = await recommendAchievements({
+      input,
+      selectWithAi: async () =>
+        aiResult(input, ["achievement-ml-api", "achievement-ml-observability"]),
+    });
+    const selected = response.recommendations.selections.map(
+      (item) => item.achievementId,
+    );
+    expect(selected).toContain("achievement-ml-api");
+    expect(selected).toContain("achievement-feature-store");
+    expect(selected).toContain("achievement-project-queue");
+    expect(response.budget).toEqual({ availableLines: 22, usedLines: 18 });
+    expect(response.requirementEvidence).toContainEqual({
+      requirement: "Familiarity or ability to learn Python, Go, or C++",
+      availableAchievementIds: ["achievement-ml-api"],
+    });
+    expect(response.requirementEvidence).toContainEqual({
+      requirement: "Availability during coordination hours in Pacific Time",
+      availableAchievementIds: [],
+    });
+    expect(response.recommendations.requirementCoverage).toContainEqual({
+      requirement: "Modernize feature store for faster feature deployment",
+      coveredByAchievementIds: ["achievement-feature-store"],
+    });
+  });
+
+  it("keeps a relevant project out when its heading and point do not fit the budget", async () => {
+    const base = makeInput();
+    const job = {
+      ...base.achievements[0],
+      id: "achievement-platform-job",
+      text: "Built AWS platform infrastructure.",
+      section: "experience" as const,
+    };
+    const project = {
+      ...base.achievements[0],
+      id: "achievement-platform-project",
+      text: "Built AWS platform infrastructure in a separate project.",
+      section: "projects" as const,
+      groupId: "project-platform",
+    };
+    const input = makeInput({
+      achievements: [job, project],
+      contentBudgetLines: 6,
+      analysis: {
+        ...analysis,
+        requiredQualifications: ["AWS platform infrastructure"],
+        responsibilities: [],
+        preferredQualifications: [],
+        toolsAndPlatforms: [],
+        domainConcepts: [],
+        atsTerms: [],
+        terminology: [],
+      },
+    });
+    const response = await recommendAchievements({
+      input,
+      selectWithAi: async () => aiResult(input, [job.id]),
+    });
+    expect(response.recommendations.selections).toHaveLength(1);
+    expect(response.budget.usedLines).toBeLessThanOrEqual(6);
+    expect(response.notice).toContain("page budget");
+  });
+
+  it("does not treat a generic feature deployment as feature-store evidence", async () => {
+    const base = makeInput();
+    const input = makeInput({
+      achievements: [
+        {
+          ...base.achievements[0],
+          id: "achievement-feature-deployment",
+          text: "Improved feature deployment for a web application.",
+          tags: [],
+          skillIds: [],
+        },
+      ],
+      skills: [],
+      analysis: {
+        ...analysis,
+        requiredQualifications: ["Modernize feature store"],
+        responsibilities: [],
+        preferredQualifications: [],
+        toolsAndPlatforms: [],
+        domainConcepts: [],
+        atsTerms: [],
+        terminology: [],
+      },
+    });
+    const response = await recommendAchievements({
+      input,
+      selectWithAi: async () => aiResult(input),
+    });
+    expect(response.requirementEvidence[0].availableAchievementIds).toEqual([]);
+    expect(response.recommendations.requirementCoverage[0]).toEqual({
+      requirement: "Modernize feature store",
+      coveredByAchievementIds: [],
+    });
+  });
 });

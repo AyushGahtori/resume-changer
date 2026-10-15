@@ -109,6 +109,17 @@ export const AchievementSelectionResponseSchema = z
   .object({
     recommendations: AchievementSelectionResultSchema,
     mode: z.enum(["ai", "local-fallback"]),
+    requirementEvidence: z
+      .array(
+        z
+          .object({
+            requirement: shortText,
+            availableAchievementIds: z.array(StableIdSchema).max(500),
+          })
+          .strict(),
+      )
+      .max(100)
+      .optional(),
     budget: z
       .object({
         availableLines: z.number().int().min(0).max(60),

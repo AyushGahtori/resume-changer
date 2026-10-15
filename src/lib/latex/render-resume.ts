@@ -17,6 +17,7 @@ const RenderInputSchema = z
     library: ResumeLibrarySchema,
     selectedAchievementIds: z.array(StableIdSchema),
     selectedSkillIds: z.array(StableIdSchema).optional(),
+    jobDescription: z.string().max(30_000).optional(),
     achievementTextOverrides: z
       .array(
         z
@@ -227,6 +228,68 @@ function groupSkills(skills: Skill[]): Array<[string, Skill[]]> {
   return [...groups.entries()];
 }
 
+const MAX_SKILL_ROW_CHARACTERS = 72;
+
+export function selectSkillsForResume(
+  skills: Skill[],
+  selectedPoints: AchievementPoint[],
+  jobDescription = "",
+): Skill[] {
+  const normalizedJd = ` ${jobDescription
+    .toLocaleLowerCase()
+    .replace(/[^a-z0-9+#]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()} `;
+  const pointSkillIds = new Set(
+    selectedPoints.flatMap((point) => point.skillIds),
+  );
+  const score = (skill: Skill) => {
+    const terms = [skill.name, ...skill.aliases];
+    const matchesJd = terms.some((term) => {
+      const normalized = term
+        .toLocaleLowerCase()
+        .replace(/[^a-z0-9+#]+/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+      return normalized.length > 1 && normalizedJd.includes(` ${normalized} `);
+    });
+    return (
+      (matchesJd ? 100 : 0) +
+      (pointSkillIds.has(skill.id) ? 10 : 0) +
+      (skill.isListedOnCurrentResume ? 1 : 0)
+    );
+  };
+  const groups = groupSkills(skills)
+    .map(([category, group], index) => ({
+      category,
+      group: [...group].sort((left, right) => score(right) - score(left)),
+      index,
+      strength: Math.max(...group.map(score)),
+    }))
+    .sort(
+      (left, right) =>
+        right.strength - left.strength || left.index - right.index,
+    );
+  const selected: Skill[] = [];
+  for (const { category, group } of groups) {
+    if (
+      new Set(selected.map((skill) => skill.category?.trim() || "Other"))
+        .size >= 2
+    ) {
+      break;
+    }
+    let characters = category.length + 2;
+    for (const skill of group) {
+      const next =
+        skill.name.length + (characters > category.length + 2 ? 2 : 0);
+      if (characters + next > MAX_SKILL_ROW_CHARACTERS) continue;
+      selected.push(skill);
+      characters += next;
+    }
+  }
+  return selected;
+}
+
 function renderSkills(skills: Skill[]): string {
   if (skills.length === 0) return "";
   const rows = groupSkills(skills).map(
@@ -235,7 +298,7 @@ function renderSkills(skills: Skill[]): string {
         .map((skill) => escapeLatexText(skill.name))
         .join(", ")}}`,
   );
-  return `\\section*{Technical Skills}\n{\\small\n${rows.join("\n")}\n}`;
+  return `\\section*{Technical Skills}\n{\\small\n\\begin{tabularx}{\\textwidth}{@{}X@{}}\n${rows.join("\n")}\n\\end{tabularx}\n}`;
 }
 
 function renderCredentials(library: ResumeLibrary): string {
@@ -274,6 +337,7 @@ export type RenderResumeLatexInput = {
   library: ResumeLibrary;
   selectedAchievementIds: string[];
   selectedSkillIds?: string[];
+  jobDescription?: string;
   achievementTextOverrides?: Array<{
     achievementId: string;
     text: string;
@@ -293,6 +357,7 @@ export function renderResumeLatex(input: RenderResumeLatexInput): string {
     library,
     selectedAchievementIds,
     selectedSkillIds,
+    jobDescription,
     achievementTextOverrides = [],
     sectionOrder,
   } = parsed.data;
@@ -349,6 +414,14 @@ export function renderResumeLatex(input: RenderResumeLatexInput): string {
   const skills = chosenSkillIds.map((id) => {
     const skill = skillById.get(id);
     if (!skill) throw new ResumeRenderError(`Unknown skill ID: ${id}.`);
+    if (
+      !skill.isListedOnCurrentResume &&
+      !skill.evidenceAchievementIds.some((pointId) => selectedIds.has(pointId))
+    ) {
+      throw new ResumeRenderError(
+        `Skill "${skill.name}" needs a selected supporting achievement point.`,
+      );
+    }
     return skill;
   });
 
@@ -356,12 +429,17 @@ export function renderResumeLatex(input: RenderResumeLatexInput): string {
   const selectedById = new Map(
     selectedAchievementIds.map((id) => [id, pointById.get(id)!]),
   );
+  const compactSkills = selectSkillsForResume(
+    skills,
+    [...selectedById.values()],
+    jobDescription,
+  );
   const context = {
     library,
     selectedById,
     selectedIds: selectedAchievementIds,
     textOverrides,
-    skills,
+    skills: compactSkills,
   };
   const sections = resolvedOrder
     .map((section) => SECTION_RENDERERS[section](context))

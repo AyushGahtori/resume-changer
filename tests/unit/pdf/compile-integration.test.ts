@@ -3,6 +3,12 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import sampleLibrary from "../../../examples/sample-resume-library.json";
+import {
+  buildAchievementSelectionInput,
+  recommendAchievements,
+} from "../../../src/lib/ai/achievement-selection";
+import type { JobAnalysisResult } from "../../../src/lib/ai/contracts";
+import { createManualGeneration } from "../../../src/lib/generation/manual-generation";
 import { renderResumeLatex } from "../../../src/lib/latex/render-resume";
 import type { ResumeLibrary } from "../../../src/lib/schemas/resume-data";
 import { describe, expect, it } from "vitest";
@@ -75,6 +81,102 @@ describe.skipIf(!hasLocalToolchain)("real local PDF toolchain", () => {
 
     expect(result.pdf.subarray(0, 5).toString()).toBe("%PDF-");
     expect(result.pageCount).toBe(1);
+  }, 60_000);
+
+  it("compiles a dense skill library with only two skill rows", async () => {
+    const resumeLatex = renderResumeLatex({
+      library,
+      selectedAchievementIds: [
+        "achievement-service-capacity-design",
+        "achievement-cloud-deployment-platform",
+        "achievement-fieldnotes-geospatial-search",
+      ],
+      selectedSkillIds: [
+        ...library.skills
+          .filter((skill) => skill.isListedOnCurrentResume)
+          .map((skill) => skill.id),
+        "skill-python",
+      ],
+      jobDescription:
+        "Build AWS platform infrastructure and Python services with reliable deployments.",
+    });
+    expect(resumeLatex.match(/\\ResumeSkillGroup\{/g)).toHaveLength(2);
+
+    await warmTectonicCache(resumeLatex);
+    const result = await compileLatexToPdf(resumeLatex);
+    expect(result.pdf.subarray(0, 5).toString()).toBe("%PDF-");
+    expect(result.pageCount).toBe(1);
+  }, 60_000);
+
+  it("selects evidence across fictional jobs and a project, then compiles the generated resume", async () => {
+    const jobDescription =
+      "Build AWS cloud deployments, order workflows, and idempotent queue processing.";
+    const analysis: JobAnalysisResult = {
+      targetTitle: "Platform Engineer",
+      seniority: "Entry level",
+      requiredQualifications: [
+        "AWS environment provisioning",
+        "idempotency keys",
+      ],
+      responsibilities: ["order workflows"],
+      preferredQualifications: [],
+      toolsAndPlatforms: ["AWS"],
+      domainConcepts: ["queue processing"],
+      atsTerms: [],
+      inferredContext: [],
+      terminology: [],
+    };
+    const input = buildAchievementSelectionInput({
+      library,
+      jobDescription,
+      analysis,
+    });
+    const recommendation = await recommendAchievements({
+      input,
+      selectWithAi: async () => ({
+        selections: [
+          "achievement-cloud-deployment-platform",
+          "achievement-orders-api",
+          "achievement-queueboard-worker-model",
+        ].map((id) => ({
+          achievementId: id,
+          section: input.achievements.find((point) => point.id === id)!.section,
+          confidence: 0.9,
+          rationale: "Direct evidence in the fictional library.",
+        })),
+        requirementCoverage: [],
+        skillRecommendations: [],
+        confidence: 0.9,
+        summary: "Matched fictional platform experience.",
+      }),
+    });
+    const selectedIds = recommendation.recommendations.selections.map(
+      (item) => item.achievementId,
+    );
+    expect(selectedIds).toEqual(
+      expect.arrayContaining([
+        "achievement-cloud-deployment-platform",
+        "achievement-orders-api",
+        "achievement-queueboard-worker-model",
+      ]),
+    );
+    expect(recommendation.budget.usedLines).toBeLessThanOrEqual(
+      input.contentBudgetLines,
+    );
+
+    const generated = createManualGeneration(library, {
+      dataSource: "demo",
+      company: "Example Systems",
+      roleTitle: "Platform Engineer",
+      jobUrl: "",
+      jobDescription,
+      selectedAchievementIds: selectedIds,
+    });
+    expect(generated.latex.match(/\\ResumeSkillGroup\{/g)).toHaveLength(2);
+    await warmTectonicCache(generated.latex);
+    const pdf = await compileLatexToPdf(generated.latex);
+    expect(pdf.pdf.subarray(0, 5).toString()).toBe("%PDF-");
+    expect(pdf.pageCount).toBe(1);
   }, 60_000);
 
   it("rejects a real two-page document with the one-page diagnostic", async () => {
