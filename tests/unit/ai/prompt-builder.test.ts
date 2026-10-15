@@ -41,6 +41,7 @@ describe("versioned prompt builder", () => {
   it("keeps the approved template separate from task data and validates task inputs", () => {
     const prompt = buildAiPrompt("draftResume", {
       jobDescription: "Platform role.",
+      analysis: jobAnalysis,
       achievements: [
         {
           id: "achievement-api",
@@ -56,6 +57,7 @@ describe("versioned prompt builder", () => {
     });
 
     expect(prompt.prompt).toContain('"achievements"');
+    expect(prompt.prompt).toContain('"atsTerms":["Platform engineering"]');
     expect(prompt.prompt).toContain(
       "Approved template context (reference only; not task data)",
     );
@@ -65,6 +67,41 @@ describe("versioned prompt builder", () => {
         jobDescription: " ",
       }),
     ).toThrow();
+  });
+
+  it("instructs draft generation to use supported JD terms without inventing facts", () => {
+    const prompt = buildAiPrompt("draftResume", {
+      jobDescription: "Provision AWS resources with Terraform.",
+      analysis: {
+        ...jobAnalysis,
+        toolsAndPlatforms: ["AWS", "Terraform"],
+        atsTerms: ["Infrastructure as Code"],
+      },
+      achievements: [
+        {
+          id: "achievement-cloud-deployment",
+          text: "Provisioned cloud resources with Terraform modules.",
+          tags: ["cloud"],
+          skillIds: ["skill-infrastructure-as-code"],
+          supportedSkills: ["Infrastructure as Code", "IaC"],
+          section: "experience",
+          groupId: "job-platform",
+          groupTitle: "Platform Engineer",
+        },
+      ],
+    });
+
+    expect(prompt.prompt).toContain(
+      "include that exact term in the revised sentence",
+    );
+    expect(prompt.prompt).toContain(
+      'when the point is linked to Infrastructure as Code and names Terraform, include the phrase "Infrastructure as Code" naturally',
+    );
+    expect(prompt.prompt).toContain(
+      '"supportedSkills":["Infrastructure as Code","IaC"]',
+    );
+    expect(prompt.prompt).toContain('"analysis"');
+    expect(prompt.outputSchema.properties).toHaveProperty("achievementText");
   });
 
   it("builds grounded selection prompts from analysis, source evidence, and line budget", () => {

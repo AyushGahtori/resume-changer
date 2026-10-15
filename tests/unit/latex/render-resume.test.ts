@@ -112,6 +112,43 @@ describe("resume LaTeX renderer", () => {
     ).toThrow(/disabled/);
   });
 
+  it("renders only explicitly supplied tailored wording and escapes it", () => {
+    const selectedId = allPointIds[0];
+    const tailoredText =
+      "Built an AWS & cloud platform with 20% lower latency.";
+    const output = render({
+      selectedAchievementIds: [selectedId],
+      achievementTextOverrides: [
+        { achievementId: selectedId, text: tailoredText },
+      ],
+    });
+
+    expect(output).toContain(
+      "Built an AWS \\& cloud platform with 20\\% lower latency.",
+    );
+    expect(output).not.toContain(library.jobs[0].points[0].text);
+  });
+
+  it("rejects duplicate or unselected tailored wording overrides", () => {
+    const selectedId = allPointIds[0];
+    const override = { achievementId: selectedId, text: "Updated wording." };
+
+    expect(() =>
+      render({
+        selectedAchievementIds: [selectedId],
+        achievementTextOverrides: [override, override],
+      }),
+    ).toThrow(/only once/);
+    expect(() =>
+      render({
+        selectedAchievementIds: [selectedId],
+        achievementTextOverrides: [
+          { achievementId: allPointIds[1], text: "Updated wording." },
+        ],
+      }),
+    ).toThrow(/must be selected/);
+  });
+
   it("rejects unknown or duplicate skills and duplicate sections", () => {
     expect(() => render({ selectedSkillIds: ["skill-missing"] })).toThrow(
       /Unknown skill ID/,

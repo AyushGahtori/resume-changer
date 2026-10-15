@@ -10,8 +10,10 @@ import {
 } from "@/lib/jd-draft";
 import {
   AchievementSelectionResponseSchema,
+  TailorAchievementsResponseSchema,
   type AchievementSelectionResponse,
   type JobAnalysisResult,
+  type TailorAchievementsResponse,
 } from "@/lib/ai/contracts";
 import { readJobAnalysisCache } from "@/lib/jd-analysis-cache";
 import { createResumeFilename } from "@/lib/generation/resume-filename";
@@ -72,6 +74,14 @@ function getSafeJobUrl(value: string): string | null {
   }
 }
 
+function normalizeKeywordText(value: string): string {
+  return value
+    .toLocaleLowerCase()
+    .normalize("NFKD")
+    .replace(/[^a-z0-9+#.]+/g, " ")
+    .trim();
+}
+
 export default function ResumeGenerator({ library, source }: Props) {
   const [draft, setDraft] = useState<JobDescriptionDraft>(EMPTY_DRAFT);
   const [draftReady, setDraftReady] = useState(false);
@@ -85,6 +95,13 @@ export default function ResumeGenerator({ library, source }: Props) {
     useState<AchievementSelectionResponse | null>(null);
   const [selectionError, setSelectionError] = useState("");
   const [isRecommending, setIsRecommending] = useState(false);
+  const [tailoring, setTailoring] = useState<TailorAchievementsResponse | null>(
+    null,
+  );
+  const [tailoredText, setTailoredText] = useState<Record<string, string>>({});
+  const [approvedTailoredIds, setApprovedTailoredIds] = useState<string[]>([]);
+  const [tailoringError, setTailoringError] = useState("");
+  const [isTailoring, setIsTailoring] = useState(false);
   const [result, setResult] = useState<ManualGenerationResult | null>(null);
   const [requestError, setRequestError] = useState("");
   const [copyMessage, setCopyMessage] = useState("");
@@ -100,6 +117,7 @@ export default function ResumeGenerator({ library, source }: Props) {
   const [isPdfFullscreen, setIsPdfFullscreen] = useState(false);
   const compileAbortRef = useRef<AbortController | null>(null);
   const selectionAbortRef = useRef<AbortController | null>(null);
+  const tailoringAbortRef = useRef<AbortController | null>(null);
   const pdfViewportRef = useRef<HTMLDivElement>(null);
   const groups = useMemo(() => getPointGroups(library), [library]);
   const enabledIds = useMemo(
@@ -154,9 +172,20 @@ export default function ResumeGenerator({ library, source }: Props) {
     () => () => {
       compileAbortRef.current?.abort();
       selectionAbortRef.current?.abort();
+      tailoringAbortRef.current?.abort();
     },
     [],
   );
+
+  function clearTailoring() {
+    tailoringAbortRef.current?.abort();
+    tailoringAbortRef.current = null;
+    setIsTailoring(false);
+    setTailoring(null);
+    setTailoredText({});
+    setApprovedTailoredIds([]);
+    setTailoringError("");
+  }
 
   function clearPdfOutput() {
     compileAbortRef.current?.abort();
@@ -176,6 +205,11 @@ export default function ResumeGenerator({ library, source }: Props) {
         : [...selectedIds, id]
       : selectedIds.filter((selectedId) => selectedId !== id);
     setSelectedIds(nextIds);
+    if (!checked) {
+      setApprovedTailoredIds((current) =>
+        current.filter((selectedId) => selectedId !== id),
+      );
+    }
     setSelectedSkillIds(
       (current) =>
         current?.filter((skillId) => {
@@ -207,6 +241,7 @@ export default function ResumeGenerator({ library, source }: Props) {
 
   function clearSelection() {
     setSelectedIds([]);
+    clearTailoring();
     setSelectedSkillIds(
       library.skills
         .filter((skill) => skill.isListedOnCurrentResume)
@@ -267,6 +302,7 @@ export default function ResumeGenerator({ library, source }: Props) {
       }
 
       setRecommendation(parsed.data);
+      clearTailoring();
       setSelectedIds(
         parsed.data.recommendations.selections.map(
           (item) => item.achievementId,
@@ -303,6 +339,7 @@ export default function ResumeGenerator({ library, source }: Props) {
 
   function applyRecommendations() {
     if (!recommendation) return;
+    clearTailoring();
     setSelectedIds(
       recommendation.recommendations.selections.map(
         (item) => item.achievementId,
@@ -322,6 +359,85 @@ export default function ResumeGenerator({ library, source }: Props) {
     setResult(null);
     setRequestError("");
     setCopyMessage("");
+  }
+
+  async function handleTailorSelected() {
+    if (!draft.jobDescription.trim() || !analysis || selectedIds.length === 0) {
+      setTailoringError(
+        "Save and analyze a job description, then select at least one achievement point.",
+      );
+      return;
+    }
+    if (selectedIds.length > 100) {
+      setTailoringError(
+        "Select at most 100 points for one tailoring request. A shorter, focused selection usually works better.",
+      );
+      return;
+    }
+
+    tailoringAbortRef.current?.abort();
+    const controller = new AbortController();
+    tailoringAbortRef.current = controller;
+    setIsTailoring(true);
+    setTailoringError("");
+    setTailoring(null);
+    setTailoredText({});
+    setApprovedTailoredIds([]);
+    clearPdfOutput();
+    setResult(null);
+    setRequestError("");
+
+    try {
+      const response = await fetch("/api/ai/tailor-achievements", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          dataSource: source,
+          jobDescription: draft.jobDescription,
+          analysis,
+          achievementIds: selectedIds,
+        }),
+        signal: controller.signal,
+      });
+      const payload: unknown = await response.json();
+      if (!response.ok) {
+        const message =
+          payload &&
+          typeof payload === "object" &&
+          "error" in payload &&
+          typeof payload.error === "string"
+            ? payload.error
+            : "Tailored wording could not be prepared. Try again.";
+        throw new Error(message);
+      }
+      const parsed = TailorAchievementsResponseSchema.safeParse(payload);
+      if (!parsed.success) {
+        throw new Error(
+          "The tailoring service returned an invalid response. Try again.",
+        );
+      }
+      setTailoring(parsed.data);
+      setTailoredText(
+        Object.fromEntries(
+          parsed.data.proposals.map((proposal) => [
+            proposal.achievementId,
+            proposal.proposedText,
+          ]),
+        ),
+      );
+    } catch (error) {
+      if (controller.signal.aborted) return;
+      setTailoringError(
+        error instanceof Error
+          ? error.message
+          : "Tailored wording could not be prepared. Try again.",
+      );
+    } finally {
+      if (tailoringAbortRef.current === controller) {
+        tailoringAbortRef.current = null;
+        setIsTailoring(false);
+      }
+    }
   }
 
   async function handleGenerate(event: FormEvent<HTMLFormElement>) {
@@ -353,6 +469,22 @@ export default function ResumeGenerator({ library, source }: Props) {
           jobDescription: draft.jobDescription,
           selectedAchievementIds: selectedIds,
           ...(selectedSkillIds ? { selectedSkillIds } : {}),
+          ...(tailoring
+            ? {
+                achievementTextOverrides: tailoring.proposals
+                  .filter(
+                    (proposal) =>
+                      approvedTailoredIds.includes(proposal.achievementId) &&
+                      selectedIds.includes(proposal.achievementId),
+                  )
+                  .map((proposal) => ({
+                    achievementId: proposal.achievementId,
+                    text:
+                      tailoredText[proposal.achievementId] ??
+                      proposal.proposedText,
+                  })),
+              }
+            : {}),
         }),
       });
       const payload = (await response.json()) as ApiResponse;
@@ -593,6 +725,7 @@ export default function ResumeGenerator({ library, source }: Props) {
                     !hasJobDescription ||
                     !analysis ||
                     isRecommending ||
+                    isTailoring ||
                     enabledIds.length === 0
                   }
                   onClick={handleRecommend}
@@ -603,6 +736,26 @@ export default function ResumeGenerator({ library, source }: Props) {
                     : selectionError
                       ? "Retry suggestions"
                       : "Suggest points"}
+                </button>
+                <button
+                  className="generation-ai-button"
+                  disabled={
+                    !draftReady ||
+                    !hasJobDescription ||
+                    !analysis ||
+                    isRecommending ||
+                    isTailoring ||
+                    selectedIds.length === 0 ||
+                    selectedIds.length > 100
+                  }
+                  onClick={handleTailorSelected}
+                  type="button"
+                >
+                  {isTailoring
+                    ? "Drafting wording…"
+                    : tailoringError
+                      ? "Retry Guided Tailor"
+                      : "Guided Tailor"}
                 </button>
                 <button type="button" onClick={selectAll}>
                   Select all
@@ -755,6 +908,163 @@ export default function ResumeGenerator({ library, source }: Props) {
                   </div>
                 )}
               </section>
+            )}
+
+            {tailoring && (
+              <section
+                className="guided-tailor-review"
+                aria-label="Guided Tailor review"
+                aria-live="polite"
+              >
+                <div className="guided-tailor-heading">
+                  <div>
+                    <h3>Guided Tailor</h3>
+                    <p>{tailoring.summary}</p>
+                  </div>
+                  <span className="guided-tailor-count" role="status">
+                    {
+                      approvedTailoredIds.filter((id) =>
+                        selectedIds.includes(id),
+                      ).length
+                    }{" "}
+                    /{" "}
+                    {
+                      tailoring.proposals.filter((proposal) =>
+                        selectedIds.includes(proposal.achievementId),
+                      ).length
+                    }{" "}
+                    approved
+                  </span>
+                </div>
+                <p className="guided-tailor-note">
+                  Review each change. Only approved wording for selected points
+                  replaces the originals in the generated resume.
+                </p>
+                <div className="guided-tailor-proposals">
+                  {tailoring.proposals.map((proposal) => {
+                    const sourcePoint = pointById.get(proposal.achievementId);
+                    if (
+                      !sourcePoint ||
+                      !selectedIds.includes(proposal.achievementId)
+                    ) {
+                      return null;
+                    }
+                    const editedText =
+                      tailoredText[proposal.achievementId] ??
+                      proposal.proposedText;
+                    const originalNormalized = normalizeKeywordText(
+                      proposal.originalText,
+                    );
+                    const proposedNormalized = normalizeKeywordText(editedText);
+                    const addedTerms = tailoring.analyzedTerms.filter(
+                      (term) => {
+                        const normalizedTerm = normalizeKeywordText(term);
+                        return (
+                          normalizedTerm.length > 0 &&
+                          proposedNormalized.includes(normalizedTerm) &&
+                          !originalNormalized.includes(normalizedTerm)
+                        );
+                      },
+                    );
+                    return (
+                      <article
+                        className="guided-tailor-proposal"
+                        key={proposal.achievementId}
+                      >
+                        <h4>
+                          {sourcePoint.group.title}
+                          {sourcePoint.group.subtitle
+                            ? ` · ${sourcePoint.group.subtitle}`
+                            : ""}
+                        </h4>
+                        <div className="guided-tailor-comparison">
+                          <div>
+                            <span className="guided-tailor-label">
+                              Original
+                            </span>
+                            <p>{proposal.originalText}</p>
+                          </div>
+                          <label>
+                            <span className="guided-tailor-label">
+                              Proposed wording
+                            </span>
+                            <textarea
+                              aria-label={`Tailored wording for ${proposal.achievementId}`}
+                              maxLength={8_000}
+                              onChange={(event) => {
+                                setTailoredText((current) => ({
+                                  ...current,
+                                  [proposal.achievementId]: event.target.value,
+                                }));
+                                setApprovedTailoredIds((current) =>
+                                  current.filter(
+                                    (id) => id !== proposal.achievementId,
+                                  ),
+                                );
+                                clearPdfOutput();
+                                setResult(null);
+                                setRequestError("");
+                                setCopyMessage("");
+                              }}
+                              rows={4}
+                              value={editedText}
+                            />
+                          </label>
+                        </div>
+                        <p className="guided-tailor-rationale">
+                          {proposal.rationale}
+                        </p>
+                        {addedTerms.length > 0 ? (
+                          <div className="guided-tailor-terms">
+                            <span>New JD terms reflected</span>
+                            <ul>
+                              {addedTerms.map((term) => (
+                                <li key={term}>{term}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        ) : (
+                          <p className="guided-tailor-rationale">
+                            No new exact JD terms were detected in this wording.
+                          </p>
+                        )}
+                        <label className="guided-tailor-approve">
+                          <input
+                            checked={approvedTailoredIds.includes(
+                              proposal.achievementId,
+                            )}
+                            onChange={(event) => {
+                              setApprovedTailoredIds((current) =>
+                                event.target.checked
+                                  ? [
+                                      ...new Set([
+                                        ...current,
+                                        proposal.achievementId,
+                                      ]),
+                                    ]
+                                  : current.filter(
+                                      (id) => id !== proposal.achievementId,
+                                    ),
+                              );
+                              clearPdfOutput();
+                              setResult(null);
+                              setRequestError("");
+                              setCopyMessage("");
+                            }}
+                            type="checkbox"
+                          />
+                          <span>Use tailored wording for this point</span>
+                        </label>
+                      </article>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
+            {tailoringError && (
+              <p className="generation-error-message" role="alert">
+                {tailoringError}
+              </p>
             )}
 
             {groups.length === 0 ? (

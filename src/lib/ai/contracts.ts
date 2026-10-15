@@ -43,6 +43,7 @@ export const AchievementEvidenceSchema = z
     text,
     tags: z.array(shortText).max(50),
     skillIds: z.array(StableIdSchema).max(100),
+    supportedSkills: z.array(shortText).max(100).optional(),
     section: z.enum(["experience", "projects"]),
     groupId: StableIdSchema,
     groupTitle: shortText,
@@ -121,6 +122,7 @@ export const AchievementSelectionResponseSchema = z
 export const ResumeDraftInputSchema = z
   .object({
     jobDescription: z.string().trim().min(1).max(30_000),
+    analysis: JobAnalysisResultSchema,
     achievements: z.array(AchievementEvidenceSchema).min(1).max(100),
     templateContext: z.string().max(30_000).optional(),
   })
@@ -135,10 +137,29 @@ export const ResumeDraftResultSchema = z
           .object({
             achievementId: StableIdSchema,
             text,
+            rationale: shortText.optional(),
           })
           .strict(),
       )
       .max(100),
+  })
+  .strict();
+
+export const TailoredAchievementProposalSchema = z
+  .object({
+    achievementId: StableIdSchema,
+    originalText: z.string().trim().min(1).max(8_000),
+    proposedText: z.string().trim().min(1).max(8_000),
+    rationale: shortText,
+    addedTerms: terms,
+  })
+  .strict();
+
+export const TailorAchievementsResponseSchema = z
+  .object({
+    proposals: z.array(TailoredAchievementProposalSchema).min(1).max(100),
+    summary: z.string().trim().min(1).max(1_500),
+    analyzedTerms: terms,
   })
   .strict();
 
@@ -167,5 +188,8 @@ export type AchievementSelectionResponse = z.infer<
 >;
 export type ResumeDraftInput = z.infer<typeof ResumeDraftInputSchema>;
 export type ResumeDraftResult = z.infer<typeof ResumeDraftResultSchema>;
+export type TailorAchievementsResponse = z.infer<
+  typeof TailorAchievementsResponseSchema
+>;
 export type LatexRepairInput = z.infer<typeof LatexRepairInputSchema>;
 export type LatexRepairResult = z.infer<typeof LatexRepairResultSchema>;

@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { createGeminiProvider } from "../../../src/lib/ai/gemini-provider";
-import { JobAnalysisResultSchema } from "../../../src/lib/ai/contracts";
+import {
+  JobAnalysisResultSchema,
+  ResumeDraftResultSchema,
+} from "../../../src/lib/ai/contracts";
 
 const liveTestEnabled = process.env.GEMINI_LIVE_TEST === "1";
 
@@ -41,5 +44,54 @@ Tools: Python and Kubernetes.`,
     expect(validated.toolsAndPlatforms.join(" ").toLowerCase()).toContain(
       "python",
     );
+  }, 60_000);
+
+  it("drafts a selected achievement using supported JD terminology", async () => {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) throw new Error("GEMINI_API_KEY is required for this test.");
+
+    const provider = createGeminiProvider({
+      apiKey,
+      model: process.env.GEMINI_LIVE_MODEL ?? "gemini-2.5-flash-lite",
+    });
+    const result = await provider.draftResume({
+      jobDescription:
+        "Standardize AWS provisioning and deployment workflows. Use Infrastructure as Code; Terraform experience is relevant.",
+      analysis: {
+        targetTitle: "Cloud Platform Engineer",
+        seniority: "Early career",
+        requiredQualifications: ["AWS provisioning"],
+        preferredQualifications: ["Terraform experience"],
+        responsibilities: ["Standardize deployment workflows"],
+        toolsAndPlatforms: ["AWS", "Terraform"],
+        domainConcepts: ["Cloud infrastructure"],
+        atsTerms: ["Infrastructure as Code"],
+        inferredContext: [],
+        terminology: [
+          { term: "Infrastructure as Code", alternatives: ["IaC"] },
+        ],
+      },
+      achievements: [
+        {
+          id: "achievement-live-terraform",
+          text: "Standardized AWS provisioning with Terraform modules and deployment checks for three internal services.",
+          tags: ["cloud", "deployment"],
+          skillIds: ["skill-terraform"],
+          supportedSkills: ["Infrastructure as Code", "IaC", "Terraform"],
+          section: "experience",
+          groupId: "job-platform",
+          groupTitle: "Platform Engineer",
+          groupSubtitle: "Example Systems",
+        },
+      ],
+    });
+    const validated = ResumeDraftResultSchema.parse(result);
+    const proposal = validated.achievementText[0];
+
+    expect(validated.achievementText).toHaveLength(1);
+    expect(proposal.achievementId).toBe("achievement-live-terraform");
+    expect(proposal.text.toLowerCase()).toContain("infrastructure as code");
+    expect(proposal.text.toLowerCase()).toContain("terraform");
+    expect(proposal.text).not.toContain("\\documentclass");
   }, 60_000);
 });

@@ -83,6 +83,19 @@ describe("manual resume generation", () => {
     expect(JSON.stringify(result)).not.toContain(validRequest.jobDescription);
   });
 
+  it("uses approved tailored wording in the deterministic LaTeX output", () => {
+    const tailoredText = "Provisioned AWS services using Terraform modules.";
+    const result = createManualGeneration(library, {
+      ...validRequest,
+      achievementTextOverrides: [
+        { achievementId: firstPoint.id, text: tailoredText },
+      ],
+    });
+
+    expect(result.latex).toContain(tailoredText);
+    expect(result.latex).not.toContain(firstPoint.text);
+  });
+
   it("rejects unknown and disabled point IDs through the renderer", () => {
     expect(() =>
       createManualGeneration(library, {
