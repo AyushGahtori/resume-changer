@@ -35,6 +35,7 @@ export class AiProviderError extends Error {
     message: string,
     readonly code: AiProviderErrorCode,
     readonly retryable = false,
+    readonly diagnosticCode?: string,
   ) {
     super(message);
     this.name = "AiProviderError";

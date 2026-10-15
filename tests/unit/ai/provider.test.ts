@@ -261,7 +261,7 @@ describe("Gemini adapter", () => {
     }
   });
 
-  it("falls back to Gemini 2.5 Flash only when the configured model is unavailable", async () => {
+  it("falls back to Gemini 2.5 Flash-Lite when the configured model is unavailable", async () => {
     const models: string[] = [];
     const provider = createGeminiProvider({
       apiKey: "test-key",
@@ -278,7 +278,26 @@ describe("Gemini adapter", () => {
     await expect(
       provider.analyzeJobDescription({ jobDescription: "Platform role." }),
     ).resolves.toEqual(analysis);
-    expect(models).toEqual(["gemini-3.6-flash", "gemini-2.5-flash"]);
+    expect(models).toEqual(["gemini-3.6-flash", "gemini-2.5-flash-lite"]);
+  });
+
+  it("retries malformed structured output with Gemini Flash-Lite", async () => {
+    const models: string[] = [];
+    const provider = createGeminiProvider({
+      apiKey: "test-key",
+      model: "gemini-3.6-flash",
+      request: async ({ model }) => {
+        models.push(model);
+        return model === "gemini-3.6-flash"
+          ? JSON.stringify({ targetTitle: 4 })
+          : JSON.stringify(analysis);
+      },
+    });
+
+    await expect(
+      provider.analyzeJobDescription({ jobDescription: "Platform role." }),
+    ).resolves.toEqual(analysis);
+    expect(models).toEqual(["gemini-3.6-flash", "gemini-2.5-flash-lite"]);
   });
 
   it("does not expose upstream error details in safe errors", async () => {
@@ -295,6 +314,7 @@ describe("Gemini adapter", () => {
       code: "REQUEST_FAILED",
       message:
         "The Gemini request failed. Check your connection and try again.",
+      diagnosticCode: "NETWORK_OR_UNKNOWN_ERROR",
     });
   });
 
@@ -321,7 +341,7 @@ describe("Gemini adapter", () => {
     ).rejects.toMatchObject({ code: "INVALID_RESPONSE" });
   });
 
-  it("rejects duplicate IDs, incorrect section allocation, and unsupported skills", async () => {
+  it("rejects duplicate achievement IDs and incorrect section allocation", async () => {
     const outputs = [
       {
         ...selectionResult,
@@ -334,16 +354,6 @@ describe("Gemini adapter", () => {
         ...selectionResult,
         selections: [{ ...selectionResult.selections[0], section: "projects" }],
       },
-      {
-        ...selectionResult,
-        skillRecommendations: [
-          {
-            skillId: "skill-unlisted",
-            rationale: "No evidence.",
-            supportingAchievementIds: ["achievement-api"],
-          },
-        ],
-      },
     ];
     for (const output of outputs) {
       const provider = createGeminiProvider({
@@ -354,5 +364,50 @@ describe("Gemini adapter", () => {
         provider.selectAchievements(selectionInput),
       ).rejects.toMatchObject({ code: "INVALID_RESPONSE" });
     }
+  });
+
+  it("drops unsupported optional skill suggestions without losing valid points", async () => {
+    const provider = createGeminiProvider({
+      apiKey: "test-key",
+      request: async () =>
+        JSON.stringify({
+          ...selectionResult,
+          skillRecommendations: [
+            {
+              skillId: "skill-terraform",
+              rationale: "The selected point supports Terraform.",
+              supportingAchievementIds: [
+                "achievement-api",
+                "achievement-other",
+              ],
+            },
+            {
+              skillId: "skill-unknown",
+              rationale: "Unknown skills should not invalidate point matches.",
+              supportingAchievementIds: ["achievement-api"],
+            },
+          ],
+        }),
+    });
+    const result = await provider.selectAchievements({
+      ...selectionInput,
+      skills: [
+        {
+          id: "skill-terraform",
+          name: "Terraform",
+          aliases: [],
+          isListedOnCurrentResume: false,
+          evidenceAchievementIds: ["achievement-api"],
+        },
+      ],
+    });
+
+    expect(result.selections).toEqual(selectionResult.selections);
+    expect(result.skillRecommendations).toEqual([
+      expect.objectContaining({
+        skillId: "skill-terraform",
+        supportingAchievementIds: ["achievement-api"],
+      }),
+    ]);
   });
 });
