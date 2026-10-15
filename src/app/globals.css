@@ -1940,6 +1940,153 @@ a:focus-visible {
   line-height: 1.4;
 }
 
+.guided-tailor-review {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 15px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--surface-soft);
+}
+
+.guided-tailor-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.guided-tailor-heading h3,
+.guided-tailor-proposal h4 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.guided-tailor-heading p,
+.guided-tailor-note,
+.guided-tailor-proposal p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.guided-tailor-count {
+  flex: 0 0 auto;
+  color: var(--accent-hover);
+  font-size: 9px;
+  font-weight: 650;
+}
+
+.guided-tailor-note {
+  margin: 0;
+}
+
+.guided-tailor-proposals {
+  display: grid;
+  gap: 9px;
+}
+
+.guided-tailor-proposal {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--surface);
+}
+
+.guided-tailor-comparison {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.guided-tailor-comparison > div,
+.guided-tailor-comparison > label {
+  min-width: 0;
+}
+
+.guided-tailor-label {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--accent-hover);
+  font-size: 8px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.guided-tailor-comparison > div p {
+  margin: 0;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.guided-tailor-comparison textarea {
+  display: block;
+  width: 100%;
+  min-height: 72px;
+  padding: 7px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--surface-soft);
+  color: var(--ink);
+  font: inherit;
+  font-size: 9px;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.guided-tailor-terms {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  color: var(--muted);
+  font-size: 8px;
+}
+
+.guided-tailor-terms > span {
+  font-weight: 650;
+}
+
+.guided-tailor-terms ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.guided-tailor-terms li {
+  padding: 2px 5px;
+  border-radius: 3px;
+  background: var(--accent-soft);
+  color: var(--accent-hover);
+}
+
+.guided-tailor-approve {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  color: var(--ink);
+  font-size: 9px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.guided-tailor-approve input {
+  width: 13px;
+  height: 13px;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
 .generation-output-actions .generation-compile-button {
   border-color: var(--accent);
   background: var(--accent);
@@ -2265,6 +2412,10 @@ a:focus-visible {
 
   .generation-section-heading {
     flex-direction: column;
+  }
+
+  .guided-tailor-comparison {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .generation-selection-actions {

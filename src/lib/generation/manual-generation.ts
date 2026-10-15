@@ -31,6 +31,17 @@ export const ManualGenerationRequestSchema = z
       .max(MAX_JD_CHARACTERS),
     selectedAchievementIds: z.array(StableIdSchema).min(1),
     selectedSkillIds: z.array(StableIdSchema).optional(),
+    achievementTextOverrides: z
+      .array(
+        z
+          .object({
+            achievementId: StableIdSchema,
+            text: z.string().trim().min(1).max(8_000),
+          })
+          .strict(),
+      )
+      .max(100)
+      .optional(),
   })
   .strict();
 
@@ -84,6 +95,7 @@ export function createManualGeneration(
     library,
     selectedAchievementIds: request.selectedAchievementIds,
     selectedSkillIds: request.selectedSkillIds,
+    achievementTextOverrides: request.achievementTextOverrides,
   });
 
   return {

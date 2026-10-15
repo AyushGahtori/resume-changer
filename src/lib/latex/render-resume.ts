@@ -17,6 +17,17 @@ const RenderInputSchema = z
     library: ResumeLibrarySchema,
     selectedAchievementIds: z.array(StableIdSchema),
     selectedSkillIds: z.array(StableIdSchema).optional(),
+    achievementTextOverrides: z
+      .array(
+        z
+          .object({
+            achievementId: StableIdSchema,
+            text: z.string().trim().min(1).max(8_000),
+          })
+          .strict(),
+      )
+      .max(100)
+      .optional(),
     sectionOrder: z.array(ResumeSectionTypeSchema).optional(),
   })
   .strict();
@@ -117,11 +128,17 @@ function renderHeader(library: ResumeLibrary): string {
     .join("\n");
 }
 
-function renderBullets(points: AchievementPoint[]): string {
+function renderBullets(
+  points: AchievementPoint[],
+  textOverrides: Map<string, string>,
+): string {
   if (points.length === 0) return "";
   return [
     "\\ResumeBulletListStart",
-    ...points.map((point) => `  \\item ${escapeLatexText(point.text)}`),
+    ...points.map(
+      (point) =>
+        `  \\item ${escapeLatexText(textOverrides.get(point.id) ?? point.text)}`,
+    ),
     "\\ResumeBulletListEnd",
   ].join("\n");
 }
@@ -130,6 +147,7 @@ function renderExperience(
   library: ResumeLibrary,
   selectedById: Map<string, AchievementPoint>,
   selectedIds: string[],
+  textOverrides: Map<string, string>,
 ): string {
   const entries = library.jobs.flatMap((job) => {
     const points = selectedIds
@@ -147,7 +165,7 @@ function renderExperience(
       .join(" $\\cdot$ ");
     return [
       `\\ResumeEntry{${escapeLatexText(job.title)}}{${formatRange(job.startDate, job.endDate)}}{${subheading}}{${escapeLatexText(job.location ?? "")}}`,
-      renderBullets(points),
+      renderBullets(points, textOverrides),
     ];
   });
 
@@ -158,6 +176,7 @@ function renderProjects(
   library: ResumeLibrary,
   selectedById: Map<string, AchievementPoint>,
   selectedIds: string[],
+  textOverrides: Map<string, string>,
 ): string {
   const entries = library.projects.flatMap((project) => {
     const points = selectedIds
@@ -170,7 +189,7 @@ function renderProjects(
     if (points.length === 0) return [];
     return [
       `\\ResumeEntry{${escapeLatexText(project.name)}}{${formatRange(project.startDate, project.endDate)}}{${escapeLatexText(project.role ?? "")}}{}`,
-      renderBullets(points),
+      renderBullets(points, textOverrides),
     ];
   });
 
@@ -238,13 +257,14 @@ const SECTION_RENDERERS: Record<
     library: ResumeLibrary;
     selectedById: Map<string, AchievementPoint>;
     selectedIds: string[];
+    textOverrides: Map<string, string>;
     skills: Skill[];
   }) => string
 > = {
-  experience: ({ library, selectedById, selectedIds }) =>
-    renderExperience(library, selectedById, selectedIds),
-  projects: ({ library, selectedById, selectedIds }) =>
-    renderProjects(library, selectedById, selectedIds),
+  experience: ({ library, selectedById, selectedIds, textOverrides }) =>
+    renderExperience(library, selectedById, selectedIds, textOverrides),
+  projects: ({ library, selectedById, selectedIds, textOverrides }) =>
+    renderProjects(library, selectedById, selectedIds, textOverrides),
   education: ({ library }) => renderEducation(library),
   skills: ({ skills }) => renderSkills(skills),
   credentials: ({ library }) => renderCredentials(library),
@@ -254,6 +274,10 @@ export type RenderResumeLatexInput = {
   library: ResumeLibrary;
   selectedAchievementIds: string[];
   selectedSkillIds?: string[];
+  achievementTextOverrides?: Array<{
+    achievementId: string;
+    text: string;
+  }>;
   sectionOrder?: ResumeSectionType[];
 };
 
@@ -265,8 +289,13 @@ export function renderResumeLatex(input: RenderResumeLatexInput): string {
     );
   }
 
-  const { library, selectedAchievementIds, selectedSkillIds, sectionOrder } =
-    parsed.data;
+  const {
+    library,
+    selectedAchievementIds,
+    selectedSkillIds,
+    achievementTextOverrides = [],
+    sectionOrder,
+  } = parsed.data;
   if (new Set(selectedAchievementIds).size !== selectedAchievementIds.length) {
     throw new ResumeRenderError(
       "An achievement point may be selected only once.",
@@ -292,6 +321,22 @@ export function renderResumeLatex(input: RenderResumeLatexInput): string {
     }
   }
 
+  const selectedIds = new Set(selectedAchievementIds);
+  const textOverrides = new Map<string, string>();
+  for (const item of achievementTextOverrides) {
+    if (textOverrides.has(item.achievementId)) {
+      throw new ResumeRenderError(
+        "A tailored achievement may be supplied only once.",
+      );
+    }
+    if (!selectedIds.has(item.achievementId)) {
+      throw new ResumeRenderError(
+        `A tailored achievement must be selected: ${item.achievementId}.`,
+      );
+    }
+    textOverrides.set(item.achievementId, item.text);
+  }
+
   const skillById = new Map(library.skills.map((skill) => [skill.id, skill]));
   const chosenSkillIds =
     selectedSkillIds ??
@@ -315,6 +360,7 @@ export function renderResumeLatex(input: RenderResumeLatexInput): string {
     library,
     selectedById,
     selectedIds: selectedAchievementIds,
+    textOverrides,
     skills,
   };
   const sections = resolvedOrder

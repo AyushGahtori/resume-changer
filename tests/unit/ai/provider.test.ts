@@ -188,6 +188,7 @@ describe("Gemini adapter", () => {
     await expect(
       provider.draftResume({
         jobDescription: "Platform role.",
+        analysis,
         achievements: [point],
         templateContext: "Approved fixed template context",
       }),

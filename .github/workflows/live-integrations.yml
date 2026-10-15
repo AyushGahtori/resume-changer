@@ -28,7 +28,7 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - name: Verify live Gemini analysis
+      - name: Verify live Gemini analysis and grounded drafting
         run: npm run test:ai-live
 
   pdf-toolchain:
