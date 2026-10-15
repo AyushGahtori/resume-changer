@@ -88,6 +88,11 @@ test("Guided Tailor requires approval and renders only the approved rewrite", as
     achievementIds: [achievementId],
   });
 
+  await review.getByRole("button", { name: "Approve all unchanged" }).click();
+  await expect(approval).toBeChecked();
+  await review.getByRole("button", { name: "Revoke all" }).click();
+  await expect(approval).not.toBeChecked();
+
   await page.getByRole("button", { name: "Generate LaTeX" }).click();
   const preview = page.getByLabel("Generated LaTeX");
   await expect(preview).toContainText(originalText);
@@ -104,6 +109,9 @@ test("Guided Tailor requires approval and renders only the approved rewrite", as
     .getByLabel(`Tailored wording for ${achievementId}`)
     .fill(editedText);
   await expect(approval).not.toBeChecked();
+  await expect(
+    review.getByRole("button", { name: "Approve all unchanged" }),
+  ).toBeDisabled();
   await expect(page.getByLabel("Generated LaTeX")).toHaveCount(0);
   await approval.check();
   await page.getByRole("button", { name: "Generate LaTeX" }).click();

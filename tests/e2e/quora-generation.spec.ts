@@ -80,6 +80,9 @@ test("uses the Quora JD to generate expected LaTeX from three selected points", 
   await expect(page.locator(".generation-metadata")).toContainText(
     "3 achievements",
   );
+  await expect(page.locator(".generation-metadata")).toContainText(
+    "omitted to keep two rows",
+  );
   const latex = page.locator(".latex-preview code");
   await expect(latex).toContainText("\\ResumeHeader{Jordan Example}");
   await expect(latex).toContainText(

@@ -2,7 +2,11 @@ import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import type { ResumeDataSource } from "../data/loaders";
 import { MAX_JD_CHARACTERS } from "../jd-draft";
-import { renderResumeLatex, ResumeRenderError } from "../latex/render-resume";
+import {
+  renderResumeLatex,
+  ResumeRenderError,
+  selectSkillsForResume,
+} from "../latex/render-resume";
 import { StableIdSchema } from "../schemas/resume-data";
 import type { ResumeLibrary } from "../schemas/resume-data";
 
@@ -58,6 +62,7 @@ export type ManualGenerationMetadata = {
   jobUrl: string;
   selectedAchievementIds: string[];
   selectedSkillIds?: string[];
+  renderedSkillIds: string[];
 };
 
 export type ManualGenerationResult = {
@@ -95,8 +100,24 @@ export function createManualGeneration(
     library,
     selectedAchievementIds: request.selectedAchievementIds,
     selectedSkillIds: request.selectedSkillIds,
+    jobDescription: request.jobDescription,
     achievementTextOverrides: request.achievementTextOverrides,
   });
+  const requestedSkillIds =
+    request.selectedSkillIds ??
+    library.skills
+      .filter((skill) => skill.isListedOnCurrentResume)
+      .map((skill) => skill.id);
+  const selectedPointIds = new Set(request.selectedAchievementIds);
+  const selectedPoints = [...library.jobs, ...library.projects]
+    .flatMap((group) => group.points)
+    .filter((point) => selectedPointIds.has(point.id));
+  const skillById = new Map(library.skills.map((skill) => [skill.id, skill]));
+  const renderedSkillIds = selectSkillsForResume(
+    requestedSkillIds.map((id) => skillById.get(id)!),
+    selectedPoints,
+    request.jobDescription,
+  ).map((skill) => skill.id);
 
   return {
     latex,
@@ -108,6 +129,7 @@ export function createManualGeneration(
       roleTitle: request.roleTitle,
       jobUrl: request.jobUrl,
       selectedAchievementIds: request.selectedAchievementIds,
+      renderedSkillIds,
       ...(request.selectedSkillIds
         ? { selectedSkillIds: request.selectedSkillIds }
         : {}),
