@@ -244,6 +244,15 @@ Review actual rendered output and the diff after the checks pass.
 - 2026-10-17: merged the latest `main` into the PR branch, preserved this branch's
   resume-quality and diagnostics changes in the overlapping Task 16 files, and
   retained `main`'s LaTeX validation changes. The merged branch is awaiting fresh CI.
+- 2026-10-17 follow-up: left the Gemini quota failure visible as an external live
+  validation limit, as requested; did not skip, mock, or weaken those live checks.
+- Fixed the real PDF gate's overflow fixture: four copies of each of seven sample
+  points yielded only about 364 words and legitimately fit on one page. The fixture
+  now uses enough repeated evidence to exceed one page, while its assertion accepts
+  any page count above one. All five real Tectonic/PDF integration tests pass.
+- Added a visible generation-method notice to the resume preview, distinguishing
+  internal assembly with manual evidence, AI-assisted wording, and the internal
+  original-wording fallback. The notice is covered by unit and browser tests.
 
 Next verification command after quota reset: `npm run test:ai-live`. It checks JD
 analysis, supported terminology plus a structured metric in drafting, and the

@@ -25,6 +25,7 @@ import { assessRequirementCoverage } from "@/lib/ai/requirement-coverage";
 import { createJobContextId } from "@/lib/ai/job-context";
 import { readJobAnalysisCache } from "@/lib/jd-analysis-cache";
 import { createResumeFilename } from "@/lib/generation/resume-filename";
+import { getGenerationOriginNotice } from "@/lib/generation/generation-origin";
 import type { ManualGenerationResult } from "@/lib/generation/manual-generation";
 import type { ResumeDataSource } from "@/lib/data/loaders";
 import type {
@@ -2096,6 +2097,16 @@ export default function ResumeGenerator({ library, source }: Props) {
                 id="resume-output-panel"
                 aria-labelledby={`resume-output-tab-${outputView}`}
               >
+                <p
+                  className="generation-origin"
+                  role="status"
+                  aria-label="Generation method"
+                >
+                  {getGenerationOriginNotice(
+                    result.metadata.tailoringMode,
+                    tailoring?.mode,
+                  )}
+                </p>
                 <p className="generation-metadata" role="status">
                   Generated{" "}
                   {new Date(result.metadata.generatedAt).toLocaleString()} ·{" "}

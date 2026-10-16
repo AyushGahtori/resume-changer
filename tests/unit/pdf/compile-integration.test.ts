@@ -193,7 +193,8 @@ describe.skipIf(!hasLocalToolchain)("real local PDF toolchain", () => {
           ...job,
           points: job.points.map((point) => ({
             ...point,
-            text: `${point.text} ${point.text} ${point.text} ${point.text}`,
+            // Keep this comfortably beyond one page even if template spacing changes.
+            text: Array.from({ length: 24 }, () => point.text).join(" "),
           })),
         })),
       },
@@ -204,8 +205,9 @@ describe.skipIf(!hasLocalToolchain)("real local PDF toolchain", () => {
     await expect(compileLatexToPdf(longResume)).rejects.toMatchObject({
       code: "PAGE_LIMIT_EXCEEDED",
       status: 422,
-      diagnostics:
-        "Compiled page count: 2. Reduce or reprioritize content; template typography and spacing are fixed.",
+      diagnostics: expect.stringMatching(
+        /^Compiled page count: [2-9]\d*\. Reduce or reprioritize content; template typography and spacing are fixed\.$/,
+      ),
     });
   }, 60_000);
 
