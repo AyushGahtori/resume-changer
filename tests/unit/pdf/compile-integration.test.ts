@@ -186,14 +186,22 @@ describe.skipIf(!hasLocalToolchain)("real local PDF toolchain", () => {
   }, 60_000);
 
   it("rejects a real two-page document with the one-page diagnostic", async () => {
-    await expect(
-      compileLatexToPdf(
-        String.raw`\documentclass{article}
-\begin{document}
-First page.\newpage Second page.
-\end{document}`,
+    const longResume = renderResumeLatex({
+      library: {
+        ...library,
+        jobs: library.jobs.map((job) => ({
+          ...job,
+          points: job.points.map((point) => ({
+            ...point,
+            text: `${point.text} ${point.text} ${point.text} ${point.text}`,
+          })),
+        })),
+      },
+      selectedAchievementIds: library.jobs.flatMap((job) =>
+        job.points.map((point) => point.id),
       ),
-    ).rejects.toMatchObject({
+    });
+    await expect(compileLatexToPdf(longResume)).rejects.toMatchObject({
       code: "PAGE_LIMIT_EXCEEDED",
       status: 422,
       diagnostics:
@@ -202,14 +210,14 @@ First page.\newpage Second page.
   }, 60_000);
 
   it("returns a useful error for invalid LaTeX from the real compiler", async () => {
-    await expect(
-      compileLatexToPdf(
-        String.raw`\documentclass{article}
-\begin{document}
-\definitelyNotALatexCommand
-\end{document}`,
-      ),
-    ).rejects.toMatchObject({ code: "LATEX_ERROR", status: 422 });
+    const malformedCommand = renderResumeLatex({
+      library,
+      selectedAchievementIds: [],
+    }).replace("Jordan Example", String.raw`Jordan\definitelyNotALatexCommand`);
+    await expect(compileLatexToPdf(malformedCommand)).rejects.toMatchObject({
+      code: "LATEX_ERROR",
+      status: 422,
+    });
   }, 60_000);
 });
 

@@ -237,12 +237,19 @@ Review actual rendered output and the diff after the checks pass.
 - Fresh validation of that correction and the complete 22-requirement pipeline is
   blocked by HTTP 429. The provider reported the daily free-tier limit of 20 requests
   for the configured fallback model and a retry delay of roughly 95 minutes.
-- No push or PR has been performed because the live gate has not passed.
+- PR #24 was opened for `codex/task-16-resume-output-quality`. The initial GitHub
+  quality workflow passed lint, typecheck, all unit tests, the production build and
+  browser tests; the real PDF toolchain workflow passed. The separate live Gemini
+  workflow failed on the documented provider quota (HTTP 429).
+- 2026-10-17: merged the latest `main` into the PR branch, preserved this branch's
+  resume-quality and diagnostics changes in the overlapping Task 16 files, and
+  retained `main`'s LaTeX validation changes. The merged branch is awaiting fresh CI.
 
 Next verification command after quota reset: `npm run test:ai-live`. It checks JD
 analysis, supported terminology plus a structured metric in drafting, and the
 production selection/normalization pipeline against all 22 fictional requirements.
-Resolve any remaining provider or prose failures before pushing or opening a PR.
+Resolve any remaining provider or prose failures before treating external validation
+as complete or merging the PR.
 
 ## Remaining limits
 
