@@ -21,7 +21,18 @@ import { PROMPT_VERSION, SHARED_INSTRUCTIONS } from "./prompts/v1/shared";
 import { JAKE_STYLE_TEMPLATE } from "../latex/jake-template";
 import { AiProviderError } from "./provider";
 
-const MAX_PROMPT_CHARACTERS = 120_000;
+export const MAX_PROMPT_CHARACTERS = 120_000;
+
+export function supportedTerminologyTargets(input: ResumeDraftInput) {
+  return input.achievements.flatMap((source) => {
+    const terms = input.analysis.atsTerms.filter((term) =>
+      (source.supportedSkills ?? []).some(
+        (skill) => skill.toLowerCase() === term.toLowerCase(),
+      ),
+    );
+    return terms.length ? [{ achievementId: source.id, terms }] : [];
+  });
+}
 
 export function loadApprovedTemplateContext(): string {
   return JAKE_STYLE_TEMPLATE;
@@ -73,11 +84,27 @@ export function buildAiPrompt<T extends AiTask>(
     validatedInput as typeof validatedInput & {
       templateContext?: string;
     };
+  const context: Record<string, unknown> = { ...taskData };
+  if (task === "selectAchievements") {
+    const selection = validatedInput as AchievementSelectionInput;
+    context.coverageRequirements = [
+      ...new Set([
+        ...selection.analysis.requiredQualifications,
+        ...selection.analysis.responsibilities,
+        ...selection.analysis.preferredQualifications,
+      ]),
+    ];
+  }
+  if (task === "draftResume") {
+    context.supportedTerminologyTargets = supportedTerminologyTargets(
+      validatedInput as ResumeDraftInput,
+    );
+  }
   const sections = [
     `Prompt version: ${PROMPT_VERSION}`,
     `Shared instructions:\n${SHARED_INSTRUCTIONS}`,
     `Task instructions:\n${configuration.instructions}`,
-    `Task data (JSON):\n${JSON.stringify(taskData)}`,
+    `Task data (JSON):\n${JSON.stringify(context)}`,
   ];
 
   if (templateContext) {

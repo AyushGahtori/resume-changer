@@ -1,5 +1,23 @@
 import { z } from "zod";
 import {
+  buildAchievementEvidence,
+  buildProfileEvidence,
+  buildSkillEvidence,
+  evidenceText,
+} from "./evidence";
+import {
+  assessRequirementCoverage,
+  semanticMatchScore,
+} from "./requirement-coverage";
+import {
+  preserveMetrics,
+  preserveSubstance,
+  canSynthesize,
+  enrichSourceText,
+  buildEvidenceSummary,
+  misattributedMetrics,
+} from "./draft-quality";
+import {
   AchievementSelectionResponseSchema,
   JobAnalysisResultSchema,
   ResumeDraftHandoffSchema,
@@ -15,11 +33,9 @@ import {
   type TailorAchievementsResponse,
 } from "./contracts";
 import { MAX_JD_CHARACTERS } from "../jd-draft";
-import {
-  estimateAchievementContentBudget,
-  requirementMatchScore,
-} from "./achievement-selection";
+import { estimateAchievementContentBudget } from "./achievement-selection";
 import { createJobContextId } from "./job-context";
+import { supportedTerminologyTargets } from "./prompt-builder";
 import { StableIdSchema } from "../schemas/resume-data";
 import type { ResumeLibrary } from "../schemas/resume-data";
 
@@ -60,66 +76,7 @@ export class AchievementTailoringError extends Error {
 }
 
 function getEvidence(library: ResumeLibrary): AchievementEvidence[] {
-  const skillById = new Map(library.skills.map((skill) => [skill.id, skill]));
-  const skillsByAchievementId = new Map<string, string[]>();
-  for (const skill of library.skills) {
-    for (const achievementId of skill.evidenceAchievementIds) {
-      skillsByAchievementId.set(achievementId, [
-        ...(skillsByAchievementId.get(achievementId) ?? []),
-        skill.name,
-        ...skill.aliases,
-      ]);
-    }
-  }
-
-  return [
-    ...library.jobs.flatMap((job) =>
-      job.points
-        .filter((point) => point.enabled)
-        .map((point) => ({
-          id: point.id,
-          text: point.text,
-          tags: point.tags,
-          skillIds: point.skillIds,
-          supportedSkills: [
-            ...new Set([
-              ...(skillsByAchievementId.get(point.id) ?? []),
-              ...point.skillIds.flatMap((id) => {
-                const skill = skillById.get(id);
-                return skill ? [skill.name, ...skill.aliases] : [];
-              }),
-            ]),
-          ],
-          section: "experience" as const,
-          groupId: job.id,
-          groupTitle: job.title,
-          groupSubtitle: job.company,
-        })),
-    ),
-    ...library.projects.flatMap((project) =>
-      project.points
-        .filter((point) => point.enabled)
-        .map((point) => ({
-          id: point.id,
-          text: point.text,
-          tags: point.tags,
-          skillIds: point.skillIds,
-          supportedSkills: [
-            ...new Set([
-              ...(skillsByAchievementId.get(point.id) ?? []),
-              ...point.skillIds.flatMap((id) => {
-                const skill = skillById.get(id);
-                return skill ? [skill.name, ...skill.aliases] : [];
-              }),
-            ]),
-          ],
-          section: "projects" as const,
-          groupId: project.id,
-          groupTitle: project.name,
-          groupSubtitle: project.role,
-        })),
-    ),
-  ];
+  return buildAchievementEvidence(library);
 }
 
 function getRequirementDefinitions(analysis: JobAnalysisResult) {
@@ -141,16 +98,14 @@ function getRequirementDefinitions(analysis: JobAnalysisResult) {
     ],
   ] as const;
   const seen = new Set<string>();
-  return groups
-    .flatMap(([category, values]) =>
-      values.flatMap((text) => {
-        const key = `${category}:${normalizeTerm(text)}`;
-        if (!normalizeTerm(text) || seen.has(key)) return [];
-        seen.add(key);
-        return [{ id: `requirement-${category}-${seen.size}`, category, text }];
-      }),
-    )
-    .slice(0, 100);
+  return groups.flatMap(([category, values]) =>
+    values.flatMap((text) => {
+      const key = `${category}:${normalizeTerm(text)}`;
+      if (!normalizeTerm(text) || seen.has(key)) return [];
+      seen.add(key);
+      return [{ id: `requirement-${category}-${seen.size}`, category, text }];
+    }),
+  );
 }
 
 function buildDraftHandoff(args: {
@@ -167,44 +122,27 @@ function buildDraftHandoff(args: {
     ]) ?? [],
   );
   const definitions = getRequirementDefinitions(args.request.analysis);
-  const requirements = definitions.map((requirement) => {
-    const matches = args.allEvidence
-      .map((evidence) => ({
-        id: evidence.id,
-        score: requirementMatchScore(
-          [
-            evidence.text,
-            ...evidence.tags,
-            ...(evidence.supportedSkills ?? []),
-          ].join(" "),
-          requirement.text,
-        ),
-      }))
-      .filter((item) => item.score > 0);
-    const selectedMatches = matches.filter((item) =>
-      args.request.achievementIds.includes(item.id),
-    );
-    const status = selectedMatches.length
-      ? selectedMatches.some((item) => item.score >= 0.75)
-        ? "supported"
-        : "uncertain"
-      : matches.length
-        ? "evidence-not-selected"
-        : "no-evidence-found";
-    const reason =
-      status === "supported"
-        ? "Selected source evidence directly supports this requirement."
-        : status === "uncertain"
-          ? "Selected evidence may be related; review it before relying on this match."
-          : status === "evidence-not-selected"
-            ? "Potential source evidence exists in the library but was not selected."
-            : "No matching source evidence was identified in the enabled library.";
+  const assessments = assessRequirementCoverage(
+    {
+      jobDescription: args.request.jobDescription,
+      analysis: args.request.analysis,
+      achievements: args.allEvidence,
+      skills: buildSkillEvidence(args.library),
+      profile: buildProfileEvidence(args.library),
+      contentBudgetLines: estimateAchievementContentBudget(args.library),
+    },
+    args.request.achievementIds,
+    { requirements: definitions.map((item) => item.text) },
+  );
+  const requirements = definitions.map((definition, index) => {
+    const assessment = assessments[index];
     return {
-      ...requirement,
-      status,
-      availableAchievementIds: matches.map((item) => item.id),
-      selectedAchievementIds: selectedMatches.map((item) => item.id),
-      reason,
+      ...definition,
+      status: assessment.status,
+      availableAchievementIds: assessment.availableAchievementIds,
+      selectedAchievementIds: assessment.coveredByAchievementIds,
+      evidence: assessment.evidence,
+      reason: assessment.reason,
     };
   });
   const toSource = (
@@ -220,6 +158,9 @@ function buildDraftHandoff(args: {
       ? { groupSubtitle: evidence.groupSubtitle }
       : {}),
     linkedSkills: evidence.supportedSkills ?? [],
+    metrics: evidence.metrics,
+    context: evidence.context,
+    inferredSkills: evidence.inferredSkills,
     supportedRequirementIds,
     ...(confidenceById.has(evidence.id)
       ? { selectionConfidence: confidenceById.get(evidence.id) }
@@ -326,6 +267,8 @@ export async function buildResumeDraftInput(
     analysis: request.analysis,
     achievements,
     handoff,
+    skills: buildSkillEvidence(library),
+    profile: buildProfileEvidence(library),
   });
 }
 
@@ -358,17 +301,14 @@ function getAnalyzedTerms(analysis: JobAnalysisResult): string[] {
       term,
       ...alternatives,
     ]),
-  ]
-    .filter((term, index, all) => {
-      const normalized = normalizeTerm(term);
-      return (
-        normalized.length > 0 &&
-        all.findIndex(
-          (candidate) => normalizeTerm(candidate) === normalized,
-        ) === index
-      );
-    })
-    .slice(0, 100);
+  ].filter((term, index, all) => {
+    const normalized = normalizeTerm(term);
+    return (
+      normalized.length > 0 &&
+      all.findIndex((candidate) => normalizeTerm(candidate) === normalized) ===
+        index
+    );
+  });
 }
 
 const NUMBER_WORD_VALUES: Record<string, number> = {
@@ -411,6 +351,12 @@ function numericClaims(text: string): Set<string> {
   );
   let normalized = text
     .toLocaleLowerCase()
+    .replace(/\b(\d+(?:\.\d+)?)k\+?(?=\W|$)/g, (_, value: string) =>
+      String(Number(value) * 1000),
+    )
+    .replace(/\b\d{1,3}(?:,\d{3})+(?:\.\d+)?\b/g, (number) =>
+      number.replace(/,/g, ""),
+    )
     .replace(/\b(\d+(?:[.,]\d+)?)\s+%/g, "$1%");
   const compoundNumber = new RegExp(
     `\\b(${tens.join("|")})[\\s-]+(${units.join("|")})\\b`,
@@ -447,88 +393,194 @@ function numericClaims(text: string): Set<string> {
 export function createTailoringResponse(args: {
   input: ResumeDraftInput;
   result: ResumeDraftResult;
+  repairInvalid?: boolean;
 }): TailorAchievementsResponse {
   const result = ResumeDraftResultSchema.parse(args.result);
   const sourceById = new Map(
     args.input.achievements.map((achievement) => [achievement.id, achievement]),
   );
+  const usedIds = new Set<string>();
   const generatedById = new Map<
     string,
     ResumeDraftResult["achievementText"][number]
   >();
-
   for (const item of result.achievementText) {
+    const ids = item.sourceAchievementIds ?? [item.achievementId];
     if (
       !sourceById.has(item.achievementId) ||
-      generatedById.has(item.achievementId)
+      generatedById.has(item.achievementId) ||
+      !ids.includes(item.achievementId) ||
+      ids.some((id) => !sourceById.has(id) || usedIds.has(id)) ||
+      new Set(ids).size !== ids.length
     ) {
       throw new AchievementTailoringError(
         "The AI response included an unknown or duplicate achievement.",
         "INVALID_AI_OUTPUT",
       );
     }
+    const sources = ids.map((id) => sourceById.get(id)!);
+    if (!canSynthesize(sources))
+      throw new AchievementTailoringError(
+        "Synthesis must stay within related work in the same source group.",
+        "INVALID_AI_OUTPUT",
+      );
+    ids.forEach((id) => usedIds.add(id));
     generatedById.set(item.achievementId, item);
   }
-
-  if (generatedById.size !== sourceById.size) {
+  if (usedIds.size !== sourceById.size)
     throw new AchievementTailoringError(
       "The AI response did not return wording for every selected achievement.",
       "INVALID_AI_OUTPUT",
     );
-  }
-
   const terms = getAnalyzedTerms(args.input.analysis);
-  const proposals = args.input.achievements.map((source) => {
-    const generated = generatedById.get(source.id)!;
-    const sourceNumbers = numericClaims(source.text);
-    if (
-      [...numericClaims(generated.text)].some(
-        (value) => !sourceNumbers.has(value),
-      )
-    ) {
-      throw new AchievementTailoringError(
-        `The AI added an unsupported number to achievement ${source.id}.`,
-        "INVALID_AI_OUTPUT",
-      );
-    }
-    const sourceEvidence = [
-      source.text,
-      ...source.tags,
-      ...(source.supportedSkills ?? []),
-    ].join(" ");
+  const validationTerms = [
+    ...new Set([
+      ...terms,
+      ...(args.input.skills ?? []).flatMap((skill) => [
+        skill.name,
+        ...skill.aliases,
+      ]),
+    ]),
+  ];
+  const allNotes: string[] = [];
+  const proposals = [...generatedById.values()].map((generated) => {
+    const ids = generated.sourceAchievementIds ?? [generated.achievementId];
+    const sources = ids.map((id) => sourceById.get(id)!);
+    const originalText = sources.map((source) => source.text).join("\n");
+    const sourceEvidence = sources.map(evidenceText).join(" ");
+    const sourceNumbers = numericClaims(sourceEvidence);
+    const inferred = sources.flatMap((source) => source.inferredSkills ?? []);
     const addedTerms = terms.filter(
       (term) =>
-        containsTerm(generated.text, term) && !containsTerm(source.text, term),
+        containsTerm(generated.text, term) && !containsTerm(originalText, term),
     );
-    const unsupportedTerms = addedTerms.filter(
-      (term) => !containsTerm(sourceEvidence, term),
+    const unsupportedTerms = validationTerms.filter(
+      (term) =>
+        containsTerm(generated.text, term) &&
+        !containsTerm(sourceEvidence, term) &&
+        semanticMatchScore(sourceEvidence, term) < 0.75 &&
+        !inferred.some((skill) => containsTerm(skill.name, term)),
     );
-    if (unsupportedTerms.length > 0) {
-      throw new AchievementTailoringError(
-        `The AI added unsupported job terms to achievement ${source.id}.`,
-        "INVALID_AI_OUTPUT",
+    const unsupportedNumbers = [...numericClaims(generated.text)].filter(
+      (value) => !sourceNumbers.has(value),
+    );
+    let proposedText = generated.text;
+    const notes: string[] = [];
+    if (
+      unsupportedNumbers.length ||
+      unsupportedTerms.length ||
+      misattributedMetrics(generated.text, sources).length
+    ) {
+      if (!args.repairInvalid)
+        throw new AchievementTailoringError(
+          unsupportedNumbers.length ||
+            misattributedMetrics(generated.text, sources).length
+            ? `The AI added an unsupported number to achievement ${generated.achievementId}.`
+            : `The AI added unsupported job terms to achievement ${generated.achievementId}.`,
+          "INVALID_AI_OUTPUT",
+        );
+      proposedText = sources.map(enrichSourceText).join(" ");
+      notes.push(
+        "Unsupported additions were replaced with the complete source evidence.",
       );
     }
-
+    const substantive = preserveSubstance(proposedText, sources);
+    proposedText = substantive.text;
+    if (substantive.restored)
+      notes.push(
+        "Restored source specificity lost in an overly compressed rewrite.",
+      );
+    const missingSourceNumbers = [...numericClaims(originalText)].some(
+      (value) => !numericClaims(proposedText).has(value),
+    );
+    if (missingSourceNumbers) {
+      proposedText = sources.map((source) => source.text).join(" ");
+      notes.push("Restored a numeric source fact omitted by the rewrite.");
+    }
+    const preserved = preserveMetrics(proposedText, sources);
+    if (preserved.restoredMetricIds.length)
+      notes.push("Restored structured metrics omitted by the model.");
+    proposedText = preserved.text;
+    const omittedTargets = supportedTerminologyTargets(args.input)
+      .filter((target) => ids.includes(target.achievementId))
+      .flatMap((target) => target.terms)
+      .filter((term) => !containsTerm(proposedText, term));
+    if (omittedTargets.length)
+      notes.push(
+        `Supported JD phrases still absent after drafting: ${[...new Set(omittedTargets)].join(", ")}. Review this wording.`,
+      );
+    const inferredTerms = inferred
+      .filter(
+        (skill) =>
+          containsTerm(proposedText, skill.name) &&
+          !containsTerm(sourceEvidence, skill.name),
+      )
+      .map((skill) => skill.name);
+    if (inferredTerms.length)
+      notes.push(
+        `Inferred framework usage: ${inferredTerms.join(", ")}. Review this assumption; it is not directly recorded project history.`,
+      );
+    allNotes.push(...notes);
     return {
-      achievementId: source.id,
-      originalText: source.text,
-      proposedText: generated.text,
+      achievementId: generated.achievementId,
+      sourceAchievementIds: ids,
+      originalText,
+      proposedText,
       rationale:
         generated.rationale ||
-        "Review the source wording above to confirm this job-aligned phrasing is accurate.",
-      addedTerms,
+        "Aligned the source evidence to the active job while preserving its outcomes.",
+      addedTerms: terms.filter(
+        (term) =>
+          containsTerm(proposedText, term) && !containsTerm(originalText, term),
+      ),
+      inferredTerms,
+      retainedMetricIds: sources
+        .flatMap((source) => source.metrics ?? [])
+        .map((metric) => metric.id),
+      qualityNotes: notes,
     };
   });
-
+  const summaryEvidence =
+    args.input.achievements.map(evidenceText).join(" ") +
+    " " +
+    (args.input.skills ?? [])
+      .flatMap((skill) => [skill.name, ...skill.aliases])
+      .join(" ");
+  let resumeSummary = result.resumeSummary || buildEvidenceSummary(args.input);
+  const badSummaryNumber = [...numericClaims(resumeSummary)].some(
+    (value) => !numericClaims(summaryEvidence).has(value),
+  );
+  const badSummaryTerm = terms.some(
+    (term) =>
+      containsTerm(resumeSummary, term) && !containsTerm(summaryEvidence, term),
+  );
+  const unsupportedTraining =
+    /\btrain(?:ed|ing)?\b/i.test(resumeSummary) &&
+    !/\btrain(?:ed|ing)?\b/i.test(summaryEvidence);
+  const unsupportedYears =
+    /\b\d+(?:\.\d+)?\+?\s+years?\b/i.test(resumeSummary) &&
+    !/\b\d+(?:\.\d+)?\+?\s+years?\b/i.test(summaryEvidence);
+  if (
+    badSummaryNumber ||
+    badSummaryTerm ||
+    unsupportedTraining ||
+    unsupportedYears ||
+    misattributedMetrics(resumeSummary, args.input.achievements).length
+  ) {
+    resumeSummary = buildEvidenceSummary(args.input);
+    allNotes.push(
+      "Replaced an unsupported summary with an evidence-backed accomplishment summary.",
+    );
+  }
   return TailorAchievementsResponseSchema.parse({
     proposals,
     analyzedTerms: terms,
     mode: "ai",
     handoff: args.input.handoff,
     summary:
-      result.summary ||
-      "Review each proposal and approve only wording that accurately describes your experience.",
+      result.summary || "Drafted the selected evidence for the active job.",
+    resumeSummary,
+    qualityNotes: [...new Set(allNotes)].slice(0, 100),
   });
 }
 
@@ -540,12 +592,15 @@ export function createOriginalsFallbackResponse(args: {
     proposals: args.input.achievements.map((achievement) => ({
       achievementId: achievement.id,
       originalText: achievement.text,
-      proposedText: achievement.text,
+      proposedText: enrichSourceText(achievement),
+      sourceAchievementIds: [achievement.id],
+      retainedMetricIds: (achievement.metrics ?? []).map((metric) => metric.id),
       rationale: "The original source wording is preserved without AI edits.",
       addedTerms: [],
     })),
     summary:
       "The resume draft uses selected source points. No AI wording changes were applied.",
+    resumeSummary: buildEvidenceSummary(args.input),
     analyzedTerms: getAnalyzedTerms(args.input.analysis),
     mode: "originals-fallback",
     handoff: args.input.handoff,

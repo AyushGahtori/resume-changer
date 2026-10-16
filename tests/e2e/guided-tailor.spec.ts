@@ -63,6 +63,8 @@ test("Guided Tailor requires approval and renders only the approved rewrite", as
       contentType: "application/json",
       body: JSON.stringify({
         summary: "The proposed wording aligns the point with the analyzed JD.",
+        resumeSummary:
+          "Delivered reliable AWS infrastructure with reusable deployment checks.",
         analyzedTerms: ["AWS provisioning", "Infrastructure as Code"],
         mode: "ai",
         handoff: createResumeDraftHandoff({
@@ -112,10 +114,17 @@ test("Guided Tailor requires approval and renders only the approved rewrite", as
   const preview = page.getByLabel("Generated LaTeX");
   await expect(preview).toContainText(originalText);
   await expect(preview).not.toContainText("using Infrastructure as Code");
+  await expect(preview).not.toContainText(
+    "Delivered reliable AWS infrastructure",
+  );
 
+  await review
+    .getByRole("checkbox", { name: "Use this generated summary" })
+    .check();
   await approval.check();
   await page.getByRole("button", { name: "Generate LaTeX" }).click();
   await expect(preview).toContainText(proposedText);
+  await expect(preview).toContainText("Delivered reliable AWS infrastructure");
   await expect(preview).not.toContainText(originalText);
 
   const editedText =

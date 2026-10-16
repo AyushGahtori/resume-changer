@@ -75,8 +75,9 @@ export async function POST(request: Request) {
       input,
       selectWithAi: () => createAiProvider().selectAchievements(input),
     });
+    const { audit: _audit, ...responseBody } = response;
     return NextResponse.json(
-      AchievementSelectionResponseSchema.parse(response),
+      AchievementSelectionResponseSchema.parse(responseBody),
     );
   } catch (error) {
     if (error instanceof DataLoadError) {

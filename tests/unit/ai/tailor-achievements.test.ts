@@ -3,6 +3,7 @@ import sampleLibrary from "../../../examples/sample-resume-library.json";
 import {
   ResumeDraftInputSchema,
   type ResumeDraftResult,
+  type JobAnalysisResult,
 } from "../../../src/lib/ai/contracts";
 import {
   AchievementTailoringError,
@@ -14,7 +15,7 @@ import { createJobContextId } from "../../../src/lib/ai/job-context";
 import type { ResumeLibrary } from "../../../src/lib/schemas/resume-data";
 
 const library = sampleLibrary as ResumeLibrary;
-const analysis = {
+const analysis: JobAnalysisResult = {
   targetTitle: "Cloud Platform Engineer",
   seniority: "Early career",
   requiredQualifications: ["AWS provisioning"],
@@ -57,6 +58,37 @@ async function createRequest(overrides: Partial<typeof baseRequest> = {}) {
 }
 
 describe("Guided Tailor evidence preparation", () => {
+  it("retains every parent requirement when the analysis exceeds one hundred items", async () => {
+    const expanded = {
+      ...analysis,
+      requiredQualifications: Array.from(
+        { length: 100 },
+        (_, index) => `Required AWS capability ${index}`,
+      ),
+      responsibilities: Array.from(
+        { length: 100 },
+        (_, index) => `Operate AWS service ${index}`,
+      ),
+      preferredQualifications: Array.from(
+        { length: 100 },
+        (_, index) => `Preferred AWS capability ${index}`,
+      ),
+    };
+    const input = await buildResumeDraftInput(
+      library,
+      await createRequest({ analysis: expanded }),
+    );
+    expect(
+      input.handoff.requirements.filter(
+        (requirement) => requirement.category !== "context",
+      ),
+    ).toHaveLength(300);
+    expect(input.handoff.requirements).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ text: "Preferred AWS capability 99" }),
+      ]),
+    );
+  });
   it("sends the active job, structured handoff, and selected enabled evidence", async () => {
     const request = await createRequest();
     const input = await buildResumeDraftInput(library, request);
@@ -86,7 +118,7 @@ describe("Guided Tailor evidence preparation", () => {
         }),
       ]),
     );
-    expect(input).not.toHaveProperty("profile");
+    expect(input).not.toHaveProperty("profile.email");
     expect(input).not.toHaveProperty("templateContext");
   });
 
@@ -123,7 +155,7 @@ describe("Guided Tailor evidence preparation", () => {
         }),
         expect.objectContaining({
           text: "AWS environment platform",
-          status: "uncertain",
+          status: "partial",
         }),
         expect.objectContaining({
           text: "release readiness checks",

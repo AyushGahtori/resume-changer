@@ -16,6 +16,12 @@ import {
   type JobAnalysisResult,
   type TailorAchievementsResponse,
 } from "@/lib/ai/contracts";
+import {
+  buildAchievementEvidence,
+  buildSkillEvidence,
+  buildProfileEvidence,
+} from "@/lib/ai/evidence";
+import { assessRequirementCoverage } from "@/lib/ai/requirement-coverage";
 import { createJobContextId } from "@/lib/ai/job-context";
 import { readJobAnalysisCache } from "@/lib/jd-analysis-cache";
 import { createResumeFilename } from "@/lib/generation/resume-filename";
@@ -25,6 +31,11 @@ import type {
   AchievementPoint,
   ResumeLibrary,
 } from "@/lib/schemas/resume-data";
+import {
+  getActiveRunId,
+  recordRunEvent,
+  recordServerEvents,
+} from "@/lib/diagnostics/run-log";
 
 type Props = {
   library: ResumeLibrary;
@@ -100,6 +111,7 @@ export default function ResumeGenerator({ library, source }: Props) {
   const [tailoring, setTailoring] = useState<TailorAchievementsResponse | null>(
     null,
   );
+  const [summaryApproved, setSummaryApproved] = useState(false);
   const [tailoredText, setTailoredText] = useState<Record<string, string>>({});
   const [approvedTailoredIds, setApprovedTailoredIds] = useState<string[]>([]);
   const [tailoringError, setTailoringError] = useState("");
@@ -147,8 +159,12 @@ export default function ResumeGenerator({ library, source }: Props) {
 
   useEffect(() => {
     const saved = readDraft(window.localStorage);
+    const cachedAnalysis = readJobAnalysisCache(
+      window.localStorage,
+      saved.draft,
+    );
     setDraft(saved.draft);
-    setAnalysis(readJobAnalysisCache(window.localStorage, saved.draft));
+    setAnalysis(cachedAnalysis);
     setDraftNotice(
       saved.state === "invalid"
         ? "The saved job draft could not be restored. Return to Job description and save it again."
@@ -157,6 +173,17 @@ export default function ResumeGenerator({ library, source }: Props) {
           : "",
     );
     setDraftReady(true);
+    void recordRunEvent({
+      runId: getActiveRunId(),
+      stage: "resume-builder.opened",
+      message:
+        "Opened Resume Builder and restored the active job and analysis.",
+      data: {
+        draftState: saved.state,
+        draft: saved.draft,
+        analysis: cachedAnalysis,
+      },
+    });
   }, []);
 
   useEffect(() => {
@@ -189,6 +216,7 @@ export default function ResumeGenerator({ library, source }: Props) {
     tailoringAbortRef.current = null;
     setIsTailoring(false);
     setTailoring(null);
+    setSummaryApproved(false);
     setTailoredText({});
     setApprovedTailoredIds([]);
     setTailoringError("");
@@ -408,6 +436,7 @@ export default function ResumeGenerator({ library, source }: Props) {
     setAutoTailorStatus("");
     setTailoringWorkflow(null);
     setTailoring(null);
+    setSummaryApproved(false);
     setTailoredText({});
     setApprovedTailoredIds([]);
     clearPdfOutput();
@@ -458,6 +487,7 @@ export default function ResumeGenerator({ library, source }: Props) {
         );
       }
       setTailoring(parsed.data);
+      setSummaryApproved(false);
       setTailoringWorkflow("guided");
       setTailoredText(
         Object.fromEntries(
@@ -483,6 +513,7 @@ export default function ResumeGenerator({ library, source }: Props) {
   }
 
   async function handleAutoTailor() {
+    const runId = getActiveRunId();
     if (!draft.jobDescription.trim() || !analysis) {
       setTailoringError(
         "Save and analyze a job description before running Auto Tailor.",
@@ -512,18 +543,60 @@ export default function ResumeGenerator({ library, source }: Props) {
           analysis,
         }),
       };
+      const requestBody = {
+        dataSource: source,
+        generatePdf: true,
+        jobDescription: draft.jobDescription,
+        analysis,
+        job,
+      };
+      void recordRunEvent({
+        runId,
+        stage: "auto-tailor.button-clicked",
+        message: "User clicked Auto Tailor.",
+        data: { requestBody },
+      });
       const response = await fetch("/api/ai/auto-tailor", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          dataSource: source,
-          jobDescription: draft.jobDescription,
-          analysis,
-          job,
-        }),
+        headers: {
+          "Content-Type": "application/json",
+          "X-Resume-Run-Id": runId,
+        },
+        body: JSON.stringify(requestBody),
         signal: controller.signal,
       });
       const payload: unknown = await response.json();
+      void recordRunEvent({
+        runId,
+        stage: "auto-tailor.http-response",
+        message: "Received Auto Tailor API response body.",
+        data: {
+          status: response.status,
+          ok: response.ok,
+          body:
+            payload && typeof payload === "object" && "compiled" in payload
+              ? {
+                  ...payload,
+                  compiled: {
+                    ...(payload as { compiled?: Record<string, unknown> })
+                      .compiled,
+                    pdfBase64: "[PDF bytes omitted]",
+                  },
+                }
+              : payload,
+        },
+      });
+      if (
+        payload &&
+        typeof payload === "object" &&
+        "diagnostics" in payload &&
+        Array.isArray(payload.diagnostics)
+      ) {
+        recordServerEvents(
+          runId,
+          payload.diagnostics as Parameters<typeof recordServerEvents>[1],
+        );
+      }
       if (!response.ok) {
         const message =
           payload &&
@@ -534,7 +607,15 @@ export default function ResumeGenerator({ library, source }: Props) {
             : "Auto Tailor could not prepare this resume. Try again.";
         throw new Error(message);
       }
-      const parsed = AutoTailorResponseSchema.safeParse(payload);
+      const parsed = AutoTailorResponseSchema.safeParse(
+        payload && typeof payload === "object" && "diagnostics" in payload
+          ? Object.fromEntries(
+              Object.entries(payload).filter(
+                ([key]) => key !== "diagnostics" && key !== "runId",
+              ),
+            )
+          : payload,
+      );
       if (!parsed.success) {
         throw new Error(
           "Auto Tailor returned an invalid response. No resume was generated.",
@@ -568,6 +649,50 @@ export default function ResumeGenerator({ library, source }: Props) {
           ? "AI selected and drafted the source evidence. Generating LaTeX and checking the PDF…"
           : "AI is unavailable, so Auto Tailor kept the selected source wording unchanged. Generating LaTeX and checking the PDF…",
       );
+      void recordRunEvent({
+        runId,
+        stage: "auto-tailor.client-state",
+        message:
+          "Applied validated recommendation, tailoring, and selected skills to Resume Builder state.",
+        data: {
+          selectedAchievementIds: nextIds,
+          selectedSkillIds: auto.selectedSkillIds,
+          recommendation: auto.recommendation,
+          tailoring: auto.tailoring,
+        },
+      });
+
+      if (auto.compiled) {
+        const binary = atob(auto.compiled.pdfBase64);
+        const bytes = Uint8Array.from(binary, (character) =>
+          character.charCodeAt(0),
+        );
+        if (new TextDecoder().decode(bytes.slice(0, 5)) !== "%PDF-")
+          throw new Error("Auto Tailor returned invalid PDF bytes.");
+        const generation = {
+          latex: auto.compiled.latex,
+          metadata: auto.compiled.metadata,
+        };
+        setResult(generation);
+        setSelectedIds(generation.metadata.selectedAchievementIds);
+        setPdfUrl(
+          URL.createObjectURL(new Blob([bytes], { type: "application/pdf" })),
+        );
+        setPdfZoom(100);
+        setOutputView("pdf");
+        const fit = generation.metadata.fitting;
+        setCompileStatus(
+          `PDF ready · 1 page${generation.metadata.layout ? ` · ${Math.round(generation.metadata.layout.utilization * 100)}% page fill` : ""}.`,
+        );
+        setAutoTailorStatus(
+          fit?.status === "filled"
+            ? "Auto Tailor completed with a verified one-page PDF and measured page fill."
+            : fit?.status === "measurement-unavailable"
+              ? "One-page PDF prepared; page-fill measurement was unavailable."
+              : "One-page PDF prepared. More relevant evidence is needed to fill the remaining space.",
+        );
+        return;
+      }
 
       const generated = await requestGeneration({
         selectedIds: nextIds,
@@ -596,6 +721,11 @@ export default function ResumeGenerator({ library, source }: Props) {
       );
     } catch (error) {
       if (controller.signal.aborted) return;
+      void recordRunEvent({
+        runId,
+        stage: "auto-tailor.client-error",
+        message: error instanceof Error ? error.message : "Auto Tailor failed.",
+      });
       setTailoringError(
         error instanceof Error
           ? error.message
@@ -627,6 +757,7 @@ export default function ResumeGenerator({ library, source }: Props) {
       workflow: tailoringWorkflow ?? (tailoring ? "guided" : "manual"),
     },
   ): Promise<ManualGenerationResult | null> {
+    const runId = getActiveRunId();
     clearPdfOutput();
     setResult(null);
     setRequestError("");
@@ -643,40 +774,69 @@ export default function ResumeGenerator({ library, source }: Props) {
 
     setIsGenerating(true);
     try {
+      const requestBody = {
+        dataSource: source,
+        company: draft.company,
+        roleTitle: draft.roleTitle,
+        jobUrl: draft.jobUrl,
+        jobDescription: draft.jobDescription,
+        tailoringMode: options.workflow,
+        ...(options.tailoring?.resumeSummary &&
+        (options.workflow === "auto" || summaryApproved)
+          ? { summaryOverride: options.tailoring.resumeSummary }
+          : {}),
+        selectedAchievementIds: options.selectedIds,
+        ...(options.selectedSkillIds
+          ? { selectedSkillIds: options.selectedSkillIds }
+          : {}),
+        ...(options.tailoring
+          ? {
+              achievementTextOverrides: options.tailoring.proposals
+                .filter(
+                  (proposal) =>
+                    options.approvedTailoredIds.includes(
+                      proposal.achievementId,
+                    ) && options.selectedIds.includes(proposal.achievementId),
+                )
+                .map((proposal) => ({
+                  achievementId: proposal.achievementId,
+                  sourceAchievementIds: proposal.sourceAchievementIds,
+                  inferredTerms: proposal.inferredTerms,
+                  text:
+                    options.tailoredText[proposal.achievementId] ??
+                    proposal.proposedText,
+                })),
+            }
+          : {}),
+      };
+      void recordRunEvent({
+        runId,
+        stage: "latex.client-request",
+        message:
+          "Sending selected resume content to deterministic LaTeX renderer.",
+        data: { requestBody },
+      });
       const response = await fetch("/api/generate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          dataSource: source,
-          company: draft.company,
-          roleTitle: draft.roleTitle,
-          jobUrl: draft.jobUrl,
-          jobDescription: draft.jobDescription,
-          tailoringMode: options.workflow,
-          selectedAchievementIds: options.selectedIds,
-          ...(options.selectedSkillIds
-            ? { selectedSkillIds: options.selectedSkillIds }
-            : {}),
-          ...(options.tailoring
-            ? {
-                achievementTextOverrides: options.tailoring.proposals
-                  .filter(
-                    (proposal) =>
-                      options.approvedTailoredIds.includes(
-                        proposal.achievementId,
-                      ) && options.selectedIds.includes(proposal.achievementId),
-                  )
-                  .map((proposal) => ({
-                    achievementId: proposal.achievementId,
-                    text:
-                      options.tailoredText[proposal.achievementId] ??
-                      proposal.proposedText,
-                  })),
-              }
-            : {}),
-        }),
+        headers: {
+          "Content-Type": "application/json",
+          "X-Resume-Run-Id": runId,
+        },
+        body: JSON.stringify(requestBody),
       });
       const payload = (await response.json()) as ApiResponse;
+      void recordRunEvent({
+        runId,
+        stage: "latex.http-response",
+        message: "Received LaTeX generation API response.",
+        data: { status: response.status, ok: response.ok, body: payload },
+      });
+      if ("diagnostics" in payload && Array.isArray(payload.diagnostics)) {
+        recordServerEvents(
+          runId,
+          payload.diagnostics as Parameters<typeof recordServerEvents>[1],
+        );
+      }
 
       if (!response.ok || !("latex" in payload)) {
         setRequestError(
@@ -691,6 +851,12 @@ export default function ResumeGenerator({ library, source }: Props) {
       setResult(payload);
       return payload;
     } catch {
+      void recordRunEvent({
+        runId,
+        stage: "latex.client-error",
+        message:
+          "LaTeX generation request failed or the server could not be reached.",
+      });
       setRequestError("The server could not be reached. Try again.");
       setResult(null);
       return null;
@@ -706,6 +872,7 @@ export default function ResumeGenerator({ library, source }: Props) {
 
   async function compilePdf(target: ManualGenerationResult | null = result) {
     if (!target || isCompiling) return false;
+    const runId = getActiveRunId();
 
     const controller = new AbortController();
     compileAbortRef.current = controller;
@@ -714,15 +881,31 @@ export default function ResumeGenerator({ library, source }: Props) {
     setCompileStatus("");
 
     try {
+      const requestBody = { latex: target.latex };
+      void recordRunEvent({
+        runId,
+        stage: "pdf.client-request",
+        message: "Sending generated LaTeX to the local PDF compiler.",
+        data: { requestBody },
+      });
       const response = await fetch("/api/compile", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ latex: target.latex }),
+        headers: {
+          "Content-Type": "application/json",
+          "X-Resume-Run-Id": runId,
+        },
+        body: JSON.stringify(requestBody),
         signal: controller.signal,
       });
 
       if (!response.ok) {
         const payload = (await response.json()) as CompileErrorResponse;
+        void recordRunEvent({
+          runId,
+          stage: "pdf.http-error",
+          message: "PDF compiler returned an error response.",
+          data: { status: response.status, body: payload },
+        });
         setCompileError({
           error: payload.error ?? "The PDF could not be created. Try again.",
           diagnostics: payload.diagnostics,
@@ -741,6 +924,37 @@ export default function ResumeGenerator({ library, source }: Props) {
       }
 
       const pdf = await response.blob();
+      let compilerTrace: unknown = [];
+      try {
+        const encoded = response.headers.get("X-Compile-Trace");
+        if (encoded) {
+          const binary = atob(encoded.replace(/-/g, "+").replace(/_/g, "/"));
+          const bytes = Uint8Array.from(binary, (character) =>
+            character.charCodeAt(0),
+          );
+          compilerTrace = JSON.parse(new TextDecoder().decode(bytes));
+        }
+      } catch {
+        compilerTrace = {
+          parseError: "Compiler trace header could not be decoded.",
+        };
+      }
+      void recordRunEvent({
+        runId,
+        stage: "pdf.http-response",
+        message:
+          "PDF compiler returned a PDF binary; binary content is represented by metadata and SHA-256 rather than embedded in the text log.",
+        data: {
+          status: response.status,
+          contentType: response.headers.get("Content-Type"),
+          pageCount: response.headers.get("X-PDF-Pages"),
+          byteLength: pdf.size,
+          sha256: response.headers.get("X-PDF-SHA256"),
+          compileDurationMs: response.headers.get("X-Compile-Duration-Ms"),
+          signatureValid: (await pdf.slice(0, 5).text()) === "%PDF-",
+          compilerTrace,
+        },
+      });
       if (controller.signal.aborted) return false;
       if ((await pdf.slice(0, 5).text()) !== "%PDF-") {
         setCompileError({
@@ -756,6 +970,12 @@ export default function ResumeGenerator({ library, source }: Props) {
       setCompileStatus("PDF ready · 1 page.");
       return true;
     } catch {
+      void recordRunEvent({
+        runId,
+        stage: "pdf.client-error",
+        message:
+          "PDF compilation request failed or the server could not be reached.",
+      });
       if (!controller.signal.aborted) {
         setCompileError({
           error: "The PDF service could not be reached. Try again.",
@@ -853,21 +1073,68 @@ export default function ResumeGenerator({ library, source }: Props) {
       }
     }
   }
-  const coverageItems =
-    recommendation?.recommendations.requirementCoverage.map((item) => {
-      const availableIds =
-        availableEvidence.get(item.requirement) ?? item.coveredByAchievementIds;
-      return {
-        requirement: item.requirement,
-        category: coverageCategories.get(item.requirement) ?? "Other signals",
-        availableIds,
-        selectedEvidenceIds: availableIds.filter((id) =>
-          selectedIds.includes(id),
-        ),
-      };
-    }) ?? [];
+  const currentCoverage = useMemo(
+    () =>
+      analysis && recommendation
+        ? assessRequirementCoverage(
+            {
+              jobDescription: draft.jobDescription,
+              analysis,
+              achievements: buildAchievementEvidence(library),
+              skills: buildSkillEvidence(library),
+              profile: buildProfileEvidence(library),
+              contentBudgetLines: 60,
+            },
+            selectedIds,
+            { renderedSkillIds: selectedSkillIds ?? undefined },
+          )
+        : null,
+    [
+      analysis,
+      recommendation,
+      draft.jobDescription,
+      library,
+      selectedIds,
+      selectedSkillIds,
+    ],
+  );
+  const finalCoverage = result?.metadata.finalCoverage;
+  const coverageItems = (
+    finalCoverage ??
+    currentCoverage ??
+    recommendation?.recommendations.requirementCoverage ??
+    []
+  ).map((item) => {
+    const details = recommendation?.requirementEvidence?.find(
+      (entry) => entry.requirement === item.requirement,
+    );
+    const availableIds =
+      availableEvidence.get(item.requirement) ?? item.coveredByAchievementIds;
+    const selectedEvidenceIds = availableIds.filter((id) =>
+      selectedIds.includes(id),
+    );
+    return {
+      requirement: item.requirement,
+      category: coverageCategories.get(item.requirement) ?? "Other signals",
+      availableIds,
+      selectedEvidenceIds,
+      evidence: item.evidence ?? details?.evidence ?? [],
+      reason: item.reason ?? details?.reason,
+      status:
+        item.status ??
+        details?.status ??
+        (selectedEvidenceIds.length
+          ? "supported"
+          : availableIds.length
+            ? "evidence-not-selected"
+            : "no-evidence-found"),
+    };
+  });
   const coveredCount = coverageItems.filter(
-    (item) => item.selectedEvidenceIds.length > 0,
+    (item) => item.status === "supported",
+  ).length;
+  const partialCount = coverageItems.filter(
+    (item) => item.status === "partial" || item.status === "uncertain",
   ).length;
   const visibleProposals =
     tailoring?.proposals.filter((proposal) =>
@@ -1098,6 +1365,7 @@ export default function ResumeGenerator({ library, source }: Props) {
                     <h4>Requirement coverage</h4>
                     <strong>
                       {coveredCount} / {coverageItems.length} supported
+                      {partialCount ? ` · ${partialCount} partial` : ""}
                     </strong>
                   </div>
                   {coverageItems.length ? (
@@ -1116,11 +1384,17 @@ export default function ResumeGenerator({ library, source }: Props) {
                             {coverageItems
                               .filter((item) => item.category === category)
                               .map((item) => {
-                                const status = item.selectedEvidenceIds.length
-                                  ? "Covered"
-                                  : item.availableIds.length
-                                    ? "Not selected"
-                                    : "No match found";
+                                const status =
+                                  item.status === "supported"
+                                    ? "Covered"
+                                    : item.status === "partial"
+                                      ? "Partial support"
+                                      : item.status === "uncertain"
+                                        ? "Needs confirmation"
+                                        : item.status ===
+                                            "evidence-not-selected"
+                                          ? "Not selected"
+                                          : "No match found";
                                 const evidenceIds = item.selectedEvidenceIds
                                   .length
                                   ? item.selectedEvidenceIds
@@ -1141,17 +1415,19 @@ export default function ResumeGenerator({ library, source }: Props) {
                                         <span>{item.requirement}</span>
                                       </summary>
                                       <p>
-                                        {evidenceIds.length
-                                          ? `${item.selectedEvidenceIds.length ? "Selected evidence" : "Available evidence"}: ${evidenceIds
-                                              .map((id) => {
-                                                const source =
-                                                  pointById.get(id);
-                                                return source
-                                                  ? `${source.group.title}${source.group.subtitle ? `, ${source.group.subtitle}` : ""}: ${source.point.text}`
-                                                  : id;
-                                              })
-                                              .join("; ")}`
-                                          : "No supporting achievement was identified in the enabled library."}
+                                        {item.evidence.length
+                                          ? `${item.reason ?? ""} ${item.evidence.map((evidence) => `${evidence.kind}: ${evidence.label} — ${evidence.quote}`).join("; ")}`
+                                          : evidenceIds.length
+                                            ? `${item.selectedEvidenceIds.length ? "Selected evidence" : "Available evidence"}: ${evidenceIds
+                                                .map((id) => {
+                                                  const source =
+                                                    pointById.get(id);
+                                                  return source
+                                                    ? `${source.group.title}${source.group.subtitle ? `, ${source.group.subtitle}` : ""}: ${source.point.text}`
+                                                    : id;
+                                                })
+                                                .join("; ")}`
+                                            : "No supporting achievement was identified in the enabled library."}
                                       </p>
                                     </details>
                                   </li>
@@ -1240,13 +1516,46 @@ export default function ResumeGenerator({ library, source }: Props) {
             {tailoring && (
               <section
                 className="guided-tailor-review"
-                aria-label="Guided Tailor review"
+                aria-label={
+                  tailoringWorkflow === "auto"
+                    ? "Auto Tailor review"
+                    : "Guided Tailor review"
+                }
                 aria-live="polite"
               >
                 <div className="guided-tailor-heading">
                   <div>
-                    <h3>Guided Tailor</h3>
+                    <h3>
+                      {tailoringWorkflow === "auto"
+                        ? "Auto Tailor review"
+                        : "Guided Tailor"}
+                    </h3>
                     <p>{tailoring.summary}</p>
+                    {tailoring.resumeSummary && (
+                      <div>
+                        <h4>Resume summary</h4>
+                        <p>{tailoring.resumeSummary}</p>
+                        {tailoringWorkflow !== "auto" && (
+                          <label>
+                            <input
+                              type="checkbox"
+                              checked={summaryApproved}
+                              onChange={(event) => {
+                                setSummaryApproved(event.target.checked);
+                                setResult(null);
+                                clearPdfOutput();
+                              }}
+                            />{" "}
+                            Use this generated summary
+                          </label>
+                        )}
+                      </div>
+                    )}
+                    {tailoring.qualityNotes?.map((note) => (
+                      <p className="selection-fallback-notice" key={note}>
+                        {note}
+                      </p>
+                    ))}
                   </div>
                   <span className="guided-tailor-count" role="status">
                     {
@@ -1290,8 +1599,9 @@ export default function ResumeGenerator({ library, source }: Props) {
                   </button>
                 </div>
                 <p className="guided-tailor-note">
-                  Review each change. Only approved wording for selected points
-                  replaces the originals in the generated resume.
+                  Review disclosed framework inferences before using them. Only
+                  approved wording for selected points replaces the originals in
+                  the generated resume.
                 </p>
                 {tailoring.notice && (
                   <p className="selection-fallback-notice" role="status">
@@ -1477,6 +1787,26 @@ export default function ResumeGenerator({ library, source }: Props) {
                               Original
                             </span>
                             <p>{proposal.originalText}</p>
+                            {(
+                              proposal.sourceAchievementIds ?? [
+                                proposal.achievementId,
+                              ]
+                            )
+                              .flatMap(
+                                (id) => pointById.get(id)?.point.metrics ?? [],
+                              )
+                              .map((metric) => (
+                                <p
+                                  className="guided-tailor-rationale"
+                                  key={metric.id}
+                                >
+                                  Recorded metric: {metric.label} —{" "}
+                                  {metric.value}
+                                  {metric.unit === "%"
+                                    ? "%"
+                                    : ` ${metric.unit ?? ""}`}
+                                </p>
+                              ))}
                           </div>
                           <label>
                             <span className="guided-tailor-label">
@@ -1508,6 +1838,13 @@ export default function ResumeGenerator({ library, source }: Props) {
                         <p className="guided-tailor-rationale">
                           {proposal.rationale}
                         </p>
+                        {proposal.inferredTerms?.length ? (
+                          <p className="selection-fallback-notice">
+                            Inferred, not directly recorded:{" "}
+                            {proposal.inferredTerms.join(", ")}. Check that this
+                            describes your work.
+                          </p>
+                        ) : null}
                         <p className="guided-tailor-rationale">
                           Source: {sourceContext?.section ?? "resume"} ·{" "}
                           {sourceContext?.groupId ?? proposal.achievementId}

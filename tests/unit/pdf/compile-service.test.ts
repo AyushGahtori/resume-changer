@@ -44,8 +44,10 @@ describe("compileLatexToPdf", () => {
   it("returns a one-page PDF, uses fixed untrusted offline flags, and cleans temporary files", async () => {
     const tempRoot = await createRoot();
     const calls: string[][] = [];
+    const events: Array<{ stage: string; data?: unknown }> = [];
     const result = await compileLatexToPdf(latex, {
       tempRoot,
+      onDiagnostic: (event) => events.push(event),
       runProcess: async (_executable, args, cwd) => {
         calls.push(args);
         if (calls.length === 1) {
@@ -71,6 +73,20 @@ describe("compileLatexToPdf", () => {
     expect(calls[0]).toContain("--untrusted");
     expect(calls[0]).toContain("--only-cached");
     expect(calls[0]).not.toContain("-Zshell-escape");
+    expect(events.map((event) => event.stage)).toEqual([
+      "pdf.temp-workspace",
+      "pdf.source-written",
+      "pdf.tectonic-started",
+      "pdf.tectonic-finished",
+      "pdf.page-count-started",
+      "pdf.page-count-result",
+      "pdf.verified",
+    ]);
+    expect(events[2].data).toMatchObject({
+      executable: expect.stringMatching(/^tectonic(\.exe)?$/),
+      args: expect.arrayContaining(["--untrusted", "--only-cached"]),
+    });
+    expect(events[6].data).toMatchObject({ pageCount: 1, signature: "%PDF-" });
     expect(await readdir(tempRoot)).toEqual([]);
   });
 
