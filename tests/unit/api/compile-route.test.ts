@@ -9,7 +9,15 @@ vi.mock("@/lib/pdf/compile-service", async (importOriginal) => {
 });
 
 import { POST } from "@/app/api/compile/route";
+import sampleLibrary from "../../../examples/sample-resume-library.json";
+import { renderResumeLatex } from "@/lib/latex/render-resume";
+import type { ResumeLibrary } from "@/lib/schemas/resume-data";
 import { PdfCompileError } from "@/lib/pdf/compile-service";
+
+const validLatex = renderResumeLatex({
+  library: sampleLibrary as ResumeLibrary,
+  selectedAchievementIds: [],
+});
 
 describe("POST /api/compile", () => {
   beforeEach(() => compileMock.mockReset());
@@ -23,7 +31,7 @@ describe("POST /api/compile", () => {
       new Request("http://localhost/api/compile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ latex: "\\documentclass{article}" }),
+        body: JSON.stringify({ latex: validLatex }),
       }),
     );
 
@@ -46,6 +54,30 @@ describe("POST /api/compile", () => {
 
     expect(response.status).toBe(400);
     expect(compileMock).not.toHaveBeenCalled();
+  });
+
+  it("returns validation diagnostics from the compile service", async () => {
+    compileMock.mockRejectedValueOnce(
+      new PdfCompileError(
+        "LaTeX validation failed. Fix the reported issues and regenerate the resume.",
+        "LATEX_VALIDATION_ERROR",
+        String.raw`Unsupported command: \input`,
+      ),
+    );
+    const response = await POST(
+      new Request("http://localhost/api/compile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ latex: validLatex }),
+      }),
+    );
+
+    expect(response.status).toBe(422);
+    await expect(response.json()).resolves.toMatchObject({
+      code: "LATEX_VALIDATION_ERROR",
+      diagnostics: expect.stringContaining(String.raw`\input`),
+    });
+    expect(compileMock).toHaveBeenCalledOnce();
   });
 
   it("returns a structured error when the request body is not valid JSON", async () => {
@@ -76,7 +108,7 @@ describe("POST /api/compile", () => {
       new Request("http://localhost/api/compile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ latex: "\\documentclass{article}" }),
+        body: JSON.stringify({ latex: validLatex }),
       }),
     );
 
@@ -97,7 +129,7 @@ describe("POST /api/compile", () => {
       new Request("http://localhost/api/compile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ latex: "\\documentclass{article}" }),
+        body: JSON.stringify({ latex: validLatex }),
       }),
     );
 

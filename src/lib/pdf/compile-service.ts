@@ -4,10 +4,15 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { z } from "zod";
+import { validateResumeLatex } from "../latex/validate-resume-latex";
 
 export const CompileRequestSchema = z
   .object({
-    latex: z.string().trim().min(1).max(150_000),
+    latex: z
+      .string()
+      .min(1)
+      .max(150_000)
+      .refine((value) => value.trim().length > 0, "LaTeX source is required."),
   })
   .strict();
 
@@ -16,6 +21,7 @@ export type CompileErrorCode =
   | "PDF_INFO_NOT_FOUND"
   | "COMPILE_TIMEOUT"
   | "LATEX_ERROR"
+  | "LATEX_VALIDATION_ERROR"
   | "INVALID_PDF"
   | "PAGE_LIMIT_EXCEEDED"
   | "COMPILE_FAILED";
@@ -124,6 +130,15 @@ export async function compileLatexToPdf(
     throw new PdfCompileError(
       "Provide valid LaTeX source to compile.",
       "LATEX_ERROR",
+    );
+  }
+
+  const validation = validateResumeLatex(parsed.data.latex);
+  if (!validation.valid) {
+    throw new PdfCompileError(
+      "LaTeX validation failed. Fix the reported issues and regenerate the resume.",
+      "LATEX_VALIDATION_ERROR",
+      validation.errors.join("\n"),
     );
   }
 
