@@ -10,6 +10,7 @@ import {
   createTailoringResponse,
   TailorAchievementsRequestSchema,
 } from "../../../src/lib/ai/tailor-achievements";
+import { createJobContextId } from "../../../src/lib/ai/job-context";
 import type { ResumeLibrary } from "../../../src/lib/schemas/resume-data";
 
 const library = sampleLibrary as ResumeLibrary;
@@ -28,16 +29,37 @@ const analysis = {
   ],
 };
 const cloudPointId = "achievement-cloud-deployment-platform";
-const request = {
+const baseRequest = {
   dataSource: "demo" as const,
   jobDescription: "Provision AWS services with Terraform.",
   analysis,
   achievementIds: [cloudPointId],
 };
+const job = {
+  company: "Example Cloud Labs",
+  roleTitle: "Platform Engineer",
+  jobUrl: "",
+};
+
+async function createRequest(overrides: Partial<typeof baseRequest> = {}) {
+  const value = { ...baseRequest, ...overrides };
+  return {
+    ...value,
+    job: {
+      ...job,
+      contextId: await createJobContextId({
+        ...job,
+        jobDescription: value.jobDescription,
+        analysis: value.analysis,
+      }),
+    },
+  };
+}
 
 describe("Guided Tailor evidence preparation", () => {
-  it("sends only selected enabled evidence with the JD analysis", () => {
-    const input = buildResumeDraftInput(library, request);
+  it("sends the active job, structured handoff, and selected enabled evidence", async () => {
+    const request = await createRequest();
+    const input = await buildResumeDraftInput(library, request);
 
     expect(input.analysis).toEqual(analysis);
     expect(input.jobDescription).toBe(request.jobDescription);
@@ -48,11 +70,87 @@ describe("Guided Tailor evidence preparation", () => {
     expect(input.achievements[0].supportedSkills).toContain(
       "Infrastructure as Code",
     );
+    expect(input.handoff.job.contextId).toBe(request.job.contextId);
+    expect(input.handoff.selectedAchievements[0]).toMatchObject({
+      achievementId: cloudPointId,
+      section: "experience",
+      groupId: "job-example-cloud-labs",
+      linkedSkills: expect.arrayContaining(["Infrastructure as Code"]),
+    });
+    expect(input.handoff.requirements).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          text: "AWS provisioning",
+          status: "supported",
+          selectedAchievementIds: [cloudPointId],
+        }),
+      ]),
+    );
     expect(input).not.toHaveProperty("profile");
     expect(input).not.toHaveProperty("templateContext");
   });
 
-  it("rejects duplicate, unknown, and disabled point IDs", () => {
+  it("distinguishes supported, uncertain, unselected, and missing evidence", async () => {
+    const request = await createRequest();
+    const expandedAnalysis = {
+      ...analysis,
+      requiredQualifications: [
+        "AWS provisioning",
+        "AWS environment platform",
+        "release readiness checks",
+        "quantum computing operations",
+      ],
+    };
+    const expandedRequest = {
+      ...request,
+      analysis: expandedAnalysis,
+      job: {
+        ...request.job,
+        contextId: await createJobContextId({
+          ...job,
+          jobDescription: request.jobDescription,
+          analysis: expandedAnalysis,
+        }),
+      },
+    };
+    const input = await buildResumeDraftInput(library, expandedRequest);
+
+    expect(input.handoff.requirements).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          text: "AWS provisioning",
+          status: "supported",
+        }),
+        expect.objectContaining({
+          text: "AWS environment platform",
+          status: "uncertain",
+        }),
+        expect.objectContaining({
+          text: "release readiness checks",
+          status: "evidence-not-selected",
+          availableAchievementIds: ["achievement-release-check-automation"],
+        }),
+        expect.objectContaining({
+          text: "quantum computing operations",
+          status: "no-evidence-found",
+        }),
+      ]),
+    );
+    expect(input.handoff.suggestedEvidence).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          achievementId: "achievement-release-check-automation",
+          supportedRequirementIds: expect.arrayContaining([
+            expect.stringMatching(/^requirement-required-/),
+          ]),
+        }),
+      ]),
+    );
+    expect(input.handoff.contentBudgetLines).toBeGreaterThan(0);
+  });
+
+  it("rejects duplicate, unknown, disabled, and stale-context selections", async () => {
+    const request = await createRequest();
     expect(
       TailorAchievementsRequestSchema.safeParse({
         ...request,
@@ -60,12 +158,12 @@ describe("Guided Tailor evidence preparation", () => {
       }).success,
     ).toBe(false);
 
-    expect(() =>
-      buildResumeDraftInput(library, {
-        ...request,
-        achievementIds: ["achievement-unknown"],
-      }),
-    ).toThrow(AchievementTailoringError);
+    await expect(
+      buildResumeDraftInput(
+        library,
+        await createRequest({ achievementIds: ["achievement-unknown"] }),
+      ),
+    ).rejects.toThrow(AchievementTailoringError);
 
     const disabledLibrary = structuredClone(library);
     const point = disabledLibrary.jobs
@@ -73,9 +171,15 @@ describe("Guided Tailor evidence preparation", () => {
       .find(({ id }) => id === cloudPointId);
     if (!point) throw new Error("Expected synthetic sample achievement.");
     point.enabled = false;
-    expect(() => buildResumeDraftInput(disabledLibrary, request)).toThrow(
-      /disabled/,
-    );
+    await expect(
+      buildResumeDraftInput(disabledLibrary, request),
+    ).rejects.toThrow(/disabled/);
+    await expect(
+      buildResumeDraftInput(library, {
+        ...request,
+        job: { ...request.job, contextId: "0".repeat(64) },
+      }),
+    ).rejects.toThrow(/changed/);
   });
 });
 
@@ -99,6 +203,40 @@ describe("Guided Tailor response validation", () => {
         groupTitle: "Platform Engineer",
       },
     ],
+    handoff: {
+      job: {
+        company: "Example Cloud Labs",
+        roleTitle: "Platform Engineer",
+        jobUrl: "",
+        contextId: "a".repeat(64),
+      },
+      requirements: [
+        {
+          id: "requirement-required-1",
+          category: "required",
+          text: "AWS provisioning",
+          status: "supported",
+          availableAchievementIds: ["achievement-terraform"],
+          selectedAchievementIds: ["achievement-terraform"],
+          reason:
+            "Selected source evidence directly supports this requirement.",
+        },
+      ],
+      selectedAchievements: [
+        {
+          achievementId: "achievement-terraform",
+          text: sourceText,
+          section: "experience",
+          groupId: "job-platform",
+          groupTitle: "Platform Engineer",
+          linkedSkills: ["Infrastructure as Code", "IaC"],
+          supportedRequirementIds: ["requirement-required-1"],
+          selectionConfidence: 0.9,
+        },
+      ],
+      suggestedEvidence: [],
+      contentBudgetLines: 40,
+    },
   });
 
   it("reports exact source text, rationale, and newly reflected analyzed JD terms", () => {
@@ -124,11 +262,16 @@ describe("Guided Tailor response validation", () => {
           addedTerms: ["Infrastructure as Code"],
         },
       ],
+      mode: "ai",
       analyzedTerms: expect.arrayContaining(["Infrastructure as Code", "AWS"]),
     });
+    expect(
+      createTailoringResponse({ input, result }).handoff.selectedAchievements[0]
+        .achievementId,
+    ).toBe("achievement-terraform");
   });
 
-  it("adds a short analyzed term when linked skill evidence supports it", () => {
+  it("does not append a supported term the model did not phrase naturally", () => {
     const response = createTailoringResponse({
       input,
       result: {
@@ -142,12 +285,31 @@ describe("Guided Tailor response validation", () => {
       },
     });
 
-    expect(response.proposals[0]).toMatchObject({
-      proposedText:
-        "Provisioned AWS resources with Terraform modules, with experience in Infrastructure as Code.",
-      rationale: expect.stringContaining("supported by skills linked"),
-      addedTerms: ["Infrastructure as Code"],
+    expect(response.proposals[0].proposedText).toBe(
+      "Provisioned AWS resources with Terraform modules.",
+    );
+    expect(response.proposals[0].addedTerms).toEqual([]);
+  });
+
+  it("rejects added JD terms that source text and linked skills do not support", () => {
+    const unsupportedInput = ResumeDraftInputSchema.parse({
+      ...input,
+      analysis: { ...input.analysis, atsTerms: ["Go"] },
     });
+    expect(() =>
+      createTailoringResponse({
+        input: unsupportedInput,
+        result: {
+          summary: "Draft",
+          achievementText: [
+            {
+              achievementId: "achievement-terraform",
+              text: "Provisioned AWS resources with Terraform modules and Go.",
+            },
+          ],
+        },
+      }),
+    ).toThrow(/unsupported job terms/);
   });
 
   it("rejects duplicate, missing, or unknown achievement responses", () => {

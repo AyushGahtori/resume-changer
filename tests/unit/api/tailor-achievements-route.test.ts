@@ -17,6 +17,7 @@ vi.mock("@/lib/data/loaders", async (importOriginal) => {
 import sampleLibrary from "../../../examples/sample-resume-library.json";
 import { POST } from "@/app/api/ai/tailor-achievements/route";
 import { AiProviderError } from "@/lib/ai/provider";
+import { createJobContextId } from "@/lib/ai/job-context";
 
 const analysis = {
   targetTitle: "Cloud Platform Engineer",
@@ -32,12 +33,33 @@ const analysis = {
 };
 
 const achievementId = "achievement-cloud-deployment-platform";
-const request = {
+const requestBase = {
   dataSource: "demo",
   jobDescription: "Provision AWS services with Terraform.",
   analysis,
+  job: {
+    company: "Example Cloud",
+    roleTitle: "Cloud Platform Engineer",
+    jobUrl: "",
+  },
   achievementIds: [achievementId],
 };
+
+async function createRequest() {
+  const value = requestBase;
+  const job = value.job;
+  return {
+    ...value,
+    job: {
+      ...job,
+      contextId: await createJobContextId({
+        ...job,
+        jobDescription: value.jobDescription,
+        analysis,
+      }),
+    },
+  };
+}
 
 function post(body: string) {
   return POST(
@@ -56,6 +78,7 @@ describe("POST /api/ai/tailor-achievements", () => {
   });
 
   it("returns reviewable per-point proposals from only selected enabled evidence", async () => {
+    const request = await createRequest();
     const original = sampleLibrary.jobs[0].points.find(
       ({ id }) => id === achievementId,
     )?.text;
@@ -84,6 +107,16 @@ describe("POST /api/ai/tailor-achievements", () => {
         addedTerms: ["Infrastructure as Code"],
       }),
     ]);
+    expect(payload.mode).toBe("ai");
+    expect(payload.handoff).toMatchObject({
+      job: { contextId: request.job.contextId },
+      selectedAchievements: [
+        expect.objectContaining({
+          achievementId,
+          groupTitle: sampleLibrary.jobs[0].title,
+        }),
+      ],
+    });
     expect(payload.analyzedTerms).toContain("AWS provisioning");
     expect(loadResumeLibrary).toHaveBeenCalledWith({ source: "demo" });
     expect(draftResume).toHaveBeenCalledTimes(1);
@@ -103,6 +136,7 @@ describe("POST /api/ai/tailor-achievements", () => {
 
   it("rejects malformed requests and unavailable or disabled evidence", async () => {
     expect((await post("{bad json")).status).toBe(400);
+    const request = await createRequest();
     const invalid = await post(
       JSON.stringify({
         ...request,
@@ -130,6 +164,7 @@ describe("POST /api/ai/tailor-achievements", () => {
   });
 
   it("returns actionable provider errors and rejects incomplete AI results", async () => {
+    const request = await createRequest();
     draftResume.mockRejectedValue(
       new AiProviderError(
         "Gemini is temporarily unavailable.",
@@ -138,10 +173,17 @@ describe("POST /api/ai/tailor-achievements", () => {
       ),
     );
     const unavailable = await post(JSON.stringify(request));
-    expect(unavailable.status).toBe(503);
+    expect(unavailable.status).toBe(200);
     await expect(unavailable.json()).resolves.toMatchObject({
-      code: "RATE_LIMITED",
-      retryable: true,
+      mode: "originals-fallback",
+      notice: expect.stringContaining("original wording is preserved"),
+      proposals: [
+        expect.objectContaining({
+          achievementId,
+          originalText: expect.any(String),
+          proposedText: expect.any(String),
+        }),
+      ],
     });
 
     draftResume.mockResolvedValue({

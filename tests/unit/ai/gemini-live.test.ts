@@ -10,6 +10,7 @@ import {
 } from "../../../src/lib/ai/contracts";
 import type { ResumeLibrary } from "../../../src/lib/schemas/resume-data";
 import { createTailoringResponse } from "../../../src/lib/ai/tailor-achievements";
+import { createResumeDraftHandoff } from "../../helpers/resume-draft-handoff";
 
 const liveTestEnabled = process.env.GEMINI_LIVE_TEST === "1";
 
@@ -90,6 +91,13 @@ Tools: Python and Kubernetes.`,
           groupSubtitle: "Example Systems",
         },
       ],
+      handoff: createResumeDraftHandoff({
+        achievementId: "achievement-live-terraform",
+        text: "Standardized AWS provisioning with Terraform modules and deployment checks for three internal services.",
+        groupId: "job-platform",
+        groupTitle: "Platform Engineer",
+        linkedSkills: ["Infrastructure as Code", "IaC", "Terraform"],
+      }),
     };
     const result = ResumeDraftResultSchema.parse(
       await provider.draftResume(draftInput),

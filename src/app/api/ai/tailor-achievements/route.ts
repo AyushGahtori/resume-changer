@@ -5,6 +5,7 @@ import { AiProviderError } from "@/lib/ai/provider";
 import {
   AchievementTailoringError,
   buildResumeDraftInput,
+  createOriginalsFallbackResponse,
   createTailoringResponse,
   TailorAchievementsRequestSchema,
 } from "@/lib/ai/tailor-achievements";
@@ -40,12 +41,32 @@ export async function POST(request: Request) {
 
   try {
     const library = await loadResumeLibrary({ source: parsed.data.dataSource });
-    const input = buildResumeDraftInput(library, parsed.data);
-    const result = await createAiProvider().draftResume(input);
-    return NextResponse.json(createTailoringResponse({ input, result }));
+    const input = await buildResumeDraftInput(library, parsed.data);
+    try {
+      const result = await createAiProvider().draftResume(input);
+      return NextResponse.json(createTailoringResponse({ input, result }));
+    } catch (error) {
+      if (
+        error instanceof AiProviderError &&
+        (error.retryable || error.code === "MISSING_API_KEY")
+      ) {
+        return NextResponse.json(
+          createOriginalsFallbackResponse({
+            input,
+            notice: `${error.message} The original wording is preserved; no AI edits were applied.`,
+          }),
+        );
+      }
+      throw error;
+    }
   } catch (error) {
     if (error instanceof AchievementTailoringError) {
-      const status = error.code === "INVALID_SELECTION" ? 422 : 502;
+      const status =
+        error.code === "INVALID_SELECTION"
+          ? 422
+          : error.code === "STALE_CONTEXT"
+            ? 409
+            : 502;
       return NextResponse.json(
         { error: error.message, code: error.code, retryable: false },
         { status },
