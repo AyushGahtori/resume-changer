@@ -1,5 +1,40 @@
 import { describe, expect, it } from "vitest";
-import { layoutFromTextBoxes } from "../../../src/lib/pdf/layout-analysis";
+import {
+  analyzePdfLayout,
+  layoutFromTextBoxes,
+} from "../../../src/lib/pdf/layout-analysis";
+
+function createSinglePagePdf(text: string): Uint8Array {
+  const escapedText = text
+    .replaceAll("\\", "\\\\")
+    .replaceAll("(", "\\(")
+    .replaceAll(")", "\\)");
+  const stream = `BT /F1 12 Tf 72 720 Td (${escapedText}) Tj ET`;
+  const objects = [
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+    `<< /Length ${new TextEncoder().encode(stream).length} >>\nstream\n${stream}\nendstream`,
+  ];
+  let pdf = "%PDF-1.4\n";
+  const offsets = [0];
+
+  for (const [index, body] of objects.entries()) {
+    offsets.push(new TextEncoder().encode(pdf).length);
+    pdf += `${index + 1} 0 obj\n${body}\nendobj\n`;
+  }
+
+  const xrefOffset = new TextEncoder().encode(pdf).length;
+  pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  pdf += offsets
+    .slice(1)
+    .map((offset) => `${String(offset).padStart(10, "0")} 00000 n \n`)
+    .join("");
+  pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
+
+  return new TextEncoder().encode(pdf);
+}
 
 describe("PDF content measurements", () => {
   it("measures visible text, usable height and actual bottom gap", () => {
@@ -40,5 +75,15 @@ describe("PDF content measurements", () => {
       ),
     ).toMatchObject({ pageCount: 2, clipped: true });
     expect(() => layoutFromTextBoxes([], 612, 792)).toThrow(/no readable text/);
+  });
+
+  it("loads PDF.js and extracts text without a local TeX toolchain", async () => {
+    const analysis = await analyzePdfLayout(
+      createSinglePagePdf("PDF parser smoke test"),
+    );
+
+    expect(analysis.layout.pageCount).toBe(1);
+    expect(analysis.layout.visibleWordCount).toBe(4);
+    expect(analysis.text).toContain("PDF parser smoke test");
   });
 });
