@@ -1,16 +1,25 @@
 import { z } from "zod";
 import {
+  AchievementSelectionResponseSchema,
   JobAnalysisResultSchema,
+  ResumeDraftHandoffSchema,
   ResumeDraftInputSchema,
   ResumeDraftResultSchema,
+  ResumeDraftJobRequestSchema,
   TailorAchievementsResponseSchema,
   type AchievementEvidence,
   type JobAnalysisResult,
   type ResumeDraftInput,
   type ResumeDraftResult,
+  type ResumeDraftHandoff,
   type TailorAchievementsResponse,
 } from "./contracts";
 import { MAX_JD_CHARACTERS } from "../jd-draft";
+import {
+  estimateAchievementContentBudget,
+  requirementMatchScore,
+} from "./achievement-selection";
+import { createJobContextId } from "./job-context";
 import { StableIdSchema } from "../schemas/resume-data";
 import type { ResumeLibrary } from "../schemas/resume-data";
 
@@ -19,6 +28,8 @@ export const TailorAchievementsRequestSchema = z
     dataSource: z.enum(["personal", "demo"]).default("personal"),
     jobDescription: z.string().trim().min(1).max(MAX_JD_CHARACTERS),
     analysis: JobAnalysisResultSchema,
+    job: ResumeDraftJobRequestSchema,
+    selectionContext: AchievementSelectionResponseSchema.optional(),
     achievementIds: z.array(StableIdSchema).min(1).max(100),
   })
   .strict()
@@ -41,7 +52,7 @@ export type TailorAchievementsRequest = z.infer<
 export class AchievementTailoringError extends Error {
   constructor(
     message: string,
-    readonly code: "INVALID_SELECTION" | "INVALID_AI_OUTPUT",
+    readonly code: "INVALID_SELECTION" | "INVALID_AI_OUTPUT" | "STALE_CONTEXT",
   ) {
     super(message);
     this.name = "AchievementTailoringError";
@@ -49,6 +60,7 @@ export class AchievementTailoringError extends Error {
 }
 
 function getEvidence(library: ResumeLibrary): AchievementEvidence[] {
+  const skillById = new Map(library.skills.map((skill) => [skill.id, skill]));
   const skillsByAchievementId = new Map<string, string[]>();
   for (const skill of library.skills) {
     for (const achievementId of skill.evidenceAchievementIds) {
@@ -62,40 +74,217 @@ function getEvidence(library: ResumeLibrary): AchievementEvidence[] {
 
   return [
     ...library.jobs.flatMap((job) =>
-      job.points.map((point) => ({
-        id: point.id,
-        text: point.text,
-        tags: point.tags,
-        skillIds: point.skillIds,
-        supportedSkills: skillsByAchievementId.get(point.id) ?? [],
-        section: "experience" as const,
-        groupId: job.id,
-        groupTitle: job.title,
-        groupSubtitle: job.company,
-      })),
+      job.points
+        .filter((point) => point.enabled)
+        .map((point) => ({
+          id: point.id,
+          text: point.text,
+          tags: point.tags,
+          skillIds: point.skillIds,
+          supportedSkills: [
+            ...new Set([
+              ...(skillsByAchievementId.get(point.id) ?? []),
+              ...point.skillIds.flatMap((id) => {
+                const skill = skillById.get(id);
+                return skill ? [skill.name, ...skill.aliases] : [];
+              }),
+            ]),
+          ],
+          section: "experience" as const,
+          groupId: job.id,
+          groupTitle: job.title,
+          groupSubtitle: job.company,
+        })),
     ),
     ...library.projects.flatMap((project) =>
-      project.points.map((point) => ({
-        id: point.id,
-        text: point.text,
-        tags: point.tags,
-        skillIds: point.skillIds,
-        supportedSkills: skillsByAchievementId.get(point.id) ?? [],
-        section: "projects" as const,
-        groupId: project.id,
-        groupTitle: project.name,
-        groupSubtitle: project.role,
-      })),
+      project.points
+        .filter((point) => point.enabled)
+        .map((point) => ({
+          id: point.id,
+          text: point.text,
+          tags: point.tags,
+          skillIds: point.skillIds,
+          supportedSkills: [
+            ...new Set([
+              ...(skillsByAchievementId.get(point.id) ?? []),
+              ...point.skillIds.flatMap((id) => {
+                const skill = skillById.get(id);
+                return skill ? [skill.name, ...skill.aliases] : [];
+              }),
+            ]),
+          ],
+          section: "projects" as const,
+          groupId: project.id,
+          groupTitle: project.name,
+          groupSubtitle: project.role,
+        })),
     ),
   ];
 }
 
-export function buildResumeDraftInput(
+function getRequirementDefinitions(analysis: JobAnalysisResult) {
+  const groups = [
+    ["required", analysis.requiredQualifications],
+    ["responsibility", analysis.responsibilities],
+    ["preferred", analysis.preferredQualifications],
+    [
+      "context",
+      [
+        ...analysis.toolsAndPlatforms,
+        ...analysis.domainConcepts,
+        ...analysis.atsTerms,
+        ...analysis.terminology.flatMap(({ term, alternatives }) => [
+          term,
+          ...alternatives,
+        ]),
+      ],
+    ],
+  ] as const;
+  const seen = new Set<string>();
+  return groups
+    .flatMap(([category, values]) =>
+      values.flatMap((text) => {
+        const key = `${category}:${normalizeTerm(text)}`;
+        if (!normalizeTerm(text) || seen.has(key)) return [];
+        seen.add(key);
+        return [{ id: `requirement-${category}-${seen.size}`, category, text }];
+      }),
+    )
+    .slice(0, 100);
+}
+
+function buildDraftHandoff(args: {
+  library: ResumeLibrary;
+  request: TailorAchievementsRequest;
+  achievements: AchievementEvidence[];
+  allEvidence: AchievementEvidence[];
+}): ResumeDraftHandoff {
+  const evidenceById = new Map(args.allEvidence.map((item) => [item.id, item]));
+  const confidenceById = new Map(
+    args.request.selectionContext?.recommendations.selections.map((item) => [
+      item.achievementId,
+      item.confidence,
+    ]) ?? [],
+  );
+  const definitions = getRequirementDefinitions(args.request.analysis);
+  const requirements = definitions.map((requirement) => {
+    const matches = args.allEvidence
+      .map((evidence) => ({
+        id: evidence.id,
+        score: requirementMatchScore(
+          [
+            evidence.text,
+            ...evidence.tags,
+            ...(evidence.supportedSkills ?? []),
+          ].join(" "),
+          requirement.text,
+        ),
+      }))
+      .filter((item) => item.score > 0);
+    const selectedMatches = matches.filter((item) =>
+      args.request.achievementIds.includes(item.id),
+    );
+    const status = selectedMatches.length
+      ? selectedMatches.some((item) => item.score >= 0.75)
+        ? "supported"
+        : "uncertain"
+      : matches.length
+        ? "evidence-not-selected"
+        : "no-evidence-found";
+    const reason =
+      status === "supported"
+        ? "Selected source evidence directly supports this requirement."
+        : status === "uncertain"
+          ? "Selected evidence may be related; review it before relying on this match."
+          : status === "evidence-not-selected"
+            ? "Potential source evidence exists in the library but was not selected."
+            : "No matching source evidence was identified in the enabled library.";
+    return {
+      ...requirement,
+      status,
+      availableAchievementIds: matches.map((item) => item.id),
+      selectedAchievementIds: selectedMatches.map((item) => item.id),
+      reason,
+    };
+  });
+  const toSource = (
+    evidence: AchievementEvidence,
+    supportedRequirementIds: string[],
+  ) => ({
+    achievementId: evidence.id,
+    text: evidence.text,
+    section: evidence.section,
+    groupId: evidence.groupId,
+    groupTitle: evidence.groupTitle,
+    ...(evidence.groupSubtitle
+      ? { groupSubtitle: evidence.groupSubtitle }
+      : {}),
+    linkedSkills: evidence.supportedSkills ?? [],
+    supportedRequirementIds,
+    ...(confidenceById.has(evidence.id)
+      ? { selectionConfidence: confidenceById.get(evidence.id) }
+      : {}),
+  });
+  const selectedAchievements = args.achievements.map((evidence) =>
+    toSource(
+      evidence,
+      requirements
+        .filter((requirement) =>
+          requirement.selectedAchievementIds.includes(evidence.id),
+        )
+        .map((requirement) => requirement.id),
+    ),
+  );
+  const selectedIds = new Set(args.request.achievementIds);
+  const suggestedEvidence = requirements
+    .filter((requirement) => requirement.status === "evidence-not-selected")
+    .flatMap((requirement) =>
+      requirement.availableAchievementIds
+        .filter((id) => !selectedIds.has(id))
+        .map((id) => ({ id, requirementId: requirement.id })),
+    )
+    .reduce<Array<{ id: string; requirementIds: string[] }>>((items, item) => {
+      const existing = items.find((candidate) => candidate.id === item.id);
+      if (existing) existing.requirementIds.push(item.requirementId);
+      else if (items.length < 30) {
+        items.push({ id: item.id, requirementIds: [item.requirementId] });
+      }
+      return items;
+    }, [])
+    .flatMap(({ id, requirementIds }) => {
+      const evidence = evidenceById.get(id);
+      return evidence ? [toSource(evidence, requirementIds)] : [];
+    });
+  const contextId = args.request.job.contextId;
+  return ResumeDraftHandoffSchema.parse({
+    job: { ...args.request.job, contextId },
+    requirements,
+    selectedAchievements,
+    suggestedEvidence,
+    contentBudgetLines:
+      args.request.selectionContext?.budget.availableLines ??
+      estimateAchievementContentBudget(args.library),
+  });
+}
+
+export async function buildResumeDraftInput(
   library: ResumeLibrary,
   request: TailorAchievementsRequest,
-): ResumeDraftInput {
+): Promise<ResumeDraftInput> {
+  const expectedContextId = await createJobContextId({
+    ...request.job,
+    jobDescription: request.jobDescription,
+    analysis: request.analysis,
+  });
+  if (expectedContextId !== request.job.contextId) {
+    throw new AchievementTailoringError(
+      "The job description or analysis changed. Reanalyze the active job before drafting.",
+      "STALE_CONTEXT",
+    );
+  }
+  const allEvidence = getEvidence(library);
   const evidenceById = new Map(
-    getEvidence(library).map((evidence) => [evidence.id, evidence]),
+    allEvidence.map((evidence) => [evidence.id, evidence]),
   );
   const pointById = new Map(
     [...library.jobs, ...library.projects]
@@ -103,9 +292,8 @@ export function buildResumeDraftInput(
       .map((point) => [point.id, point]),
   );
   const achievements = request.achievementIds.map((id) => {
-    const evidence = evidenceById.get(id);
     const point = pointById.get(id);
-    if (!evidence || !point) {
+    if (!point) {
       throw new AchievementTailoringError(
         `Achievement ${id} is unavailable in this library.`,
         "INVALID_SELECTION",
@@ -117,13 +305,27 @@ export function buildResumeDraftInput(
         "INVALID_SELECTION",
       );
     }
+    const evidence = evidenceById.get(id);
+    if (!evidence) {
+      throw new AchievementTailoringError(
+        `Achievement ${id} is unavailable in this library.`,
+        "INVALID_SELECTION",
+      );
+    }
     return evidence;
   });
 
+  const handoff = buildDraftHandoff({
+    library,
+    request,
+    achievements,
+    allEvidence,
+  });
   return ResumeDraftInputSchema.parse({
     jobDescription: request.jobDescription,
     analysis: request.analysis,
     achievements,
+    handoff,
   });
 }
 
@@ -131,7 +333,7 @@ function normalizeTerm(value: string): string {
   return value
     .toLocaleLowerCase()
     .normalize("NFKD")
-    .replace(/[^a-z0-9+#.]+/g, " ")
+    .replace(/[^a-z0-9+#]+/g, " ")
     .trim();
 }
 
@@ -142,35 +344,6 @@ function containsTerm(text: string, term: string): boolean {
     normalizedTerm.length > 0 &&
     ` ${normalizedText} `.includes(` ${normalizedTerm} `)
   );
-}
-
-function ensureSupportedTerms(
-  proposedText: string,
-  source: AchievementEvidence,
-  analyzedTerms: string[],
-): { text: string; addedTerms: string[] } {
-  const linkedSkills = new Set(
-    (source.supportedSkills ?? []).map(normalizeTerm),
-  );
-  const missingTerms = analyzedTerms
-    .filter((term) => {
-      const normalized = normalizeTerm(term);
-      const wordCount = normalized.split(" ").filter(Boolean).length;
-      const supported =
-        containsTerm(source.text, term) || linkedSkills.has(normalized);
-      return supported && wordCount <= 6 && !containsTerm(proposedText, term);
-    })
-    .slice(0, 2);
-
-  if (missingTerms.length === 0) {
-    return { text: proposedText, addedTerms: [] };
-  }
-
-  const trimmed = proposedText.trim().replace(/[.!?]+$/, "");
-  return {
-    text: `${trimmed}, with experience in ${missingTerms.join(" and ")}.`,
-    addedTerms: missingTerms,
-  };
 }
 
 function getAnalyzedTerms(analysis: JobAnalysisResult): string[] {
@@ -318,24 +491,32 @@ export function createTailoringResponse(args: {
         "INVALID_AI_OUTPUT",
       );
     }
-    const { text: proposedText, addedTerms: guaranteedTerms } =
-      ensureSupportedTerms(generated.text, source, terms);
+    const sourceEvidence = [
+      source.text,
+      ...source.tags,
+      ...(source.supportedSkills ?? []),
+    ].join(" ");
     const addedTerms = terms.filter(
       (term) =>
-        containsTerm(proposedText, term) && !containsTerm(source.text, term),
+        containsTerm(generated.text, term) && !containsTerm(source.text, term),
     );
-    for (const term of guaranteedTerms) {
-      if (!addedTerms.includes(term)) addedTerms.push(term);
+    const unsupportedTerms = addedTerms.filter(
+      (term) => !containsTerm(sourceEvidence, term),
+    );
+    if (unsupportedTerms.length > 0) {
+      throw new AchievementTailoringError(
+        `The AI added unsupported job terms to achievement ${source.id}.`,
+        "INVALID_AI_OUTPUT",
+      );
     }
 
     return {
       achievementId: source.id,
       originalText: source.text,
-      proposedText,
-      rationale: guaranteedTerms.length
-        ? "Any added JD terms are supported by skills linked to this source achievement."
-        : generated.rationale ||
-          "Review the source wording above to confirm this job-aligned phrasing is accurate.",
+      proposedText: generated.text,
+      rationale:
+        generated.rationale ||
+        "Review the source wording above to confirm this job-aligned phrasing is accurate.",
       addedTerms,
     };
   });
@@ -343,8 +524,31 @@ export function createTailoringResponse(args: {
   return TailorAchievementsResponseSchema.parse({
     proposals,
     analyzedTerms: terms,
+    mode: "ai",
+    handoff: args.input.handoff,
     summary:
       result.summary ||
       "Review each proposal and approve only wording that accurately describes your experience.",
+  });
+}
+
+export function createOriginalsFallbackResponse(args: {
+  input: ResumeDraftInput;
+  notice: string;
+}): TailorAchievementsResponse {
+  return TailorAchievementsResponseSchema.parse({
+    proposals: args.input.achievements.map((achievement) => ({
+      achievementId: achievement.id,
+      originalText: achievement.text,
+      proposedText: achievement.text,
+      rationale: "The original source wording is preserved without AI edits.",
+      addedTerms: [],
+    })),
+    summary:
+      "The resume draft uses selected source points. No AI wording changes were applied.",
+    analyzedTerms: getAnalyzedTerms(args.input.analysis),
+    mode: "originals-fallback",
+    handoff: args.input.handoff,
+    notice: args.notice,
   });
 }

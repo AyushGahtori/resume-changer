@@ -34,6 +34,7 @@ export const ManualGenerationRequestSchema = z
       .min(1, "Enter a job description before generating.")
       .max(MAX_JD_CHARACTERS),
     selectedAchievementIds: z.array(StableIdSchema).min(1),
+    tailoringMode: z.enum(["manual", "guided", "auto"]).default("manual"),
     selectedSkillIds: z.array(StableIdSchema).optional(),
     achievementTextOverrides: z
       .array(
@@ -49,7 +50,7 @@ export const ManualGenerationRequestSchema = z
   })
   .strict();
 
-export type ManualGenerationRequest = z.infer<
+export type ManualGenerationRequest = z.input<
   typeof ManualGenerationRequestSchema
 >;
 
@@ -61,6 +62,15 @@ export type ManualGenerationMetadata = {
   roleTitle: string;
   jobUrl: string;
   selectedAchievementIds: string[];
+  tailoringMode: "manual" | "guided" | "auto";
+  sourceProvenance: Array<{
+    achievementId: string;
+    section: "experience" | "projects";
+    groupId: string;
+    groupTitle: string;
+    originalText: string;
+    renderedText: string;
+  }>;
   selectedSkillIds?: string[];
   renderedSkillIds: string[];
 };
@@ -75,12 +85,13 @@ export function createManualGeneration(
   request: ManualGenerationRequest,
   options: { id?: string; now?: Date } = {},
 ): ManualGenerationResult {
-  if (request.selectedSkillIds) {
-    const selectedAchievementIds = new Set(request.selectedAchievementIds);
+  const normalized = ManualGenerationRequestSchema.parse(request);
+  if (normalized.selectedSkillIds) {
+    const selectedAchievementIds = new Set(normalized.selectedAchievementIds);
     const skillsById = new Map(
       library.skills.map((skill) => [skill.id, skill]),
     );
-    for (const skillId of request.selectedSkillIds) {
+    for (const skillId of normalized.selectedSkillIds) {
       const skill = skillsById.get(skillId);
       if (!skill) throw new ResumeRenderError(`Unknown skill ID: ${skillId}.`);
       if (
@@ -98,17 +109,17 @@ export function createManualGeneration(
 
   const latex = renderResumeLatex({
     library,
-    selectedAchievementIds: request.selectedAchievementIds,
-    selectedSkillIds: request.selectedSkillIds,
-    jobDescription: request.jobDescription,
-    achievementTextOverrides: request.achievementTextOverrides,
+    selectedAchievementIds: normalized.selectedAchievementIds,
+    selectedSkillIds: normalized.selectedSkillIds,
+    jobDescription: normalized.jobDescription,
+    achievementTextOverrides: normalized.achievementTextOverrides,
   });
   const requestedSkillIds =
-    request.selectedSkillIds ??
+    normalized.selectedSkillIds ??
     library.skills
       .filter((skill) => skill.isListedOnCurrentResume)
       .map((skill) => skill.id);
-  const selectedPointIds = new Set(request.selectedAchievementIds);
+  const selectedPointIds = new Set(normalized.selectedAchievementIds);
   const selectedPoints = [...library.jobs, ...library.projects]
     .flatMap((group) => group.points)
     .filter((point) => selectedPointIds.has(point.id));
@@ -116,22 +127,57 @@ export function createManualGeneration(
   const renderedSkillIds = selectSkillsForResume(
     requestedSkillIds.map((id) => skillById.get(id)!),
     selectedPoints,
-    request.jobDescription,
+    normalized.jobDescription,
   ).map((skill) => skill.id);
+  const overrideById = new Map(
+    (normalized.achievementTextOverrides ?? []).map((item) => [
+      item.achievementId,
+      item.text,
+    ]),
+  );
+  const sourceProvenance = [
+    ...library.jobs.flatMap((group) =>
+      group.points.map((point) => ({
+        achievementId: point.id,
+        section: "experience" as const,
+        groupId: group.id,
+        groupTitle: group.title,
+        originalText: point.text,
+      })),
+    ),
+    ...library.projects.flatMap((group) =>
+      group.points.map((point) => ({
+        achievementId: point.id,
+        section: "projects" as const,
+        groupId: group.id,
+        groupTitle: group.name,
+        originalText: point.text,
+      })),
+    ),
+  ]
+    .filter((point) =>
+      normalized.selectedAchievementIds.includes(point.achievementId),
+    )
+    .map((point) => ({
+      ...point,
+      renderedText: overrideById.get(point.achievementId) ?? point.originalText,
+    }));
 
   return {
     latex,
     metadata: {
       id: options.id ?? `manual-${randomUUID()}`,
       generatedAt: (options.now ?? new Date()).toISOString(),
-      dataSource: request.dataSource,
-      company: request.company,
-      roleTitle: request.roleTitle,
-      jobUrl: request.jobUrl,
-      selectedAchievementIds: request.selectedAchievementIds,
+      dataSource: normalized.dataSource,
+      company: normalized.company,
+      roleTitle: normalized.roleTitle,
+      jobUrl: normalized.jobUrl,
+      selectedAchievementIds: normalized.selectedAchievementIds,
+      tailoringMode: normalized.tailoringMode,
+      sourceProvenance,
       renderedSkillIds,
-      ...(request.selectedSkillIds
-        ? { selectedSkillIds: request.selectedSkillIds }
+      ...(normalized.selectedSkillIds
+        ? { selectedSkillIds: normalized.selectedSkillIds }
         : {}),
     },
   };

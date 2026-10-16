@@ -79,6 +79,17 @@ describe("manual resume generation", () => {
       roleTitle: "Platform Engineer",
       jobUrl: "https://jobs.example/platform",
       selectedAchievementIds: [firstPoint.id],
+      tailoringMode: "manual",
+      sourceProvenance: [
+        {
+          achievementId: firstPoint.id,
+          section: "experience",
+          groupId: library.jobs[0].id,
+          groupTitle: library.jobs[0].title,
+          originalText: firstPoint.text,
+          renderedText: firstPoint.text,
+        },
+      ],
       renderedSkillIds: expect.any(Array),
     });
     expect(JSON.stringify(result)).not.toContain(validRequest.jobDescription);
@@ -95,6 +106,28 @@ describe("manual resume generation", () => {
 
     expect(result.latex).toContain(tailoredText);
     expect(result.latex).not.toContain(firstPoint.text);
+  });
+
+  it("records Auto Tailor mode and original-to-rendered source provenance", () => {
+    const tailoredText = "Built an API using supported platform evidence.";
+    const result = createManualGeneration(library, {
+      ...validRequest,
+      tailoringMode: "auto",
+      achievementTextOverrides: [
+        { achievementId: firstPoint.id, text: tailoredText },
+      ],
+    });
+
+    expect(result.metadata).toMatchObject({
+      tailoringMode: "auto",
+      sourceProvenance: [
+        {
+          achievementId: firstPoint.id,
+          originalText: firstPoint.text,
+          renderedText: tailoredText,
+        },
+      ],
+    });
   });
 
   it("rejects unknown and disabled point IDs through the renderer", () => {

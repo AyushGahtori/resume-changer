@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { createResumeDraftHandoff } from "../helpers/resume-draft-handoff";
 
 const jobDescription =
   "Standardize AWS provisioning with Infrastructure as Code.";
@@ -52,12 +53,25 @@ test("Guided Tailor requires approval and renders only the approved rewrite", as
   let tailoringRequest: unknown;
   await page.route("**/api/ai/tailor-achievements", async (route) => {
     tailoringRequest = route.request().postDataJSON();
+    const requestJob = (
+      tailoringRequest as {
+        job: Parameters<typeof createResumeDraftHandoff>[0]["job"];
+      }
+    ).job;
     await route.fulfill({
       status: 200,
       contentType: "application/json",
       body: JSON.stringify({
         summary: "The proposed wording aligns the point with the analyzed JD.",
         analyzedTerms: ["AWS provisioning", "Infrastructure as Code"],
+        mode: "ai",
+        handoff: createResumeDraftHandoff({
+          achievementId,
+          text: originalText,
+          job: requestJob,
+          groupId: "job-example-cloud-labs",
+          groupTitle: "Cloud Platform Engineer",
+        }),
         proposals: [
           {
             achievementId,
@@ -86,6 +100,7 @@ test("Guided Tailor requires approval and renders only the approved rewrite", as
     jobDescription,
     analysis,
     achievementIds: [achievementId],
+    job: { contextId: expect.stringMatching(/^[a-f0-9]{64}$/) },
   });
 
   await review.getByRole("button", { name: "Approve all unchanged" }).click();
@@ -116,4 +131,136 @@ test("Guided Tailor requires approval and renders only the approved rewrite", as
   await approval.check();
   await page.getByRole("button", { name: "Generate LaTeX" }).click();
   await expect(page.getByLabel("Generated LaTeX")).toContainText(editedText);
+});
+
+test("Guided Tailor adds suggested evidence only after explicit user action", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByLabel("Company").fill("Example Cloud");
+  await page.getByLabel("Role title").fill("Cloud Platform Engineer");
+  await page.getByLabel("Job description").fill(jobDescription);
+  await expect(page.getByRole("status")).toContainText("Saved locally");
+
+  await page.route("**/api/ai/analyze-job-description", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ analysis }),
+    });
+  });
+  await page.getByRole("button", { name: "Analyze job description" }).click();
+  await expect(
+    page.getByRole("region", { name: "Job description analysis" }),
+  ).toBeVisible();
+  await page.goto("/generate?source=demo");
+  await page.getByLabel(`Select achievement ${achievementId}`).check();
+
+  const pipelineId = "achievement-ci-cd-pipeline";
+  const pipelineText =
+    "Built reusable CI/CD workflows that let application teams validate and release services without maintaining deployment scripts individually.";
+  let requestCount = 0;
+  let secondRequestIds: string[] = [];
+  await page.route("**/api/ai/tailor-achievements", async (route) => {
+    const request = route.request().postDataJSON() as {
+      achievementIds: string[];
+      job: {
+        company: string;
+        roleTitle: string;
+        jobUrl: string;
+        contextId: string;
+      };
+    };
+    requestCount += 1;
+    if (requestCount === 2) secondRequestIds = request.achievementIds;
+    const selectedTextById: Record<string, string> = {
+      [achievementId]: originalText,
+      [pipelineId]: pipelineText,
+    };
+    const selectedAchievements = request.achievementIds.map((id) => ({
+      achievementId: id,
+      text: selectedTextById[id],
+      section: "experience",
+      groupId: "job-example-cloud-labs",
+      groupTitle: "Platform Engineer",
+      groupSubtitle: "Example Cloud Labs",
+      linkedSkills: [],
+      supportedRequirementIds:
+        requestCount === 1 ? [] : ["requirement-responsibility-1"],
+    }));
+    const hasSuggestion = requestCount === 1;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        summary: "Review the source-grounded wording before applying it.",
+        analyzedTerms: ["AWS provisioning", "deployment workflows"],
+        mode: "ai",
+        proposals: request.achievementIds.map((id) => ({
+          achievementId: id,
+          originalText: selectedTextById[id],
+          proposedText:
+            id === achievementId
+              ? proposedText
+              : "Built reusable CI/CD workflows for service validation and releases.",
+          rationale: "The original source point supports this wording.",
+          addedTerms: id === achievementId ? ["Infrastructure as Code"] : [],
+        })),
+        handoff: {
+          job: request.job,
+          requirements: [
+            {
+              id: "requirement-responsibility-1",
+              category: "responsibility",
+              text: "Standardize deployment workflows",
+              status: hasSuggestion ? "evidence-not-selected" : "supported",
+              availableAchievementIds: [pipelineId],
+              selectedAchievementIds: hasSuggestion
+                ? []
+                : request.achievementIds,
+              reason: hasSuggestion
+                ? "Potential source evidence exists in the library but was not selected."
+                : "Selected source evidence directly supports this requirement.",
+            },
+          ],
+          selectedAchievements,
+          suggestedEvidence: hasSuggestion
+            ? [
+                {
+                  achievementId: pipelineId,
+                  text: pipelineText,
+                  section: "experience",
+                  groupId: "job-example-cloud-labs",
+                  groupTitle: "Platform Engineer",
+                  groupSubtitle: "Example Cloud Labs",
+                  linkedSkills: ["Workflow Automation"],
+                  supportedRequirementIds: ["requirement-responsibility-1"],
+                },
+              ]
+            : [],
+          contentBudgetLines: 24,
+        },
+      }),
+    });
+  });
+
+  await page.getByRole("button", { name: "Guided Tailor" }).click();
+  const review = page.getByRole("region", { name: "Guided Tailor review" });
+  await expect(review).toContainText(pipelineText);
+  await expect(
+    page.getByLabel(`Select achievement ${pipelineId}`),
+  ).not.toBeChecked();
+  await review.getByRole("button", { name: "Add to selection" }).click();
+  await expect(
+    page.getByLabel(`Select achievement ${pipelineId}`),
+  ).toBeChecked();
+  await expect(page.locator(".auto-tailor-status")).toContainText(
+    "Source selection updated",
+  );
+  await expect(review).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Guided Tailor" }).click();
+  await expect(review).toContainText(originalText);
+  await expect(review).toContainText(pipelineText);
+  expect(secondRequestIds).toEqual([achievementId, pipelineId]);
 });

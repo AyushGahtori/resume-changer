@@ -6,6 +6,7 @@ import {
 import { createGeminiProvider } from "../../../src/lib/ai/gemini-provider";
 import { createAiProvider } from "../../../src/lib/ai/provider-factory";
 import { AiProviderError } from "../../../src/lib/ai/provider";
+import { createResumeDraftHandoff } from "../../helpers/resume-draft-handoff";
 
 const analysis = {
   targetTitle: "Platform Engineer",
@@ -190,6 +191,12 @@ describe("Gemini adapter", () => {
         jobDescription: "Platform role.",
         analysis,
         achievements: [point],
+        handoff: createResumeDraftHandoff({
+          achievementId: point.id,
+          text: point.text,
+          groupId: point.groupId,
+          groupTitle: point.groupTitle,
+        }),
         templateContext: "Approved fixed template context",
       }),
     ).resolves.toMatchObject({
