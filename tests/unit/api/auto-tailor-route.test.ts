@@ -1,12 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { createProvider, selectAchievements, draftResume, loadResumeLibrary } =
-  vi.hoisted(() => ({
-    createProvider: vi.fn(),
-    selectAchievements: vi.fn(),
-    draftResume: vi.fn(),
-    loadResumeLibrary: vi.fn(),
-  }));
+const {
+  createProvider,
+  selectAchievements,
+  draftResume,
+  loadResumeLibrary,
+  fitResume,
+} = vi.hoisted(() => ({
+  createProvider: vi.fn(),
+  fitResume: vi.fn(),
+  selectAchievements: vi.fn(),
+  draftResume: vi.fn(),
+  loadResumeLibrary: vi.fn(),
+}));
+
+vi.mock("@/lib/generation/fit-resume", () => ({ fitResumeToPage: fitResume }));
 
 vi.mock("@/lib/ai/provider-factory", () => ({
   createAiProvider: () => createProvider(),
@@ -61,11 +69,14 @@ async function requestBody(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function post(body: unknown) {
+function post(body: unknown, runId?: string) {
   return POST(
     new Request("http://localhost/api/ai/auto-tailor", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...(runId ? { "X-Resume-Run-Id": runId } : {}),
+      },
       body: JSON.stringify(body),
     }),
   );
@@ -115,7 +126,7 @@ describe("POST /api/ai/auto-tailor", () => {
 
   it("hands the AI-selected evidence directly to the drafter with matching job context", async () => {
     const body = await requestBody();
-    const response = await post(body);
+    const response = await post(body, "diagnostic-test-run");
 
     expect(response.status).toBe(200);
     const payload = await response.json();
@@ -139,6 +150,15 @@ describe("POST /api/ai/auto-tailor", () => {
         },
       },
     });
+    expect(payload.runId).toBe("diagnostic-test-run");
+    expect(payload.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ stage: "auto-tailor.selection-input" }),
+        expect.objectContaining({ stage: "auto-tailor.selection-audit" }),
+        expect.objectContaining({ stage: "auto-tailor.draft-input" }),
+        expect.objectContaining({ stage: "auto-tailor.evidence-validation" }),
+      ]),
+    );
     expect(draftResume).toHaveBeenCalledTimes(1);
     const draftInput = draftResume.mock.calls[0][0] as {
       achievements: Array<{ id: string }>;
@@ -166,10 +186,46 @@ describe("POST /api/ai/auto-tailor", () => {
     expect(
       payload.tailoring.proposals.every(
         (proposal: { originalText: string; proposedText: string }) =>
-          proposal.originalText === proposal.proposedText,
+          proposal.proposedText.includes(
+            proposal.originalText.replace(/\.$/, ""),
+          ),
       ),
     ).toBe(true);
     expect(draftResume).not.toHaveBeenCalled();
+  });
+
+  it("returns a measured PDF and final metadata in one Auto Tailor request without logging binary bytes", async () => {
+    fitResume.mockResolvedValue({
+      pdf: Buffer.from("%PDF-final"),
+      generation: {
+        latex: "verified latex",
+        metadata: {
+          id: "final-generation",
+          selectedAchievementIds: [selectedId],
+          renderedSkillIds: [],
+          generatedAt: "2026-10-16T12:00:00Z",
+          fitting: { status: "filled", attempts: 2, decisions: [] },
+        },
+      },
+    });
+    const response = await post(
+      await requestBody({ generatePdf: true }),
+      "quality-run",
+    );
+    expect(response.status).toBe(200);
+    const payload = await response.json();
+    expect(Buffer.from(payload.compiled.pdfBase64, "base64").toString()).toBe(
+      "%PDF-final",
+    );
+    expect(payload.compiled.metadata.fitting.status).toBe("filled");
+    expect(fitResume.mock.calls[0][0].request.summaryOverride).toBeTruthy();
+    expect(JSON.stringify(payload.diagnostics)).not.toContain(
+      payload.compiled.pdfBase64,
+    );
+    expect(
+      fitResume.mock.calls[0][0].request.achievementTextOverrides[0]
+        .sourceAchievementIds,
+    ).toBeTruthy();
   });
 
   it("rejects stale job context before loading private or demo resume data", async () => {

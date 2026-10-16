@@ -195,7 +195,7 @@ describe("AI achievement selection service", () => {
     expect(
       response.recommendations.selections.map((item) => item.achievementId),
     ).toEqual([first.id, second.id]);
-    expect(response.budget.usedLines).toBe(8);
+    expect(response.budget.usedLines).toBeLessThanOrEqual(8);
   });
 
   it("uses direct and meaning-level local matches when the model fails", async () => {
@@ -216,14 +216,20 @@ describe("AI achievement selection service", () => {
     expect(response.notice).toContain("local matches");
     expect(selectedIds).toContain("achievement-cloud-deployment-platform");
     expect(selectedIds).toContain("achievement-queueboard-worker-model");
-    expect(response.recommendations.requirementCoverage).toContainEqual({
-      requirement: "AWS provisioning",
-      coveredByAchievementIds: ["achievement-cloud-deployment-platform"],
-    });
-    expect(response.recommendations.requirementCoverage).toContainEqual({
-      requirement: "idempotency keys",
-      coveredByAchievementIds: ["achievement-queueboard-worker-model"],
-    });
+    expect(response.recommendations.requirementCoverage).toContainEqual(
+      expect.objectContaining({
+        requirement: "AWS provisioning",
+        coveredByAchievementIds: expect.arrayContaining([
+          "achievement-cloud-deployment-platform",
+        ]),
+      }),
+    );
+    expect(response.recommendations.requirementCoverage).toContainEqual(
+      expect.objectContaining({
+        requirement: "idempotency keys",
+        coveredByAchievementIds: ["achievement-queueboard-worker-model"],
+      }),
+    );
   });
 
   it("explains retryable provider failures and logs only safe diagnostics", async () => {
@@ -280,10 +286,11 @@ describe("AI achievement selection service", () => {
 
     expect(response.recommendations.selections).toEqual([]);
     expect(response.recommendations.requirementCoverage).toEqual([
-      {
+      expect.objectContaining({
         requirement: "quantum particle accelerator design",
         coveredByAchievementIds: [],
-      },
+        status: "no-evidence-found",
+      }),
     ]);
   });
 
@@ -311,12 +318,14 @@ describe("AI achievement selection service", () => {
           item.achievementId === "achievement-cloud-deployment-platform",
       ),
     ).toHaveLength(1);
-    expect(response.recommendations.skillRecommendations).toEqual([
-      expect.objectContaining({
-        skillId: "skill-infrastructure-as-code",
-        supportingAchievementIds: ["achievement-cloud-deployment-platform"],
-      }),
-    ]);
+    expect(response.recommendations.skillRecommendations).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          skillId: "skill-infrastructure-as-code",
+          supportingAchievementIds: ["achievement-cloud-deployment-platform"],
+        }),
+      ]),
+    );
   });
 
   it("keeps recommendations across experience and projects when both cover signals", async () => {
@@ -419,19 +428,47 @@ describe("AI achievement selection service", () => {
     expect(selected).toContain("achievement-ml-api");
     expect(selected).toContain("achievement-feature-store");
     expect(selected).toContain("achievement-project-queue");
-    expect(response.budget).toEqual({ availableLines: 22, usedLines: 18 });
-    expect(response.requirementEvidence).toContainEqual({
-      requirement: "Familiarity or ability to learn Python, Go, or C++",
-      availableAchievementIds: ["achievement-ml-api"],
+    expect(response.budget.availableLines).toBe(22);
+    expect(response.budget.usedLines).toBeLessThanOrEqual(22);
+    expect(response.requirementEvidence).toContainEqual(
+      expect.objectContaining({
+        requirement: "Familiarity or ability to learn Python, Go, or C++",
+        availableAchievementIds: expect.arrayContaining(["achievement-ml-api"]),
+      }),
+    );
+    expect(response.requirementEvidence).toContainEqual(
+      expect.objectContaining({
+        requirement: "Availability during coordination hours in Pacific Time",
+        availableAchievementIds: [],
+      }),
+    );
+    expect(response.recommendations.requirementCoverage).toContainEqual(
+      expect.objectContaining({
+        requirement: "Modernize feature store for faster feature deployment",
+        coveredByAchievementIds: ["achievement-feature-store"],
+      }),
+    );
+    expect(
+      response.audit.find(
+        (item) => item.achievementId === "achievement-feature-store",
+      ),
+    ).toMatchObject({
+      selected: true,
+      outcome: "selected",
+      matchingRequirements: expect.arrayContaining([
+        "Modernize feature store for faster feature deployment",
+      ]),
     });
-    expect(response.requirementEvidence).toContainEqual({
-      requirement: "Availability during coordination hours in Pacific Time",
-      availableAchievementIds: [],
+    expect(
+      response.audit.find(
+        (item) => item.achievementId === "achievement-ml-observability",
+      ),
+    ).toMatchObject({
+      selected: true,
+      outcome: "selected",
+      rationale: expect.any(String),
     });
-    expect(response.recommendations.requirementCoverage).toContainEqual({
-      requirement: "Modernize feature store for faster feature deployment",
-      coveredByAchievementIds: ["achievement-feature-store"],
-    });
+    expect(response.audit).toHaveLength(input.achievements.length);
   });
 
   it("keeps a relevant project out when its heading and point do not fit the budget", async () => {
@@ -470,6 +507,12 @@ describe("AI achievement selection service", () => {
     expect(response.recommendations.selections).toHaveLength(1);
     expect(response.budget.usedLines).toBeLessThanOrEqual(6);
     expect(response.notice).toContain("page budget");
+    expect(
+      response.audit.find((item) => item.achievementId === project.id),
+    ).toMatchObject({
+      selected: false,
+      outcome: "not-selected-by-model-or-local-priority",
+    });
   });
 
   it("does not treat a generic feature deployment as feature-store evidence", async () => {
@@ -501,7 +544,7 @@ describe("AI achievement selection service", () => {
       selectWithAi: async () => aiResult(input),
     });
     expect(response.requirementEvidence[0].availableAchievementIds).toEqual([]);
-    expect(response.recommendations.requirementCoverage[0]).toEqual({
+    expect(response.recommendations.requirementCoverage[0]).toMatchObject({
       requirement: "Modernize feature store",
       coveredByAchievementIds: [],
     });

@@ -4,6 +4,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
+import {
+  clearRunEvents,
+  getActiveRunId,
+  getRunEvents,
+  recordRunEvent,
+  startNewRun,
+} from "@/lib/diagnostics/run-log";
 
 const THEME_STORAGE_KEY = "resume-changer.theme.v1";
 
@@ -28,6 +35,8 @@ function readTheme(): "light" | "dark" {
 export default function WorkspaceShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [theme, setTheme] = useState<"light" | "dark">("light");
+  const [logCount, setLogCount] = useState(0);
+  const [logMessage, setLogMessage] = useState("");
   const currentPage = navigation.find((item) => item.href === pathname);
 
   useEffect(() => {
@@ -35,6 +44,68 @@ export default function WorkspaceShell({ children }: { children: ReactNode }) {
     setTheme(savedTheme);
     document.documentElement.dataset.theme = savedTheme;
   }, []);
+
+  useEffect(() => {
+    const runId = getActiveRunId();
+    const refreshCount = () => {
+      void getRunEvents(runId).then((events) => setLogCount(events.length));
+    };
+    window.addEventListener("resume-changer-run-log-updated", refreshCount);
+    void recordRunEvent({
+      runId,
+      stage: "navigation.page-opened",
+      message: "Opened app page.",
+      data: { path: pathname, title: currentPage?.label ?? "Workspace" },
+    });
+    refreshCount();
+    return () =>
+      window.removeEventListener(
+        "resume-changer-run-log-updated",
+        refreshCount,
+      );
+  }, [pathname, currentPage?.label]);
+
+  async function exportRunLog() {
+    const runId = getActiveRunId();
+    const events = await getRunEvents(runId);
+    const contents = [
+      "Resume Changer local diagnostic run",
+      `Run ID: ${runId}`,
+      `Exported: ${new Date().toISOString()}`,
+      "All content below is stored locally in this browser. It may include the job description and resume data sent to the AI provider.",
+      "",
+      ...events.map((event) => JSON.stringify(event, null, 2)),
+    ].join("\n");
+    const url = URL.createObjectURL(
+      new Blob([contents], { type: "text/plain" }),
+    );
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "task16 logs.txt";
+    anchor.click();
+    URL.revokeObjectURL(url);
+    setLogCount(events.length);
+    setLogMessage(`Exported ${events.length} events`);
+  }
+
+  async function clearRunLog() {
+    const runId = getActiveRunId();
+    await clearRunEvents(runId);
+    setLogCount(0);
+    setLogMessage("Local run log cleared");
+  }
+
+  function beginNewRun() {
+    const runId = startNewRun();
+    setLogCount(0);
+    setLogMessage("Started a new local run");
+    void recordRunEvent({
+      runId,
+      stage: "run.started",
+      message: "Started a new local diagnostic run.",
+      data: { path: pathname },
+    });
+  }
 
   function toggleTheme() {
     const nextTheme = theme === "light" ? "dark" : "light";
@@ -82,6 +153,25 @@ export default function WorkspaceShell({ children }: { children: ReactNode }) {
             <p className="sidebar-bottom-title">Private workspace</p>
             <p className="sidebar-bottom-copy">Saved on this device</p>
           </div>
+        </div>
+        <div className="run-log-controls" aria-label="Local run diagnostics">
+          <div className="run-log-heading">Run diagnostics · {logCount}</div>
+          <div className="run-log-buttons">
+            <button onClick={beginNewRun} type="button">
+              New run
+            </button>
+            <button onClick={exportRunLog} type="button">
+              Export log
+            </button>
+            <button onClick={clearRunLog} type="button">
+              Clear
+            </button>
+          </div>
+          <p>
+            Full request/response data stays in this browser. Logs can contain
+            your JD and resume details.
+          </p>
+          <span aria-live="polite">{logMessage}</span>
         </div>
       </aside>
 

@@ -49,6 +49,8 @@ export const AchievementPointSchema = z
     metrics: z.array(MetricSchema),
     source: AchievementSourceSchema,
     enabled: z.boolean(),
+    initiativeId: StableIdSchema.optional(),
+    context: nonEmptyText.optional(),
   })
   .strict()
   .superRefine((point, context) => {

@@ -71,7 +71,7 @@ describe("manual resume generation", () => {
     });
 
     expect(result.latex).toContain(firstPoint.text);
-    expect(result.metadata).toEqual({
+    expect(result.metadata).toMatchObject({
       id: "manual-test-1",
       generatedAt: "2026-10-12T10:30:00.000Z",
       dataSource: "demo",

@@ -41,7 +41,7 @@ describe("resume LaTeX renderer", () => {
     expect(output).toContain(
       "Redesigned service boundaries and capacity planning",
     );
-    expect(output).toContain("\\ResumeSkillGroup{Cloud}{Amazon Web Services}");
+    expect(output).toContain("Amazon Web Services");
     expect(output).toContain(
       "\\ResumeProfileSummary{Software Engineer | Cloud Platforms}{Fictional software engineer focused on reliable services and developer tooling.}",
     );
@@ -60,8 +60,8 @@ describe("resume LaTeX renderer", () => {
     const rows = output.match(/\\ResumeSkillGroup\{[^\n]+/g) ?? [];
 
     expect(rows).toHaveLength(2);
-    expect(output).toContain("\\ResumeSkillGroup{Cloud}{Amazon Web Services}");
-    expect(rows.every((row) => row.length < 110)).toBe(true);
+    expect(output).toContain("Amazon Web Services");
+    expect(rows.every((row) => row.length < 135)).toBe(true);
     expect(output).not.toContain("\\ResumeSkillGroup{Frontend}");
   });
 

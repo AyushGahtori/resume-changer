@@ -9,3 +9,5 @@ Use these documents to understand, run, and contribute to Resume Changer.
 - [README](../README.md): product summary, current status, quick start, and command reference.
 
 The [local setup guide](local-setup.md) covers Gemini key configuration, AI-powered JD analysis and achievement suggestions, and local PDF compilation. Later roadmap tasks add AI resume drafting and repair.
+
+- [Resume output-quality diagnosis, plan and implementation tracker](../plan.md)

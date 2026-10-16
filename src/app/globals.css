@@ -226,6 +226,46 @@ a {
   color: var(--muted);
 }
 
+.run-log-controls {
+  padding: 11px 9px 0;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.run-log-heading {
+  margin-bottom: 7px;
+  color: var(--ink);
+  font-weight: 650;
+}
+
+.run-log-buttons {
+  display: flex;
+  gap: 6px;
+}
+
+.run-log-buttons button {
+  min-height: 27px;
+  padding: 3px 8px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  font: inherit;
+}
+
+.run-log-controls p {
+  margin: 7px 0 3px;
+  line-height: 1.4;
+}
+
+.run-log-controls [aria-live] {
+  display: block;
+  min-height: 12px;
+  color: var(--accent);
+}
+
 .main-column {
   min-width: 0;
 }
@@ -1427,6 +1467,27 @@ a:focus-visible {
     display: none;
   }
 
+  .run-log-controls {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 5px 10px;
+    padding: 8px 2px 0;
+    border-top: 0;
+  }
+
+  .run-log-heading {
+    margin: 0;
+  }
+
+  .run-log-controls p {
+    display: none;
+  }
+
+  .run-log-controls [aria-live] {
+    grid-column: 1 / -1;
+  }
+
   .main-navigation {
     display: flex;
     gap: 5px;
@@ -2400,6 +2461,18 @@ a:focus-visible {
   margin: 0 0 9px;
   color: var(--muted);
   font-size: 10px;
+}
+
+.generation-origin {
+  margin: 0 0 10px;
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--teal);
+  border-radius: 5px;
+  background: var(--surface-soft);
+  color: var(--ink);
+  font-size: 11px;
+  line-height: 1.5;
 }
 
 .latex-preview {

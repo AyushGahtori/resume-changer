@@ -126,7 +126,7 @@ describe("Gemini adapter", () => {
         model: string;
         outputSchema: Record<string, unknown>;
       }) => {
-        expect(value.prompt).toContain("Prompt version: v1");
+        expect(value.prompt).toContain("Prompt version: v2-evidence-quality");
         expect(value.prompt).toContain("Task instructions:");
         expect(value.prompt).toContain('"roleTitle":"Platform Engineer"');
         return JSON.stringify(analysis);
@@ -145,17 +145,66 @@ describe("Gemini adapter", () => {
     expect(request.mock.calls[0][0].outputSchema).toMatchObject({
       type: "object",
       properties: {
-        requiredQualifications: { maxItems: 20 },
+        requiredQualifications: { type: "array" },
         terminology: {
-          maxItems: 6,
+          type: "array",
           items: {
             properties: {
-              alternatives: { maxItems: 4 },
+              alternatives: { type: "array" },
             },
           },
         },
       },
     });
+    expect(JSON.stringify(request.mock.calls[0][0].outputSchema)).not.toMatch(
+      /"(?:maxItems|minItems)"/,
+    );
+    expect(
+      JobAnalysisResultSchema.safeParse({
+        ...analysis,
+        requiredQualifications: Array.from({ length: 101 }, () => "Python"),
+      }).success,
+    ).toBe(false);
+  });
+
+  it("emits the exact prompt, raw response, validated result, and retry diagnostics without credentials", async () => {
+    const events: Array<{ stage: string; data?: unknown }> = [];
+    const request = vi
+      .fn()
+      .mockRejectedValueOnce(
+        Object.assign(new Error("Unavailable"), { status: 503 }),
+      )
+      .mockResolvedValueOnce(JSON.stringify(analysis));
+    const provider = createGeminiProvider({
+      apiKey: "do-not-log-this-key",
+      request,
+      onDiagnostic: (event) => events.push(event),
+    });
+
+    await expect(
+      provider.analyzeJobDescription({
+        roleTitle: "Platform Engineer",
+        jobDescription: "Maintain distributed services.",
+      }),
+    ).resolves.toEqual(analysis);
+
+    expect(events.map((event) => event.stage)).toEqual([
+      "gemini.analyzeJobDescription.request",
+      "gemini.analyzeJobDescription.retry",
+      "gemini.analyzeJobDescription.request",
+      "gemini.analyzeJobDescription.response",
+      "gemini.analyzeJobDescription.validated",
+    ]);
+    expect(events[0].data).toMatchObject({
+      model: "gemini-3.6-flash",
+      prompt: expect.stringContaining("Maintain distributed services."),
+      outputSchema: expect.any(Object),
+    });
+    expect(events[1].data).toMatchObject({
+      diagnosticCode: "HTTP_503",
+      fallbackModel: "gemini-2.5-flash-lite",
+    });
+    expect(JSON.stringify(events)).not.toContain("do-not-log-this-key");
   });
 
   it("supports all four task contracts without returning LaTeX source", async () => {
@@ -221,6 +270,80 @@ describe("Gemini adapter", () => {
     );
     expect(request.mock.calls[2][0].prompt).not.toContain("\\documentclass");
   });
+
+  it("makes one targeted correction for a missing supported JD phrase", async () => {
+    const input = {
+      jobDescription: "Apply Infrastructure as Code.",
+      analysis: { ...analysis, atsTerms: ["Infrastructure as Code"] },
+      achievements: [{ ...point, supportedSkills: ["Infrastructure as Code"] }],
+      handoff: createResumeDraftHandoff({
+        achievementId: point.id,
+        text: point.text,
+      }),
+    };
+    const initial = {
+      summary: "Draft",
+      achievementText: [{ achievementId: point.id, text: "Built an API." }],
+    };
+    const corrected = {
+      summary: "Draft",
+      achievementText: [
+        {
+          achievementId: point.id,
+          text: "Built an API using Infrastructure as Code.",
+        },
+      ],
+    };
+    const request = vi
+      .fn()
+      .mockResolvedValueOnce(JSON.stringify(initial))
+      .mockResolvedValueOnce(JSON.stringify(corrected));
+    const provider = createGeminiProvider({
+      apiKey: "test-key",
+      model: "gemini-2.5-flash-lite",
+      request,
+    });
+    expect(await provider.draftResume(input)).toEqual(corrected);
+    expect(request).toHaveBeenCalledTimes(2);
+    expect(request.mock.calls[1][0].prompt).toContain(
+      "Server correction instructions:",
+    );
+    expect(request.mock.calls[1][0].prompt).toContain("Infrastructure as Code");
+  });
+
+  it.each(["repeated omission", "rate limit"])(
+    "bounds quality correction and keeps the initial draft after %s",
+    async (failure) => {
+      const input = {
+        jobDescription: "Apply Infrastructure as Code.",
+        analysis: { ...analysis, atsTerms: ["Infrastructure as Code"] },
+        achievements: [
+          { ...point, supportedSkills: ["Infrastructure as Code"] },
+        ],
+        handoff: createResumeDraftHandoff({
+          achievementId: point.id,
+          text: point.text,
+        }),
+      };
+      const initial = {
+        summary: "Draft",
+        achievementText: [{ achievementId: point.id, text: "Built an API." }],
+      };
+      const request = vi.fn().mockResolvedValueOnce(JSON.stringify(initial));
+      if (failure === "rate limit")
+        request.mockRejectedValueOnce(
+          Object.assign(new Error("quota"), { status: 429 }),
+        );
+      else request.mockResolvedValueOnce(JSON.stringify(initial));
+      const provider = createGeminiProvider({
+        apiKey: "test-key",
+        model: "gemini-2.5-flash-lite",
+        request,
+      });
+      expect(await provider.draftResume(input)).toEqual(initial);
+      expect(request).toHaveBeenCalledTimes(2);
+    },
+  );
 
   it("classifies quota, authentication, timeout, and malformed response failures", async () => {
     const input = { jobDescription: "Platform role." };

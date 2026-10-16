@@ -5,13 +5,13 @@ This guide runs the application locally, including Gemini-powered JD analysis an
 ## Requirements
 
 - Git
-- Node.js `^18.18.0`, `^19.8.0`, or `>=20.0.0`
+- Node.js `>=22.13.0` (Node.js 24 recommended for the PDF.js measurement dependency)
 - npm (included with Node.js)
 - Chromium for Playwright browser tests
 - [Tectonic](https://tectonic-typesetting.github.io/book/latest/installation/), the local LaTeX compiler
 - Poppler's `pdfinfo` utility, used to verify the one-page limit
 
-The Node.js range comes from the installed Next.js package's engine declaration.
+The Node.js range accommodates PDF.js, which measures visible PDF text and page utilization without another external executable.
 
 ## Clone And Install
 
@@ -84,3 +84,13 @@ The project plan's Task 25 can expand setup instructions after the remaining AI 
 - **Playwright cannot find Chromium:** Run `npx playwright install chromium` and retry the E2E command.
 - **Dependencies appear inconsistent:** Run `npm ci` from the repository root to recreate `node_modules` from the lockfile.
 - **A check fails after a change:** Read the first reported file and line, fix the underlying issue, then rerun the failed command before opening or updating a PR.
+
+## Output quality and page fitting
+
+Auto Tailor can select, draft and compile a measured result in one request. The
+backend keeps structured achievement metrics, discloses inferred framework usage,
+and reports full/partial requirement coverage against the final content. Page
+fitting uses PDF.js text bounds with a six-compilation limit; visible word count
+is an estimate rather than proof of page fill. An underfilled result or unavailable
+measurement is reported explicitly. Model failures retain source wording plus
+recorded metrics. The fixed template typography is unchanged.

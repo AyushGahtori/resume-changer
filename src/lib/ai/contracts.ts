@@ -1,5 +1,10 @@
 import { z } from "zod";
-import { StableIdSchema } from "../schemas/resume-data";
+import {
+  StableIdSchema,
+  MetricSchema,
+  EducationSchema,
+  CredentialSchema,
+} from "../schemas/resume-data";
 
 const text = z.string().trim().min(1).max(8_000);
 const shortText = z.string().trim().min(1).max(500);
@@ -37,6 +42,34 @@ export const JobAnalysisResultSchema = z
   })
   .strict();
 
+export const ProfileEvidenceSchema = z
+  .object({
+    headline: shortText.optional(),
+    summary: text.optional(),
+    education: z.array(EducationSchema),
+    credentials: z.array(CredentialSchema),
+  })
+  .strict();
+
+export const CoverageEvidenceSchema = z
+  .object({
+    kind: z.enum(["job", "project", "skill", "education", "credential"]),
+    id: StableIdSchema,
+    label: shortText,
+    quote: text,
+    selected: z.boolean(),
+    inferred: z.boolean().optional(),
+  })
+  .strict();
+
+export const CoverageStatusSchema = z.enum([
+  "supported",
+  "partial",
+  "uncertain",
+  "evidence-not-selected",
+  "no-evidence-found",
+]);
+
 export const AchievementEvidenceSchema = z
   .object({
     id: StableIdSchema,
@@ -44,6 +77,19 @@ export const AchievementEvidenceSchema = z
     tags: z.array(shortText).max(50),
     skillIds: z.array(StableIdSchema).max(100),
     supportedSkills: z.array(shortText).max(100).optional(),
+    metrics: z.array(MetricSchema).optional(),
+    source: z
+      .object({
+        type: shortText,
+        label: shortText.optional(),
+        reference: shortText.optional(),
+      })
+      .optional(),
+    context: text.optional(),
+    initiativeId: StableIdSchema.optional(),
+    inferredSkills: z
+      .array(z.object({ name: shortText, reason: shortText }).strict())
+      .optional(),
     section: z.enum(["experience", "projects"]),
     groupId: StableIdSchema,
     groupTitle: shortText,
@@ -67,7 +113,8 @@ export const AchievementSelectionInputSchema = z
     analysis: JobAnalysisResultSchema,
     achievements: z.array(AchievementEvidenceSchema).min(1).max(500),
     skills: z.array(SkillEvidenceSchema).max(500),
-    contentBudgetLines: z.number().int().min(0).max(60),
+    contentBudgetLines: z.number().int().min(0).max(100),
+    profile: ProfileEvidenceSchema.optional(),
   })
   .strict();
 
@@ -84,6 +131,10 @@ export const RequirementCoverageSchema = z
   .object({
     requirement: shortText,
     coveredByAchievementIds: z.array(StableIdSchema).max(100),
+    status: CoverageStatusSchema.optional(),
+    evidence: z.array(CoverageEvidenceSchema).max(500).optional(),
+    missingComponents: terms.optional(),
+    reason: shortText.optional(),
   })
   .strict();
 
@@ -98,7 +149,7 @@ export const SkillRecommendationSchema = z
 export const AchievementSelectionResultSchema = z
   .object({
     selections: z.array(AchievementSelectionItemSchema).max(100),
-    requirementCoverage: z.array(RequirementCoverageSchema).max(100),
+    requirementCoverage: z.array(RequirementCoverageSchema).max(300),
     skillRecommendations: z.array(SkillRecommendationSchema).max(200),
     confidence: z.number().min(0).max(1),
     summary: shortText,
@@ -115,15 +166,20 @@ export const AchievementSelectionResponseSchema = z
           .object({
             requirement: shortText,
             availableAchievementIds: z.array(StableIdSchema).max(500),
+            coveredByAchievementIds: z.array(StableIdSchema).optional(),
+            status: CoverageStatusSchema.optional(),
+            evidence: z.array(CoverageEvidenceSchema).max(500).optional(),
+            missingComponents: terms.optional(),
+            reason: shortText.optional(),
           })
           .strict(),
       )
-      .max(100)
+      .max(300)
       .optional(),
     budget: z
       .object({
-        availableLines: z.number().int().min(0).max(60),
-        usedLines: z.number().int().min(0).max(60),
+        availableLines: z.number().int().min(0).max(100),
+        usedLines: z.number().int().min(0).max(100),
       })
       .strict(),
     notice: shortText.optional(),
@@ -153,12 +209,8 @@ export const ResumeDraftRequirementSchema = z
     id: StableIdSchema,
     category: z.enum(["required", "responsibility", "preferred", "context"]),
     text: shortText,
-    status: z.enum([
-      "supported",
-      "uncertain",
-      "evidence-not-selected",
-      "no-evidence-found",
-    ]),
+    status: CoverageStatusSchema,
+    evidence: z.array(CoverageEvidenceSchema).optional(),
     availableAchievementIds: z.array(StableIdSchema).max(500),
     selectedAchievementIds: z.array(StableIdSchema).max(100),
     reason: shortText,
@@ -174,7 +226,12 @@ export const ResumeDraftSourceSchema = z
     groupTitle: shortText,
     groupSubtitle: shortText.optional(),
     linkedSkills: z.array(shortText).max(100),
-    supportedRequirementIds: z.array(StableIdSchema).max(100),
+    metrics: z.array(MetricSchema).optional(),
+    context: text.optional(),
+    inferredSkills: z
+      .array(z.object({ name: shortText, reason: shortText }).strict())
+      .optional(),
+    supportedRequirementIds: z.array(StableIdSchema).max(2000),
     selectionConfidence: z.number().min(0).max(1).optional(),
   })
   .strict();
@@ -182,10 +239,10 @@ export const ResumeDraftSourceSchema = z
 export const ResumeDraftHandoffSchema = z
   .object({
     job: ResumeDraftJobSchema,
-    requirements: z.array(ResumeDraftRequirementSchema).max(100),
+    requirements: z.array(ResumeDraftRequirementSchema).max(2000),
     selectedAchievements: z.array(ResumeDraftSourceSchema).min(1).max(100),
     suggestedEvidence: z.array(ResumeDraftSourceSchema).max(30),
-    contentBudgetLines: z.number().int().min(0).max(60),
+    contentBudgetLines: z.number().int().min(0).max(100),
   })
   .strict();
 
@@ -196,12 +253,15 @@ export const ResumeDraftInputSchema = z
     achievements: z.array(AchievementEvidenceSchema).min(1).max(100),
     handoff: ResumeDraftHandoffSchema,
     templateContext: z.string().max(30_000).optional(),
+    skills: z.array(SkillEvidenceSchema).optional(),
+    profile: ProfileEvidenceSchema.optional(),
   })
   .strict();
 
 export const ResumeDraftResultSchema = z
   .object({
     summary: z.string().trim().max(1_500),
+    resumeSummary: z.string().trim().max(1_500).optional(),
     achievementText: z
       .array(
         z
@@ -209,6 +269,11 @@ export const ResumeDraftResultSchema = z
             achievementId: StableIdSchema,
             text,
             rationale: shortText.optional(),
+            sourceAchievementIds: z
+              .array(StableIdSchema)
+              .min(1)
+              .max(100)
+              .optional(),
           })
           .strict(),
       )
@@ -223,14 +288,20 @@ export const TailoredAchievementProposalSchema = z
     proposedText: z.string().trim().min(1).max(8_000),
     rationale: shortText,
     addedTerms: terms,
+    sourceAchievementIds: z.array(StableIdSchema).optional(),
+    inferredTerms: terms.optional(),
+    retainedMetricIds: z.array(StableIdSchema).optional(),
+    qualityNotes: terms.optional(),
   })
   .strict();
 
 export const TailorAchievementsResponseSchema = z
   .object({
     proposals: z.array(TailoredAchievementProposalSchema).min(1).max(100),
+    resumeSummary: z.string().trim().max(1_500).optional(),
+    qualityNotes: terms.optional(),
     summary: z.string().trim().min(1).max(1_500),
-    analyzedTerms: terms,
+    analyzedTerms: z.array(shortText).max(2000),
     mode: z.enum(["ai", "originals-fallback"]),
     handoff: ResumeDraftHandoffSchema,
     notice: shortText.optional(),
@@ -243,6 +314,24 @@ export const AutoTailorResponseSchema = z
     tailoring: TailorAchievementsResponseSchema,
     selectedSkillIds: z.array(StableIdSchema).max(200),
     draftingMode: z.enum(["ai", "originals-fallback"]),
+    compiled: z
+      .object({
+        latex: z.string().max(150000),
+        metadata: z.custom<
+          import("../generation/manual-generation").ManualGenerationMetadata
+        >((value) =>
+          Boolean(
+            value &&
+            typeof value === "object" &&
+            "selectedAchievementIds" in value &&
+            "renderedSkillIds" in value &&
+            "generatedAt" in value,
+          ),
+        ),
+        pdfBase64: z.string().min(1).max(2000000),
+      })
+      .strict()
+      .optional(),
   })
   .strict();
 

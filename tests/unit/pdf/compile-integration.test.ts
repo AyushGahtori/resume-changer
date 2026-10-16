@@ -12,6 +12,7 @@ import { createManualGeneration } from "../../../src/lib/generation/manual-gener
 import { renderResumeLatex } from "../../../src/lib/latex/render-resume";
 import type { ResumeLibrary } from "../../../src/lib/schemas/resume-data";
 import { describe, expect, it } from "vitest";
+import { analyzePdfLayout } from "../../../src/lib/pdf/layout-analysis";
 import { compileLatexToPdf } from "../../../src/lib/pdf/compile-service";
 
 const library = sampleLibrary as ResumeLibrary;
@@ -81,6 +82,11 @@ describe.skipIf(!hasLocalToolchain)("real local PDF toolchain", () => {
 
     expect(result.pdf.subarray(0, 5).toString()).toBe("%PDF-");
     expect(result.pageCount).toBe(1);
+    const analysis = await analyzePdfLayout(result.pdf);
+    expect(analysis.layout.pageCount).toBe(1);
+    expect(analysis.layout.visibleWordCount).toBeGreaterThan(40);
+    expect(analysis.layout.utilization).toBeGreaterThan(0);
+    expect(analysis.text).toContain("Jordan Example");
   }, 60_000);
 
   it("compiles a dense skill library with only two skill rows", async () => {
@@ -187,7 +193,8 @@ describe.skipIf(!hasLocalToolchain)("real local PDF toolchain", () => {
           ...job,
           points: job.points.map((point) => ({
             ...point,
-            text: `${point.text} ${point.text} ${point.text} ${point.text}`,
+            // Keep this comfortably beyond one page even if template spacing changes.
+            text: Array.from({ length: 24 }, () => point.text).join(" "),
           })),
         })),
       },
@@ -198,8 +205,9 @@ describe.skipIf(!hasLocalToolchain)("real local PDF toolchain", () => {
     await expect(compileLatexToPdf(longResume)).rejects.toMatchObject({
       code: "PAGE_LIMIT_EXCEEDED",
       status: 422,
-      diagnostics:
-        "Compiled page count: 2. Reduce or reprioritize content; template typography and spacing are fixed.",
+      diagnostics: expect.stringMatching(
+        /^Compiled page count: [2-9]\d*\. Reduce or reprioritize content; template typography and spacing are fixed\.$/,
+      ),
     });
   }, 60_000);
 

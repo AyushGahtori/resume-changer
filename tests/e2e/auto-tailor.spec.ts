@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { readFile } from "node:fs/promises";
 import { createResumeDraftHandoff } from "../helpers/resume-draft-handoff";
 
 const jobDescription = "Provision AWS services with Terraform.";
@@ -183,4 +184,163 @@ test("Auto Tailor selects, drafts, generates, and verifies a one-page PDF", asyn
 
   await page.getByRole("tab", { name: "LaTeX" }).click();
   await expect(page.getByLabel("Generated LaTeX")).toContainText(proposedText);
+
+  const downloadEvent = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Export log" }).click();
+  const download = await downloadEvent;
+  const logPath = await download.path();
+  expect(logPath).toBeTruthy();
+  const runLog = await readFile(logPath!, "utf8");
+  expect(runLog).toContain('"stage": "analysis.button-clicked"');
+  expect(runLog).toContain('"stage": "auto-tailor.button-clicked"');
+  expect(runLog).toContain('"stage": "latex.client-request"');
+  expect(runLog).toContain('"stage": "pdf.http-response"');
+  expect(runLog).toContain(jobDescription);
+  expect(runLog).toContain(proposedText);
+});
+
+test("Auto Tailor uses the measured server result and exposes summary, partial coverage and inference", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByLabel("Company").fill("Example Cloud");
+  await page.getByLabel("Role title").fill("Cloud Platform Engineer");
+  await page.getByLabel("Job description").fill(jobDescription);
+  await expect(page.getByRole("status")).toContainText("Saved locally");
+  await page.route("**/api/ai/analyze-job-description", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ analysis }),
+    }),
+  );
+  await page.getByRole("button", { name: "Analyze job description" }).click();
+  await expect(
+    page.getByRole("region", { name: "Job description analysis" }),
+  ).toBeVisible();
+  await page.goto("/generate?source=demo");
+  let repeatedGeneration = 0;
+  await page.route("**/api/generate", (route) => {
+    repeatedGeneration++;
+    return route.abort();
+  });
+  await page.route("**/api/compile", (route) => {
+    repeatedGeneration++;
+    return route.abort();
+  });
+  await page.route("**/api/ai/auto-tailor", async (route) => {
+    const request = route.request().postDataJSON();
+    expect(request.generatePdf).toBe(true);
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        recommendation: {
+          recommendations: {
+            selections: [
+              {
+                achievementId,
+                section: "experience",
+                confidence: 0.9,
+                rationale: "Supported job work.",
+              },
+            ],
+            requirementCoverage: [
+              {
+                requirement: "AWS provisioning",
+                coveredByAchievementIds: [achievementId],
+              },
+            ],
+            skillRecommendations: [],
+            confidence: 0.9,
+            summary: "Selected relevant work.",
+          },
+          mode: "ai",
+          budget: { availableLines: 40, usedLines: 10 },
+        },
+        tailoring: {
+          proposals: [
+            {
+              achievementId,
+              originalText,
+              proposedText,
+              rationale: "Preserved outcomes.",
+              addedTerms: [],
+              inferredTerms: ["TensorFlow"],
+            },
+          ],
+          summary: "Drafted source achievements.",
+          resumeSummary:
+            "Delivered reliable cloud services with source-backed outcomes.",
+          qualityNotes: [
+            "Inferred framework usage: TensorFlow. Review this assumption.",
+          ],
+          analyzedTerms: [],
+          mode: "ai",
+          handoff: createResumeDraftHandoff({
+            achievementId,
+            text: originalText,
+            job: request.job,
+            groupId: "job-example-cloud-labs",
+            groupTitle: "Cloud Platform Engineer",
+          }),
+        },
+        selectedSkillIds: [],
+        draftingMode: "ai",
+        compiled: {
+          latex: "Verified measured LaTeX",
+          pdfBase64: createOnePagePdf().toString("base64"),
+          metadata: {
+            id: "measured-result",
+            generatedAt: new Date().toISOString(),
+            dataSource: "demo",
+            company: "Example Cloud",
+            roleTitle: "Cloud Platform Engineer",
+            jobUrl: "",
+            tailoringMode: "auto",
+            selectedAchievementIds: [achievementId],
+            selectedSkillIds: [],
+            renderedSkillIds: [],
+            sourceProvenance: [],
+            generatedBullets: [],
+            visibleWordCount: 520,
+            layout: { utilization: 0.97 },
+            fitting: { attempts: 2, decisions: [], status: "filled" },
+            finalCoverage: [
+              {
+                requirement: "AWS provisioning",
+                coveredByAchievementIds: [achievementId],
+                availableAchievementIds: [achievementId],
+                status: "partial",
+                evidence: [],
+                missingComponents: ["More deployment evidence"],
+                reason: "Related evidence supports part of the requirement.",
+              },
+            ],
+          },
+        },
+      }),
+    });
+  });
+  await page.getByRole("button", { name: "Auto Tailor", exact: true }).click();
+  await expect(
+    page.getByText(
+      "Auto Tailor completed with a verified one-page PDF and measured page fill.",
+    ),
+  ).toBeVisible();
+  await expect(
+    page.getByText("PDF ready · 1 page · 97% page fill."),
+  ).toBeVisible();
+  await expect(page.getByText("0 / 1 supported · 1 partial")).toBeVisible();
+  await expect(
+    page.getByText(
+      "Delivered reliable cloud services with source-backed outcomes.",
+    ),
+  ).toBeVisible();
+  await expect(
+    page.getByText(
+      "Inferred framework usage: TensorFlow. Review this assumption.",
+    ),
+  ).toBeVisible();
+  expect(repeatedGeneration).toBe(0);
 });

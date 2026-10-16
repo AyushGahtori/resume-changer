@@ -1,5 +1,13 @@
 import { z } from "zod";
 import {
+  JobAnalysisResultSchema,
+  type JobAnalysisResult,
+} from "../ai/contracts";
+import {
+  requirementComponents,
+  semanticMatchScore,
+} from "../ai/requirement-coverage";
+import {
   ResumeLibrarySchema,
   ResumeSectionTypeSchema,
   StableIdSchema,
@@ -23,6 +31,8 @@ const RenderInputSchema = z
         z
           .object({
             achievementId: StableIdSchema,
+            sourceAchievementIds: z.array(StableIdSchema).min(1).optional(),
+            inferredTerms: z.array(z.string()).optional(),
             text: z.string().trim().min(1).max(8_000),
           })
           .strict(),
@@ -30,6 +40,8 @@ const RenderInputSchema = z
       .max(100)
       .optional(),
     sectionOrder: z.array(ResumeSectionTypeSchema).optional(),
+    summaryOverride: z.string().trim().min(1).max(1500).optional(),
+    analysis: JobAnalysisResultSchema.optional(),
   })
   .strict();
 
@@ -91,7 +103,10 @@ function formatRange(start?: string, end?: string | null): string {
     : formatMonth(start);
 }
 
-function renderHeader(library: ResumeLibrary): string {
+function renderHeader(
+  library: ResumeLibrary,
+  summaryOverride?: string,
+): string {
   const { profile } = library;
   const contacts: string[] = [];
 
@@ -114,7 +129,10 @@ function renderHeader(library: ResumeLibrary): string {
     );
   }
 
-  const summary = profile.summary ? escapeLatexText(profile.summary) : "";
+  const summary =
+    summaryOverride || profile.summary
+      ? escapeLatexText(summaryOverride ?? profile.summary ?? "")
+      : "";
   const headline = profile.headline ? escapeLatexText(profile.headline) : "";
   const profileSummary =
     headline || summary
@@ -150,7 +168,12 @@ function renderExperience(
   selectedIds: string[],
   textOverrides: Map<string, string>,
 ): string {
-  const entries = library.jobs.flatMap((job) => {
+  const orderedJobs = [...library.jobs].sort(
+    (a, b) =>
+      Number(b.endDate === null) - Number(a.endDate === null) ||
+      b.startDate.localeCompare(a.startDate),
+  );
+  const entries = orderedJobs.flatMap((job) => {
     const points = selectedIds
       .map((id) => selectedById.get(id))
       .filter(
@@ -228,13 +251,15 @@ function groupSkills(skills: Skill[]): Array<[string, Skill[]]> {
   return [...groups.entries()];
 }
 
-const MAX_SKILL_ROW_CHARACTERS = 72;
+const MAX_SKILL_ROW_CHARACTERS = 100;
 
 export function selectSkillsForResume(
   skills: Skill[],
   selectedPoints: AchievementPoint[],
   jobDescription = "",
+  analysis?: JobAnalysisResult,
 ): Skill[] {
+  const concepts = requirementComponents(jobDescription);
   const normalizedJd = ` ${jobDescription
     .toLocaleLowerCase()
     .replace(/[^a-z0-9+#]+/g, " ")
@@ -245,49 +270,53 @@ export function selectSkillsForResume(
   );
   const score = (skill: Skill) => {
     const terms = [skill.name, ...skill.aliases];
-    const matchesJd = terms.some((term) => {
-      const normalized = term
-        .toLocaleLowerCase()
-        .replace(/[^a-z0-9+#]+/g, " ")
-        .replace(/\s+/g, " ")
-        .trim();
-      return normalized.length > 1 && normalizedJd.includes(` ${normalized} `);
-    });
+    const skillText = terms.join(" ");
+    const matchesJd =
+      concepts.some((concept) => semanticMatchScore(skillText, concept) > 0) ||
+      terms.some((term) => {
+        const normalized = term
+          .toLocaleLowerCase()
+          .replace(/[^a-z0-9+#]+/g, " ")
+          .replace(/\s+/g, " ")
+          .trim();
+        return (
+          normalized.length > 1 && normalizedJd.includes(` ${normalized} `)
+        );
+      });
     return (
+      (analysis?.requiredQualifications.some(
+        (requirement) => semanticMatchScore(skillText, requirement) > 0,
+      )
+        ? 1000
+        : analysis?.responsibilities.some(
+              (requirement) => semanticMatchScore(skillText, requirement) > 0,
+            )
+          ? 500
+          : analysis?.preferredQualifications.some(
+                (requirement) => semanticMatchScore(skillText, requirement) > 0,
+              )
+            ? 250
+            : 0) +
       (matchesJd ? 100 : 0) +
       (pointSkillIds.has(skill.id) ? 10 : 0) +
       (skill.isListedOnCurrentResume ? 1 : 0)
     );
   };
-  const groups = groupSkills(skills)
-    .map(([category, group], index) => ({
-      category,
-      group: [...group].sort((left, right) => score(right) - score(left)),
-      index,
-      strength: Math.max(...group.map(score)),
-    }))
-    .sort(
-      (left, right) =>
-        right.strength - left.strength || left.index - right.index,
+  const ranked = skills
+    .map((skill, index) => ({ skill, index, score: score(skill) }))
+    .sort((a, b) => b.score - a.score || a.index - b.index);
+  const rows: Skill[][] = [[], []];
+  const labels = ["Relevant Skills", "Additional Skills"];
+  const lengths = labels.map((label) => label.length + 2);
+  for (const { skill } of ranked) {
+    const row = lengths.findIndex(
+      (length) => length + skill.name.length + 2 <= MAX_SKILL_ROW_CHARACTERS,
     );
-  const selected: Skill[] = [];
-  for (const { category, group } of groups) {
-    if (
-      new Set(selected.map((skill) => skill.category?.trim() || "Other"))
-        .size >= 2
-    ) {
-      break;
-    }
-    let characters = category.length + 2;
-    for (const skill of group) {
-      const next =
-        skill.name.length + (characters > category.length + 2 ? 2 : 0);
-      if (characters + next > MAX_SKILL_ROW_CHARACTERS) continue;
-      selected.push(skill);
-      characters += next;
-    }
+    if (row < 0) continue;
+    rows[row].push({ ...skill, category: labels[row] });
+    lengths[row] += skill.name.length + 2;
   }
-  return selected;
+  return rows.flat();
 }
 
 function renderSkills(skills: Skill[]): string {
@@ -340,9 +369,13 @@ export type RenderResumeLatexInput = {
   jobDescription?: string;
   achievementTextOverrides?: Array<{
     achievementId: string;
+    sourceAchievementIds?: string[];
+    inferredTerms?: string[];
     text: string;
   }>;
   sectionOrder?: ResumeSectionType[];
+  summaryOverride?: string;
+  analysis?: JobAnalysisResult;
 };
 
 export function renderResumeLatex(input: RenderResumeLatexInput): string {
@@ -360,6 +393,8 @@ export function renderResumeLatex(input: RenderResumeLatexInput): string {
     jobDescription,
     achievementTextOverrides = [],
     sectionOrder,
+    summaryOverride,
+    analysis,
   } = parsed.data;
   if (new Set(selectedAchievementIds).size !== selectedAchievementIds.length) {
     throw new ResumeRenderError(
@@ -402,6 +437,38 @@ export function renderResumeLatex(input: RenderResumeLatexInput): string {
     textOverrides.set(item.achievementId, item.text);
   }
 
+  const consumedIds = new Set<string>();
+  const groupById = new Map(
+    [...library.jobs, ...library.projects].flatMap((group) =>
+      group.points.map((point) => [point.id, group.id] as const),
+    ),
+  );
+  for (const item of achievementTextOverrides) {
+    const sources = item.sourceAchievementIds ?? [item.achievementId];
+    if (
+      !sources.includes(item.achievementId) ||
+      sources.some((id) => !selectedIds.has(id)) ||
+      new Set(sources.map((id) => groupById.get(id))).size !== 1
+    ) {
+      throw new ResumeRenderError(
+        "A synthesized bullet must use selected sources in the same group.",
+      );
+    }
+    for (const id of sources) {
+      if (consumedIds.has(id))
+        throw new ResumeRenderError(
+          "A synthesized source may be used only once.",
+        );
+      consumedIds.add(id);
+    }
+  }
+  const suppressedIds = new Set(
+    achievementTextOverrides.flatMap((item) =>
+      (item.sourceAchievementIds ?? []).filter(
+        (id) => id !== item.achievementId,
+      ),
+    ),
+  );
   const skillById = new Map(library.skills.map((skill) => [skill.id, skill]));
   const chosenSkillIds =
     selectedSkillIds ??
@@ -416,7 +483,15 @@ export function renderResumeLatex(input: RenderResumeLatexInput): string {
     if (!skill) throw new ResumeRenderError(`Unknown skill ID: ${id}.`);
     if (
       !skill.isListedOnCurrentResume &&
-      !skill.evidenceAchievementIds.some((pointId) => selectedIds.has(pointId))
+      !skill.evidenceAchievementIds.some((pointId) =>
+        selectedIds.has(pointId),
+      ) &&
+      ![...library.jobs, ...library.projects].some((group) =>
+        group.points.some(
+          (point) =>
+            selectedIds.has(point.id) && point.skillIds.includes(skill.id),
+        ),
+      )
     ) {
       throw new ResumeRenderError(
         `Skill "${skill.name}" needs a selected supporting achievement point.`,
@@ -433,11 +508,12 @@ export function renderResumeLatex(input: RenderResumeLatexInput): string {
     skills,
     [...selectedById.values()],
     jobDescription,
+    analysis,
   );
   const context = {
     library,
     selectedById,
-    selectedIds: selectedAchievementIds,
+    selectedIds: selectedAchievementIds.filter((id) => !suppressedIds.has(id)),
     textOverrides,
     skills: compactSkills,
   };
@@ -446,6 +522,6 @@ export function renderResumeLatex(input: RenderResumeLatexInput): string {
     .filter(Boolean);
 
   return applyJakeStyleTemplate(
-    [renderHeader(library), ...sections].join("\n\n"),
+    [renderHeader(library, summaryOverride), ...sections].join("\n\n"),
   );
 }

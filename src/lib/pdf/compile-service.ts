@@ -59,10 +59,34 @@ type CompileOptions = {
   pdfInfoPath?: string;
   timeoutMs?: number;
   runProcess?: RunProcess;
+  onDiagnostic?: (event: {
+    stage: string;
+    message: string;
+    data?: unknown;
+  }) => void;
 };
 
 const MAX_DIAGNOSTIC_LENGTH = 12_000;
 const DEFAULT_TIMEOUT_MS = 30_000;
+
+function notify(
+  options: CompileOptions,
+  stage: string,
+  message: string,
+  data?: unknown,
+) {
+  try {
+    options.onDiagnostic?.({ stage, message, data });
+  } catch {
+    // Diagnostics must never prevent a resume from compiling.
+  }
+}
+
+function outputExcerpt(value: string, directory: string) {
+  return diagnosticsOf({ code: 0, stdout: value, stderr: "" }, directory).slice(
+    -800,
+  );
+}
 
 function trimDiagnostics(value: string): string {
   const trimmed = value.trim();
@@ -151,25 +175,65 @@ export async function compileLatexToPdf(
   const run = options.runProcess ?? runProcess;
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const deadline = Date.now() + timeoutMs;
+  notify(
+    options,
+    "pdf.temp-workspace",
+    "Created a private temporary compile workspace.",
+    {
+      sourceLength: parsed.data.latex.length,
+    },
+  );
 
   try {
     await writeFile(texPath, parsed.data.latex, {
       encoding: "utf8",
       mode: 0o600,
     });
+    notify(
+      options,
+      "pdf.source-written",
+      "Wrote validated LaTeX source to the temporary workspace.",
+    );
+    const tectonicExecutable =
+      options.tectonicPath ?? process.env.TECTONIC_BINARY ?? "tectonic";
+    const tectonicArgs = [
+      "--untrusted",
+      "--only-cached",
+      "--keep-logs",
+      "--outdir",
+      directory,
+      texPath,
+    ];
+    notify(
+      options,
+      "pdf.tectonic-started",
+      "Started Tectonic with fixed untrusted/offline arguments.",
+      {
+        executable: path.basename(tectonicExecutable),
+        args: [
+          "--untrusted",
+          "--only-cached",
+          "--keep-logs",
+          "--outdir",
+          "[temporary directory]",
+          "[temporary .tex file]",
+        ],
+        timeoutMs,
+      },
+    );
     const compiler = await run(
-      options.tectonicPath ?? process.env.TECTONIC_BINARY ?? "tectonic",
-      [
-        "--untrusted",
-        "--only-cached",
-        "--keep-logs",
-        "--outdir",
-        directory,
-        texPath,
-      ],
+      tectonicExecutable,
+      tectonicArgs,
       directory,
       timeoutMs,
     );
+    notify(options, "pdf.tectonic-finished", "Tectonic process completed.", {
+      exitCode: compiler.code,
+      spawnError: compiler.error?.code,
+      timedOut: Boolean(compiler.timedOut),
+      stdout: outputExcerpt(compiler.stdout, directory),
+      stderr: outputExcerpt(compiler.stderr, directory),
+    });
 
     if (compiler.error?.code === "ENOENT") {
       throw new PdfCompileError(
@@ -212,11 +276,36 @@ export async function compileLatexToPdf(
       );
     }
 
+    const pdfInfoExecutable =
+      options.pdfInfoPath ?? process.env.PDFINFO_BINARY ?? "pdfinfo";
+    notify(
+      options,
+      "pdf.page-count-started",
+      "Started Poppler pdfinfo page-count verification.",
+      {
+        executable: path.basename(pdfInfoExecutable),
+        args: ["-f", "1", "-l", "2", "[temporary .pdf file]"],
+        remainingTimeoutMs: Math.max(1, deadline - Date.now()),
+      },
+    );
+
     const pdfInfo = await run(
-      options.pdfInfoPath ?? process.env.PDFINFO_BINARY ?? "pdfinfo",
+      pdfInfoExecutable,
       ["-f", "1", "-l", "2", pdfPath],
       directory,
       Math.max(1, deadline - Date.now()),
+    );
+    notify(
+      options,
+      "pdf.page-count-result",
+      "Received Poppler page-count result.",
+      {
+        exitCode: pdfInfo.code,
+        spawnError: pdfInfo.error?.code,
+        timedOut: Boolean(pdfInfo.timedOut),
+        stdout: outputExcerpt(pdfInfo.stdout, directory),
+        stderr: outputExcerpt(pdfInfo.stderr, directory),
+      },
     );
     if (pdfInfo.error?.code === "ENOENT") {
       throw new PdfCompileError(
@@ -254,6 +343,12 @@ export async function compileLatexToPdf(
         `Compiled page count: ${pageCount}. Reduce or reprioritize content; template typography and spacing are fixed.`,
       );
     }
+
+    notify(options, "pdf.verified", "Verified the result is a one-page PDF.", {
+      pageCount,
+      byteLength: pdf.byteLength,
+      signature: "%PDF-",
+    });
 
     return { pdf, pageCount };
   } finally {

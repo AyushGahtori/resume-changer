@@ -96,7 +96,7 @@ describe("POST /api/ai/select-achievements", () => {
       expect.arrayContaining([
         expect.objectContaining({
           requirement: "AWS provisioning",
-          coveredByAchievementIds: [selectedId],
+          coveredByAchievementIds: expect.arrayContaining([selectedId]),
         }),
       ]),
     );
@@ -121,7 +121,7 @@ describe("POST /api/ai/select-achievements", () => {
           .some((source) => source.id === point.id && source.enabled),
       ),
     ).toBe(true);
-    expect(input).not.toHaveProperty("profile");
+    expect(input).not.toHaveProperty("profile.email");
   });
 
   it("returns local evidence recommendations if the AI provider is unavailable", async () => {

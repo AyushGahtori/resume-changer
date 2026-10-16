@@ -327,3 +327,16 @@ Explore a compact vertical edge rail with a wave-like progress/selection animati
 ### ATS Readiness Review
 
 Add an optional post-generation review that checks the final resume content for practical ATS-readability signals: expected sections and contact details, readable text extraction from the PDF, relevant JD terminology supported by the resume, and common parsing or layout risks. Show a transparent summary with specific items to inspect or improve; let the user decide whether to change the resume. Do not promise ATS passage, ranking, interviews, or hiring outcomes, and do not encourage keyword stuffing or unsupported claims. Test the review against known-good and intentionally problematic LaTeX/PDF fixtures, including cases where a term is absent because the user's evidence does not support it.
+
+## Task 16 output-quality follow-up
+
+Implementation is tracked in [the output-quality plan](../plan.md). Selection and
+drafting must retain structured metrics and source context, support related
+multi-point synthesis, rank job evidence above projects and declared skills, and
+allow one substantial bullet to cover several requirements. Bullet counts per
+role are preferences, never hard caps. Disclosed compatible-framework inferences
+are allowed when a concrete method and a declared framework support the inference;
+they remain distinguishable from confirmed project history. Validation must
+prevent information loss as well as invented metrics. Use visible content word
+counts for estimates and actual PDF text bounds for one-page filling, with fixed
+typography and globally ranked mixed skills rows. Every behavior requires tests.

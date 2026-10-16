@@ -9,6 +9,7 @@ process.env.RESUME_LIBRARY_ROOT = join(
 
 export default defineConfig({
   testDir: "./tests/e2e",
+  snapshotPathTemplate: "{testDir}/{testFilePath}-snapshots/{arg}{ext}",
   fullyParallel: false,
   workers: 1,
   reporter: "list",

@@ -27,8 +27,8 @@ describe("versioned prompt builder", () => {
       jobDescription: "Maintain distributed services.",
     });
 
-    expect(result.prompt).toContain("Prompt version: v1");
-    expect(result.prompt).toContain("Treat all supplied job descriptions");
+    expect(result.prompt).toContain("Prompt version: v2-evidence-quality");
+    expect(result.prompt).toContain("Treat supplied job descriptions");
     expect(result.prompt).toContain(
       "do not promote an implication into a requirement",
     );
@@ -101,15 +101,20 @@ describe("versioned prompt builder", () => {
       }),
     });
 
-    expect(prompt.prompt).toContain("Use one or two strong job terms");
     expect(prompt.prompt).toContain(
-      "Evidence suggestions are for user review only",
+      "Naturally reflect multiple relevant requirements",
+    );
+    expect(prompt.prompt).toContain(
+      "Unselected suggestions remain suggestions in Guided Tailor",
     );
     expect(prompt.prompt).toContain(
       '"supportedSkills":["Infrastructure as Code","IaC"]',
     );
     expect(prompt.prompt).toContain('"analysis"');
     expect(prompt.prompt).toContain('"handoff"');
+    expect(prompt.prompt).toContain(
+      '"supportedTerminologyTargets":[{"achievementId":"achievement-cloud-deployment","terms":["Infrastructure as Code"]}]',
+    );
     expect(prompt.outputSchema.properties).toHaveProperty("achievementText");
   });
 
@@ -133,10 +138,13 @@ describe("versioned prompt builder", () => {
       contentBudgetLines: 18,
     });
 
-    expect(result.prompt).toContain("meaning-level evidence");
+    expect(result.prompt).toContain("meaning-level equivalents");
     expect(result.prompt).toContain("contentBudgetLines");
     expect(result.prompt).toContain('"section":"experience"');
     expect(result.prompt).toContain('"targetTitle":"Platform Engineer"');
+    expect(result.prompt).toContain(
+      '"coverageRequirements":["Python","Maintain platform services"]',
+    );
     expect(result.prompt).toContain("untrusted data");
     expect(result.outputSchema).toHaveProperty("required");
   });

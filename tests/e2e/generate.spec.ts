@@ -62,6 +62,11 @@ test("selects points, generates LaTeX, copies and downloads the output", async (
   const preview = page.getByLabel("Generated LaTeX");
   await expect(preview).toContainText("Jordan Example");
   await expect(preview).toContainText("Redesigned service boundaries");
+  await expect(
+    page.getByRole("status", { name: "Generation method" }),
+  ).toHaveText(
+    "Generated internally by Resume Changer from your selected evidence. AI did not rewrite the content.",
+  );
   await expect(page.locator(".generation-metadata")).toContainText(
     "1 achievement",
   );

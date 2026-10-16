@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import sampleLibrary from "../../../examples/sample-resume-library.json";
-import { buildAchievementSelectionInput } from "../../../src/lib/ai/achievement-selection";
+import {
+  buildAchievementSelectionInput,
+  recommendAchievements,
+} from "../../../src/lib/ai/achievement-selection";
 import { createGeminiProvider } from "../../../src/lib/ai/gemini-provider";
 import {
   AchievementSelectionResultSchema,
@@ -85,6 +88,15 @@ Tools: Python and Kubernetes.`,
           tags: ["cloud", "deployment"],
           skillIds: ["skill-terraform"],
           supportedSkills: ["Infrastructure as Code", "IaC", "Terraform"],
+          metrics: [
+            {
+              id: "metric-live-deployment-time",
+              label: "Deployment time reduction",
+              value: "25",
+              unit: "%",
+              evidence: "Fictional benchmark for this smoke test.",
+            },
+          ],
           section: "experience",
           groupId: "job-platform",
           groupTitle: "Platform Engineer",
@@ -113,10 +125,12 @@ Tools: Python and Kubernetes.`,
       "infrastructure as code",
     );
     expect(proposal.proposedText.toLowerCase()).toContain("terraform");
+    expect(proposal.proposedText).toContain("25%");
+    expect(result.resumeSummary).toBeTruthy();
     expect(proposal.proposedText).not.toContain("\\documentclass");
   }, 60_000);
 
-  it("selects grounded points from the sample resume for a synthetic JD", async () => {
+  it("selects grounded points and returns all 22 requirements for a synthetic JD", async () => {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) throw new Error("GEMINI_API_KEY is required for this test.");
 
@@ -131,9 +145,31 @@ Tools: Python and Kubernetes.`,
       analysis: {
         targetTitle: "Cloud Platform Engineer",
         seniority: "Early career",
-        requiredQualifications: ["AWS", "distributed systems"],
-        preferredQualifications: ["Terraform"],
-        responsibilities: ["Build and operate scalable cloud infrastructure"],
+        requiredQualifications: [
+          "AWS",
+          "distributed systems",
+          "Python",
+          "REST API design",
+          "Docker",
+          "Git",
+          "CI/CD",
+          "Infrastructure as Code",
+          "Observability",
+          "TypeScript",
+          "technical documentation",
+          "background jobs",
+          "idempotency",
+          "bounded retries",
+          "service dashboards",
+          "release readiness",
+          "schema validation",
+          "accessible workflows",
+        ],
+        preferredQualifications: ["Terraform", "Kubernetes"],
+        responsibilities: [
+          "Build and operate scalable cloud infrastructure",
+          "Automate release checks",
+        ],
         toolsAndPlatforms: ["AWS", "Terraform", "Python"],
         domainConcepts: ["distributed systems", "cloud infrastructure"],
         atsTerms: ["AWS", "Terraform", "Python", "distributed systems"],
@@ -143,10 +179,23 @@ Tools: Python and Kubernetes.`,
         ],
       },
     });
+    const recommendation = await recommendAchievements({
+      input,
+      selectWithAi: () => provider.selectAchievements(input),
+    });
+    expect(recommendation.mode).toBe("ai");
     const result = AchievementSelectionResultSchema.parse(
-      await provider.selectAchievements(input),
+      recommendation.recommendations,
     );
     const allowedIds = new Set(input.achievements.map(({ id }) => id));
+    const requirements = [
+      ...input.analysis.requiredQualifications,
+      ...input.analysis.responsibilities,
+      ...input.analysis.preferredQualifications,
+    ];
+    expect(
+      result.requirementCoverage.map((row) => row.requirement).sort(),
+    ).toEqual(requirements.sort());
 
     expect(result.selections.length).toBeGreaterThan(0);
     expect(

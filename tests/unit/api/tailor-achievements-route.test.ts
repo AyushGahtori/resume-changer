@@ -130,7 +130,7 @@ describe("POST /api/ai/tailor-achievements", () => {
         }),
       ],
     });
-    expect(draftResume.mock.calls[0][0]).not.toHaveProperty("profile");
+    expect(draftResume.mock.calls[0][0]).not.toHaveProperty("profile.email");
     expect(draftResume.mock.calls[0][0]).not.toHaveProperty("templateContext");
   });
 

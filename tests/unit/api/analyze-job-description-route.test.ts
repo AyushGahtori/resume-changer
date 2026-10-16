@@ -24,11 +24,14 @@ const result = {
   terminology: [{ term: "machine learning", alternatives: ["ML"] }],
 };
 
-function post(body: string) {
+function post(body: string, runId?: string) {
   return POST(
     new Request("http://localhost/api/ai/analyze-job-description", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...(runId ? { "X-Resume-Run-Id": runId } : {}),
+      },
       body,
     }),
   );
@@ -56,6 +59,27 @@ describe("POST /api/ai/analyze-job-description", () => {
       roleTitle: "Software Engineer",
       jobDescription: "Build distributed services.",
     });
+  });
+
+  it("returns correlated request, validation, and analysis diagnostics when requested by the browser", async () => {
+    analyzeJobDescription.mockResolvedValue(result);
+    const response = await post(
+      JSON.stringify({ jobDescription: "Build distributed services." }),
+      "analysis-run-test",
+    );
+    const body = await response.json();
+
+    expect(body.runId).toBe("analysis-run-test");
+    expect(body.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          stage: "analysis.request",
+          data: { jobDescription: "Build distributed services." },
+        }),
+        expect.objectContaining({ stage: "analysis.validation" }),
+        expect.objectContaining({ stage: "analysis.complete", data: result }),
+      ]),
+    );
   });
 
   it("rejects malformed JSON, missing fields, and oversized descriptions before calling AI", async () => {

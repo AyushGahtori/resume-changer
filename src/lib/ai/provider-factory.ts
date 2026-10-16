@@ -3,6 +3,7 @@ import { AiProviderError } from "./provider";
 import { createGeminiProvider } from "./gemini-provider";
 import { mockAiProvider } from "./mock-provider";
 import type { AiProvider } from "./provider";
+import type { DiagnosticObserver } from "@/lib/diagnostics/server-trace";
 
 export type AiProviderEnvironment = {
   AI_PROVIDER?: string;
@@ -16,6 +17,7 @@ export function createAiProvider(
     GEMINI_API_KEY: process.env.GEMINI_API_KEY,
     GEMINI_MODEL: process.env.GEMINI_MODEL,
   },
+  onDiagnostic?: DiagnosticObserver,
 ): AiProvider {
   const selectedProvider = environment.AI_PROVIDER ?? "gemini";
   if (selectedProvider === "mock") return mockAiProvider;
@@ -34,5 +36,6 @@ export function createAiProvider(
   return createGeminiProvider({
     apiKey: environment.GEMINI_API_KEY,
     model: environment.GEMINI_MODEL,
+    onDiagnostic,
   });
 }

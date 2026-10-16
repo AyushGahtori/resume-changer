@@ -44,7 +44,9 @@ export async function POST(request: Request) {
     const input = await buildResumeDraftInput(library, parsed.data);
     try {
       const result = await createAiProvider().draftResume(input);
-      return NextResponse.json(createTailoringResponse({ input, result }));
+      return NextResponse.json(
+        createTailoringResponse({ input, result, repairInvalid: true }),
+      );
     } catch (error) {
       if (
         error instanceof AiProviderError &&
