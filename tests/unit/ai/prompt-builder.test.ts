@@ -4,6 +4,7 @@ import {
   loadApprovedTemplateContext,
 } from "../../../src/lib/ai/prompt-builder";
 import { JAKE_STYLE_TEMPLATE } from "../../../src/lib/latex/jake-template";
+import { createResumeDraftHandoff } from "../../helpers/resume-draft-handoff";
 
 const jobAnalysis = {
   targetTitle: "Platform Engineer",
@@ -53,6 +54,10 @@ describe("versioned prompt builder", () => {
           groupTitle: "Platform Engineer",
         },
       ],
+      handoff: createResumeDraftHandoff({
+        achievementId: "achievement-api",
+        text: "Built an API.",
+      }),
       templateContext: "Approved template body: \\documentclass{article}",
     });
 
@@ -89,18 +94,22 @@ describe("versioned prompt builder", () => {
           groupTitle: "Platform Engineer",
         },
       ],
+      handoff: createResumeDraftHandoff({
+        achievementId: "achievement-cloud-deployment",
+        text: "Provisioned cloud resources with Terraform modules.",
+        linkedSkills: ["Infrastructure as Code", "IaC"],
+      }),
     });
 
+    expect(prompt.prompt).toContain("Use one or two strong job terms");
     expect(prompt.prompt).toContain(
-      "include that exact term in the revised sentence",
-    );
-    expect(prompt.prompt).toContain(
-      'when the point is linked to Infrastructure as Code and names Terraform, include the phrase "Infrastructure as Code" naturally',
+      "Evidence suggestions are for user review only",
     );
     expect(prompt.prompt).toContain(
       '"supportedSkills":["Infrastructure as Code","IaC"]',
     );
     expect(prompt.prompt).toContain('"analysis"');
+    expect(prompt.prompt).toContain('"handoff"');
     expect(prompt.outputSchema.properties).toHaveProperty("achievementText");
   });
 

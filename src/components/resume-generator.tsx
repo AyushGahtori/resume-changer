@@ -9,12 +9,14 @@ import {
   type JobDescriptionDraft,
 } from "@/lib/jd-draft";
 import {
+  AutoTailorResponseSchema,
   AchievementSelectionResponseSchema,
   TailorAchievementsResponseSchema,
   type AchievementSelectionResponse,
   type JobAnalysisResult,
   type TailorAchievementsResponse,
 } from "@/lib/ai/contracts";
+import { createJobContextId } from "@/lib/ai/job-context";
 import { readJobAnalysisCache } from "@/lib/jd-analysis-cache";
 import { createResumeFilename } from "@/lib/generation/resume-filename";
 import type { ManualGenerationResult } from "@/lib/generation/manual-generation";
@@ -102,6 +104,11 @@ export default function ResumeGenerator({ library, source }: Props) {
   const [approvedTailoredIds, setApprovedTailoredIds] = useState<string[]>([]);
   const [tailoringError, setTailoringError] = useState("");
   const [isTailoring, setIsTailoring] = useState(false);
+  const [isAutoTailoring, setIsAutoTailoring] = useState(false);
+  const [autoTailorStatus, setAutoTailorStatus] = useState("");
+  const [tailoringWorkflow, setTailoringWorkflow] = useState<
+    "guided" | "auto" | null
+  >(null);
   const [result, setResult] = useState<ManualGenerationResult | null>(null);
   const [requestError, setRequestError] = useState("");
   const [copyMessage, setCopyMessage] = useState("");
@@ -185,6 +192,8 @@ export default function ResumeGenerator({ library, source }: Props) {
     setTailoredText({});
     setApprovedTailoredIds([]);
     setTailoringError("");
+    setTailoringWorkflow(null);
+    setAutoTailorStatus("");
   }
 
   function clearPdfOutput() {
@@ -251,6 +260,22 @@ export default function ResumeGenerator({ library, source }: Props) {
     setResult(null);
     setCopyMessage("");
     setRequestError("");
+  }
+
+  function applyDraftEvidenceAction(achievementId: string, replaceId?: string) {
+    if (!enabledIds.includes(achievementId)) return;
+    const nextIds = selectedIds.filter((id) => id !== replaceId);
+    if (!nextIds.includes(achievementId)) nextIds.push(achievementId);
+    clearTailoring();
+    setSelectedIds(nextIds);
+    setSelectedSkillIds(null);
+    setApprovedTailoredIds([]);
+    clearPdfOutput();
+    setResult(null);
+    setRequestError("");
+    setAutoTailorStatus(
+      "Source selection updated. Run Guided Tailor to review wording for these points.",
+    );
   }
 
   async function handleRecommend() {
@@ -380,6 +405,8 @@ export default function ResumeGenerator({ library, source }: Props) {
     tailoringAbortRef.current = controller;
     setIsTailoring(true);
     setTailoringError("");
+    setAutoTailorStatus("");
+    setTailoringWorkflow(null);
     setTailoring(null);
     setTailoredText({});
     setApprovedTailoredIds([]);
@@ -388,6 +415,18 @@ export default function ResumeGenerator({ library, source }: Props) {
     setRequestError("");
 
     try {
+      const job = {
+        company: draft.company,
+        roleTitle: draft.roleTitle,
+        jobUrl: draft.jobUrl,
+        contextId: await createJobContextId({
+          company: draft.company,
+          roleTitle: draft.roleTitle,
+          jobUrl: draft.jobUrl,
+          jobDescription: draft.jobDescription,
+          analysis,
+        }),
+      };
       const response = await fetch("/api/ai/tailor-achievements", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -395,6 +434,8 @@ export default function ResumeGenerator({ library, source }: Props) {
           dataSource: source,
           jobDescription: draft.jobDescription,
           analysis,
+          job,
+          ...(recommendation ? { selectionContext: recommendation } : {}),
           achievementIds: selectedIds,
         }),
         signal: controller.signal,
@@ -417,6 +458,7 @@ export default function ResumeGenerator({ library, source }: Props) {
         );
       }
       setTailoring(parsed.data);
+      setTailoringWorkflow("guided");
       setTailoredText(
         Object.fromEntries(
           parsed.data.proposals.map((proposal) => [
@@ -440,8 +482,151 @@ export default function ResumeGenerator({ library, source }: Props) {
     }
   }
 
-  async function handleGenerate(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function handleAutoTailor() {
+    if (!draft.jobDescription.trim() || !analysis) {
+      setTailoringError(
+        "Save and analyze a job description before running Auto Tailor.",
+      );
+      return;
+    }
+
+    clearTailoring();
+    const controller = new AbortController();
+    tailoringAbortRef.current = controller;
+    setIsAutoTailoring(true);
+    setTailoringError("");
+    setAutoTailorStatus("Selecting evidence and drafting your resume…");
+    clearPdfOutput();
+    setResult(null);
+
+    try {
+      const job = {
+        company: draft.company,
+        roleTitle: draft.roleTitle,
+        jobUrl: draft.jobUrl,
+        contextId: await createJobContextId({
+          company: draft.company,
+          roleTitle: draft.roleTitle,
+          jobUrl: draft.jobUrl,
+          jobDescription: draft.jobDescription,
+          analysis,
+        }),
+      };
+      const response = await fetch("/api/ai/auto-tailor", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          dataSource: source,
+          jobDescription: draft.jobDescription,
+          analysis,
+          job,
+        }),
+        signal: controller.signal,
+      });
+      const payload: unknown = await response.json();
+      if (!response.ok) {
+        const message =
+          payload &&
+          typeof payload === "object" &&
+          "error" in payload &&
+          typeof payload.error === "string"
+            ? payload.error
+            : "Auto Tailor could not prepare this resume. Try again.";
+        throw new Error(message);
+      }
+      const parsed = AutoTailorResponseSchema.safeParse(payload);
+      if (!parsed.success) {
+        throw new Error(
+          "Auto Tailor returned an invalid response. No resume was generated.",
+        );
+      }
+
+      const auto = parsed.data;
+      const nextIds = auto.recommendation.recommendations.selections.map(
+        (item) => item.achievementId,
+      );
+      const nextTailoredText = Object.fromEntries(
+        auto.tailoring.proposals.map((proposal) => [
+          proposal.achievementId,
+          proposal.proposedText,
+        ]),
+      );
+      setRecommendation(auto.recommendation);
+      setSelectedIds(nextIds);
+      setSelectedSkillIds(auto.selectedSkillIds);
+      setTailoring(auto.tailoring);
+      setTailoredText(nextTailoredText);
+      setApprovedTailoredIds(
+        auto.tailoring.proposals.map((proposal) => proposal.achievementId),
+      );
+      setTailoringWorkflow("auto");
+      clearPdfOutput();
+      setRequestError("");
+      setCopyMessage("");
+      setAutoTailorStatus(
+        auto.draftingMode === "ai"
+          ? "AI selected and drafted the source evidence. Generating LaTeX and checking the PDF…"
+          : "AI is unavailable, so Auto Tailor kept the selected source wording unchanged. Generating LaTeX and checking the PDF…",
+      );
+
+      const generated = await requestGeneration({
+        selectedIds: nextIds,
+        selectedSkillIds: auto.selectedSkillIds,
+        tailoring: auto.tailoring,
+        approvedTailoredIds: auto.tailoring.proposals.map(
+          (proposal) => proposal.achievementId,
+        ),
+        tailoredText: nextTailoredText,
+        workflow: "auto",
+      });
+      if (!generated) {
+        setAutoTailorStatus(
+          "Auto Tailor selected and drafted the content, but LaTeX generation failed. Review the error below.",
+        );
+        return;
+      }
+
+      const pdfReady = await compilePdf(generated);
+      setAutoTailorStatus(
+        pdfReady
+          ? auto.draftingMode === "ai"
+            ? "Auto Tailor completed and the one-page PDF was verified."
+            : "Auto Tailor prepared a one-page PDF using original source wording; no AI rewrites were applied."
+          : "LaTeX was prepared, but PDF compilation did not verify a one-page result. Review the compiler message.",
+      );
+    } catch (error) {
+      if (controller.signal.aborted) return;
+      setTailoringError(
+        error instanceof Error
+          ? error.message
+          : "Auto Tailor could not prepare this resume. Try again.",
+      );
+      setAutoTailorStatus("");
+    } finally {
+      if (tailoringAbortRef.current === controller) {
+        tailoringAbortRef.current = null;
+        setIsAutoTailoring(false);
+      }
+    }
+  }
+
+  async function requestGeneration(
+    options: {
+      selectedIds: string[];
+      selectedSkillIds: string[] | null;
+      tailoring: TailorAchievementsResponse | null;
+      approvedTailoredIds: string[];
+      tailoredText: Record<string, string>;
+      workflow: "manual" | "guided" | "auto";
+    } = {
+      selectedIds,
+      selectedSkillIds,
+      tailoring,
+      approvedTailoredIds,
+      tailoredText,
+      workflow: tailoringWorkflow ?? (tailoring ? "guided" : "manual"),
+    },
+  ): Promise<ManualGenerationResult | null> {
     clearPdfOutput();
     setResult(null);
     setRequestError("");
@@ -449,11 +634,11 @@ export default function ResumeGenerator({ library, source }: Props) {
 
     if (!draft.jobDescription.trim()) {
       setRequestError("Save a job description before generating a resume.");
-      return;
+      return null;
     }
-    if (selectedIds.length === 0) {
+    if (options.selectedIds.length === 0) {
       setRequestError("Select at least one enabled achievement point.");
-      return;
+      return null;
     }
 
     setIsGenerating(true);
@@ -467,20 +652,24 @@ export default function ResumeGenerator({ library, source }: Props) {
           roleTitle: draft.roleTitle,
           jobUrl: draft.jobUrl,
           jobDescription: draft.jobDescription,
-          selectedAchievementIds: selectedIds,
-          ...(selectedSkillIds ? { selectedSkillIds } : {}),
-          ...(tailoring
+          tailoringMode: options.workflow,
+          selectedAchievementIds: options.selectedIds,
+          ...(options.selectedSkillIds
+            ? { selectedSkillIds: options.selectedSkillIds }
+            : {}),
+          ...(options.tailoring
             ? {
-                achievementTextOverrides: tailoring.proposals
+                achievementTextOverrides: options.tailoring.proposals
                   .filter(
                     (proposal) =>
-                      approvedTailoredIds.includes(proposal.achievementId) &&
-                      selectedIds.includes(proposal.achievementId),
+                      options.approvedTailoredIds.includes(
+                        proposal.achievementId,
+                      ) && options.selectedIds.includes(proposal.achievementId),
                   )
                   .map((proposal) => ({
                     achievementId: proposal.achievementId,
                     text:
-                      tailoredText[proposal.achievementId] ??
+                      options.tailoredText[proposal.achievementId] ??
                       proposal.proposedText,
                   })),
               }
@@ -496,20 +685,27 @@ export default function ResumeGenerator({ library, source }: Props) {
             : "The resume could not be generated. Try again.",
         );
         setResult(null);
-        return;
+        return null;
       }
 
       setResult(payload);
+      return payload;
     } catch {
       setRequestError("The server could not be reached. Try again.");
       setResult(null);
+      return null;
     } finally {
       setIsGenerating(false);
     }
   }
 
-  async function compilePdf() {
-    if (!result || isCompiling) return;
+  async function handleGenerate(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    await requestGeneration();
+  }
+
+  async function compilePdf(target: ManualGenerationResult | null = result) {
+    if (!target || isCompiling) return false;
 
     const controller = new AbortController();
     compileAbortRef.current = controller;
@@ -521,7 +717,7 @@ export default function ResumeGenerator({ library, source }: Props) {
       const response = await fetch("/api/compile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ latex: result.latex }),
+        body: JSON.stringify({ latex: target.latex }),
         signal: controller.signal,
       });
 
@@ -531,7 +727,7 @@ export default function ResumeGenerator({ library, source }: Props) {
           error: payload.error ?? "The PDF could not be created. Try again.",
           diagnostics: payload.diagnostics,
         });
-        return;
+        return false;
       }
 
       if (
@@ -541,29 +737,31 @@ export default function ResumeGenerator({ library, source }: Props) {
         setCompileError({
           error: "The server returned an unverified PDF. Try compiling again.",
         });
-        return;
+        return false;
       }
 
       const pdf = await response.blob();
-      if (controller.signal.aborted) return;
+      if (controller.signal.aborted) return false;
       if ((await pdf.slice(0, 5).text()) !== "%PDF-") {
         setCompileError({
           error: "The server response was not a valid PDF. Try again.",
         });
-        return;
+        return false;
       }
-      if (controller.signal.aborted) return;
+      if (controller.signal.aborted) return false;
 
       setPdfUrl(URL.createObjectURL(pdf));
       setPdfZoom(100);
       setOutputView("pdf");
       setCompileStatus("PDF ready · 1 page.");
+      return true;
     } catch {
       if (!controller.signal.aborted) {
         setCompileError({
           error: "The PDF service could not be reached. Try again.",
         });
       }
+      return false;
     } finally {
       if (compileAbortRef.current === controller) {
         compileAbortRef.current = null;
@@ -777,6 +975,7 @@ export default function ResumeGenerator({ library, source }: Props) {
                     !analysis ||
                     isRecommending ||
                     isTailoring ||
+                    isAutoTailoring ||
                     enabledIds.length === 0
                   }
                   onClick={handleRecommend}
@@ -796,6 +995,7 @@ export default function ResumeGenerator({ library, source }: Props) {
                     !analysis ||
                     isRecommending ||
                     isTailoring ||
+                    isAutoTailoring ||
                     selectedIds.length === 0 ||
                     selectedIds.length > 100
                   }
@@ -808,14 +1008,44 @@ export default function ResumeGenerator({ library, source }: Props) {
                       ? "Retry Guided Tailor"
                       : "Guided Tailor"}
                 </button>
-                <button type="button" onClick={selectAll}>
+                <button
+                  className="generation-ai-button"
+                  disabled={
+                    !draftReady ||
+                    !hasJobDescription ||
+                    !analysis ||
+                    isRecommending ||
+                    isTailoring ||
+                    isAutoTailoring ||
+                    enabledIds.length === 0
+                  }
+                  onClick={handleAutoTailor}
+                  type="button"
+                >
+                  {isAutoTailoring ? "Auto tailoring…" : "Auto Tailor"}
+                </button>
+                <button
+                  disabled={isRecommending || isTailoring || isAutoTailoring}
+                  type="button"
+                  onClick={selectAll}
+                >
                   Select all
                 </button>
-                <button type="button" onClick={clearSelection}>
+                <button
+                  disabled={isRecommending || isTailoring || isAutoTailoring}
+                  type="button"
+                  onClick={clearSelection}
+                >
                   Clear
                 </button>
               </div>
             </div>
+
+            {autoTailorStatus && (
+              <p className="auto-tailor-status" role="status">
+                {autoTailorStatus}
+              </p>
+            )}
 
             {!analysis && draftReady && hasJobDescription && (
               <p className="selection-analysis-notice">
@@ -1063,6 +1293,137 @@ export default function ResumeGenerator({ library, source }: Props) {
                   Review each change. Only approved wording for selected points
                   replaces the originals in the generated resume.
                 </p>
+                {tailoring.notice && (
+                  <p className="selection-fallback-notice" role="status">
+                    {tailoring.notice}
+                  </p>
+                )}
+                <details className="draft-handoff">
+                  <summary>
+                    Draft context · {tailoring.handoff.job.company || "Company"}
+                    {tailoring.handoff.job.roleTitle
+                      ? " · " + tailoring.handoff.job.roleTitle
+                      : ""}
+                  </summary>
+                  <p>
+                    Context {tailoring.handoff.job.contextId.slice(0, 12)} ·{" "}
+                    {tailoring.handoff.selectedAchievements.length} selected
+                    sources · {tailoring.handoff.suggestedEvidence.length}{" "}
+                    evidence suggestions
+                  </p>
+                  <ul>
+                    {tailoring.handoff.requirements.map((requirement) => (
+                      <li key={requirement.id}>
+                        <strong>
+                          {requirement.status === "supported"
+                            ? "Supported"
+                            : requirement.status === "uncertain"
+                              ? "Uncertain"
+                              : requirement.status === "evidence-not-selected"
+                                ? "Evidence not selected"
+                                : "No evidence found"}
+                        </strong>
+                        <span>{requirement.text}</span>
+                        <small>
+                          {requirement.reason}
+                          {requirement.selectedAchievementIds.length
+                            ? " Selected: " +
+                              requirement.selectedAchievementIds.join(", ") +
+                              "."
+                            : ""}
+                          {requirement.availableAchievementIds.length &&
+                          !requirement.selectedAchievementIds.length
+                            ? " Available: " +
+                              requirement.availableAchievementIds.join(", ") +
+                              "."
+                            : ""}
+                        </small>
+                      </li>
+                    ))}
+                  </ul>
+                  <p>
+                    Estimated content budget:{" "}
+                    {tailoring.handoff.contentBudgetLines} lines.
+                  </p>
+                </details>
+                {tailoring.handoff.suggestedEvidence.length > 0 && (
+                  <div className="draft-evidence-suggestions">
+                    <h4>Other evidence to review</h4>
+                    <p>
+                      These points may help with open requirements. Add one or
+                      explicitly replace a selected point; they are never
+                      inserted automatically in Guided Tailor.
+                    </p>
+                    {tailoring.handoff.suggestedEvidence.map((suggestion) => {
+                      const supportingRequirements =
+                        tailoring.handoff.requirements.filter((requirement) =>
+                          suggestion.supportedRequirementIds.includes(
+                            requirement.id,
+                          ),
+                        );
+                      const replaceChoices = selectedIds.filter(
+                        (id) => id !== suggestion.achievementId,
+                      );
+                      return (
+                        <article key={suggestion.achievementId}>
+                          <strong>
+                            {suggestion.groupTitle}
+                            {suggestion.groupSubtitle
+                              ? " · " + suggestion.groupSubtitle
+                              : ""}
+                          </strong>
+                          <p>{suggestion.text}</p>
+                          <small>
+                            May support:{" "}
+                            {supportingRequirements
+                              .map((requirement) => requirement.text)
+                              .join("; ")}
+                          </small>
+                          <div className="guided-tailor-actions">
+                            <button
+                              disabled={isTailoring || isAutoTailoring}
+                              onClick={() =>
+                                applyDraftEvidenceAction(
+                                  suggestion.achievementId,
+                                )
+                              }
+                              type="button"
+                            >
+                              Add to selection
+                            </button>
+                            {replaceChoices.length > 0 && (
+                              <select
+                                aria-label={
+                                  "Replace a selected point with " +
+                                  suggestion.groupTitle
+                                }
+                                defaultValue=""
+                                disabled={isTailoring || isAutoTailoring}
+                                onChange={(event) => {
+                                  if (event.target.value) {
+                                    applyDraftEvidenceAction(
+                                      suggestion.achievementId,
+                                      event.target.value,
+                                    );
+                                  }
+                                }}
+                              >
+                                <option value="">
+                                  Replace selected point…
+                                </option>
+                                {replaceChoices.map((id) => (
+                                  <option key={id} value={id}>
+                                    {pointById.get(id)?.group.title ?? id}
+                                  </option>
+                                ))}
+                              </select>
+                            )}
+                          </div>
+                        </article>
+                      );
+                    })}
+                  </div>
+                )}
                 <div className="guided-tailor-proposals">
                   {tailoring.proposals.map((proposal) => {
                     const sourcePoint = pointById.get(proposal.achievementId);
@@ -1089,6 +1450,16 @@ export default function ResumeGenerator({ library, source }: Props) {
                         );
                       },
                     );
+                    const sourceContext =
+                      tailoring.handoff.selectedAchievements.find(
+                        (item) => item.achievementId === proposal.achievementId,
+                      );
+                    const supportedRequirements =
+                      tailoring.handoff.requirements.filter((requirement) =>
+                        sourceContext?.supportedRequirementIds.includes(
+                          requirement.id,
+                        ),
+                      );
                     return (
                       <article
                         className="guided-tailor-proposal"
@@ -1136,6 +1507,25 @@ export default function ResumeGenerator({ library, source }: Props) {
                         </div>
                         <p className="guided-tailor-rationale">
                           {proposal.rationale}
+                        </p>
+                        <p className="guided-tailor-rationale">
+                          Source: {sourceContext?.section ?? "resume"} ·{" "}
+                          {sourceContext?.groupId ?? proposal.achievementId}
+                          {sourceContext?.selectionConfidence !== undefined
+                            ? " · " +
+                              Math.round(
+                                sourceContext.selectionConfidence * 100,
+                              ) +
+                              "% selection confidence"
+                            : ""}
+                        </p>
+                        <p className="guided-tailor-rationale">
+                          Supports:{" "}
+                          {supportedRequirements.length
+                            ? supportedRequirements
+                                .map((requirement) => requirement.text)
+                                .join("; ")
+                            : "No direct requirement match identified; wording stays grounded in the source."}
                         </p>
                         {addedTerms.length > 0 ? (
                           <div className="guided-tailor-terms">
@@ -1209,6 +1599,9 @@ export default function ResumeGenerator({ library, source }: Props) {
                           <input
                             aria-label={`Select achievement ${point.id}`}
                             checked={selectedIds.includes(point.id)}
+                            disabled={
+                              isRecommending || isTailoring || isAutoTailoring
+                            }
                             onChange={(event) =>
                               changeSelection(point.id, event.target.checked)
                             }
@@ -1294,7 +1687,7 @@ export default function ResumeGenerator({ library, source }: Props) {
                         Download PDF
                       </button>
                       <button
-                        onClick={compilePdf}
+                        onClick={() => compilePdf()}
                         disabled={isCompiling}
                         type="button"
                       >
@@ -1322,7 +1715,7 @@ export default function ResumeGenerator({ library, source }: Props) {
                       <button
                         className="primary-button generation-compile-button"
                         disabled={isCompiling || isGenerating}
-                        onClick={compilePdf}
+                        onClick={() => compilePdf()}
                         type="button"
                       >
                         {isCompiling ? "Creating PDF…" : "Create PDF"}

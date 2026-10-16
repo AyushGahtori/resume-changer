@@ -130,11 +130,71 @@ export const AchievementSelectionResponseSchema = z
   })
   .strict();
 
+export const ResumeDraftJobSchema = z
+  .object({
+    company: z.string().trim().max(160),
+    roleTitle: z.string().trim().max(160),
+    jobUrl: z.string().trim().max(2048),
+    contextId: z.string().regex(/^[a-f0-9]{64}$/),
+  })
+  .strict();
+
+export const ResumeDraftJobRequestSchema = z
+  .object({
+    company: z.string().trim().max(160),
+    roleTitle: z.string().trim().max(160),
+    jobUrl: z.string().trim().max(2048),
+    contextId: z.string().regex(/^[a-f0-9]{64}$/),
+  })
+  .strict();
+
+export const ResumeDraftRequirementSchema = z
+  .object({
+    id: StableIdSchema,
+    category: z.enum(["required", "responsibility", "preferred", "context"]),
+    text: shortText,
+    status: z.enum([
+      "supported",
+      "uncertain",
+      "evidence-not-selected",
+      "no-evidence-found",
+    ]),
+    availableAchievementIds: z.array(StableIdSchema).max(500),
+    selectedAchievementIds: z.array(StableIdSchema).max(100),
+    reason: shortText,
+  })
+  .strict();
+
+export const ResumeDraftSourceSchema = z
+  .object({
+    achievementId: StableIdSchema,
+    text,
+    section: z.enum(["experience", "projects"]),
+    groupId: StableIdSchema,
+    groupTitle: shortText,
+    groupSubtitle: shortText.optional(),
+    linkedSkills: z.array(shortText).max(100),
+    supportedRequirementIds: z.array(StableIdSchema).max(100),
+    selectionConfidence: z.number().min(0).max(1).optional(),
+  })
+  .strict();
+
+export const ResumeDraftHandoffSchema = z
+  .object({
+    job: ResumeDraftJobSchema,
+    requirements: z.array(ResumeDraftRequirementSchema).max(100),
+    selectedAchievements: z.array(ResumeDraftSourceSchema).min(1).max(100),
+    suggestedEvidence: z.array(ResumeDraftSourceSchema).max(30),
+    contentBudgetLines: z.number().int().min(0).max(60),
+  })
+  .strict();
+
 export const ResumeDraftInputSchema = z
   .object({
     jobDescription: z.string().trim().min(1).max(30_000),
     analysis: JobAnalysisResultSchema,
     achievements: z.array(AchievementEvidenceSchema).min(1).max(100),
+    handoff: ResumeDraftHandoffSchema,
     templateContext: z.string().max(30_000).optional(),
   })
   .strict();
@@ -171,6 +231,18 @@ export const TailorAchievementsResponseSchema = z
     proposals: z.array(TailoredAchievementProposalSchema).min(1).max(100),
     summary: z.string().trim().min(1).max(1_500),
     analyzedTerms: terms,
+    mode: z.enum(["ai", "originals-fallback"]),
+    handoff: ResumeDraftHandoffSchema,
+    notice: shortText.optional(),
+  })
+  .strict();
+
+export const AutoTailorResponseSchema = z
+  .object({
+    recommendation: AchievementSelectionResponseSchema,
+    tailoring: TailorAchievementsResponseSchema,
+    selectedSkillIds: z.array(StableIdSchema).max(200),
+    draftingMode: z.enum(["ai", "originals-fallback"]),
   })
   .strict();
 
@@ -202,5 +274,7 @@ export type ResumeDraftResult = z.infer<typeof ResumeDraftResultSchema>;
 export type TailorAchievementsResponse = z.infer<
   typeof TailorAchievementsResponseSchema
 >;
+export type ResumeDraftHandoff = z.infer<typeof ResumeDraftHandoffSchema>;
+export type AutoTailorResponse = z.infer<typeof AutoTailorResponseSchema>;
 export type LatexRepairInput = z.infer<typeof LatexRepairInputSchema>;
 export type LatexRepairResult = z.infer<typeof LatexRepairResultSchema>;

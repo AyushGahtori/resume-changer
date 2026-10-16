@@ -179,7 +179,7 @@ function normalizedTokens(value: string) {
     .filter((token) => token.length > 1 && !STOP_WORDS.has(token));
 }
 
-function requirementMatchScore(evidence: string, requirement: string) {
+export function requirementMatchScore(evidence: string, requirement: string) {
   const normalizedEvidence = evidence.toLocaleLowerCase();
   const normalizedRequirement = requirement.toLocaleLowerCase().trim();
   if (
