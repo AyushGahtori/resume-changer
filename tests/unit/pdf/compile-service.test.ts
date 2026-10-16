@@ -2,6 +2,10 @@ import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import sampleLibrary from "../../../examples/sample-resume-library.json";
+import { renderResumeLatex } from "../../../src/lib/latex/render-resume";
+import { validateResumeLatex } from "../../../src/lib/latex/validate-resume-latex";
+import type { ResumeLibrary } from "../../../src/lib/schemas/resume-data";
 import {
   compileLatexToPdf,
   CompileRequestSchema,
@@ -9,7 +13,10 @@ import {
 } from "../../../src/lib/pdf/compile-service";
 
 const roots: string[] = [];
-const latex = "\\documentclass{article}\\begin{document}Resume\\end{document}";
+const latex = renderResumeLatex({
+  library: sampleLibrary as ResumeLibrary,
+  selectedAchievementIds: [],
+});
 const pdf = Buffer.from("%PDF-1.7\nsynthetic test pdf");
 
 async function createRoot() {
@@ -28,6 +35,7 @@ describe("CompileRequestSchema", () => {
   it("requires non-empty LaTeX within the request limit", () => {
     expect(CompileRequestSchema.safeParse({ latex }).success).toBe(true);
     expect(CompileRequestSchema.safeParse({ latex: " " }).success).toBe(false);
+    expect(CompileRequestSchema.parse({ latex }).latex).toBe(latex);
     expect(
       CompileRequestSchema.safeParse({ latex: "x".repeat(150_001) }).success,
     ).toBe(false);
@@ -42,6 +50,7 @@ describe("CompileRequestSchema", () => {
 
 describe("compileLatexToPdf", () => {
   it("returns a one-page PDF, uses fixed untrusted offline flags, and cleans temporary files", async () => {
+    expect(validateResumeLatex(latex)).toEqual({ valid: true, errors: [] });
     const tempRoot = await createRoot();
     const calls: string[][] = [];
     const result = await compileLatexToPdf(latex, {
@@ -112,6 +121,27 @@ describe("compileLatexToPdf", () => {
     ).rejects.toMatchObject({
       code: "LATEX_ERROR",
       diagnostics: "! Undefined control sequence.",
+    });
+    expect(await readdir(tempRoot)).toEqual([]);
+  });
+
+  it("rejects malformed or unsafe LaTeX before creating compiler files or spawning a process", async () => {
+    const tempRoot = await createRoot();
+    const runProcess = async () => {
+      throw new Error("Compiler must not run for rejected LaTeX");
+    };
+
+    await expect(
+      compileLatexToPdf(
+        latex.replace("Jordan Example", String.raw`\input{secret}`),
+        {
+          tempRoot,
+          runProcess,
+        },
+      ),
+    ).rejects.toMatchObject({
+      code: "LATEX_VALIDATION_ERROR",
+      status: 422,
     });
     expect(await readdir(tempRoot)).toEqual([]);
   });
