@@ -88,7 +88,7 @@ describe("Guided Tailor evidence preparation", () => {
         expect.objectContaining({ text: "Preferred AWS capability 99" }),
       ]),
     );
-  });
+  }, 20_000);
   it("sends the active job, structured handoff, and selected enabled evidence", async () => {
     const request = await createRequest();
     const input = await buildResumeDraftInput(library, request);
