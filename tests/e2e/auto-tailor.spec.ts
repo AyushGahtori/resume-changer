@@ -192,6 +192,7 @@ test("local matching is offered only after explaining the AI failure and request
   await page.getByLabel("Company").fill("Example Cloud");
   await page.getByLabel("Role title").fill("Cloud Platform Engineer");
   await page.getByLabel("Job description").fill(jobDescription);
+  await expect(page.getByRole("status")).toContainText("Saved locally");
   await page.route("**/api/ai/analyze-job-description", (route) =>
     route.fulfill({
       status: 200,
@@ -203,6 +204,7 @@ test("local matching is offered only after explaining the AI failure and request
   await expect(
     page.getByRole("region", { name: "Job description analysis" }),
   ).toBeVisible();
+  await expect(page.locator(".analysis-cache-notice")).toHaveCount(0);
   await page.goto("/generate?source=demo");
 
   const requestBodies: Array<Record<string, unknown>> = [];
@@ -246,7 +248,9 @@ test("local matching is offered only after explaining the AI failure and request
     confirmationMessage = dialog.message();
     await dialog.accept();
   });
-  await page.getByRole("button", { name: "Suggest points" }).click();
+  const suggestButton = page.getByRole("button", { name: "Suggest points" });
+  await expect(suggestButton).toBeEnabled();
+  await suggestButton.click();
   await expect.poll(() => requestBodies).toHaveLength(2);
   expect(confirmationMessage).toContain(
     "Gemini's free-tier request limit was reached.",
