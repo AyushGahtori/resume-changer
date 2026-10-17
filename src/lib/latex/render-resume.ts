@@ -481,22 +481,6 @@ export function renderResumeLatex(input: RenderResumeLatexInput): string {
   const skills = chosenSkillIds.map((id) => {
     const skill = skillById.get(id);
     if (!skill) throw new ResumeRenderError(`Unknown skill ID: ${id}.`);
-    if (
-      !skill.isListedOnCurrentResume &&
-      !skill.evidenceAchievementIds.some((pointId) =>
-        selectedIds.has(pointId),
-      ) &&
-      ![...library.jobs, ...library.projects].some((group) =>
-        group.points.some(
-          (point) =>
-            selectedIds.has(point.id) && point.skillIds.includes(skill.id),
-        ),
-      )
-    ) {
-      throw new ResumeRenderError(
-        `Skill "${skill.name}" needs a selected supporting achievement point.`,
-      );
-    }
     return skill;
   });
 

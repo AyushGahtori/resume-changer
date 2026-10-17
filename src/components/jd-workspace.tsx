@@ -20,11 +20,6 @@ import type {
   DraftFields,
   JobDescriptionDraft,
 } from "@/lib/jd-draft";
-import {
-  getActiveRunId,
-  recordRunEvent,
-  recordServerEvents,
-} from "@/lib/diagnostics/run-log";
 
 type SaveState = "loading" | "saving" | "saved" | "error" | "idle";
 type AnalysisState = "idle" | "loading" | "success" | "error";
@@ -77,13 +72,6 @@ export default function JDWorkspace() {
     );
     setIsReady(true);
     setSaveState(result.state === "restored" ? "saved" : "idle");
-    const runId = getActiveRunId();
-    void recordRunEvent({
-      runId,
-      stage: "jd.draft-restored",
-      message: "Loaded the current job description draft from this browser.",
-      data: { state: result.state, draft: result.draft },
-    });
   }, []);
 
   useEffect(() => {
@@ -98,14 +86,6 @@ export default function JDWorkspace() {
         ? writeDraft(window.localStorage, draft)
         : clearDraft(window.localStorage);
       setSaveState(saved ? (hasDraftContent ? "saved" : "idle") : "error");
-      if (hasDraftContent) {
-        void recordRunEvent({
-          runId: getActiveRunId(),
-          stage: "jd.draft-autosaved",
-          message: "Autosaved current job details in browser storage.",
-          data: { saved, draft },
-        });
-      }
     }, 350);
 
     return () => window.clearTimeout(timeoutId);
@@ -125,7 +105,6 @@ export default function JDWorkspace() {
   }
 
   async function handleAnalyze() {
-    const runId = getActiveRunId();
     const description = draft.jobDescription.trim();
     if (!description || description.length > MAX_JD_CHARACTERS) {
       setErrors((current) => ({
@@ -153,17 +132,10 @@ export default function JDWorkspace() {
         roleTitle: draft.roleTitle,
         jobDescription: description,
       };
-      void recordRunEvent({
-        runId,
-        stage: "analysis.button-clicked",
-        message: "User requested job description analysis.",
-        data: { requestBody },
-      });
       const response = await fetch("/api/ai/analyze-job-description", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-Resume-Run-Id": runId,
         },
         body: JSON.stringify(requestBody),
         signal: controller.signal,
@@ -171,15 +143,7 @@ export default function JDWorkspace() {
       const result = (await response.json()) as {
         analysis?: JobAnalysisResult;
         error?: string;
-        diagnostics?: Parameters<typeof recordServerEvents>[1];
       };
-      void recordRunEvent({
-        runId,
-        stage: "analysis.http-response",
-        message: "Received job description analysis API response.",
-        data: { status: response.status, ok: response.ok, body: result },
-      });
-      if (result.diagnostics) recordServerEvents(runId, result.diagnostics);
 
       if (!response.ok || !result.analysis) {
         throw new Error(
@@ -193,12 +157,6 @@ export default function JDWorkspace() {
       setAnalysisState("success");
     } catch (error) {
       if (controller.signal.aborted) return;
-      void recordRunEvent({
-        runId,
-        stage: "analysis.client-error",
-        message:
-          error instanceof Error ? error.message : "Analysis request failed.",
-      });
       setAnalysisError(
         error instanceof Error
           ? error.message
@@ -214,30 +172,17 @@ export default function JDWorkspace() {
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const runId = getActiveRunId();
     const nextErrors = validateDraft(draft);
     setErrors(nextErrors);
     setSaveFeedback("");
 
     if (Object.keys(nextErrors).length > 0) {
-      void recordRunEvent({
-        runId,
-        stage: "jd.save-rejected",
-        message: "Save draft failed validation.",
-        data: { draft, errors: nextErrors },
-      });
       setSaveFeedbackError(true);
       setSaveFeedback("Fix the highlighted fields before saving.");
       return;
     }
 
     const saved = writeDraft(window.localStorage, draft);
-    void recordRunEvent({
-      runId,
-      stage: "jd.save-clicked",
-      message: "User clicked Save draft.",
-      data: { draft, saved },
-    });
     setSaveState(saved ? "saved" : "error");
     setSaveFeedbackError(!saved);
     setSaveFeedback(
@@ -248,13 +193,6 @@ export default function JDWorkspace() {
   }
 
   function handleClear() {
-    const runId = getActiveRunId();
-    void recordRunEvent({
-      runId,
-      stage: "jd.clear-clicked",
-      message: "User cleared the current job description draft.",
-      data: { previousDraft: draft },
-    });
     clearJobAnalysisCache(window.localStorage);
     setAnalysisCacheSaved(false);
     analysisRequest.current?.abort();

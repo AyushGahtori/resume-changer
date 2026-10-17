@@ -5,7 +5,6 @@ import {
 } from "@/lib/ai/contracts";
 import { createAiProvider } from "@/lib/ai/provider-factory";
 import { AiProviderError } from "@/lib/ai/provider";
-import { createServerTrace } from "@/lib/diagnostics/server-trace";
 
 export const runtime = "nodejs";
 
@@ -27,35 +26,17 @@ function statusForError(error: AiProviderError) {
 }
 
 export async function POST(request: Request) {
-  const trace = createServerTrace();
-  const runId = request.headers.get("x-resume-run-id") ?? "unknown";
   let body: unknown;
   try {
     body = await request.json();
   } catch {
-    trace.record("analysis.validation", "Request body was not valid JSON.");
     return NextResponse.json(
-      {
-        error: "Request body must be valid JSON.",
-        code: "INVALID_REQUEST",
-        diagnostics: runId === "unknown" ? undefined : trace.events,
-      },
+      { error: "Request body must be valid JSON.", code: "INVALID_REQUEST" },
       { status: 400 },
     );
   }
-  trace.record(
-    "analysis.request",
-    "Received job description analysis request.",
-    body,
-  );
-
   const parsed = JobAnalysisInputSchema.safeParse(body);
   if (!parsed.success) {
-    trace.record(
-      "analysis.validation",
-      "Request failed schema validation.",
-      parsed.error.issues,
-    );
     return NextResponse.json(
       {
         error: "Enter a job description of 1 to 30,000 characters.",
@@ -64,35 +45,16 @@ export async function POST(request: Request) {
           path: issue.path.map(String).join("."),
           message: issue.message,
         })),
-        diagnostics: runId === "unknown" ? undefined : trace.events,
       },
       { status: 400 },
     );
   }
 
   try {
-    trace.record(
-      "analysis.validation",
-      "Request passed schema validation.",
-      parsed.data,
-    );
-    const provider = createAiProvider(undefined, (event) =>
-      trace.events.push(event),
-    );
-    trace.record("analysis.provider", "Selected AI provider.", {
-      provider: provider.name,
-    });
+    const provider = createAiProvider();
     const providerResult = await provider.analyzeJobDescription(parsed.data);
     const analysis = JobAnalysisResultSchema.parse(providerResult);
-    trace.record(
-      "analysis.complete",
-      "Analysis passed the response contract.",
-      analysis,
-    );
-    return NextResponse.json({
-      analysis,
-      ...(runId !== "unknown" ? { diagnostics: trace.events, runId } : {}),
-    });
+    return NextResponse.json({ analysis });
   } catch (error) {
     if (error instanceof AiProviderError) {
       return NextResponse.json(
@@ -100,7 +62,6 @@ export async function POST(request: Request) {
           error: error.message,
           code: error.code,
           retryable: error.retryable,
-          diagnostics: runId === "unknown" ? undefined : trace.events,
         },
         { status: statusForError(error) },
       );
@@ -112,7 +73,6 @@ export async function POST(request: Request) {
             "The AI returned an analysis that did not match the expected format. Try again.",
           code: "INVALID_RESPONSE",
           retryable: true,
-          diagnostics: runId === "unknown" ? undefined : trace.events,
         },
         { status: 502 },
       );
@@ -122,7 +82,6 @@ export async function POST(request: Request) {
         error: "Job description analysis failed. Try again.",
         code: "ANALYSIS_FAILED",
         retryable: true,
-        diagnostics: runId === "unknown" ? undefined : trace.events,
       },
       { status: 500 },
     );

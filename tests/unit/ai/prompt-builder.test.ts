@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildAiPrompt,
+  MAX_PROMPT_CHARACTERS,
   loadApprovedTemplateContext,
 } from "../../../src/lib/ai/prompt-builder";
 import { JAKE_STYLE_TEMPLATE } from "../../../src/lib/latex/jake-template";
@@ -118,6 +119,38 @@ describe("versioned prompt builder", () => {
     expect(prompt.outputSchema.properties).toHaveProperty("achievementText");
   });
 
+  it("repairs page overflow using rendered context without permitting style or evidence changes", () => {
+    const prompt = buildAiPrompt("repairLatexContent", {
+      currentContent: {
+        summary: "Repair the selected resume wording.",
+        resumeSummary: "Platform engineer experienced with AWS.",
+        achievementText: [
+          {
+            achievementId: "achievement-cloud-deployment",
+            sourceAchievementIds: ["achievement-cloud-deployment"],
+            text: "Provisioned cloud resources with Terraform modules.",
+          },
+        ],
+      },
+      diagnostics: ["The resume exceeds one page by eight words."],
+      firstPageText: "Content measured on page one.",
+      overflowText: "Content that flowed onto page two.",
+      overflowWordCount: 8,
+    });
+
+    expect(prompt.prompt).toContain("preserve all supported facts");
+    expect(prompt.prompt).toContain("source-to-bullet assignments");
+    expect(prompt.prompt).toContain("Do not remove a point");
+    expect(prompt.prompt).toContain("font family or size");
+    expect(prompt.prompt).toContain('"overflowWordCount":8');
+    expect(prompt.prompt).toContain(
+      '"firstPageText":"Content measured on page one."',
+    );
+    expect(prompt.prompt).toContain(
+      '"overflowText":"Content that flowed onto page two."',
+    );
+  });
+
   it("builds grounded selection prompts from analysis, source evidence, and line budget", () => {
     const result = buildAiPrompt("selectAchievements", {
       jobDescription: "Provision AWS infrastructure.",
@@ -151,11 +184,12 @@ describe("versioned prompt builder", () => {
 
   it("loads the approved template from its dedicated source and bounds prompt size", () => {
     expect(loadApprovedTemplateContext()).toBe(JAKE_STYLE_TEMPLATE);
+    expect(MAX_PROMPT_CHARACTERS).toBe(360_000);
     expect(() =>
       buildAiPrompt("selectAchievements", {
         jobDescription: "Platform role.",
         analysis: jobAnalysis,
-        achievements: Array.from({ length: 20 }, (_, index) => ({
+        achievements: Array.from({ length: 52 }, (_, index) => ({
           id: `achievement-${index}`,
           text: "x".repeat(7_000),
           tags: [],
@@ -168,5 +202,22 @@ describe("versioned prompt builder", () => {
         contentBudgetLines: 24,
       }),
     ).toThrow(expect.objectContaining({ code: "INPUT_TOO_LARGE" }));
+    expect(() =>
+      buildAiPrompt("selectAchievements", {
+        jobDescription: "Platform role.",
+        analysis: jobAnalysis,
+        achievements: Array.from({ length: 40 }, (_, index) => ({
+          id: `achievement-${index}`,
+          text: "x".repeat(7_000),
+          tags: [],
+          skillIds: [],
+          section: "experience" as const,
+          groupId: `job-${index}`,
+          groupTitle: "Platform Engineer",
+        })),
+        skills: [],
+        contentBudgetLines: 24,
+      }),
+    ).not.toThrow();
   });
 });

@@ -22,7 +22,8 @@ const nextCli = join(
   "bin",
   "next",
 );
-const server = spawn(process.execPath, [nextCli, "dev", "--port", "3010"], {
+const port = process.env.PLAYWRIGHT_PORT ?? "3010";
+const server = spawn(process.execPath, [nextCli, "dev", "--port", port], {
   cwd: projectRoot,
   env: { ...process.env, RESUME_LIBRARY_ROOT: fixtureRoot },
   stdio: "inherit",

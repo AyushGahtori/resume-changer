@@ -69,41 +69,80 @@ export function layoutFromTextBoxes(
   };
 }
 
-export async function analyzePdfLayout(
-  pdf: Uint8Array,
-): Promise<{ layout: PdfLayout; text: string }> {
+export function layoutFromPageTextBoxes(
+  boxesByPage: TextBox[][],
+  width: number,
+  height: number,
+): {
+  layout: PdfLayout;
+  text: string;
+  firstPageText: string;
+  overflowText: string;
+  overflowWordCount: number;
+} {
+  const firstPage = boxesByPage[0] ?? [];
+  const firstPageText = firstPage.map((box) => box.text).join(" ");
+  const overflowText = boxesByPage
+    .slice(1)
+    .flatMap((boxes) => boxes.map((box) => box.text))
+    .join(" ");
+  return {
+    layout: layoutFromTextBoxes(firstPage, width, height, boxesByPage.length),
+    text: boxesByPage
+      .flatMap((boxes) => boxes.map((box) => box.text))
+      .join(" "),
+    firstPageText,
+    overflowText,
+    overflowWordCount: overflowText.split(/\s+/).filter(Boolean).length,
+  };
+}
+
+export async function analyzePdfLayout(pdf: Uint8Array): Promise<{
+  layout: PdfLayout;
+  text: string;
+  firstPageText: string;
+  overflowText: string;
+  overflowWordCount: number;
+}> {
   const { getDocument } = await import("pdfjs-dist/legacy/build/pdf.mjs");
   const task = getDocument({ data: new Uint8Array(pdf), useSystemFonts: true });
   const document = await task.promise;
   try {
-    const page = await document.getPage(1);
-    const viewport = page.getViewport({ scale: 1 });
-    const content = await page.getTextContent();
-    const boxes: TextBox[] = content.items.flatMap((item) =>
-      "str" in item
-        ? [
-            {
-              text: item.str,
-              x: item.transform[4],
-              y: item.transform[5],
-              width: item.width,
-              height: Math.max(
-                item.height * (content.styles[item.fontName]?.ascent ?? 0.8),
-                1,
-              ),
-            },
-          ]
-        : [],
+    const boxesByPage: TextBox[][] = [];
+    let firstPageViewport: { width: number; height: number } | undefined;
+    for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
+      const page = await document.getPage(pageNumber);
+      const content = await page.getTextContent();
+      boxesByPage.push(
+        content.items.flatMap((item) =>
+          "str" in item
+            ? [
+                {
+                  text: item.str,
+                  x: item.transform[4],
+                  y: item.transform[5],
+                  width: item.width,
+                  height: Math.max(
+                    item.height *
+                      (content.styles[item.fontName]?.ascent ?? 0.8),
+                    1,
+                  ),
+                },
+              ]
+            : [],
+        ),
+      );
+      if (pageNumber === 1) {
+        firstPageViewport = page.getViewport({ scale: 1 });
+      }
+      page.cleanup();
+    }
+    if (!firstPageViewport) throw new Error("PDF contains no first page.");
+    return layoutFromPageTextBoxes(
+      boxesByPage,
+      firstPageViewport.width,
+      firstPageViewport.height,
     );
-    return {
-      layout: layoutFromTextBoxes(
-        boxes,
-        viewport.width,
-        viewport.height,
-        document.numPages,
-      ),
-      text: boxes.map((box) => box.text).join(" "),
-    };
   } finally {
     await task.destroy();
   }

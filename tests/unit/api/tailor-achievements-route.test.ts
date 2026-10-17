@@ -163,7 +163,7 @@ describe("POST /api/ai/tailor-achievements", () => {
     expect(draftResume).not.toHaveBeenCalled();
   });
 
-  it("returns actionable provider errors and rejects incomplete AI results", async () => {
+  it("requires consent for original wording and rejects incomplete AI results", async () => {
     const request = await createRequest();
     draftResume.mockRejectedValue(
       new AiProviderError(
@@ -173,17 +173,20 @@ describe("POST /api/ai/tailor-achievements", () => {
       ),
     );
     const unavailable = await post(JSON.stringify(request));
-    expect(unavailable.status).toBe(200);
+    expect(unavailable.status).toBe(503);
     await expect(unavailable.json()).resolves.toMatchObject({
+      code: "RATE_LIMITED",
+      fallbackAvailable: true,
+      fallbackType: "original-wording",
+    });
+
+    const consented = await post(
+      JSON.stringify({ ...(await createRequest()), allowOriginalsFallback: true }),
+    );
+    expect(consented.status).toBe(200);
+    await expect(consented.json()).resolves.toMatchObject({
       mode: "originals-fallback",
-      notice: expect.stringContaining("original wording is preserved"),
-      proposals: [
-        expect.objectContaining({
-          achievementId,
-          originalText: expect.any(String),
-          proposedText: expect.any(String),
-        }),
-      ],
+      proposals: [expect.objectContaining({ achievementId })],
     });
 
     draftResume.mockResolvedValue({

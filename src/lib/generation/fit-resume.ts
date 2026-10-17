@@ -1,5 +1,8 @@
-import type { ResumeLibrary } from "../schemas/resume-data";
-import type { AchievementSelectionInput } from "../ai/contracts";
+import type {
+  LatexRepairInput,
+  LatexRepairResult,
+  AchievementSelectionInput,
+} from "../ai/contracts";
 import { assessRequirementCoverage } from "../ai/requirement-coverage";
 import { buildSkillEvidence } from "../ai/evidence";
 import { buildEvidenceSummary, enrichSourceText } from "../ai/draft-quality";
@@ -10,12 +13,74 @@ import {
   type ManualGenerationRequest,
   type ManualGenerationResult,
 } from "./manual-generation";
+import type { ResumeLibrary } from "../schemas/resume-data";
+
+export const MAX_AI_REPAIR_OVERFLOW_WORDS = 40;
+const MAX_AI_REPAIR_ATTEMPTS = 1;
+const MAX_FIT_ATTEMPTS = 6;
 
 type Compile = (latex: string) => Promise<{ pdf: Buffer; pageCount: number }>;
-type Measure = (
-  pdf: Uint8Array,
-) => Promise<{ layout: PdfLayout; text: string }>;
-type Decision = { stage: string; message: string; data?: unknown };
+type Measure = (pdf: Uint8Array) => Promise<{
+  layout: PdfLayout;
+  text: string;
+  firstPageText?: string;
+  overflowText?: string;
+  overflowWordCount?: number;
+}>;
+function wordCount(value: string): number {
+  return value.split(/\s+/).filter(Boolean).length;
+}
+
+function currentRepairContent(
+  generation: ManualGenerationResult,
+): LatexRepairResult {
+  return {
+    summary: "Shorten the selected resume content to fit the approved page.",
+    ...(generation.metadata.resumeSummary
+      ? { resumeSummary: generation.metadata.resumeSummary }
+      : {}),
+    achievementText: generation.metadata.generatedBullets.map((bullet) => ({
+      achievementId: bullet.achievementId,
+      sourceAchievementIds: bullet.sourceAchievementIds,
+      text: bullet.text,
+    })),
+  };
+}
+
+function hasSameEvidence(
+  current: LatexRepairResult,
+  repaired: LatexRepairResult,
+): boolean {
+  if (current.achievementText.length !== repaired.achievementText.length)
+    return false;
+  const repairedById = new Map(
+    repaired.achievementText.map((item) => [item.achievementId, item]),
+  );
+  return current.achievementText.every((item) => {
+    const returned = repairedById.get(item.achievementId);
+    const originalIds = [...(item.sourceAchievementIds ?? [item.achievementId])]
+      .sort()
+      .join("\0");
+    const returnedIds = returned
+      ? [...(returned.sourceAchievementIds ?? [returned.achievementId])]
+          .sort()
+          .join("\0")
+      : "";
+    return Boolean(returned && originalIds === returnedIds);
+  });
+}
+
+function repairDiagnostics(values: string[]): string[] {
+  const diagnostics = values
+    .flatMap((value) => value.split(/\r?\n/))
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .slice(-10)
+    .map((line) => line.slice(0, 500));
+  return diagnostics.length
+    ? diagnostics
+    : ["Resume content needs a bounded wording repair to pass validation."];
+}
 
 export async function fitResumeToPage(args: {
   library: ResumeLibrary;
@@ -24,9 +89,11 @@ export async function fitResumeToPage(args: {
   scores: Map<string, number>;
   compile?: Compile;
   measure?: Measure;
-  onDiagnostic?: (event: Decision) => void;
+  repairContent?: (input: LatexRepairInput) => Promise<LatexRepairResult>;
 }): Promise<{ generation: ManualGenerationResult; pdf: Buffer }> {
-  const compile = args.compile ?? compileLatexToPdf;
+  const compile =
+    args.compile ??
+    ((latex: string) => compileLatexToPdf(latex, { allowPageOverflow: true }));
   const measure = args.measure ?? analyzePdfLayout;
   const request = structuredClone(args.request);
   const evidence = new Map(
@@ -42,21 +109,124 @@ export async function fitResumeToPage(args: {
       (a, b) => (args.scores.get(b.id) ?? 0) - (args.scores.get(a.id) ?? 0),
     );
   const decisions: string[] = [];
+  const explicitlySelectedSkillIds = new Set(
+    args.request.selectedSkillIds ?? [],
+  );
   let best:
     | { generation: ManualGenerationResult; pdf: Buffer; distance: number }
     | undefined;
   let lastError: unknown;
   let attempts = 0;
-  const log = (message: string, data?: unknown) => {
+  let repairAttempts = 0;
+  const log = (message: string, _data?: unknown) => {
     decisions.push(message);
-    args.onDiagnostic?.({ stage: "auto-tailor.page-fit", message, data });
   };
-  for (; attempts < 6; attempts++) {
+
+  const tryRepair = async (
+    generation: ManualGenerationResult,
+    diagnostics: string[],
+    options: {
+      firstPageText?: string;
+      overflowText?: string;
+      overflowWordCount?: number;
+      requireShorter: boolean;
+    },
+  ): Promise<boolean> => {
+    if (!args.repairContent || repairAttempts >= MAX_AI_REPAIR_ATTEMPTS)
+      return false;
+    repairAttempts += 1;
+    const currentContent = currentRepairContent(generation);
+    log("Requested a bounded AI repair of structured resume wording.", {
+      repairAttempt: repairAttempts,
+      diagnostics,
+      overflowWordCount: options.overflowWordCount,
+    });
+    let repaired: LatexRepairResult;
+    try {
+      repaired = await args.repairContent({
+        currentContent,
+        diagnostics: repairDiagnostics(diagnostics),
+        ...(options.firstPageText
+          ? { firstPageText: options.firstPageText.slice(0, 20_000) }
+          : {}),
+        ...(options.overflowText
+          ? { overflowText: options.overflowText.slice(0, 20_000) }
+          : {}),
+        ...(options.overflowWordCount !== undefined
+          ? { overflowWordCount: options.overflowWordCount }
+          : {}),
+      });
+    } catch (error) {
+      log(
+        "AI resume-content repair failed; deterministic fitting will continue.",
+        {
+          error:
+            error instanceof Error ? error.message : "Unknown repair error.",
+        },
+      );
+      return false;
+    }
+
+    if (!hasSameEvidence(currentContent, repaired)) {
+      log("Rejected AI repair because it changed selected source evidence.");
+      return false;
+    }
+
+    const currentText = [
+      currentContent.resumeSummary ?? "",
+      ...currentContent.achievementText.map((item) => item.text),
+    ].join(" ");
+    const repairedText = [
+      repaired.resumeSummary ?? currentContent.resumeSummary ?? "",
+      ...repaired.achievementText.map((item) => item.text),
+    ].join(" ");
+    if (
+      options.requireShorter &&
+      wordCount(repairedText) >= wordCount(currentText)
+    ) {
+      log(
+        "AI repair did not reduce the rendered word count; deterministic fitting will continue.",
+        {
+          before: wordCount(currentText),
+          after: wordCount(repairedText),
+        },
+      );
+      return false;
+    }
+
+    const repairedById = new Map(
+      repaired.achievementText.map((item) => [item.achievementId, item]),
+    );
+    request.achievementTextOverrides = generation.metadata.generatedBullets.map(
+      (bullet) => ({
+        achievementId: bullet.achievementId,
+        sourceAchievementIds: bullet.sourceAchievementIds,
+        ...(bullet.inferredTerms
+          ? { inferredTerms: bullet.inferredTerms }
+          : {}),
+        text: repairedById.get(bullet.achievementId)!.text,
+      }),
+    );
+    if (repaired.resumeSummary?.trim())
+      request.summaryOverride = repaired.resumeSummary;
+    log(
+      "Applied evidence-validated AI wording repair without changing source selection.",
+      {
+        repairAttempt: repairAttempts,
+        beforeWords: wordCount(currentText),
+        afterWords: wordCount(repairedText),
+      },
+    );
+    return true;
+  };
+
+  for (; attempts < MAX_FIT_ATTEMPTS; attempts++) {
     const selectedSourceIds = new Set(request.selectedAchievementIds);
     request.selectedSkillIds = buildSkillEvidence(args.library)
       .filter(
         (skill) =>
           skill.isListedOnCurrentResume ||
+          explicitlySelectedSkillIds.has(skill.id) ||
           skill.evidenceAchievementIds.some((id) => selectedSourceIds.has(id)),
       )
       .map((skill) => skill.id);
@@ -73,8 +243,17 @@ export async function fitResumeToPage(args: {
       try {
         measured = await measure(compiled.pdf);
       } catch (error) {
+        if (compiled.pageCount !== 1)
+          throw new PdfCompileError(
+            "The PDF exceeded one page and its overflow could not be measured.",
+            "PAGE_LIMIT_EXCEEDED",
+            error instanceof Error
+              ? error.message
+              : "Layout measurement failed.",
+          );
         generation.metadata.fitting = {
           attempts: attempts + 1,
+          repairAttempts,
           decisions: [
             ...decisions,
             error instanceof Error
@@ -108,21 +287,58 @@ export async function fitResumeToPage(args: {
           ),
         },
       );
-      if (
+      const overflows =
         compiled.pageCount !== 1 ||
         measured.layout.pageCount !== 1 ||
-        measured.layout.clipped
-      )
+        measured.layout.clipped;
+      if (overflows) {
+        const overflowWordCount =
+          measured.overflowWordCount ?? wordCount(measured.overflowText ?? "");
+        if (
+          overflowWordCount > 0 &&
+          overflowWordCount <= MAX_AI_REPAIR_OVERFLOW_WORDS &&
+          (measured.overflowText?.trim() ?? "")
+        ) {
+          const repaired = await tryRepair(
+            generation,
+            [
+              `The resume is over the one-page limit by ${overflowWordCount} words.`,
+              "Content visible on page one:",
+              measured.firstPageText ?? measured.text,
+              "Content that flowed to page two or later:",
+              measured.overflowText!,
+            ],
+            {
+              firstPageText: measured.firstPageText ?? measured.text,
+              overflowText: measured.overflowText,
+              overflowWordCount,
+              requireShorter: true,
+            },
+          );
+          if (repaired) continue;
+        }
+        const reason =
+          overflowWordCount > MAX_AI_REPAIR_OVERFLOW_WORDS
+            ? `Overflow was ${overflowWordCount} words, above the ${MAX_AI_REPAIR_OVERFLOW_WORDS}-word AI repair limit.`
+            : "The overflow was too small to measure reliably or could not be repaired.";
+        log(reason, {
+          overflowWordCount,
+          aiRepairLimit: MAX_AI_REPAIR_OVERFLOW_WORDS,
+        });
         throw new PdfCompileError(
-          "Resume content crosses the approved margins.",
+          "Resume content exceeds the approved one-page limit.",
           "PAGE_LIMIT_EXCEEDED",
+          reason,
         );
+      }
+
       const distance = Math.abs(0.975 - measured.layout.utilization);
       if (!best || distance < best.distance)
         best = { generation, pdf: compiled.pdf, distance };
       if (measured.layout.utilization >= 0.95) {
         generation.metadata.fitting = {
           attempts: attempts + 1,
+          repairAttempts,
           decisions,
           status: "filled",
         };
@@ -149,11 +365,21 @@ export async function fitResumeToPage(args: {
       });
     } catch (error) {
       lastError = error;
+      if (!(error instanceof PdfCompileError)) throw error;
       if (
-        !(error instanceof PdfCompileError) ||
-        error.code !== "PAGE_LIMIT_EXCEEDED"
-      )
+        error.code === "LATEX_VALIDATION_ERROR" ||
+        error.code === "LATEX_ERROR"
+      ) {
+        const repaired = await tryRepair(
+          generation,
+          [error.message, error.diagnostics],
+          { requireShorter: false },
+        );
+        if (repaired) continue;
         throw error;
+      }
+      if (error.code !== "PAGE_LIMIT_EXCEEDED") throw error;
+
       const groups = new Map<string, number>();
       for (const bullet of generation.metadata.generatedBullets) {
         const point = evidence.get(bullet.achievementId)!;
@@ -207,7 +433,8 @@ export async function fitResumeToPage(args: {
       )
     );
   best.generation.metadata.fitting = {
-    attempts: Math.min(6, attempts + 1),
+    attempts: Math.min(MAX_FIT_ATTEMPTS, attempts + 1),
+    repairAttempts,
     decisions,
     status:
       best.generation.metadata.layout &&

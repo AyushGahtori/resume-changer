@@ -20,6 +20,7 @@ const SelectionRequestSchema = z
     dataSource: z.enum(["personal", "demo"]).default("personal"),
     jobDescription: z.string().trim().min(1).max(MAX_JD_CHARACTERS),
     analysis: JobAnalysisResultSchema,
+    allowLocalFallback: z.boolean().default(false),
   })
   .strict();
 
@@ -73,6 +74,7 @@ export async function POST(request: Request) {
     });
     const response = await recommendAchievements({
       input,
+      allowLocalFallback: parsed.data.allowLocalFallback,
       selectWithAi: () => createAiProvider().selectAchievements(input),
     });
     const { audit: _audit, ...responseBody } = response;
@@ -88,7 +90,13 @@ export async function POST(request: Request) {
     }
     if (error instanceof AiProviderError) {
       return NextResponse.json(
-        { error: error.message, code: error.code, retryable: error.retryable },
+        {
+          error: error.message,
+          code: error.code,
+          retryable: error.retryable,
+          fallbackAvailable: !parsed.data.allowLocalFallback,
+          fallbackType: "local-matching",
+        },
         { status: error.code === "INPUT_TOO_LARGE" ? 413 : 503 },
       );
     }

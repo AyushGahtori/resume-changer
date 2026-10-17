@@ -4,6 +4,7 @@ const {
   createProvider,
   selectAchievements,
   draftResume,
+  repairLatexContent,
   loadResumeLibrary,
   fitResume,
 } = vi.hoisted(() => ({
@@ -11,6 +12,7 @@ const {
   fitResume: vi.fn(),
   selectAchievements: vi.fn(),
   draftResume: vi.fn(),
+  repairLatexContent: vi.fn(),
   loadResumeLibrary: vi.fn(),
 }));
 
@@ -29,6 +31,8 @@ import sampleLibrary from "../../../examples/sample-resume-library.json";
 import { POST } from "@/app/api/ai/auto-tailor/route";
 import { createJobContextId } from "@/lib/ai/job-context";
 import { AiProviderError } from "@/lib/ai/provider";
+import type { LatexRepairInput, LatexRepairResult } from "@/lib/ai/contracts";
+import type { ResumeLibrary } from "@/lib/schemas/resume-data";
 
 const analysis = {
   targetTitle: "Cloud Platform Engineer",
@@ -69,14 +73,11 @@ async function requestBody(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function post(body: unknown, runId?: string) {
+function post(body: unknown) {
   return POST(
     new Request("http://localhost/api/ai/auto-tailor", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(runId ? { "X-Resume-Run-Id": runId } : {}),
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     }),
   );
@@ -87,6 +88,7 @@ describe("POST /api/ai/auto-tailor", () => {
     createProvider.mockReset().mockImplementation(() => ({
       selectAchievements,
       draftResume,
+      repairLatexContent,
     }));
     selectAchievements.mockReset().mockResolvedValue({
       selections: [
@@ -121,12 +123,13 @@ describe("POST /api/ai/auto-tailor", () => {
           })),
         }),
       );
+    repairLatexContent.mockReset();
     loadResumeLibrary.mockReset().mockResolvedValue(sampleLibrary);
   });
 
   it("hands the AI-selected evidence directly to the drafter with matching job context", async () => {
     const body = await requestBody();
-    const response = await post(body, "diagnostic-test-run");
+    const response = await post(body);
 
     expect(response.status).toBe(200);
     const payload = await response.json();
@@ -150,15 +153,8 @@ describe("POST /api/ai/auto-tailor", () => {
         },
       },
     });
-    expect(payload.runId).toBe("diagnostic-test-run");
-    expect(payload.diagnostics).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ stage: "auto-tailor.selection-input" }),
-        expect.objectContaining({ stage: "auto-tailor.selection-audit" }),
-        expect.objectContaining({ stage: "auto-tailor.draft-input" }),
-        expect.objectContaining({ stage: "auto-tailor.evidence-validation" }),
-      ]),
-    );
+    expect(payload).not.toHaveProperty("runId");
+    expect(payload).not.toHaveProperty("diagnostics");
     expect(draftResume).toHaveBeenCalledTimes(1);
     const draftInput = draftResume.mock.calls[0][0] as {
       achievements: Array<{ id: string }>;
@@ -169,11 +165,20 @@ describe("POST /api/ai/auto-tailor", () => {
     expect(loadResumeLibrary).toHaveBeenCalledWith({ source: "demo" });
   });
 
-  it("uses locally selected evidence and preserves original wording when the AI quota is exhausted", async () => {
+  it("does not use local matching until the user explicitly consents", async () => {
     selectAchievements.mockRejectedValue(
       new AiProviderError("Gemini quota exhausted.", "RATE_LIMITED", true),
     );
-    const response = await post(await requestBody());
+    const request = await requestBody();
+    const declined = await post(request);
+    expect(declined.status).toBe(503);
+    await expect(declined.json()).resolves.toMatchObject({
+      code: "RATE_LIMITED",
+      fallbackAvailable: true,
+      fallbackType: "local-matching-or-original-wording",
+    });
+
+    const response = await post({ ...request, allowLocalFallback: true });
 
     expect(response.status).toBe(200);
     const payload = await response.json();
@@ -208,10 +213,7 @@ describe("POST /api/ai/auto-tailor", () => {
         },
       },
     });
-    const response = await post(
-      await requestBody({ generatePdf: true }),
-      "quality-run",
-    );
+    const response = await post(await requestBody({ generatePdf: true }));
     expect(response.status).toBe(200);
     const payload = await response.json();
     expect(Buffer.from(payload.compiled.pdfBase64, "base64").toString()).toBe(
@@ -219,13 +221,80 @@ describe("POST /api/ai/auto-tailor", () => {
     );
     expect(payload.compiled.metadata.fitting.status).toBe("filled");
     expect(fitResume.mock.calls[0][0].request.summaryOverride).toBeTruthy();
-    expect(JSON.stringify(payload.diagnostics)).not.toContain(
-      payload.compiled.pdfBase64,
-    );
+    expect(payload).not.toHaveProperty("diagnostics");
     expect(
       fitResume.mock.calls[0][0].request.achievementTextOverrides[0]
         .sourceAchievementIds,
     ).toBeTruthy();
+  });
+
+  it("passes measured overflow to Gemini and validates the repair against selected evidence", async () => {
+    const library = sampleLibrary as ResumeLibrary;
+    const point = library.jobs
+      .flatMap((job) => job.points)
+      .find((item) => item.id === selectedId)!;
+    repairLatexContent.mockResolvedValue({
+      summary: "Kept the selected wording while checking the layout.",
+      achievementText: [
+        {
+          achievementId: selectedId,
+          sourceAchievementIds: [selectedId],
+          text: point.text,
+        },
+      ],
+    });
+    fitResume.mockImplementationOnce(
+      async (args: {
+        repairContent?: (input: LatexRepairInput) => Promise<LatexRepairResult>;
+      }) => {
+        const result = await args.repairContent!({
+          currentContent: {
+            summary: "Selected wording.",
+            achievementText: [
+              {
+                achievementId: selectedId,
+                sourceAchievementIds: [selectedId],
+                text: point.text,
+              },
+            ],
+          },
+          diagnostics: ["The resume exceeds one page by eight words."],
+          firstPageText: "Measured page-one resume text.",
+          overflowText: "The words that flowed onto page two.",
+          overflowWordCount: 8,
+        });
+        expect(result.achievementText).toEqual([
+          expect.objectContaining({
+            achievementId: selectedId,
+            sourceAchievementIds: [selectedId],
+            text: point.text,
+          }),
+        ]);
+        return {
+          pdf: Buffer.from("%PDF-final"),
+          generation: {
+            latex: "verified latex",
+            metadata: {
+              id: "final-generation",
+              selectedAchievementIds: [selectedId],
+              renderedSkillIds: [],
+              generatedAt: "2026-10-16T12:00:00Z",
+            },
+          },
+        };
+      },
+    );
+
+    const response = await post(await requestBody({ generatePdf: true }));
+
+    expect(response.status).toBe(200);
+    expect(repairLatexContent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        firstPageText: "Measured page-one resume text.",
+        overflowText: "The words that flowed onto page two.",
+        overflowWordCount: 8,
+      }),
+    );
   });
 
   it("rejects stale job context before loading private or demo resume data", async () => {

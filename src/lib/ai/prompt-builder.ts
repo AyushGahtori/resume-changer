@@ -21,7 +21,7 @@ import { PROMPT_VERSION, SHARED_INSTRUCTIONS } from "./prompts/v1/shared";
 import { JAKE_STYLE_TEMPLATE } from "../latex/jake-template";
 import { AiProviderError } from "./provider";
 
-export const MAX_PROMPT_CHARACTERS = 120_000;
+export const MAX_PROMPT_CHARACTERS = 360_000;
 
 export function supportedTerminologyTargets(input: ResumeDraftInput) {
   return input.achievements.flatMap((source) => {

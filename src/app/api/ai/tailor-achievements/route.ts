@@ -48,10 +48,8 @@ export async function POST(request: Request) {
         createTailoringResponse({ input, result, repairInvalid: true }),
       );
     } catch (error) {
-      if (
-        error instanceof AiProviderError &&
-        (error.retryable || error.code === "MISSING_API_KEY")
-      ) {
+      if (error instanceof AiProviderError) {
+        if (!parsed.data.allowOriginalsFallback) throw error;
         return NextResponse.json(
           createOriginalsFallbackResponse({
             input,
@@ -87,6 +85,10 @@ export async function POST(request: Request) {
           error: error.message,
           code: error.code,
           retryable: error.retryable,
+          fallbackAvailable:
+            !parsed.data.allowOriginalsFallback &&
+            (error.retryable || error.code === "MISSING_API_KEY"),
+          fallbackType: "original-wording",
         },
         {
           status: invalidResponse

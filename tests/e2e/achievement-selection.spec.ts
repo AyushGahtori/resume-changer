@@ -59,8 +59,8 @@ const selectionResponse = {
     skillRecommendations: [
       {
         skillId,
-        rationale: "Supported by the selected cloud deployment achievement.",
-        supportingAchievementIds: [cloudAchievementId],
+        rationale: "Relevant to the analyzed job description.",
+        supportingAchievementIds: [],
       },
     ],
     confidence: 0.9,
@@ -182,8 +182,8 @@ test("analyzes a saved JD, retries point suggestions, and allows grounded overri
   await page.getByLabel(`Select achievement ${cloudAchievementId}`).uncheck();
   await expect(recommendation).toContainText("0 / 2 supported");
   await expect(recommendation).toContainText("Not selected");
-  await expect(suggestedSkill).toBeDisabled();
-  await expect(suggestedSkill).not.toBeChecked();
+  await expect(suggestedSkill).toBeEnabled();
+  await expect(suggestedSkill).toBeChecked();
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(recommendation).toBeVisible();
   expect(
