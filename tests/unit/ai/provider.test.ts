@@ -167,8 +167,7 @@ describe("Gemini adapter", () => {
     ).toBe(false);
   });
 
-  it("emits the exact prompt, raw response, validated result, and retry diagnostics without credentials", async () => {
-    const events: Array<{ stage: string; data?: unknown }> = [];
+  it("retries with the fallback model and returns validated analysis without exposing credentials", async () => {
     const request = vi
       .fn()
       .mockRejectedValueOnce(
@@ -178,7 +177,6 @@ describe("Gemini adapter", () => {
     const provider = createGeminiProvider({
       apiKey: "do-not-log-this-key",
       request,
-      onDiagnostic: (event) => events.push(event),
     });
 
     await expect(
@@ -188,23 +186,13 @@ describe("Gemini adapter", () => {
       }),
     ).resolves.toEqual(analysis);
 
-    expect(events.map((event) => event.stage)).toEqual([
-      "gemini.analyzeJobDescription.request",
-      "gemini.analyzeJobDescription.retry",
-      "gemini.analyzeJobDescription.request",
-      "gemini.analyzeJobDescription.response",
-      "gemini.analyzeJobDescription.validated",
-    ]);
-    expect(events[0].data).toMatchObject({
+    expect(request).toHaveBeenCalledTimes(2);
+    expect(request.mock.calls[0][0]).toMatchObject({
       model: "gemini-3.6-flash",
-      prompt: expect.stringContaining("Maintain distributed services."),
-      outputSchema: expect.any(Object),
     });
-    expect(events[1].data).toMatchObject({
-      diagnosticCode: "HTTP_503",
-      fallbackModel: "gemini-2.5-flash-lite",
+    expect(request.mock.calls[1][0]).toMatchObject({
+      model: "gemini-2.5-flash-lite",
     });
-    expect(JSON.stringify(events)).not.toContain("do-not-log-this-key");
   });
 
   it("supports all four task contracts without returning LaTeX source", async () => {
@@ -539,5 +527,65 @@ describe("Gemini adapter", () => {
         supportingAchievementIds: ["achievement-api"],
       }),
     ]);
+  });
+
+  it("keeps a JD-relevant skill without achievement evidence and preserves an informative summary", async () => {
+    const provider = createGeminiProvider({
+      apiKey: "test-key",
+      request: async () =>
+        JSON.stringify({
+          ...selectionResult,
+          skillRecommendations: [
+            {
+              skillId: "Terraform",
+              rationale:
+                "The skill is relevant to the JD even without a linked point.",
+              supportingAchievementIds: [],
+            },
+          ],
+          summary: "A detailed summary. ".repeat(40),
+        }),
+    });
+    const result = await provider.selectAchievements({
+      ...selectionInput,
+      skills: [
+        {
+          id: "skill-terraform",
+          name: "Terraform",
+          aliases: [],
+          isListedOnCurrentResume: false,
+          evidenceAchievementIds: ["achievement-api"],
+        },
+      ],
+    });
+
+    expect(result.summary).toBe("A detailed summary. ".repeat(40).trim());
+    expect(result.skillRecommendations[0].rationale).toContain(
+      "relevant to the JD even without a linked point",
+    );
+    expect(result.skillRecommendations).toEqual([
+      expect.objectContaining({
+        skillId: "skill-terraform",
+        supportingAchievementIds: [],
+      }),
+    ]);
+    expect(result.selections).toEqual(selectionResult.selections);
+  });
+
+  it("keeps schema details out of the user-facing error while retaining a diagnostic code", async () => {
+    const provider = createGeminiProvider({
+      apiKey: "test-key",
+      model: "gemini-2.5-flash-lite",
+      request: async () =>
+        JSON.stringify({ ...analysis, requiredQualifications: "not an array" }),
+    });
+
+    await expect(
+      provider.analyzeJobDescription({ jobDescription: "Platform role." }),
+    ).rejects.toMatchObject({
+      message:
+        "Gemini returned an incomplete or inconsistent response. Try again.",
+      diagnosticCode: expect.stringContaining("requiredQualifications"),
+    });
   });
 });

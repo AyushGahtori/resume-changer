@@ -89,6 +89,7 @@ export type ManualGenerationMetadata = {
   layout?: import("../pdf/layout-analysis").PdfLayout;
   fitting?: {
     attempts: number;
+    repairAttempts?: number;
     decisions: string[];
     status: "filled" | "underfilled" | "measurement-unavailable";
   };
@@ -106,30 +107,12 @@ export function createManualGeneration(
 ): ManualGenerationResult {
   const normalized = ManualGenerationRequestSchema.parse(request);
   if (normalized.selectedSkillIds) {
-    const selectedAchievementIds = new Set(normalized.selectedAchievementIds);
     const skillsById = new Map(
       library.skills.map((skill) => [skill.id, skill]),
     );
     for (const skillId of normalized.selectedSkillIds) {
       const skill = skillsById.get(skillId);
       if (!skill) throw new ResumeRenderError(`Unknown skill ID: ${skillId}.`);
-      if (
-        !skill.isListedOnCurrentResume &&
-        !skill.evidenceAchievementIds.some((id) =>
-          selectedAchievementIds.has(id),
-        ) &&
-        ![...library.jobs, ...library.projects].some((group) =>
-          group.points.some(
-            (point) =>
-              selectedAchievementIds.has(point.id) &&
-              point.skillIds.includes(skill.id),
-          ),
-        )
-      ) {
-        throw new ResumeRenderError(
-          `Skill "${skill.name}" needs a selected supporting achievement point.`,
-        );
-      }
     }
   }
 

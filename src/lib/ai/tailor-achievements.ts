@@ -46,6 +46,7 @@ export const TailorAchievementsRequestSchema = z
     analysis: JobAnalysisResultSchema,
     job: ResumeDraftJobRequestSchema,
     selectionContext: AchievementSelectionResponseSchema.optional(),
+    allowOriginalsFallback: z.boolean().default(false),
     achievementIds: z.array(StableIdSchema).min(1).max(100),
   })
   .strict()
@@ -61,7 +62,7 @@ export const TailorAchievementsRequestSchema = z
     }
   });
 
-export type TailorAchievementsRequest = z.infer<
+export type TailorAchievementsRequest = z.input<
   typeof TailorAchievementsRequestSchema
 >;
 

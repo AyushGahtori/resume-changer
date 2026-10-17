@@ -8,6 +8,8 @@ import {
 
 const text = z.string().trim().min(1).max(8_000);
 const shortText = z.string().trim().min(1).max(500);
+const skillRationale = z.string().trim().min(1).max(1_000);
+const selectionSummary = z.string().trim().min(1).max(2_000);
 const terms = z.array(shortText).max(100);
 
 export const JobAnalysisInputSchema = z
@@ -141,8 +143,8 @@ export const RequirementCoverageSchema = z
 export const SkillRecommendationSchema = z
   .object({
     skillId: StableIdSchema,
-    rationale: shortText,
-    supportingAchievementIds: z.array(StableIdSchema).min(1).max(100),
+    rationale: skillRationale,
+    supportingAchievementIds: z.array(StableIdSchema).max(100),
   })
   .strict();
 
@@ -152,7 +154,7 @@ export const AchievementSelectionResultSchema = z
     requirementCoverage: z.array(RequirementCoverageSchema).max(300),
     skillRecommendations: z.array(SkillRecommendationSchema).max(200),
     confidence: z.number().min(0).max(1),
-    summary: shortText,
+    summary: selectionSummary,
   })
   .strict();
 
@@ -339,6 +341,9 @@ export const LatexRepairInputSchema = z
   .object({
     currentContent: ResumeDraftResultSchema,
     diagnostics: z.array(shortText).min(1).max(50),
+    firstPageText: z.string().max(20_000).optional(),
+    overflowText: z.string().max(20_000).optional(),
+    overflowWordCount: z.number().int().nonnegative().max(20_000).optional(),
     templateContext: z.string().max(30_000).optional(),
   })
   .strict();

@@ -183,13 +183,15 @@ describe("manual resume generation", () => {
     );
   });
 
-  it("rejects an unlisted skill without selected evidence and unknown skills", () => {
-    expect(() =>
-      createManualGeneration(library, {
-        ...validRequest,
-        selectedSkillIds: ["skill-infrastructure-as-code"],
-      }),
-    ).toThrow(/needs a selected supporting achievement/);
+  it("renders an unlisted JD-relevant skill without linked achievement evidence and rejects unknown skills", () => {
+    const result = createManualGeneration(library, {
+      ...validRequest,
+      selectedSkillIds: ["skill-infrastructure-as-code"],
+    });
+    expect(result.latex).toContain("Infrastructure as Code");
+    expect(result.metadata.renderedSkillIds).toContain(
+      "skill-infrastructure-as-code",
+    );
     expect(() =>
       createManualGeneration(library, {
         ...validRequest,

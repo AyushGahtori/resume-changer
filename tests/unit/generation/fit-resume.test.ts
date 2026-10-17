@@ -1,8 +1,15 @@
 import { describe, expect, it, vi } from "vitest";
 import type { ResumeLibrary } from "../../../src/lib/schemas/resume-data";
 import sampleJson from "../../../examples/sample-resume-library.json";
-import { fitResumeToPage } from "../../../src/lib/generation/fit-resume";
+import {
+  fitResumeToPage,
+  MAX_AI_REPAIR_OVERFLOW_WORDS,
+} from "../../../src/lib/generation/fit-resume";
 import { buildAchievementSelectionInput } from "../../../src/lib/ai/achievement-selection";
+import type {
+  LatexRepairInput,
+  LatexRepairResult,
+} from "../../../src/lib/ai/contracts";
 import { PdfCompileError } from "../../../src/lib/pdf/compile-service";
 import type { PdfLayout } from "../../../src/lib/pdf/layout-analysis";
 
@@ -90,7 +97,7 @@ describe("bounded measured resume fitting", () => {
       "overflow",
     );
   });
-  it("removes unsupported unlisted skills when fitting removes their source", async () => {
+  it("preserves an explicitly selected skill when fitting removes its source bullet", async () => {
     const library = structuredClone(sample);
     const candidate = library.jobs[0].points[0];
     library.skills.push({
@@ -130,7 +137,7 @@ describe("bounded measured resume fitting", () => {
     expect(result.generation.metadata.selectedAchievementIds).not.toContain(
       candidate.id,
     );
-    expect(result.generation.metadata.selectedSkillIds).not.toContain(
+    expect(result.generation.metadata.selectedSkillIds).toContain(
       "skill-exclusive",
     );
   });
@@ -190,4 +197,210 @@ describe("bounded measured resume fitting", () => {
       }),
     ).rejects.toThrow("Broken toolchain");
   });
+
+  it.each([10, MAX_AI_REPAIR_OVERFLOW_WORDS])(
+    "repairs a measurable %i-word overflow without changing selected evidence",
+    async (overflowWordCount) => {
+      const selectedIds = ids.slice(0, 2);
+      const overflowText = Array.from(
+        { length: overflowWordCount },
+        () => "overflow",
+      ).join(" ");
+      const compile = vi
+        .fn()
+        .mockResolvedValueOnce({
+          pdf: Buffer.from("%PDF-overflow"),
+          pageCount: 2,
+        })
+        .mockResolvedValueOnce({
+          pdf: Buffer.from("%PDF-one-page"),
+          pageCount: 1,
+        });
+      const measure = vi
+        .fn()
+        .mockResolvedValueOnce({
+          layout: { ...layout(1), pageCount: 2 },
+          text: "Visible first-page text overflowing wording",
+          firstPageText: "Visible first-page text",
+          overflowText,
+          overflowWordCount,
+        })
+        .mockResolvedValueOnce({
+          layout: layout(0.96),
+          text: "Shorter repaired output",
+        });
+      const repairContent = vi.fn(
+        async (repairInput: LatexRepairInput): Promise<LatexRepairResult> => ({
+          ...repairInput.currentContent,
+          achievementText: repairInput.currentContent.achievementText.map(
+            (item) => ({
+              ...item,
+              text: "Built reliable AWS services.",
+            }),
+          ),
+        }),
+      );
+
+      const result = await fitResumeToPage({
+        library: sample,
+        request: { ...request, selectedAchievementIds: selectedIds },
+        input,
+        scores: new Map(ids.map((id) => [id, 1])),
+        compile,
+        measure,
+        repairContent,
+      });
+
+      expect(repairContent).toHaveBeenCalledTimes(1);
+      expect(repairContent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          firstPageText: "Visible first-page text",
+          overflowText,
+          overflowWordCount,
+        }),
+      );
+      expect(result.generation.metadata.selectedAchievementIds).toEqual(
+        selectedIds,
+      );
+      expect(result.generation.metadata.fitting).toMatchObject({
+        attempts: 2,
+        repairAttempts: 1,
+        status: "filled",
+      });
+    },
+  );
+
+  it("skips AI rewriting for large overflow and prunes the lowest-value point", async () => {
+    const selectedIds = ids.slice(0, 4);
+    const compile = vi
+      .fn()
+      .mockResolvedValueOnce({
+        pdf: Buffer.from("%PDF-overflow"),
+        pageCount: 2,
+      })
+      .mockResolvedValueOnce({
+        pdf: Buffer.from("%PDF-one-page"),
+        pageCount: 1,
+      });
+    const measure = vi
+      .fn()
+      .mockResolvedValueOnce({
+        layout: { ...layout(1), pageCount: 2 },
+        text: "First page plus substantial overflow",
+        firstPageText: "First page",
+        overflowText: Array.from({ length: 41 }, () => "overflow").join(" "),
+        overflowWordCount: 41,
+      })
+      .mockResolvedValueOnce({ layout: layout(0.96), text: "One-page output" });
+    const repairContent = vi.fn(
+      async (_repairInput: LatexRepairInput): Promise<LatexRepairResult> => {
+        throw new Error("A 41-word overflow must skip wording repair.");
+      },
+    );
+
+    const result = await fitResumeToPage({
+      library: sample,
+      request: { ...request, selectedAchievementIds: selectedIds },
+      input,
+      scores: new Map(selectedIds.map((id, index) => [id, index])),
+      compile,
+      measure,
+      repairContent,
+    });
+
+    expect(repairContent).not.toHaveBeenCalled();
+    expect(result.generation.metadata.selectedAchievementIds).toHaveLength(3);
+    expect(result.generation.metadata.selectedAchievementIds).not.toContain(
+      selectedIds[0],
+    );
+    expect(result.generation.metadata.fitting?.repairAttempts).toBe(0);
+    expect(result.generation.metadata.fitting?.decisions.join(" ")).toContain(
+      "above the 40-word AI repair limit",
+    );
+  });
+
+  it("rejects a repair that drops a selected point and falls back to priority pruning", async () => {
+    const selectedIds = ids.slice(0, 4);
+    const compile = vi
+      .fn()
+      .mockResolvedValueOnce({
+        pdf: Buffer.from("%PDF-overflow"),
+        pageCount: 2,
+      })
+      .mockResolvedValueOnce({
+        pdf: Buffer.from("%PDF-one-page"),
+        pageCount: 1,
+      });
+    const measure = vi
+      .fn()
+      .mockResolvedValueOnce({
+        layout: { ...layout(1), pageCount: 2 },
+        text: "First page with a small overflow",
+        firstPageText: "First page",
+        overflowText: "A short sentence flowed to page two.",
+        overflowWordCount: 8,
+      })
+      .mockResolvedValueOnce({ layout: layout(0.96), text: "One-page output" });
+    const repairContent = vi.fn(
+      async (repairInput: LatexRepairInput): Promise<LatexRepairResult> => ({
+        ...repairInput.currentContent,
+        achievementText: repairInput.currentContent.achievementText.slice(1),
+      }),
+    );
+
+    const result = await fitResumeToPage({
+      library: sample,
+      request: { ...request, selectedAchievementIds: selectedIds },
+      input,
+      scores: new Map(selectedIds.map((id, index) => [id, index])),
+      compile,
+      measure,
+      repairContent,
+    });
+
+    expect(repairContent).toHaveBeenCalledTimes(1);
+    expect(result.generation.metadata.selectedAchievementIds).toHaveLength(3);
+    expect(result.generation.metadata.selectedAchievementIds).not.toContain(
+      selectedIds[0],
+    );
+    expect(result.generation.metadata.fitting?.repairAttempts).toBe(1);
+    expect(result.generation.metadata.fitting?.decisions.join(" ")).toContain(
+      "Rejected AI repair because it changed selected source evidence",
+    );
+  });
+
+  it.each(["LATEX_VALIDATION_ERROR", "LATEX_ERROR"] as const)(
+    "attempts one structured content repair after %s and never loops indefinitely",
+    async (code) => {
+      const compileError = new PdfCompileError(
+        "The generated content failed LaTeX checks.",
+        code,
+        "Diagnostic from the validator/compiler",
+      );
+      const compile = vi.fn(async () => {
+        throw compileError;
+      });
+      const repairContent = vi.fn(
+        async (repairInput: LatexRepairInput): Promise<LatexRepairResult> =>
+          repairInput.currentContent,
+      );
+
+      await expect(
+        fitResumeToPage({
+          library: sample,
+          request,
+          input,
+          scores: new Map(),
+          compile,
+          repairContent,
+        }),
+      ).rejects.toBe(compileError);
+
+      expect(repairContent).toHaveBeenCalledTimes(1);
+      expect(compile).toHaveBeenCalledTimes(2);
+      expect(repairContent.mock.calls[0][0].diagnostics).toContain(
+        "Diagnostic from the validator/compiler",
+      );
+    },
+  );
 });

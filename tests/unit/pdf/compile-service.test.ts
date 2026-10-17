@@ -53,10 +53,8 @@ describe("compileLatexToPdf", () => {
     expect(validateResumeLatex(latex)).toEqual({ valid: true, errors: [] });
     const tempRoot = await createRoot();
     const calls: string[][] = [];
-    const events: Array<{ stage: string; data?: unknown }> = [];
     const result = await compileLatexToPdf(latex, {
       tempRoot,
-      onDiagnostic: (event) => events.push(event),
       runProcess: async (_executable, args, cwd) => {
         calls.push(args);
         if (calls.length === 1) {
@@ -82,20 +80,6 @@ describe("compileLatexToPdf", () => {
     expect(calls[0]).toContain("--untrusted");
     expect(calls[0]).toContain("--only-cached");
     expect(calls[0]).not.toContain("-Zshell-escape");
-    expect(events.map((event) => event.stage)).toEqual([
-      "pdf.temp-workspace",
-      "pdf.source-written",
-      "pdf.tectonic-started",
-      "pdf.tectonic-finished",
-      "pdf.page-count-started",
-      "pdf.page-count-result",
-      "pdf.verified",
-    ]);
-    expect(events[2].data).toMatchObject({
-      executable: expect.stringMatching(/^tectonic(\.exe)?$/),
-      args: expect.arrayContaining(["--untrusted", "--only-cached"]),
-    });
-    expect(events[6].data).toMatchObject({ pageCount: 1, signature: "%PDF-" });
     expect(await readdir(tempRoot)).toEqual([]);
   });
 
@@ -120,6 +104,35 @@ describe("compileLatexToPdf", () => {
         },
       }),
     ).rejects.toMatchObject({ code: "PAGE_LIMIT_EXCEEDED", status: 422 });
+    expect(await readdir(tempRoot)).toEqual([]);
+  });
+
+  it("can return a multi-page PDF only when the internal fitting loop opts in", async () => {
+    const tempRoot = await createRoot();
+    const runProcess = async (_executable: string, args: string[]) => {
+      if (args.includes("--outdir")) {
+        const input = args.at(-1)!;
+        await writeFile(
+          path.join(
+            args[args.indexOf("--outdir") + 1],
+            path.basename(input).replace(/\.tex$/, ".pdf"),
+          ),
+          pdf,
+        );
+        return { code: 0, stdout: "", stderr: "" };
+      }
+      return { code: 0, stdout: "Pages: 2\n", stderr: "" };
+    };
+
+    await expect(
+      compileLatexToPdf(latex, { tempRoot, runProcess }),
+    ).rejects.toMatchObject({ code: "PAGE_LIMIT_EXCEEDED" });
+    const result = await compileLatexToPdf(latex, {
+      tempRoot,
+      runProcess,
+      allowPageOverflow: true,
+    });
+    expect(result).toEqual({ pdf, pageCount: 2 });
     expect(await readdir(tempRoot)).toEqual([]);
   });
 

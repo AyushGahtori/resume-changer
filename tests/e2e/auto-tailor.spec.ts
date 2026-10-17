@@ -1,5 +1,4 @@
 import { expect, test } from "@playwright/test";
-import { readFile } from "node:fs/promises";
 import { createResumeDraftHandoff } from "../helpers/resume-draft-handoff";
 
 const jobDescription = "Provision AWS services with Terraform.";
@@ -184,22 +183,84 @@ test("Auto Tailor selects, drafts, generates, and verifies a one-page PDF", asyn
 
   await page.getByRole("tab", { name: "LaTeX" }).click();
   await expect(page.getByLabel("Generated LaTeX")).toContainText(proposedText);
-
-  const downloadEvent = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Export log" }).click();
-  const download = await downloadEvent;
-  const logPath = await download.path();
-  expect(logPath).toBeTruthy();
-  const runLog = await readFile(logPath!, "utf8");
-  expect(runLog).toContain('"stage": "analysis.button-clicked"');
-  expect(runLog).toContain('"stage": "auto-tailor.button-clicked"');
-  expect(runLog).toContain('"stage": "latex.client-request"');
-  expect(runLog).toContain('"stage": "pdf.http-response"');
-  expect(runLog).toContain(jobDescription);
-  expect(runLog).toContain(proposedText);
 });
 
-test("Auto Tailor uses the measured server result and exposes summary, partial coverage and inference", async ({
+test("local matching is offered only after explaining the AI failure and requesting consent", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByLabel("Company").fill("Example Cloud");
+  await page.getByLabel("Role title").fill("Cloud Platform Engineer");
+  await page.getByLabel("Job description").fill(jobDescription);
+  await expect(page.getByRole("status")).toContainText("Saved locally");
+  await page.route("**/api/ai/analyze-job-description", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ analysis }),
+    }),
+  );
+  await page.getByRole("button", { name: "Analyze job description" }).click();
+  await expect(
+    page.getByRole("region", { name: "Job description analysis" }),
+  ).toBeVisible();
+  await expect(page.locator(".analysis-cache-notice")).toHaveCount(0);
+  await page.goto("/generate?source=demo");
+
+  const requestBodies: Array<Record<string, unknown>> = [];
+  await page.route("**/api/ai/select-achievements", async (route) => {
+    const body = route.request().postDataJSON() as Record<string, unknown>;
+    requestBodies.push(body);
+    if (requestBodies.length === 1) {
+      await route.fulfill({
+        status: 503,
+        contentType: "application/json",
+        body: JSON.stringify({
+          error: "Gemini's free-tier request limit was reached.",
+          code: "RATE_LIMITED",
+          retryable: true,
+          fallbackAvailable: true,
+          fallbackType: "local-matching",
+        }),
+      });
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        mode: "local-fallback",
+        notice: "Local matching suggestions are available for review.",
+        recommendations: {
+          selections: [],
+          requirementCoverage: [],
+          skillRecommendations: [],
+          confidence: 0.3,
+          summary: "Local matching results.",
+        },
+        budget: { availableLines: 20, usedLines: 0 },
+      }),
+    });
+  });
+
+  let confirmationMessage = "";
+  page.once("dialog", async (dialog) => {
+    confirmationMessage = dialog.message();
+    await dialog.accept();
+  });
+  const suggestButton = page.getByRole("button", { name: "Suggest points" });
+  await expect(suggestButton).toBeEnabled();
+  await suggestButton.click();
+  await expect.poll(() => requestBodies).toHaveLength(2);
+  expect(confirmationMessage).toContain(
+    "Gemini's free-tier request limit was reached.",
+  );
+  expect(confirmationMessage).toContain("Continue with local-matching?");
+  expect(requestBodies[0]).not.toHaveProperty("allowLocalFallback", true);
+  expect(requestBodies[1]).toMatchObject({ allowLocalFallback: true });
+});
+
+test("Auto Tailor reports wording repair and exposes summary, partial coverage and inference", async ({
   page,
 }) => {
   await page.goto("/");
@@ -305,7 +366,12 @@ test("Auto Tailor uses the measured server result and exposes summary, partial c
             generatedBullets: [],
             visibleWordCount: 520,
             layout: { utilization: 0.97 },
-            fitting: { attempts: 2, decisions: [], status: "filled" },
+            fitting: {
+              attempts: 2,
+              repairAttempts: 1,
+              decisions: [],
+              status: "filled",
+            },
             finalCoverage: [
               {
                 requirement: "AWS provisioning",
@@ -325,11 +391,13 @@ test("Auto Tailor uses the measured server result and exposes summary, partial c
   await page.getByRole("button", { name: "Auto Tailor", exact: true }).click();
   await expect(
     page.getByText(
-      "Auto Tailor completed with a verified one-page PDF and measured page fill.",
+      "Auto Tailor completed with a verified one-page PDF and measured page fill. Wording repair used 1 time.",
     ),
   ).toBeVisible();
   await expect(
-    page.getByText("PDF ready · 1 page · 97% page fill."),
+    page.getByText(
+      "PDF ready · 1 page · 97% page fill. Wording repair used 1 time.",
+    ),
   ).toBeVisible();
   await expect(page.getByText("0 / 1 supported · 1 partial")).toBeVisible();
   await expect(

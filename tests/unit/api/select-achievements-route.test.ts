@@ -124,7 +124,7 @@ describe("POST /api/ai/select-achievements", () => {
     expect(input).not.toHaveProperty("profile.email");
   });
 
-  it("returns local evidence recommendations if the AI provider is unavailable", async () => {
+  it("requires explicit consent before returning local recommendations", async () => {
     selectAchievements.mockRejectedValue(
       new AiProviderError("Set the API key.", "MISSING_API_KEY"),
     );
@@ -136,10 +136,24 @@ describe("POST /api/ai/select-achievements", () => {
       }),
     );
 
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(503);
     await expect(response.json()).resolves.toMatchObject({
+      code: "MISSING_API_KEY",
+      fallbackAvailable: true,
+      fallbackType: "local-matching",
+    });
+
+    const consented = await post(
+      JSON.stringify({
+        dataSource: "demo",
+        jobDescription: "Provision AWS infrastructure.",
+        analysis,
+        allowLocalFallback: true,
+      }),
+    );
+    expect(consented.status).toBe(200);
+    await expect(consented.json()).resolves.toMatchObject({
       mode: "local-fallback",
-      notice: expect.stringContaining("Set GEMINI_API_KEY"),
       recommendations: {
         selections: expect.arrayContaining([
           expect.objectContaining({ achievementId: selectedId }),

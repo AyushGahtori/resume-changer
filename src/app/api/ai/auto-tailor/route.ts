@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { fitResumeToPage } from "@/lib/generation/fit-resume";
 import { PdfCompileError } from "@/lib/pdf/compile-service";
 import { NextResponse } from "next/server";
@@ -7,6 +6,7 @@ import {
   AchievementSelectionResponseSchema,
   AutoTailorResponseSchema,
   JobAnalysisResultSchema,
+  ResumeDraftInputSchema,
   ResumeDraftJobRequestSchema,
 } from "@/lib/ai/contracts";
 import { createAiProvider } from "@/lib/ai/provider-factory";
@@ -25,7 +25,6 @@ import {
 import { DataLoadError, loadResumeLibrary } from "@/lib/data/loaders";
 import { MAX_JD_CHARACTERS } from "@/lib/jd-draft";
 import { createJobContextId } from "@/lib/ai/job-context";
-import { createServerTrace } from "@/lib/diagnostics/server-trace";
 
 export const runtime = "nodejs";
 
@@ -33,6 +32,7 @@ const AutoTailorRequestSchema = z
   .object({
     dataSource: z.enum(["personal", "demo"]).default("personal"),
     generatePdf: z.boolean().default(false),
+    allowLocalFallback: z.boolean().default(false),
     jobDescription: z.string().trim().min(1).max(MAX_JD_CHARACTERS),
     analysis: JobAnalysisResultSchema,
     job: ResumeDraftJobRequestSchema,
@@ -40,8 +40,6 @@ const AutoTailorRequestSchema = z
   .strict();
 
 export async function POST(request: Request) {
-  const trace = createServerTrace();
-  const runId = request.headers.get("x-resume-run-id") ?? "unknown";
   let body: unknown;
   try {
     body = await request.json();
@@ -50,24 +48,12 @@ export async function POST(request: Request) {
       {
         error: "Request body must be valid JSON.",
         code: "INVALID_REQUEST",
-        diagnostics: runId === "unknown" ? undefined : trace.events,
       },
       { status: 400 },
     );
   }
-  trace.record(
-    "auto-tailor.request",
-    "Received Auto Tailor request body.",
-    body,
-  );
-
   const parsed = AutoTailorRequestSchema.safeParse(body);
   if (!parsed.success) {
-    trace.record(
-      "auto-tailor.validation",
-      "Request failed schema validation.",
-      parsed.error.issues,
-    );
     return NextResponse.json(
       {
         error: "Provide the active job, its analysis, and a data source.",
@@ -76,7 +62,6 @@ export async function POST(request: Request) {
           path: issue.path.map(String).join("."),
           message: issue.message,
         })),
-        diagnostics: runId === "unknown" ? undefined : trace.events,
       },
       { status: 400 },
     );
@@ -88,85 +73,38 @@ export async function POST(request: Request) {
       jobDescription: parsed.data.jobDescription,
       analysis: parsed.data.analysis,
     });
-    trace.record(
-      "auto-tailor.context",
-      "Recomputed active job context fingerprint.",
-      {
-        expectedContextId,
-        requestContextId: parsed.data.job.contextId,
-        matches: expectedContextId === parsed.data.job.contextId,
-      },
-    );
     if (expectedContextId !== parsed.data.job.contextId) {
       return NextResponse.json(
         {
           error: "The job or analysis changed. Reanalyze the active job first.",
           code: "STALE_CONTEXT",
-          diagnostics: runId === "unknown" ? undefined : trace.events,
         },
         { status: 409 },
       );
     }
 
     const library = await loadResumeLibrary({ source: parsed.data.dataSource });
-    trace.record("auto-tailor.library", "Loaded resume evidence library.", {
-      source: parsed.data.dataSource,
-      profile: library.profile,
-      jobs: library.jobs,
-      projects: library.projects,
-      skills: library.skills,
-      credentials: library.credentials,
-    });
     const selectionInput = buildAchievementSelectionInput({
       library,
       jobDescription: parsed.data.jobDescription,
       analysis: parsed.data.analysis,
     });
-    trace.record(
-      "auto-tailor.selection-input",
-      "Built candidate evidence, skills, requirements, and content budget for selection.",
-      selectionInput,
-    );
     let provider: ReturnType<typeof createAiProvider> | undefined;
     let providerCreationError: unknown;
     try {
-      provider = createAiProvider(undefined, (event) =>
-        trace.events.push(event),
-      );
-      trace.record("auto-tailor.provider", "Selected AI provider.", {
-        provider: provider.name,
-      });
+      provider = createAiProvider();
     } catch (error) {
       providerCreationError = error;
-      trace.record(
-        "auto-tailor.provider-error",
-        "AI provider could not be initialized.",
-        {
-          error:
-            error instanceof AiProviderError
-              ? { code: error.code, message: error.message }
-              : "unknown provider error",
-        },
-      );
     }
     const selection = await recommendAchievements({
       input: selectionInput,
+      allowLocalFallback: parsed.data.allowLocalFallback,
       selectWithAi: () => {
         if (!provider) throw providerCreationError;
         return provider.selectAchievements(selectionInput);
       },
     });
-    trace.record(
-      "auto-tailor.selection-result",
-      "Selection, fallback, budget, and requirement evidence results.",
-      selection,
-    );
-    const { audit: selectionAudit, ...selectionResponse } = selection;
-    trace.record(
-      "auto-tailor.selection-audit",
-      "Candidate-by-candidate scoring and inclusion decisions.",
-      selectionAudit,
-    );
+    const { audit: _audit, ...selectionResponse } = selection;
     const recommendation =
       AchievementSelectionResponseSchema.parse(selectionResponse);
     const achievementIds = recommendation.recommendations.selections.map(
@@ -178,7 +116,6 @@ export async function POST(request: Request) {
           error:
             "No enabled source points matched this job description. Review the library or choose points manually.",
           code: "NO_SUPPORTED_ACHIEVEMENTS",
-          diagnostics: runId === "unknown" ? undefined : trace.events,
         },
         { status: 422 },
       );
@@ -193,11 +130,6 @@ export async function POST(request: Request) {
       achievementIds,
     });
     const draftInput = await buildResumeDraftInput(library, draftRequest);
-    trace.record(
-      "auto-tailor.draft-input",
-      "Built evidence-grounded drafting input and requirement coverage handoff.",
-      draftInput,
-    );
     let tailoring;
     if (selection.mode === "local-fallback" || !provider) {
       const notice =
@@ -209,40 +141,21 @@ export async function POST(request: Request) {
         input: draftInput,
         notice: `${notice} Auto Tailor kept the selected source wording unchanged.`,
       });
-      trace.record(
-        "auto-tailor.draft-fallback",
-        "AI draft skipped; original wording retained.",
-        {
-          mode: tailoring.mode,
-          notice: tailoring.notice,
-          proposals: tailoring.proposals,
-        },
-      );
     } else {
       try {
         const draftResult = await provider.draftResume(draftInput);
-        trace.record(
-          "auto-tailor.draft-result",
-          "Received structured AI achievement draft.",
-          draftResult,
-        );
         tailoring = createTailoringResponse({
           input: draftInput,
           result: draftResult,
           repairInvalid: true,
         });
-        trace.record(
-          "auto-tailor.evidence-validation",
-          "Validated proposed wording against source evidence and allowed terms.",
-          tailoring,
-        );
       } catch (error) {
         if (
-          (error instanceof AiProviderError &&
-            (error.retryable || error.code === "MISSING_API_KEY")) ||
+          error instanceof AiProviderError ||
           (error instanceof AchievementTailoringError &&
             error.code === "INVALID_AI_OUTPUT")
         ) {
+          if (!parsed.data.allowLocalFallback) throw error;
           tailoring = createOriginalsFallbackResponse({
             input: draftInput,
             notice:
@@ -250,23 +163,6 @@ export async function POST(request: Request) {
                 ? `${error.message} Auto Tailor kept the selected source wording unchanged.`
                 : "The AI draft did not pass evidence checks. Auto Tailor kept the selected source wording unchanged.",
           });
-          trace.record(
-            "auto-tailor.draft-fallback",
-            "AI draft failed or did not pass evidence checks; original wording retained.",
-            {
-              error:
-                error instanceof AiProviderError
-                  ? {
-                      code: error.code,
-                      message: error.message,
-                      diagnosticCode: error.diagnosticCode,
-                    }
-                  : error instanceof AchievementTailoringError
-                    ? { code: error.code, message: error.message }
-                    : "unknown draft error",
-              proposals: tailoring.proposals,
-            },
-          );
         } else {
           throw error;
         }
@@ -291,6 +187,47 @@ export async function POST(request: Request) {
         }
       | undefined;
     if (parsed.data.generatePdf) {
+      const repairContent = provider
+        ? async (
+            repairInput: import("@/lib/ai/contracts").LatexRepairInput,
+          ) => {
+            const evidenceIds = new Set(
+              repairInput.currentContent.achievementText.flatMap(
+                (item) => item.sourceAchievementIds ?? [item.achievementId],
+              ),
+            );
+            const repairDraftInput = ResumeDraftInputSchema.parse({
+              ...draftInput,
+              achievements: draftInput.achievements.filter((item) =>
+                evidenceIds.has(item.id),
+              ),
+              handoff: {
+                ...draftInput.handoff,
+                selectedAchievements:
+                  draftInput.handoff.selectedAchievements.filter((item) =>
+                    evidenceIds.has(item.achievementId),
+                  ),
+              },
+            });
+            const repaired = await provider.repairLatexContent(repairInput);
+            const validated = createTailoringResponse({
+              input: repairDraftInput,
+              result: repaired,
+              repairInvalid: false,
+            });
+            return {
+              summary: repaired.summary,
+              resumeSummary:
+                validated.resumeSummary ??
+                repairInput.currentContent.resumeSummary,
+              achievementText: validated.proposals.map((proposal) => ({
+                achievementId: proposal.achievementId,
+                sourceAchievementIds: proposal.sourceAchievementIds,
+                text: proposal.proposedText,
+              })),
+            };
+          }
+        : undefined;
       const fitted = await fitResumeToPage({
         library,
         input: selectionInput,
@@ -314,22 +251,12 @@ export async function POST(request: Request) {
             text: proposal.proposedText,
           })),
         },
-        onDiagnostic: (event) =>
-          trace.record(event.stage, event.message, event.data),
+        repairContent,
       });
       compiled = {
         ...fitted.generation,
         pdfBase64: fitted.pdf.toString("base64"),
       };
-      trace.record(
-        "auto-tailor.pdf-result",
-        "Prepared the final measured PDF.",
-        {
-          metadata: fitted.generation.metadata,
-          byteLength: fitted.pdf.length,
-          sha256: createHash("sha256").update(fitted.pdf).digest("hex"),
-        },
-      );
     }
     const response = AutoTailorResponseSchema.parse({
       recommendation,
@@ -338,38 +265,13 @@ export async function POST(request: Request) {
       draftingMode: tailoring.mode,
       compiled,
     });
-    trace.record(
-      "auto-tailor.response",
-      "Completed Auto Tailor response after contract validation.",
-      {
-        ...response,
-        compiled: response.compiled
-          ? {
-              ...response.compiled,
-              pdfBase64: "[PDF bytes omitted; see hash and size]",
-            }
-          : undefined,
-      },
-    );
-    return NextResponse.json({
-      ...response,
-      ...(runId !== "unknown" ? { diagnostics: trace.events, runId } : {}),
-    });
+    return NextResponse.json(response);
   } catch (error) {
-    trace.record("auto-tailor.error", "Auto Tailor request failed.", {
-      error: error instanceof Error ? error.message : "Unknown error",
-      code:
-        error instanceof AiProviderError ||
-        error instanceof AchievementTailoringError
-          ? error.code
-          : undefined,
-    });
     if (error instanceof PdfCompileError) {
       return NextResponse.json(
         {
           error: error.message,
           code: error.code,
-          diagnostics: runId === "unknown" ? undefined : trace.events,
         },
         { status: error.status },
       );
@@ -379,7 +281,6 @@ export async function POST(request: Request) {
         {
           error: error.message,
           code: "RESUME_DATA_UNAVAILABLE",
-          diagnostics: runId === "unknown" ? undefined : trace.events,
         },
         { status: 409 },
       );
@@ -390,7 +291,6 @@ export async function POST(request: Request) {
           error: error.message,
           code: error.code,
           retryable: false,
-          diagnostics: runId === "unknown" ? undefined : trace.events,
         },
         { status: error.code === "STALE_CONTEXT" ? 409 : 422 },
       );
@@ -401,7 +301,8 @@ export async function POST(request: Request) {
           error: error.message,
           code: error.code,
           retryable: error.retryable,
-          diagnostics: runId === "unknown" ? undefined : trace.events,
+          fallbackAvailable: !parsed.data.allowLocalFallback,
+          fallbackType: "local-matching-or-original-wording",
         },
         { status: error.code === "INPUT_TOO_LARGE" ? 413 : 503 },
       );
@@ -411,16 +312,12 @@ export async function POST(request: Request) {
         {
           error: "The resume context could not be prepared for Auto Tailor.",
           code: "INVALID_RESUME_DATA",
-          diagnostics: runId === "unknown" ? undefined : trace.events,
         },
         { status: 422 },
       );
     }
     return NextResponse.json(
-      {
-        error: "Auto Tailor could not prepare this resume. Try again.",
-        diagnostics: runId === "unknown" ? undefined : trace.events,
-      },
+      { error: "Auto Tailor could not prepare this resume. Try again." },
       { status: 500 },
     );
   }

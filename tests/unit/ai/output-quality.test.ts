@@ -357,6 +357,69 @@ describe("complete evidence and coverage quality", () => {
     expect(assessRequirementCoverage(input, [source.id])).toHaveLength(300);
   });
 
+  it("sends Gemini only supported schema keywords without a skill-ID enum", () => {
+    const input = selectionInput();
+    input.skills = Array.from({ length: 250 }, (_, index) => ({
+      id: `skill-${index}`,
+      name: `Skill ${index}`,
+      aliases: [],
+      isListedOnCurrentResume: false,
+      evidenceAchievementIds: [],
+    }));
+    const output = buildProviderOutputSchema(
+      buildAiPrompt("selectAchievements", input).outputSchema,
+      "selectAchievements",
+      input,
+    );
+    const allowed = new Set([
+      "$id",
+      "$defs",
+      "$ref",
+      "$anchor",
+      "type",
+      "format",
+      "title",
+      "description",
+      "enum",
+      "items",
+      "prefixItems",
+      "minimum",
+      "maximum",
+      "anyOf",
+      "oneOf",
+      "properties",
+      "additionalProperties",
+      "required",
+      "propertyOrdering",
+    ]);
+    const unsupported: string[] = [];
+    const inspect = (value: unknown, propertyMap = false): void => {
+      if (Array.isArray(value)) {
+        value.forEach((item) => inspect(item));
+        return;
+      }
+      if (!value || typeof value !== "object") return;
+      for (const [key, child] of Object.entries(value)) {
+        if (!propertyMap && !allowed.has(key)) unsupported.push(key);
+        inspect(child, key === "properties" || key === "$defs");
+      }
+    };
+    inspect(output);
+
+    const properties = output.properties as Record<string, unknown>;
+    const skillIdSchema = (
+      properties.skillRecommendations as {
+        items: { properties: Record<string, unknown> };
+      }
+    ).items.properties.skillId;
+    expect(unsupported).toEqual([]);
+    expect(skillIdSchema).not.toHaveProperty("enum");
+    expect(JSON.stringify(output)).not.toMatch(/"(?:maxItems|minItems)"/);
+    expect(JSON.stringify(output)).not.toMatch(
+      /"(?:minLength|maxLength|pattern)"/,
+    );
+  });
+
   it("has no per-role bullet cap and charges longer content more space", async () => {
     const input = selectionInput();
     input.achievements = Array.from({ length: 7 }, (_, i) => ({
@@ -367,6 +430,7 @@ describe("complete evidence and coverage quality", () => {
     }));
     const response = await recommendAchievements({
       input,
+      allowLocalFallback: true,
       selectWithAi: async () => {
         throw new Error("offline");
       },
@@ -375,6 +439,7 @@ describe("complete evidence and coverage quality", () => {
     const single = { ...input, achievements: [input.achievements[0]] };
     const short = await recommendAchievements({
       input: single,
+      allowLocalFallback: true,
       selectWithAi: async () => {
         throw new Error("offline");
       },
@@ -385,6 +450,7 @@ describe("complete evidence and coverage quality", () => {
     };
     const long = await recommendAchievements({
       input: single,
+      allowLocalFallback: true,
       selectWithAi: async () => {
         throw new Error("offline");
       },

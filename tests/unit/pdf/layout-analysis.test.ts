@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   analyzePdfLayout,
+  layoutFromPageTextBoxes,
   layoutFromTextBoxes,
 } from "../../../src/lib/pdf/layout-analysis";
 
@@ -75,6 +76,33 @@ describe("PDF content measurements", () => {
       ),
     ).toMatchObject({ pageCount: 2, clipped: true });
     expect(() => layoutFromTextBoxes([], 612, 792)).toThrow(/no readable text/);
+  });
+
+  it("separates first-page content from overflow text and counts only overflow words", () => {
+    const result = layoutFromPageTextBoxes(
+      [
+        [{ text: "First page content", x: 40, y: 700, width: 150, height: 12 }],
+        [
+          {
+            text: "Words left for page two",
+            x: 40,
+            y: 700,
+            width: 180,
+            height: 12,
+          },
+        ],
+      ],
+      612,
+      792,
+    );
+
+    expect(result).toMatchObject({
+      layout: { pageCount: 2, visibleWordCount: 3 },
+      firstPageText: "First page content",
+      overflowText: "Words left for page two",
+      overflowWordCount: 5,
+      text: "First page content Words left for page two",
+    });
   });
 
   it("loads PDF.js and extracts text without a local TeX toolchain", async () => {

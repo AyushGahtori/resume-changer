@@ -531,9 +531,7 @@ function normalizeAiResult(
             skill.evidenceAchievementIds.includes(id),
         )
         .slice(0, 100);
-      return supportingAchievementIds.length
-        ? [{ ...recommendation, supportingAchievementIds }]
-        : [];
+      return [{ ...recommendation, supportingAchievementIds }];
     },
   );
   for (const skill of selectedUnlistedSkills) {
@@ -564,6 +562,7 @@ function normalizeAiResult(
 export async function recommendAchievements(args: {
   input: AchievementSelectionInput;
   selectWithAi: () => Promise<AchievementSelectionResult>;
+  allowLocalFallback?: boolean;
 }): Promise<SelectionRecommendation> {
   const availableLines = args.input.contentBudgetLines;
   let aiResult: AchievementSelectionResult | undefined;
@@ -577,18 +576,31 @@ export async function recommendAchievements(args: {
   }
 
   if (aiFailure) {
-    console.warn("AI achievement selection failed; using local fallback.", {
-      code:
-        aiFailure instanceof AiProviderError
-          ? aiFailure.code
-          : "INVALID_RESPONSE",
-      diagnostic:
-        aiFailure instanceof AiProviderError
-          ? (aiFailure.diagnosticCode ?? aiFailure.code)
-          : "OUTPUT_SCHEMA_MISMATCH",
-      retryable:
-        aiFailure instanceof AiProviderError ? aiFailure.retryable : false,
-    });
+    console.warn(
+      args.allowLocalFallback
+        ? "AI achievement selection failed; using local fallback after consent."
+        : "AI achievement selection failed; local fallback requires consent.",
+      {
+        code:
+          aiFailure instanceof AiProviderError
+            ? aiFailure.code
+            : "INVALID_RESPONSE",
+        diagnostic:
+          aiFailure instanceof AiProviderError
+            ? (aiFailure.diagnosticCode ?? aiFailure.code)
+            : "OUTPUT_SCHEMA_MISMATCH",
+        retryable:
+          aiFailure instanceof AiProviderError ? aiFailure.retryable : false,
+      },
+    );
+    if (!args.allowLocalFallback) {
+      if (aiFailure instanceof AiProviderError) throw aiFailure;
+      throw new AiProviderError(
+        "AI recommendations failed. Review the error, then choose whether to use local matching.",
+        "INVALID_RESPONSE",
+        true,
+      );
+    }
   }
 
   const recommendations = aiResult

@@ -26,7 +26,6 @@ import {
 } from "./prompt-builder";
 import { includesPhrase } from "./requirement-coverage";
 import { AiProviderError, type AiProvider } from "./provider";
-import type { DiagnosticObserver } from "@/lib/diagnostics/server-trace";
 
 const DEFAULT_MODEL = "gemini-3.6-flash";
 const FALLBACK_MODEL = "gemini-2.5-flash-lite";
@@ -42,8 +41,53 @@ type GeminiProviderOptions = {
   apiKey?: string;
   model?: string;
   request?: GeminiRequest;
-  onDiagnostic?: DiagnosticObserver;
 };
+
+const GEMINI_SCHEMA_KEYS = new Set([
+  "$id",
+  "$defs",
+  "$ref",
+  "$anchor",
+  "type",
+  "format",
+  "title",
+  "description",
+  "enum",
+  "items",
+  "prefixItems",
+  "minimum",
+  "maximum",
+  "anyOf",
+  "oneOf",
+  "properties",
+  "additionalProperties",
+  "required",
+  "propertyOrdering",
+]);
+
+function sanitizeGeminiSchema(value: unknown, propertyMap = false): void {
+  if (!value || typeof value !== "object") return;
+  if (Array.isArray(value)) {
+    value.forEach((item) => sanitizeGeminiSchema(item));
+    return;
+  }
+  const schema = value as Record<string, unknown>;
+  if (propertyMap) {
+    Object.values(schema).forEach((child) => sanitizeGeminiSchema(child));
+    return;
+  }
+  for (const [key, child] of Object.entries(schema)) {
+    if (
+      !GEMINI_SCHEMA_KEYS.has(key) ||
+      key === "minItems" ||
+      key === "maxItems"
+    ) {
+      delete schema[key];
+      continue;
+    }
+    sanitizeGeminiSchema(child, key === "properties" || key === "$defs");
+  }
+}
 
 function errorStatus(error: unknown): number | undefined {
   if (!error || typeof error !== "object") return undefined;
@@ -129,25 +173,102 @@ export function buildProviderOutputSchema(
     for (const key of ["status", "evidence", "missingComponents", "reason"])
       delete itemProps[key];
     props.skillRecommendations.description = `Recommend relevant skills only from the ${selection.skills.length} supplied skill records.`;
+    props.skillRecommendations.description +=
+      " Use each skill's exact id. Skills may be recommended based on JD relevance even when they have no linked achievement; the supplied skill library represents user-recorded skills. Do not invent skills outside the supplied list.";
+    props.summary.description =
+      "Summarize selection and important JD alignment details in up to 2,000 characters. Do not omit material context just to make the summary unusually short.";
   }
   if (task === "draftResume") {
     props.achievementText.description = `Represent all ${(input as ResumeDraftInput).achievements.length} selected source achievements exactly once. Related sources may share a synthesized bullet.`;
   }
-  // Gemini expands nested length constraints into decoder states and rejects large
-  // combinations. Removing these constraints permits complete output; Zod still
-  // enforces the full safety bounds after generation. Never shrink the item counts.
-  const removeDecoderLengths = (value: unknown): void => {
-    if (!value || typeof value !== "object") return;
-    if (Array.isArray(value)) {
-      value.forEach(removeDecoderLengths);
-      return;
-    }
-    const node = value as Record<string, unknown>;
-    delete node.maxItems;
-    delete node.minItems;
-    Object.values(node).forEach(removeDecoderLengths);
-  };
-  removeDecoderLengths(result);
+  // Send only Gemini-supported JSON Schema keywords. Full limits, patterns,
+  // and ID membership are validated or normalized after generation by Zod.
+  sanitizeGeminiSchema(result);
+  return result;
+}
+
+function normalizeSelectionSupplements(
+  input: AchievementSelectionInput,
+  decoded: unknown,
+): unknown {
+  if (!decoded || typeof decoded !== "object" || Array.isArray(decoded))
+    return decoded;
+
+  const result = { ...(decoded as Record<string, unknown>) };
+
+  const selectedIds = new Set(
+    Array.isArray(result.selections)
+      ? result.selections.flatMap((selection) =>
+          selection &&
+          typeof selection === "object" &&
+          "achievementId" in selection &&
+          typeof selection.achievementId === "string"
+            ? [selection.achievementId]
+            : [],
+        )
+      : [],
+  );
+  const canonicalLabel = (value: string) =>
+    value
+      .trim()
+      .toLocaleLowerCase()
+      .replace(/[^a-z0-9]+/g, " ");
+
+  result.skillRecommendations = Array.isArray(result.skillRecommendations)
+    ? result.skillRecommendations
+        .flatMap((recommendation) => {
+          if (
+            !recommendation ||
+            typeof recommendation !== "object" ||
+            !("skillId" in recommendation) ||
+            typeof recommendation.skillId !== "string"
+          )
+            return [];
+
+          const skill =
+            input.skills.find(({ id }) => id === recommendation.skillId) ??
+            input.skills.find((item) => {
+              const returned = canonicalLabel(recommendation.skillId as string);
+              return [item.name, ...item.aliases].some(
+                (label) => canonicalLabel(label) === returned,
+              );
+            });
+          if (!skill) return [];
+
+          const rationale =
+            "rationale" in recommendation &&
+            typeof recommendation.rationale === "string"
+              ? recommendation.rationale.trim()
+              : "";
+          if (!rationale) return [];
+
+          const rawSupportingIds =
+            "supportingAchievementIds" in recommendation &&
+            Array.isArray(recommendation.supportingAchievementIds)
+              ? recommendation.supportingAchievementIds
+              : [];
+          const supportingAchievementIds = [
+            ...new Set(
+              rawSupportingIds.filter(
+                (id: unknown): id is string =>
+                  typeof id === "string" &&
+                  selectedIds.has(id) &&
+                  skill.evidenceAchievementIds.includes(id),
+              ),
+            ),
+          ];
+          return [
+            {
+              ...recommendation,
+              skillId: skill.id,
+              rationale,
+              supportingAchievementIds,
+            },
+          ];
+        })
+        .slice(0, 200)
+    : [];
+
   return result;
 }
 
@@ -195,16 +316,6 @@ export function createGeminiProvider(
           maxOutputTokens: 8_192,
         },
       });
-      emitDiagnostic({
-        timestamp: new Date().toISOString(),
-        stage: "gemini.usage",
-        message: "Provider usage and completion metadata.",
-        data: {
-          model: requestedModel,
-          usage: response.usageMetadata,
-          finishReason: response.candidates?.[0]?.finishReason,
-        },
-      });
       if (response.candidates?.[0]?.finishReason === "MAX_TOKENS") {
         throw new AiProviderError(
           "Gemini output was incomplete; retry with a smaller evidence batch.",
@@ -215,16 +326,6 @@ export function createGeminiProvider(
       }
       return response.text;
     });
-
-  function emitDiagnostic(
-    event: Parameters<NonNullable<typeof options.onDiagnostic>>[0],
-  ) {
-    try {
-      options.onDiagnostic?.(event);
-    } catch {
-      // Diagnostic collection must never break an AI request.
-    }
-  }
 
   async function run<T>(
     task: Parameters<typeof buildAiPrompt>[0],
@@ -256,19 +357,6 @@ export function createGeminiProvider(
     const models = model === FALLBACK_MODEL ? [model] : [model, FALLBACK_MODEL];
     let lastError: AiProviderError | undefined;
     for (const [index, requestedModel] of models.entries()) {
-      emitDiagnostic({
-        timestamp: new Date().toISOString(),
-        stage: `gemini.${task}.request`,
-        message: "Sending structured prompt to Gemini.",
-        data: {
-          model: requestedModel,
-          fallbackAttempt: index > 0,
-          prompt,
-          outputSchema: boundedOutputSchema,
-          maxOutputTokens: 8192,
-          responseMimeType: "application/json",
-        },
-      });
       try {
         const responseText = await request({
           model: requestedModel,
@@ -284,13 +372,6 @@ export function createGeminiProvider(
           );
         }
 
-        emitDiagnostic({
-          timestamp: new Date().toISOString(),
-          stage: `gemini.${task}.response`,
-          message: "Received Gemini response body.",
-          data: { model: requestedModel, responseText },
-        });
-
         let decoded: unknown;
         try {
           decoded = JSON.parse(responseText);
@@ -303,13 +384,14 @@ export function createGeminiProvider(
           );
         }
         try {
-          const parsed = schema.parse(decoded);
-          emitDiagnostic({
-            timestamp: new Date().toISOString(),
-            stage: `gemini.${task}.validated`,
-            message: "Gemini response passed the task response schema.",
-            data: parsed,
-          });
+          const normalized =
+            task === "selectAchievements"
+              ? normalizeSelectionSupplements(
+                  input as AchievementSelectionInput,
+                  decoded,
+                )
+              : decoded;
+          const parsed = schema.parse(normalized);
           return parsed;
         } catch (error) {
           const issuePaths =
@@ -328,7 +410,7 @@ export function createGeminiProvider(
                 ].join(",")
               : "unknown-schema-error";
           throw new AiProviderError(
-            `Gemini returned a response that did not match the required format (${issuePaths}).`,
+            "Gemini returned an incomplete or inconsistent response. Try again.",
             "INVALID_RESPONSE",
             true,
             `OUTPUT_SCHEMA_MISMATCH:${issuePaths}`,
@@ -348,19 +430,6 @@ export function createGeminiProvider(
           errorName === "AbortError" ||
           errorName === "TimeoutError";
         if (index === 0 && models.length > 1 && recoverable) {
-          emitDiagnostic({
-            timestamp: new Date().toISOString(),
-            stage: `gemini.${task}.retry`,
-            message: "Primary model failed; retrying with fallback model.",
-            data: {
-              model: requestedModel,
-              fallbackModel: FALLBACK_MODEL,
-              code: providerError.code,
-              diagnosticCode: providerError.diagnosticCode,
-              retryable: providerError.retryable,
-              httpStatus: status,
-            },
-          });
           console.warn("Gemini request retrying with fallback model.", {
             task,
             diagnostic: providerError.diagnosticCode ?? providerError.code,
@@ -368,18 +437,6 @@ export function createGeminiProvider(
           });
           continue;
         }
-        emitDiagnostic({
-          timestamp: new Date().toISOString(),
-          stage: `gemini.${task}.error`,
-          message: providerError.message,
-          data: {
-            model: requestedModel,
-            code: providerError.code,
-            diagnosticCode: providerError.diagnosticCode,
-            retryable: providerError.retryable,
-            httpStatus: status,
-          },
-        });
         throw providerError;
       }
     }
@@ -448,8 +505,6 @@ export function createGeminiProvider(
               ),
             ),
           ];
-          if (supportingAchievementIds.length === 0) return [];
-
           seenSkillIds.add(skill.id);
           return [{ ...recommendation, supportingAchievementIds }];
         },
@@ -498,12 +553,6 @@ export function createGeminiProvider(
             40 <=
           MAX_PROMPT_CHARACTERS
         ) {
-          emitDiagnostic({
-            timestamp: new Date().toISOString(),
-            stage: "gemini.draftResume.quality-correction",
-            message: "Correcting omitted supported JD terminology once.",
-            data: { missing },
-          });
           try {
             const corrected = await run(
               "draftResume",
@@ -518,13 +567,6 @@ export function createGeminiProvider(
               result = corrected;
           } catch (error) {
             if (!(error instanceof AiProviderError)) throw error;
-            emitDiagnostic({
-              timestamp: new Date().toISOString(),
-              stage: "gemini.draftResume.quality-correction-unavailable",
-              message:
-                "Kept the validated initial draft after the bounded correction failed.",
-              data: { code: error.code, diagnosticCode: error.diagnosticCode },
-            });
           }
         }
       }

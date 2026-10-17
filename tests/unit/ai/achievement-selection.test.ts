@@ -198,10 +198,11 @@ describe("AI achievement selection service", () => {
     expect(response.budget.usedLines).toBeLessThanOrEqual(8);
   });
 
-  it("uses direct and meaning-level local matches when the model fails", async () => {
+  it("uses direct and meaning-level local matches only after explicit consent", async () => {
     const input = makeInput({ contentBudgetLines: 40 });
     const response = await recommendAchievements({
       input,
+      allowLocalFallback: true,
       selectWithAi: async () => {
         throw Object.assign(new Error("upstream unavailable"), {
           code: "SERVICE_UNAVAILABLE",
@@ -232,13 +233,33 @@ describe("AI achievement selection service", () => {
     );
   });
 
-  it("explains retryable provider failures and logs only safe diagnostics", async () => {
+  it("surfaces an AI failure instead of silently switching to local matching", async () => {
+    const input = makeInput({ contentBudgetLines: 40 });
+    await expect(
+      recommendAchievements({
+        input,
+        selectWithAi: async () => {
+          throw new AiProviderError(
+            "Gemini quota exhausted.",
+            "RATE_LIMITED",
+            true,
+          );
+        },
+      }),
+    ).rejects.toMatchObject({
+      code: "RATE_LIMITED",
+      message: "Gemini quota exhausted.",
+    });
+  });
+
+  it("explains retryable provider failures without exposing upstream details", async () => {
     const input = makeInput({ contentBudgetLines: 40 });
     const warning = vi.spyOn(console, "warn").mockImplementation(() => {});
 
     try {
       const response = await recommendAchievements({
         input,
+        allowLocalFallback: true,
         selectWithAi: async () => {
           throw new AiProviderError(
             "do not expose this detail",
@@ -252,7 +273,7 @@ describe("AI achievement selection service", () => {
       expect(response.notice).toContain("request limit was reached");
       expect(response.notice).not.toContain("do not expose this detail");
       expect(warning).toHaveBeenCalledWith(
-        "AI achievement selection failed; using local fallback.",
+        "AI achievement selection failed; using local fallback after consent.",
         {
           code: "RATE_LIMITED",
           diagnostic: "RATE_LIMITED",
@@ -279,6 +300,7 @@ describe("AI achievement selection service", () => {
     });
     const response = await recommendAchievements({
       input,
+      allowLocalFallback: true,
       selectWithAi: async () => {
         throw new Error("offline");
       },
@@ -294,8 +316,14 @@ describe("AI achievement selection service", () => {
     ]);
   });
 
-  it("deduplicates model IDs and recommends unlisted skills only with selected evidence", async () => {
+  it("deduplicates model IDs and retains JD-relevant unlisted skills without linked evidence", async () => {
     const input = makeInput({ contentBudgetLines: 40 });
+    const unlinkedSkill = input.skills.find(
+      (skill) => skill.id === "skill-infrastructure-as-code",
+    );
+    if (!unlinkedSkill) throw new Error("Expected test skill in resume input.");
+    unlinkedSkill.isListedOnCurrentResume = false;
+    unlinkedSkill.evidenceAchievementIds = [];
     const skillResult = aiResult(input, [
       "achievement-cloud-deployment-platform",
       "achievement-cloud-deployment-platform",
@@ -303,8 +331,8 @@ describe("AI achievement selection service", () => {
     skillResult.skillRecommendations = [
       {
         skillId: "skill-infrastructure-as-code",
-        rationale: "The selected point shows this skill.",
-        supportingAchievementIds: ["achievement-cloud-deployment-platform"],
+        rationale: "This skill is relevant to the active job description.",
+        supportingAchievementIds: [],
       },
     ];
     const response = await recommendAchievements({
@@ -322,7 +350,7 @@ describe("AI achievement selection service", () => {
       expect.arrayContaining([
         expect.objectContaining({
           skillId: "skill-infrastructure-as-code",
-          supportingAchievementIds: ["achievement-cloud-deployment-platform"],
+          supportingAchievementIds: [],
         }),
       ]),
     );
@@ -332,6 +360,7 @@ describe("AI achievement selection service", () => {
     const input = makeInput({ contentBudgetLines: 40 });
     const response = await recommendAchievements({
       input,
+      allowLocalFallback: true,
       selectWithAi: async () => {
         throw new Error("offline");
       },
