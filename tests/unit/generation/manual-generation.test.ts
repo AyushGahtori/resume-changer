@@ -95,6 +95,29 @@ describe("manual resume generation", () => {
     expect(JSON.stringify(result)).not.toContain(validRequest.jobDescription);
   });
 
+  it("honors reviewed section choices and bullet order", () => {
+    const cloudPoint = "achievement-cloud-deployment-platform";
+    const projectPoint = "achievement-queueboard-worker-model";
+    const result = createManualGeneration(library, {
+      ...validRequest,
+      selectedAchievementIds: [cloudPoint, firstPoint.id, projectPoint],
+      sectionOrder: ["experience", "education", "skills"],
+    });
+
+    expect(result.latex.indexOf(library.jobs[0].points[1].text)).toBeLessThan(
+      result.latex.indexOf(firstPoint.text),
+    );
+    expect(result.latex).not.toContain("\\section*{Projects}");
+    expect(result.latex).not.toContain(
+      "\\section*{Licenses and Certifications}",
+    );
+    expect(result.metadata.sectionOrder).toEqual([
+      "experience",
+      "education",
+      "skills",
+    ]);
+  });
+
   it("uses approved tailored wording in the deterministic LaTeX output", () => {
     const tailoredText = "Provisioned AWS services using Terraform modules.";
     const result = createManualGeneration(library, {
@@ -183,7 +206,7 @@ describe("manual resume generation", () => {
     );
   });
 
-  it("renders an unlisted JD-relevant skill without linked achievement evidence and rejects unknown skills", () => {
+  it("allows a user-selected library skill without a linked achievement bullet and rejects unknown skills", () => {
     const result = createManualGeneration(library, {
       ...validRequest,
       selectedSkillIds: ["skill-infrastructure-as-code"],

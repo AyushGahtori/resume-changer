@@ -366,6 +366,7 @@ export type RenderResumeLatexInput = {
   library: ResumeLibrary;
   selectedAchievementIds: string[];
   selectedSkillIds?: string[];
+  sectionOrder?: ResumeSectionType[];
   jobDescription?: string;
   achievementTextOverrides?: Array<{
     achievementId: string;
@@ -373,7 +374,6 @@ export type RenderResumeLatexInput = {
     inferredTerms?: string[];
     text: string;
   }>;
-  sectionOrder?: ResumeSectionType[];
   summaryOverride?: string;
   analysis?: JobAnalysisResult;
 };

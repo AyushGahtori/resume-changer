@@ -238,6 +238,8 @@ Create the main review workspace as the point where the AI-assisted flow becomes
 
 In this same workspace, let the user include or exclude generated bullets, reorder bullets within a job or project, and choose whether projects or credentials appear. Apply overrides to generation state and refresh the LaTeX/PDF without losing the review context. Provide loading, error, and completed states for each stage. Playwright tests should cover the mocked happy path, source-ID visibility for synthesized bullets, AI/compile failures, include/exclude, reorder, section toggles, and regeneration after edits. The task is complete when users can audit and correct the generated resume before exporting it.
 
+Skill rows are independent of achievement bullets: a skill selected from the user's declared skill library does not need a matching selected achievement ID. Treat it as a user-declared skill, not an AI-inferred fact; keep the skill independently selectable during review.
+
 Required workflow: update `main`, create `codex/task-19-review-and-overrides`, implement the review screen and correction controls together, add unit and Playwright coverage, run all quality commands, manually inspect the full flow, then push or merge only after checks pass.
 
 ### Task 20: Add Export Package
