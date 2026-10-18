@@ -86,6 +86,122 @@ test("selects points, generates LaTeX, copies and downloads the output", async (
   );
 });
 
+test("reviews generated bullets, reorders evidence, edits wording, and toggles sections", async ({
+  page,
+}) => {
+  let compileCount = 0;
+  await page.route("**/api/compile", (route) => {
+    compileCount += 1;
+    return route.fulfill({
+      status: 200,
+      contentType: "application/pdf",
+      headers: { "X-PDF-Pages": "1" },
+      body: createOnePagePdf(),
+    });
+  });
+  await page
+    .getByLabel("Select achievement achievement-service-capacity-design")
+    .check();
+  await page
+    .getByLabel("Select achievement achievement-cloud-deployment-platform")
+    .check();
+  await page
+    .getByLabel("Select achievement achievement-queueboard-worker-model")
+    .check();
+  await page.getByRole("button", { name: "Generate LaTeX" }).click();
+  await expect(page.getByLabel("Generated LaTeX")).toBeVisible();
+  await page.getByRole("button", { name: "Create PDF" }).click();
+  await expect(page.getByText("PDF ready · 1 page.")).toBeVisible();
+
+  await expect(
+    page.getByRole("region", { name: "Generated resume review" }),
+  ).toContainText("Evidence · achievement-queueboard-worker-model");
+  await page
+    .getByLabel("Review bullet achievement-cloud-deployment-platform")
+    .fill("Standardized verified cloud deployments and release checks.");
+  await page
+    .getByRole("button", {
+      name: "Move bullet up: achievement-cloud-deployment-platform",
+    })
+    .click();
+  await page.getByLabel("Include Projects section").uncheck();
+  await page.getByLabel("Include credentials").uncheck();
+  await page.getByLabel("Include skill Python").check();
+  const updateRequest = page.waitForRequest(
+    (request) =>
+      request.url().endsWith("/api/generate") && request.method() === "POST",
+  );
+  await page.getByRole("button", { name: "Apply review changes" }).click();
+  const request = await updateRequest;
+  expect(request.postDataJSON().selectedSkillIds).toContain("skill-python");
+  expect(request.postDataJSON().selectedAchievementIds).toEqual([
+    "achievement-cloud-deployment-platform",
+    "achievement-service-capacity-design",
+    "achievement-queueboard-worker-model",
+  ]);
+  await expect.poll(() => compileCount).toBe(2);
+
+  await page.getByRole("tab", { name: "LaTeX" }).click();
+  const preview = page.getByLabel("Generated LaTeX");
+  await expect(preview).toContainText(
+    "Standardized verified cloud deployments and release checks.",
+  );
+  await expect(preview).not.toContainText("\\section*{Projects}");
+  await expect(preview).not.toContainText(
+    "\\section*{Licenses and Certifications}",
+  );
+  const latex = await preview.innerText();
+  expect(latex.indexOf("Standardized verified cloud deployments")).toBeLessThan(
+    latex.indexOf("Redesigned service boundaries"),
+  );
+  await page.setViewportSize({ width: 390, height: 844 });
+  const dimensions = await page.evaluate(() => ({
+    documentWidth: document.documentElement.scrollWidth,
+    viewportWidth: document.documentElement.clientWidth,
+  }));
+  expect(dimensions.documentWidth).toBeLessThanOrEqual(
+    dimensions.viewportWidth,
+  );
+});
+
+test("keeps the reviewed draft visible when applying edits fails", async ({
+  page,
+}) => {
+  await page
+    .getByLabel("Select achievement achievement-service-capacity-design")
+    .check();
+  await page.getByRole("button", { name: "Generate LaTeX" }).click();
+  const preview = page.getByLabel("Generated LaTeX");
+  await expect(preview).toContainText("Redesigned service boundaries", {
+    timeout: 15_000,
+  });
+
+  await page.route("**/api/generate", (route) =>
+    route.fulfill({
+      status: 503,
+      contentType: "application/json",
+      body: JSON.stringify({ error: "Resume update temporarily failed." }),
+    }),
+  );
+  await page
+    .getByLabel("Review bullet achievement-service-capacity-design")
+    .fill("Edited draft that should remain available after a failed update.");
+  await page.getByRole("button", { name: "Apply review changes" }).click();
+
+  await expect(
+    page.locator('.generation-error-message[role="alert"]'),
+  ).toContainText("Resume update temporarily failed.");
+  await expect(
+    page.getByRole("region", { name: "Generated resume review" }),
+  ).toBeVisible();
+  await expect(
+    page.getByLabel("Review bullet achievement-service-capacity-design"),
+  ).toHaveValue(
+    "Edited draft that should remain available after a failed update.",
+  );
+  await expect(preview).toContainText("Redesigned service boundaries");
+});
+
 test("returns structured validation and renderer errors from the API", async ({
   request,
 }) => {

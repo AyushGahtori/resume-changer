@@ -8,8 +8,11 @@ import {
   ResumeRenderError,
   selectSkillsForResume,
 } from "../latex/render-resume";
-import { StableIdSchema } from "../schemas/resume-data";
-import type { ResumeLibrary } from "../schemas/resume-data";
+import {
+  ResumeSectionTypeSchema,
+  StableIdSchema,
+} from "../schemas/resume-data";
+import type { ResumeLibrary, ResumeSectionType } from "../schemas/resume-data";
 
 function isHttpUrl(value: string) {
   if (!value) return true;
@@ -35,6 +38,7 @@ export const ManualGenerationRequestSchema = z
       .min(1, "Enter a job description before generating.")
       .max(MAX_JD_CHARACTERS),
     selectedAchievementIds: z.array(StableIdSchema).min(1),
+    sectionOrder: z.array(ResumeSectionTypeSchema).min(1).optional(),
     summaryOverride: z.string().trim().min(1).max(1500).optional(),
     tailoringMode: z.enum(["manual", "guided", "auto"]).default("manual"),
     selectedSkillIds: z.array(StableIdSchema).optional(),
@@ -66,6 +70,7 @@ export type ManualGenerationMetadata = {
   roleTitle: string;
   jobUrl: string;
   selectedAchievementIds: string[];
+  sectionOrder?: ResumeSectionType[];
   tailoringMode: "manual" | "guided" | "auto";
   sourceProvenance: Array<{
     achievementId: string;
@@ -119,6 +124,7 @@ export function createManualGeneration(
   const latex = renderResumeLatex({
     library,
     selectedAchievementIds: normalized.selectedAchievementIds,
+    sectionOrder: normalized.sectionOrder,
     selectedSkillIds: normalized.selectedSkillIds,
     jobDescription: normalized.jobDescription,
     achievementTextOverrides: normalized.achievementTextOverrides,
@@ -227,6 +233,7 @@ export function createManualGeneration(
       roleTitle: normalized.roleTitle,
       jobUrl: normalized.jobUrl,
       selectedAchievementIds: normalized.selectedAchievementIds,
+      sectionOrder: normalized.sectionOrder as ResumeSectionType[] | undefined,
       tailoringMode: normalized.tailoringMode,
       sourceProvenance,
       renderedSkillIds,

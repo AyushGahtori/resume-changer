@@ -31,6 +31,7 @@ import type { ResumeDataSource } from "@/lib/data/loaders";
 import type {
   AchievementPoint,
   ResumeLibrary,
+  ResumeSectionType,
 } from "@/lib/schemas/resume-data";
 
 type Props = {
@@ -52,6 +53,10 @@ type CompileErrorResponse = {
   code?: string;
   diagnostics?: string;
 };
+type ReviewBulletDraft =
+  ManualGenerationResult["metadata"]["generatedBullets"][number] & {
+    included: boolean;
+  };
 
 function getPointGroups(library: ResumeLibrary): PointGroup[] {
   return [
@@ -164,6 +169,18 @@ export default function ResumeGenerator({ library, source }: Props) {
     "guided" | "auto" | null
   >(null);
   const [result, setResult] = useState<ManualGenerationResult | null>(null);
+  const [reviewBullets, setReviewBullets] = useState<ReviewBulletDraft[]>([]);
+  const [reviewSkillIds, setReviewSkillIds] = useState<string[]>(
+    library.skills
+      .filter((skill) => skill.isListedOnCurrentResume)
+      .map((skill) => skill.id),
+  );
+  const [includeProjects, setIncludeProjects] = useState(
+    library.preferences.sectionOrder.includes("projects"),
+  );
+  const [includeCredentials, setIncludeCredentials] = useState(
+    library.preferences.sectionOrder.includes("credentials"),
+  );
   const [requestError, setRequestError] = useState("");
   const [copyMessage, setCopyMessage] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
@@ -695,6 +712,14 @@ export default function ResumeGenerator({ library, source }: Props) {
       approvedTailoredIds: string[];
       tailoredText: Record<string, string>;
       workflow: "manual" | "guided" | "auto";
+      achievementTextOverrides?: Array<{
+        achievementId: string;
+        sourceAchievementIds: string[];
+        inferredTerms?: string[];
+        text: string;
+      }>;
+      sectionOrder?: ResumeSectionType[];
+      summaryOverride?: string;
     } = {
       selectedIds,
       selectedSkillIds,
@@ -702,10 +727,9 @@ export default function ResumeGenerator({ library, source }: Props) {
       approvedTailoredIds,
       tailoredText,
       workflow: tailoringWorkflow ?? (tailoring ? "guided" : "manual"),
+      sectionOrder: library.preferences.sectionOrder,
     },
   ): Promise<ManualGenerationResult | null> {
-    clearPdfOutput();
-    setResult(null);
     setRequestError("");
     setCopyMessage("");
 
@@ -727,33 +751,38 @@ export default function ResumeGenerator({ library, source }: Props) {
         jobUrl: draft.jobUrl,
         jobDescription: draft.jobDescription,
         tailoringMode: options.workflow,
-        ...(options.tailoring?.resumeSummary &&
-        (options.workflow === "auto" || summaryApproved)
-          ? { summaryOverride: options.tailoring.resumeSummary }
-          : {}),
+        ...(options.summaryOverride
+          ? { summaryOverride: options.summaryOverride }
+          : options.tailoring?.resumeSummary &&
+              (options.workflow === "auto" || summaryApproved)
+            ? { summaryOverride: options.tailoring.resumeSummary }
+            : {}),
         selectedAchievementIds: options.selectedIds,
+        sectionOrder: options.sectionOrder ?? library.preferences.sectionOrder,
         ...(options.selectedSkillIds
           ? { selectedSkillIds: options.selectedSkillIds }
           : {}),
-        ...(options.tailoring
-          ? {
-              achievementTextOverrides: options.tailoring.proposals
-                .filter(
-                  (proposal) =>
-                    options.approvedTailoredIds.includes(
-                      proposal.achievementId,
-                    ) && options.selectedIds.includes(proposal.achievementId),
-                )
-                .map((proposal) => ({
-                  achievementId: proposal.achievementId,
-                  sourceAchievementIds: proposal.sourceAchievementIds,
-                  inferredTerms: proposal.inferredTerms,
-                  text:
-                    options.tailoredText[proposal.achievementId] ??
-                    proposal.proposedText,
-                })),
-            }
-          : {}),
+        ...(options.achievementTextOverrides
+          ? { achievementTextOverrides: options.achievementTextOverrides }
+          : options.tailoring
+            ? {
+                achievementTextOverrides: options.tailoring.proposals
+                  .filter(
+                    (proposal) =>
+                      options.approvedTailoredIds.includes(
+                        proposal.achievementId,
+                      ) && options.selectedIds.includes(proposal.achievementId),
+                  )
+                  .map((proposal) => ({
+                    achievementId: proposal.achievementId,
+                    sourceAchievementIds: proposal.sourceAchievementIds,
+                    inferredTerms: proposal.inferredTerms,
+                    text:
+                      options.tailoredText[proposal.achievementId] ??
+                      proposal.proposedText,
+                  })),
+              }
+            : {}),
       };
       const response = await fetch("/api/generate", {
         method: "POST",
@@ -768,15 +797,27 @@ export default function ResumeGenerator({ library, source }: Props) {
             ? payload.error
             : "The resume could not be generated. Try again.",
         );
-        setResult(null);
         return null;
       }
 
+      clearPdfOutput();
       setResult(payload);
+      setReviewBullets(
+        payload.metadata.generatedBullets.map((bullet) => ({
+          ...bullet,
+          included: true,
+        })),
+      );
+      setReviewSkillIds(
+        options.selectedSkillIds ??
+          selectedSkillIds ??
+          library.skills
+            .filter((skill) => skill.isListedOnCurrentResume)
+            .map((skill) => skill.id),
+      );
       return payload;
     } catch {
       setRequestError("The server could not be reached. Try again.");
-      setResult(null);
       return null;
     } finally {
       setIsGenerating(false);
@@ -786,6 +827,64 @@ export default function ResumeGenerator({ library, source }: Props) {
   async function handleGenerate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     await requestGeneration();
+  }
+
+  async function applyReviewChanges() {
+    if (!result) return;
+    const included = reviewBullets.filter((bullet) => bullet.included);
+    if (included.length === 0) {
+      setRequestError("Include at least one resume bullet before updating.");
+      return;
+    }
+    const hadPdf = Boolean(pdfUrl);
+    const selectedIds = included.flatMap(
+      (bullet) => bullet.sourceAchievementIds,
+    );
+    const generated = await requestGeneration({
+      selectedIds,
+      selectedSkillIds: reviewSkillIds,
+      tailoring: null,
+      approvedTailoredIds: [],
+      tailoredText: {},
+      workflow: result.metadata.tailoringMode,
+      achievementTextOverrides: included.map((bullet) => ({
+        achievementId: bullet.achievementId,
+        sourceAchievementIds: bullet.sourceAchievementIds,
+        ...(bullet.inferredTerms
+          ? { inferredTerms: bullet.inferredTerms }
+          : {}),
+        text: bullet.text,
+      })),
+      sectionOrder: library.preferences.sectionOrder.filter(
+        (section) =>
+          (section !== "projects" || includeProjects) &&
+          (section !== "credentials" || includeCredentials),
+      ),
+      summaryOverride: result.metadata.resumeSummary,
+    });
+    if (generated && hadPdf) await compilePdf(generated);
+  }
+
+  function moveReviewBullet(achievementId: string, direction: -1 | 1) {
+    setReviewBullets((current) => {
+      const index = current.findIndex(
+        (bullet) => bullet.achievementId === achievementId,
+      );
+      if (index < 0) return current;
+      const groupId = pointById.get(achievementId)?.group.id;
+      let target = index + direction;
+      while (
+        target >= 0 &&
+        target < current.length &&
+        pointById.get(current[target].achievementId)?.group.id !== groupId
+      ) {
+        target += direction;
+      }
+      if (target < 0 || target >= current.length) return current;
+      const next = [...current];
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
   }
 
   async function compilePdf(target: ManualGenerationResult | null = result) {
@@ -1760,6 +1859,214 @@ export default function ResumeGenerator({ library, source }: Props) {
               <p className="generation-error-message" role="alert">
                 {tailoringError}
               </p>
+            )}
+
+            {result && (
+              <section
+                className="resume-review-workspace"
+                aria-label="Generated resume review"
+              >
+                <div className="resume-review-heading">
+                  <div>
+                    <h3>Review generated content</h3>
+                    <p>
+                      {reviewBullets.filter((bullet) => bullet.included).length}{" "}
+                      of {reviewBullets.length} bullets included
+                    </p>
+                  </div>
+                  <button
+                    className="primary-button"
+                    disabled={isGenerating || isCompiling}
+                    onClick={applyReviewChanges}
+                    type="button"
+                  >
+                    {isGenerating ? "Updating resume…" : "Apply review changes"}
+                  </button>
+                </div>
+                {analysis && (
+                  <details className="resume-review-analysis">
+                    <summary>
+                      Job analysis · {analysis.targetTitle}
+                      {analysis.seniority ? ` · ${analysis.seniority}` : ""}
+                    </summary>
+                    <div>
+                      {[
+                        [
+                          "Required qualifications",
+                          analysis.requiredQualifications,
+                        ],
+                        ["Responsibilities", analysis.responsibilities],
+                        [
+                          "Preferred qualifications",
+                          analysis.preferredQualifications,
+                        ],
+                        ["Tools and platforms", analysis.toolsAndPlatforms],
+                        ["Domain concepts", analysis.domainConcepts],
+                      ].map(([heading, items]) =>
+                        Array.isArray(items) && items.length ? (
+                          <section key={heading as string}>
+                            <h4>{heading as string}</h4>
+                            <ul>
+                              {items.map((item) => (
+                                <li key={item as string}>{item as string}</li>
+                              ))}
+                            </ul>
+                          </section>
+                        ) : null,
+                      )}
+                    </div>
+                  </details>
+                )}
+                <div className="resume-review-sections">
+                  <label>
+                    <input
+                      checked={includeProjects}
+                      onChange={(event) =>
+                        setIncludeProjects(event.target.checked)
+                      }
+                      type="checkbox"
+                    />
+                    Include Projects section
+                  </label>
+                  <label>
+                    <input
+                      checked={includeCredentials}
+                      onChange={(event) =>
+                        setIncludeCredentials(event.target.checked)
+                      }
+                      type="checkbox"
+                    />
+                    Include credentials
+                  </label>
+                </div>
+                <fieldset className="resume-review-skills">
+                  <legend>Skills to include</legend>
+                  <div>
+                    {library.skills.map((skill) => (
+                      <label key={skill.id}>
+                        <input
+                          aria-label={`Include skill ${skill.name}`}
+                          checked={reviewSkillIds.includes(skill.id)}
+                          onChange={(event) =>
+                            setReviewSkillIds((current) =>
+                              event.target.checked
+                                ? [...new Set([...current, skill.id])]
+                                : current.filter((id) => id !== skill.id),
+                            )
+                          }
+                          type="checkbox"
+                        />
+                        {skill.name}
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
+                <div className="resume-review-bullets">
+                  {reviewBullets.map((bullet, index) => {
+                    const group = pointById.get(bullet.achievementId)?.group;
+                    const sameGroupIndexes = reviewBullets
+                      .map((item, itemIndex) =>
+                        pointById.get(item.achievementId)?.group.id ===
+                        group?.id
+                          ? itemIndex
+                          : -1,
+                      )
+                      .filter((itemIndex) => itemIndex >= 0);
+                    const position = sameGroupIndexes.indexOf(index);
+                    return (
+                      <article
+                        className="resume-review-bullet"
+                        key={bullet.achievementId}
+                      >
+                        <div className="resume-review-bullet-heading">
+                          <label>
+                            <input
+                              checked={bullet.included}
+                              onChange={(event) =>
+                                setReviewBullets((current) =>
+                                  current.map((item) =>
+                                    item.achievementId === bullet.achievementId
+                                      ? {
+                                          ...item,
+                                          included: event.target.checked,
+                                        }
+                                      : item,
+                                  ),
+                                )
+                              }
+                              type="checkbox"
+                            />
+                            Include
+                          </label>
+                          <strong>
+                            {group?.title ?? "Resume achievement"}
+                            {group?.subtitle ? ` · ${group.subtitle}` : ""}
+                          </strong>
+                          <div className="resume-review-order-actions">
+                            <button
+                              aria-label={`Move bullet up: ${bullet.achievementId}`}
+                              disabled={position <= 0}
+                              onClick={() =>
+                                moveReviewBullet(bullet.achievementId, -1)
+                              }
+                              title="Move bullet up"
+                              type="button"
+                            >
+                              ↑
+                            </button>
+                            <button
+                              aria-label={`Move bullet down: ${bullet.achievementId}`}
+                              disabled={
+                                position < 0 ||
+                                position === sameGroupIndexes.length - 1
+                              }
+                              onClick={() =>
+                                moveReviewBullet(bullet.achievementId, 1)
+                              }
+                              title="Move bullet down"
+                              type="button"
+                            >
+                              ↓
+                            </button>
+                          </div>
+                        </div>
+                        <textarea
+                          aria-label={`Review bullet ${bullet.achievementId}`}
+                          maxLength={8_000}
+                          onChange={(event) =>
+                            setReviewBullets((current) =>
+                              current.map((item) =>
+                                item.achievementId === bullet.achievementId
+                                  ? { ...item, text: event.target.value }
+                                  : item,
+                              ),
+                            )
+                          }
+                          rows={3}
+                          value={bullet.text}
+                        />
+                        <details>
+                          <summary>
+                            Evidence · {bullet.sourceAchievementIds.join(", ")}
+                          </summary>
+                          <ul>
+                            {bullet.sourceAchievementIds.map((id) => (
+                              <li key={id}>
+                                <strong>
+                                  {pointById.get(id)?.group.title ?? id}
+                                </strong>
+                                :{" "}
+                                {pointById.get(id)?.point.text ??
+                                  "Source unavailable"}
+                              </li>
+                            ))}
+                          </ul>
+                        </details>
+                      </article>
+                    );
+                  })}
+                </div>
+              </section>
             )}
 
             {groups.length === 0 ? (
