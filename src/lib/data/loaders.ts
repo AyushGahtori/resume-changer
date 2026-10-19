@@ -172,12 +172,19 @@ export function loadTemplateMetadata({
   );
 }
 
-export function loadGenerationHistory({
-  rootDir = process.cwd(),
+export async function loadGenerationHistory({
+  rootDir = process.env.RESUME_LIBRARY_ROOT ?? process.cwd(),
 }: RootOptions = {}) {
-  return loadValidatedFile(
-    "data/generation-history.json",
-    GenerationHistorySchema,
-    rootDir,
-  );
+  try {
+    return await loadValidatedFile(
+      "data/generation-history.json",
+      GenerationHistorySchema,
+      rootDir,
+    );
+  } catch (error) {
+    if (error instanceof DataLoadError && error.code === "missing-file") {
+      return { schemaVersion: 1 as const, entries: [] };
+    }
+    throw error;
+  }
 }

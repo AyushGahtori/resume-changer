@@ -86,6 +86,35 @@ function getSafeJobUrl(value: string): string | null {
   }
 }
 
+function createHistoryRequest(
+  generation: ManualGenerationResult,
+  status: "drafted" | "compiled" | "failed",
+  pdfBase64?: string,
+) {
+  const metadata = generation.metadata;
+  return {
+    id: metadata.id,
+    createdAt: metadata.generatedAt,
+    ...(metadata.company.trim() ? { company: metadata.company.trim() } : {}),
+    role: metadata.roleTitle.trim() || "Untitled resume",
+    selectedAchievementIds: metadata.selectedAchievementIds,
+    generatedBullets: metadata.generatedBullets.map((bullet, index) => ({
+      id: `generated-bullet-${index + 1}`,
+      text: bullet.text,
+      section:
+        metadata.sourceProvenance.find(
+          (sourcePoint) => sourcePoint.achievementId === bullet.achievementId,
+        )?.section ?? "experience",
+      sourceAchievementIds: bullet.sourceAchievementIds,
+    })),
+    provider: metadata.aiProvider ?? "none",
+    status,
+    repairAttemptCount: metadata.fitting?.repairAttempts ?? 0,
+    latex: generation.latex,
+    ...(pdfBase64 ? { pdfBase64 } : {}),
+  };
+}
+
 function normalizeKeywordText(value: string): string {
   return value
     .toLocaleLowerCase()
@@ -183,6 +212,7 @@ export default function ResumeGenerator({ library, source }: Props) {
     null,
   );
   const [compileStatus, setCompileStatus] = useState("");
+  const [historyNotice, setHistoryNotice] = useState("");
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [outputView, setOutputView] = useState<"latex" | "pdf">("latex");
   const [pdfZoom, setPdfZoom] = useState(100);
@@ -211,6 +241,34 @@ export default function ResumeGenerator({ library, source }: Props) {
     () => new Map(library.skills.map((skill) => [skill.id, skill])),
     [library.skills],
   );
+
+  async function persistGeneration(
+    generation: ManualGenerationResult,
+    status: "drafted" | "compiled" | "failed",
+    savedPdfBase64?: string,
+  ) {
+    try {
+      const response = await fetch("/api/history", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(
+          createHistoryRequest(generation, status, savedPdfBase64),
+        ),
+      });
+      const payload = (await response.json().catch(() => ({}))) as {
+        error?: string;
+      };
+      setHistoryNotice(
+        response.ok
+          ? "Saved to generation history on this device."
+          : `Resume output is ready, but it could not be saved to history. ${payload.error ?? "Try again from the History page."}`,
+      );
+    } catch {
+      setHistoryNotice(
+        "Resume output is ready, but local history could not be reached. You can keep using this output; try again later.",
+      );
+    }
+  }
 
   useEffect(() => {
     const saved = readDraft(window.localStorage);
@@ -679,6 +737,11 @@ export default function ResumeGenerator({ library, source }: Props) {
         setStudioSession((current) => current + 1);
         setResult(generation);
         setPdfBase64(auto.compiled.pdfBase64);
+        await persistGeneration(
+          generation,
+          "compiled",
+          auto.compiled.pdfBase64,
+        );
         setSelectedIds(generation.metadata.selectedAchievementIds);
         setPdfUrl(
           URL.createObjectURL(new Blob([bytes], { type: "application/pdf" })),
@@ -846,6 +909,7 @@ export default function ResumeGenerator({ library, source }: Props) {
       clearPdfOutput();
       setStudioSession((current) => current + 1);
       setResult(payload);
+      await persistGeneration(payload, "drafted");
       return payload;
     } catch {
       setRequestError("The server could not be reached. Try again.");
@@ -862,6 +926,14 @@ export default function ResumeGenerator({ library, source }: Props) {
 
   async function compilePdf(target: ManualGenerationResult | null = result) {
     if (!target || isCompiling) return false;
+    const retainedPdfBase64 =
+      result?.metadata.id === target.metadata.id ? pdfBase64 : null;
+    const persistFailure = () =>
+      void persistGeneration(
+        target,
+        retainedPdfBase64 ? "compiled" : "failed",
+        retainedPdfBase64 ?? undefined,
+      );
     const controller = new AbortController();
     compileAbortRef.current = controller;
     setIsCompiling(true);
@@ -883,6 +955,7 @@ export default function ResumeGenerator({ library, source }: Props) {
           error: payload.error ?? "The PDF could not be created. Try again.",
           diagnostics: payload.diagnostics,
         });
+        persistFailure();
         return false;
       }
 
@@ -893,6 +966,7 @@ export default function ResumeGenerator({ library, source }: Props) {
         setCompileError({
           error: "The server returned an unverified PDF. Try compiling again.",
         });
+        persistFailure();
         return false;
       }
 
@@ -902,6 +976,7 @@ export default function ResumeGenerator({ library, source }: Props) {
         setCompileError({
           error: "The server response was not a valid PDF. Try again.",
         });
+        persistFailure();
         return false;
       }
       if (controller.signal.aborted) return false;
@@ -913,7 +988,9 @@ export default function ResumeGenerator({ library, source }: Props) {
         binary += String.fromCharCode(
           ...bytes.subarray(offset, offset + 32768),
         );
-      setPdfBase64(btoa(binary));
+      const compiledPdfBase64 = btoa(binary);
+      setPdfBase64(compiledPdfBase64);
+      await persistGeneration(target, "compiled", compiledPdfBase64);
       setOutputView("pdf");
       setCompileStatus("PDF ready · 1 page.");
       return true;
@@ -922,6 +999,7 @@ export default function ResumeGenerator({ library, source }: Props) {
         setCompileError({
           error: "The PDF service could not be reached. Try again.",
         });
+        persistFailure();
       }
       return false;
     } finally {
@@ -1193,6 +1271,11 @@ export default function ResumeGenerator({ library, source }: Props) {
           {autoTailorStatus}
         </p>
       )}
+      {historyNotice && (
+        <p className="generation-notice" role="status">
+          {historyNotice}
+        </p>
+      )}
       {savedSession && !result && (
         <div className="studio-restore" role="status">
           <span>
@@ -1203,6 +1286,11 @@ export default function ResumeGenerator({ library, source }: Props) {
             onClick={() => {
               setResult(savedSession.generation);
               setPdfBase64(savedSession.pdfBase64);
+              void persistGeneration(
+                savedSession.generation,
+                savedSession.pdfBase64 ? "compiled" : "drafted",
+                savedSession.pdfBase64 ?? undefined,
+              );
               if (savedSession.pdfBase64) {
                 const bytes = Uint8Array.from(
                   atob(savedSession.pdfBase64),
@@ -1965,14 +2053,16 @@ export default function ResumeGenerator({ library, source }: Props) {
                   const bytes = Uint8Array.from(atob(base64), (character) =>
                     character.charCodeAt(0),
                   );
-                  setResult({
+                  const appliedGeneration = {
                     ...generation,
                     metadata: {
                       ...generation.metadata,
                       aiProvider: result?.metadata.aiProvider ?? null,
                     },
-                  });
+                  };
+                  setResult(appliedGeneration);
                   setPdfBase64(base64);
+                  void persistGeneration(appliedGeneration, "compiled", base64);
                   setPdfUrl(
                     URL.createObjectURL(
                       new Blob([bytes], { type: "application/pdf" }),
