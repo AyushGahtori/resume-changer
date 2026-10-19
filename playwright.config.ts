@@ -2,11 +2,11 @@ import { defineConfig, devices } from "@playwright/test";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+const e2ePort = process.env.PLAYWRIGHT_PORT ?? "3010";
 process.env.RESUME_LIBRARY_ROOT = join(
   tmpdir(),
-  "resume-changer-playwright-data",
+  `resume-changer-playwright-data-${e2ePort}`,
 );
-const e2ePort = process.env.PLAYWRIGHT_PORT ?? "3010";
 const e2eUrl = `http://127.0.0.1:${e2ePort}`;
 
 export default defineConfig({
@@ -27,8 +27,8 @@ export default defineConfig({
   ],
   webServer: {
     command: "node scripts/start-e2e-server.mjs",
-    url: e2eUrl,
+    url: `${e2eUrl}/generate?source=demo`,
     reuseExistingServer: false,
-    timeout: 120_000,
+    timeout: 180_000,
   },
 });

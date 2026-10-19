@@ -26,6 +26,10 @@ import {
 } from "./prompt-builder";
 import { includesPhrase } from "./requirement-coverage";
 import { AiProviderError, type AiProvider } from "./provider";
+import {
+  AchievementWritingInputSchema,
+  AchievementWritingResultSchema,
+} from "./achievement-writing";
 
 const DEFAULT_MODEL = "gemini-3.6-flash";
 const FALLBACK_MODEL = "gemini-2.5-flash-lite";
@@ -452,6 +456,15 @@ export function createGeminiProvider(
 
   return {
     name: "gemini",
+    async writeAchievement(operation, input) {
+      AchievementWritingInputSchema.parse(input);
+      const task = {
+        edit: "achievementEdit",
+        merge: "achievementMerge",
+        create: "achievementCreate",
+      } as const;
+      return run(task[operation], input, AchievementWritingResultSchema);
+    },
     analyzeJobDescription(input: JobAnalysisInput): Promise<JobAnalysisResult> {
       JobAnalysisInputSchema.parse(input);
       return run("analyzeJobDescription", input, JobAnalysisResultSchema);

@@ -19,6 +19,38 @@ export type TextBox = {
   height: number;
 };
 
+export async function readPdfTextBoxes(pdf: Uint8Array): Promise<TextBox[][]> {
+  const { getDocument } = await import("pdfjs-dist/legacy/build/pdf.mjs");
+  const task = getDocument({ data: new Uint8Array(pdf), useSystemFonts: true });
+  const document = await task.promise;
+  try {
+    const pages: TextBox[][] = [];
+    for (let number = 1; number <= document.numPages; number += 1) {
+      const page = await document.getPage(number);
+      const content = await page.getTextContent();
+      pages.push(
+        content.items.flatMap((item) =>
+          "str" in item
+            ? [
+                {
+                  text: item.str,
+                  x: item.transform[4],
+                  y: item.transform[5],
+                  width: item.width,
+                  height: item.height,
+                },
+              ]
+            : [],
+        ),
+      );
+      page.cleanup();
+    }
+    return pages;
+  } finally {
+    await task.destroy();
+  }
+}
+
 /** PDF coordinates are bottom-left based; measurements use top-left coordinates. */
 export function layoutFromTextBoxes(
   boxes: TextBox[],

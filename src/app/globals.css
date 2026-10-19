@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./studio.css";
 
 :root {
   color-scheme: light;
@@ -12,37 +13,45 @@
   --quiet: #8c948e;
   --line: #dce2dc;
   --line-strong: #c9d1ca;
-  --accent: #c85f43;
-  --accent-hover: #ad4d35;
-  --accent-soft: #f8ebe6;
+  --accent: #e87532;
+  --accent-hover: #c95b22;
+  --accent-soft: #fff0e5;
+  --accent-contrast: #2d1a0e;
+  --imagination: #7846d7;
+  --imagination-hover: #6232bf;
+  --imagination-soft: #f1ebff;
   --teal: #356e61;
   --teal-soft: #e5f0eb;
   --danger: #a43e32;
   --danger-soft: #f9eae7;
-  --focus: #398374;
+  --focus: #7846d7;
   --shadow: 0 14px 40px rgb(32 44 37 / 5%);
 }
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --canvas: #0d1012;
-  --sidebar: #101416;
-  --surface: #151a1c;
-  --surface-soft: #1a2022;
-  --surface-hover: #242b2d;
+  --canvas: #101014;
+  --sidebar: #121217;
+  --surface: #17171e;
+  --surface-soft: #1e1e27;
+  --surface-hover: #292933;
   --ink: #f0f1ed;
   --muted: #a5aeaa;
   --quiet: #7f8985;
-  --line: #2c3435;
-  --line-strong: #3a4444;
-  --accent: #f08a66;
-  --accent-hover: #ff9c78;
-  --accent-soft: #34221d;
+  --line: #30303c;
+  --line-strong: #444453;
+  --accent: #fb923c;
+  --accent-hover: #fdba74;
+  --accent-soft: #382519;
+  --accent-contrast: #241306;
+  --imagination: #b69aff;
+  --imagination-hover: #cfbdff;
+  --imagination-soft: #281e3a;
   --teal: #91cbb9;
   --teal-soft: #1e302c;
   --danger: #ff9b8c;
   --danger-soft: #392321;
-  --focus: #83cdbc;
+  --focus: #c4b5fd;
   --shadow: 0 16px 48px rgb(0 0 0 / 18%);
 }
 
@@ -71,6 +80,10 @@ button,
 input,
 textarea {
   font: inherit;
+}
+
+input[type="checkbox"] {
+  accent-color: var(--accent);
 }
 
 button {
@@ -1718,195 +1731,6 @@ a:focus-visible {
   font-size: 10px;
 }
 
-.resume-review-workspace {
-  margin: 18px 0;
-  padding: 14px 0;
-  border-top: 1px solid var(--line);
-  border-bottom: 1px solid var(--line);
-}
-
-.resume-review-heading,
-.resume-review-bullet-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.resume-review-heading h3 {
-  margin: 0;
-  font-size: 14px;
-}
-
-.resume-review-heading p {
-  margin: 4px 0 0;
-  color: var(--muted);
-  font-size: 11px;
-}
-
-.resume-review-analysis {
-  margin: 12px 0;
-  padding: 9px 0;
-  border-top: 1px solid var(--line);
-  border-bottom: 1px solid var(--line);
-  color: var(--muted);
-  font-size: 11px;
-}
-
-.resume-review-analysis summary {
-  color: var(--ink);
-  cursor: pointer;
-  font-weight: 650;
-}
-
-.resume-review-analysis > div {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 4px 16px;
-  padding-top: 8px;
-}
-
-.resume-review-analysis h4 {
-  margin: 6px 0 3px;
-  color: var(--ink);
-  font-size: 10px;
-}
-
-.resume-review-analysis ul {
-  margin: 0;
-  padding-left: 16px;
-  line-height: 1.45;
-}
-
-.resume-review-heading button,
-.resume-review-order-actions button {
-  min-height: 30px;
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  background: var(--surface);
-  color: var(--ink);
-  cursor: pointer;
-}
-
-.resume-review-heading button {
-  padding: 0 10px;
-}
-
-.resume-review-sections {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px 20px;
-  margin: 12px 0;
-  color: var(--muted);
-  font-size: 11px;
-}
-
-.resume-review-sections label,
-.resume-review-bullet-heading label {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.resume-review-skills {
-  min-width: 0;
-  margin: 0 0 12px;
-  padding: 8px 0;
-  border: 0;
-  border-top: 1px solid var(--line);
-  color: var(--muted);
-  font-size: 11px;
-}
-
-.resume-review-skills legend {
-  padding: 0 6px 0 0;
-  color: var(--ink);
-  font-weight: 650;
-}
-
-.resume-review-skills > div {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 7px 12px;
-  padding-top: 7px;
-}
-
-.resume-review-skills label {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.resume-review-bullets {
-  display: grid;
-  gap: 10px;
-}
-
-.resume-review-bullet {
-  min-width: 0;
-  padding-top: 10px;
-  border-top: 1px solid var(--line);
-}
-
-.resume-review-bullet-heading {
-  justify-content: flex-start;
-  margin-bottom: 7px;
-  font-size: 10px;
-}
-
-.resume-review-bullet-heading > strong {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
-.resume-review-order-actions {
-  display: inline-flex;
-  gap: 4px;
-  margin-left: auto;
-}
-
-.resume-review-order-actions button {
-  width: 30px;
-  padding: 0;
-  font-size: 15px;
-}
-
-.resume-review-order-actions button:disabled,
-.resume-review-heading button:disabled {
-  cursor: not-allowed;
-  opacity: 0.5;
-}
-
-.resume-review-bullet textarea {
-  display: block;
-  width: 100%;
-  min-height: 70px;
-  padding: 8px;
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  background: var(--surface);
-  color: var(--ink);
-  font: inherit;
-  font-size: 11px;
-  line-height: 1.5;
-  resize: vertical;
-}
-
-.resume-review-bullet details {
-  margin-top: 7px;
-  color: var(--muted);
-  font-size: 10px;
-}
-
-.resume-review-bullet details summary {
-  cursor: pointer;
-}
-
-.resume-review-bullet details ul {
-  padding-left: 18px;
-  line-height: 1.5;
-}
-
 .generation-selection-actions,
 .generation-output-actions {
   display: flex;
@@ -1975,16 +1799,16 @@ a:focus-visible {
 }
 
 .generation-selection-actions .generation-ai-button {
-  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
-  background: var(--accent-soft);
-  color: var(--accent-hover);
+  border-color: color-mix(in srgb, var(--imagination) 45%, var(--line));
+  background: var(--imagination-soft);
+  color: var(--imagination-hover);
   font-weight: 650;
 }
 
 .generation-selection-actions .generation-ai-button:hover:not(:disabled) {
-  border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent-soft) 70%, var(--surface));
-  color: var(--accent-hover);
+  border-color: var(--imagination);
+  background: color-mix(in srgb, var(--imagination-soft) 70%, var(--surface));
+  color: var(--imagination-hover);
 }
 
 .generation-selection-actions button:disabled {
@@ -2791,10 +2615,6 @@ a:focus-visible {
   }
 
   .guided-tailor-comparison {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .resume-review-analysis > div {
     grid-template-columns: minmax(0, 1fr);
   }
 

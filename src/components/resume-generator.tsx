@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { FormEvent } from "react";
+import type { CSSProperties, FormEvent } from "react";
 import {
   EMPTY_DRAFT,
   readDraft,
@@ -25,6 +25,8 @@ import { assessRequirementCoverage } from "@/lib/ai/requirement-coverage";
 import { createJobContextId } from "@/lib/ai/job-context";
 import { readJobAnalysisCache } from "@/lib/jd-analysis-cache";
 import { createResumeFilename } from "@/lib/generation/resume-filename";
+import ResumeStudio from "./resume-studio";
+import { parseStudioSession } from "@/lib/generation/studio-session";
 import { getGenerationOriginNotice } from "@/lib/generation/generation-origin";
 import type { ManualGenerationResult } from "@/lib/generation/manual-generation";
 import type { ResumeDataSource } from "@/lib/data/loaders";
@@ -53,11 +55,6 @@ type CompileErrorResponse = {
   code?: string;
   diagnostics?: string;
 };
-type ReviewBulletDraft =
-  ManualGenerationResult["metadata"]["generatedBullets"][number] & {
-    included: boolean;
-  };
-
 function getPointGroups(library: ResumeLibrary): PointGroup[] {
   return [
     ...library.jobs.map((job) => ({
@@ -143,6 +140,7 @@ async function postWithFallbackConsent(
 }
 
 export default function ResumeGenerator({ library, source }: Props) {
+  const [studioSession, setStudioSession] = useState(0);
   const [draft, setDraft] = useState<JobDescriptionDraft>(EMPTY_DRAFT);
   const [draftReady, setDraftReady] = useState(false);
   const [draftNotice, setDraftNotice] = useState("");
@@ -169,18 +167,13 @@ export default function ResumeGenerator({ library, source }: Props) {
     "guided" | "auto" | null
   >(null);
   const [result, setResult] = useState<ManualGenerationResult | null>(null);
-  const [reviewBullets, setReviewBullets] = useState<ReviewBulletDraft[]>([]);
-  const [reviewSkillIds, setReviewSkillIds] = useState<string[]>(
-    library.skills
-      .filter((skill) => skill.isListedOnCurrentResume)
-      .map((skill) => skill.id),
-  );
-  const [includeProjects, setIncludeProjects] = useState(
-    library.preferences.sectionOrder.includes("projects"),
-  );
-  const [includeCredentials, setIncludeCredentials] = useState(
-    library.preferences.sectionOrder.includes("credentials"),
-  );
+  const [showGenerationSettings, setShowGenerationSettings] = useState(false);
+  const [pdfBase64, setPdfBase64] = useState<string | null>(null);
+  const [savedSession, setSavedSession] = useState<{
+    generation: ManualGenerationResult;
+    pdfBase64: string | null;
+  } | null>(null);
+  const [sessionReady, setSessionReady] = useState(false);
   const [requestError, setRequestError] = useState("");
   const [copyMessage, setCopyMessage] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
@@ -193,6 +186,8 @@ export default function ResumeGenerator({ library, source }: Props) {
   const [outputView, setOutputView] = useState<"latex" | "pdf">("latex");
   const [pdfZoom, setPdfZoom] = useState(100);
   const [isPdfFullscreen, setIsPdfFullscreen] = useState(false);
+  const [pdfFit, setPdfFit] = useState<"width" | "page" | null>("width");
+  const [previewShare, setPreviewShare] = useState(43);
   const compileAbortRef = useRef<AbortController | null>(null);
   const selectionAbortRef = useRef<AbortController | null>(null);
   const tailoringAbortRef = useRef<AbortController | null>(null);
@@ -241,6 +236,46 @@ export default function ResumeGenerator({ library, source }: Props) {
   }, [pdfUrl]);
 
   useEffect(() => {
+    if (!draftReady || sessionReady) return;
+    try {
+      setSavedSession(
+        parseStudioSession(
+          localStorage.getItem(`resume-changer.resume-session.v1.${source}`),
+          JSON.stringify([
+            draft.company,
+            draft.roleTitle,
+            draft.jobDescription,
+          ]),
+          source,
+        ),
+      );
+    } catch {
+      /* Storage can be unavailable without blocking generation. */
+    }
+    setSessionReady(true);
+  }, [draftReady, sessionReady, source, draft]);
+
+  useEffect(() => {
+    if (!sessionReady || !result || savedSession) return;
+    try {
+      localStorage.setItem(
+        `resume-changer.resume-session.v1.${source}`,
+        JSON.stringify({
+          jobSignature: JSON.stringify([
+            draft.company,
+            draft.roleTitle,
+            draft.jobDescription,
+          ]),
+          generation: result,
+          pdfBase64,
+        }),
+      );
+    } catch {
+      /* The studio separately reports draft-storage failures. */
+    }
+  }, [result, pdfBase64, draft, source, sessionReady, savedSession]);
+
+  useEffect(() => {
     function syncFullscreenState() {
       setIsPdfFullscreen(document.fullscreenElement === pdfViewportRef.current);
     }
@@ -277,6 +312,7 @@ export default function ResumeGenerator({ library, source }: Props) {
     compileAbortRef.current = null;
     setIsCompiling(false);
     setPdfUrl(null);
+    setPdfBase64(null);
     setOutputView("latex");
     setPdfZoom(100);
     setCompileError(null);
@@ -639,7 +675,9 @@ export default function ResumeGenerator({ library, source }: Props) {
           latex: auto.compiled.latex,
           metadata: auto.compiled.metadata,
         };
+        setStudioSession((current) => current + 1);
         setResult(generation);
+        setPdfBase64(auto.compiled.pdfBase64);
         setSelectedIds(generation.metadata.selectedAchievementIds);
         setPdfUrl(
           URL.createObjectURL(new Blob([bytes], { type: "application/pdf" })),
@@ -801,20 +839,8 @@ export default function ResumeGenerator({ library, source }: Props) {
       }
 
       clearPdfOutput();
+      setStudioSession((current) => current + 1);
       setResult(payload);
-      setReviewBullets(
-        payload.metadata.generatedBullets.map((bullet) => ({
-          ...bullet,
-          included: true,
-        })),
-      );
-      setReviewSkillIds(
-        options.selectedSkillIds ??
-          selectedSkillIds ??
-          library.skills
-            .filter((skill) => skill.isListedOnCurrentResume)
-            .map((skill) => skill.id),
-      );
       return payload;
     } catch {
       setRequestError("The server could not be reached. Try again.");
@@ -827,64 +853,6 @@ export default function ResumeGenerator({ library, source }: Props) {
   async function handleGenerate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     await requestGeneration();
-  }
-
-  async function applyReviewChanges() {
-    if (!result) return;
-    const included = reviewBullets.filter((bullet) => bullet.included);
-    if (included.length === 0) {
-      setRequestError("Include at least one resume bullet before updating.");
-      return;
-    }
-    const hadPdf = Boolean(pdfUrl);
-    const selectedIds = included.flatMap(
-      (bullet) => bullet.sourceAchievementIds,
-    );
-    const generated = await requestGeneration({
-      selectedIds,
-      selectedSkillIds: reviewSkillIds,
-      tailoring: null,
-      approvedTailoredIds: [],
-      tailoredText: {},
-      workflow: result.metadata.tailoringMode,
-      achievementTextOverrides: included.map((bullet) => ({
-        achievementId: bullet.achievementId,
-        sourceAchievementIds: bullet.sourceAchievementIds,
-        ...(bullet.inferredTerms
-          ? { inferredTerms: bullet.inferredTerms }
-          : {}),
-        text: bullet.text,
-      })),
-      sectionOrder: library.preferences.sectionOrder.filter(
-        (section) =>
-          (section !== "projects" || includeProjects) &&
-          (section !== "credentials" || includeCredentials),
-      ),
-      summaryOverride: result.metadata.resumeSummary,
-    });
-    if (generated && hadPdf) await compilePdf(generated);
-  }
-
-  function moveReviewBullet(achievementId: string, direction: -1 | 1) {
-    setReviewBullets((current) => {
-      const index = current.findIndex(
-        (bullet) => bullet.achievementId === achievementId,
-      );
-      if (index < 0) return current;
-      const groupId = pointById.get(achievementId)?.group.id;
-      let target = index + direction;
-      while (
-        target >= 0 &&
-        target < current.length &&
-        pointById.get(current[target].achievementId)?.group.id !== groupId
-      ) {
-        target += direction;
-      }
-      if (target < 0 || target >= current.length) return current;
-      const next = [...current];
-      [next[index], next[target]] = [next[target], next[index]];
-      return next;
-    });
   }
 
   async function compilePdf(target: ManualGenerationResult | null = result) {
@@ -934,7 +902,13 @@ export default function ResumeGenerator({ library, source }: Props) {
       if (controller.signal.aborted) return false;
 
       setPdfUrl(URL.createObjectURL(pdf));
-      setPdfZoom(100);
+      const bytes = new Uint8Array(await pdf.arrayBuffer());
+      let binary = "";
+      for (let offset = 0; offset < bytes.length; offset += 32768)
+        binary += String.fromCharCode(
+          ...bytes.subarray(offset, offset + 32768),
+        );
+      setPdfBase64(btoa(binary));
       setOutputView("pdf");
       setCompileStatus("PDF ready · 1 page.");
       return true;
@@ -1114,8 +1088,15 @@ export default function ResumeGenerator({ library, source }: Props) {
     (id) => !approvedTailoredIds.includes(id),
   );
   const requestedSkillCount =
-    result?.metadata.selectedSkillIds?.length ??
-    library.skills.filter((skill) => skill.isListedOnCurrentResume).length;
+    result?.metadata.studioDocument &&
+    !result.metadata.studioDocument.sectionOrder.includes("skills")
+      ? 0
+      : (result?.metadata.selectedSkillIds?.length ??
+        library.skills.filter((skill) => skill.isListedOnCurrentResume).length);
+  const renderedAchievementCount =
+    result?.metadata.generatedBullets?.length ??
+    result?.metadata.selectedAchievementIds.length ??
+    0;
   const hasRecommendationEdits =
     JSON.stringify([...selectedIds].sort()) !==
       JSON.stringify([...recommendedIds].sort()) ||
@@ -1130,9 +1111,13 @@ export default function ResumeGenerator({ library, source }: Props) {
           <p className="eyebrow">
             MANUAL GENERATION <span>02 / 04</span>
           </p>
-          <h1 id="page-title">Build your resume.</h1>
+          <h1 id="page-title">
+            {result ? "Your next chapter." : "Build your resume."}
+          </h1>
           <p className="page-intro">
-            Choose the experience you want to include, then review the LaTeX.
+            {result
+              ? "A focused workspace for your experience, skills, and story."
+              : "Choose the experience you want to include, then review the LaTeX."}
           </p>
         </div>
         <nav className="library-source-switch" aria-label="Resume data source">
@@ -1182,944 +1167,898 @@ export default function ResumeGenerator({ library, source }: Props) {
           {draftNotice}
         </p>
       )}
+      {result && autoTailorStatus && (
+        <p className="auto-tailor-status" role="status">
+          {autoTailorStatus}
+        </p>
+      )}
+      {savedSession && !result && (
+        <div className="studio-restore" role="status">
+          <span>
+            A previous resume and editing session are saved for this job.
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              setResult(savedSession.generation);
+              setPdfBase64(savedSession.pdfBase64);
+              if (savedSession.pdfBase64) {
+                const bytes = Uint8Array.from(
+                  atob(savedSession.pdfBase64),
+                  (character) => character.charCodeAt(0),
+                );
+                setPdfUrl(
+                  URL.createObjectURL(
+                    new Blob([bytes], { type: "application/pdf" }),
+                  ),
+                );
+                setOutputView("pdf");
+              }
+              setSavedSession(null);
+            }}
+          >
+            Restore editing session
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setSavedSession(null);
+              try {
+                localStorage.removeItem(
+                  `resume-changer.resume-session.v1.${source}`,
+                );
+              } catch {}
+            }}
+          >
+            Start fresh
+          </button>
+        </div>
+      )}
 
       <form className="generation-form" onSubmit={handleGenerate}>
-        <div className="generation-layout">
+        <div
+          className={`generation-layout${result ? " is-studio-layout" : ""}`}
+          style={{ "--preview-share": `${previewShare}%` } as CSSProperties}
+        >
           <section
             className="generation-selection"
-            aria-labelledby="selection-title"
+            aria-label={
+              result ? "Resume editing workspace" : "Choose achievements"
+            }
           >
-            <div className="generation-section-heading">
-              <div>
-                <h2 id="selection-title">Choose achievements</h2>
-                <p>
-                  {selectedIds.length} selected · {enabledIds.length} enabled
-                </p>
-              </div>
-              <div className="generation-selection-actions">
-                <button
-                  className="generation-ai-button"
-                  disabled={
-                    !draftReady ||
-                    !hasJobDescription ||
-                    !analysis ||
-                    isRecommending ||
-                    isTailoring ||
-                    isAutoTailoring ||
-                    enabledIds.length === 0
-                  }
-                  onClick={handleRecommend}
-                  type="button"
-                >
-                  {isRecommending
-                    ? "Finding matches…"
-                    : selectionError
-                      ? "Retry suggestions"
-                      : "Suggest points"}
-                </button>
-                <button
-                  className="generation-ai-button"
-                  disabled={
-                    !draftReady ||
-                    !hasJobDescription ||
-                    !analysis ||
-                    isRecommending ||
-                    isTailoring ||
-                    isAutoTailoring ||
-                    selectedIds.length === 0 ||
-                    selectedIds.length > 100
-                  }
-                  onClick={handleTailorSelected}
-                  type="button"
-                >
-                  {isTailoring
-                    ? "Drafting wording…"
-                    : tailoringError
-                      ? "Retry Guided Tailor"
-                      : "Guided Tailor"}
-                </button>
-                <button
-                  className="generation-ai-button"
-                  disabled={
-                    !draftReady ||
-                    !hasJobDescription ||
-                    !analysis ||
-                    isRecommending ||
-                    isTailoring ||
-                    isAutoTailoring ||
-                    enabledIds.length === 0
-                  }
-                  onClick={handleAutoTailor}
-                  type="button"
-                >
-                  {isAutoTailoring ? "Auto tailoring…" : "Auto Tailor"}
-                </button>
-                <button
-                  disabled={isRecommending || isTailoring || isAutoTailoring}
-                  type="button"
-                  onClick={selectAll}
-                >
-                  Select all
-                </button>
-                <button
-                  disabled={isRecommending || isTailoring || isAutoTailoring}
-                  type="button"
-                  onClick={clearSelection}
-                >
-                  Clear
-                </button>
-              </div>
-            </div>
-
-            {autoTailorStatus && (
-              <p className="auto-tailor-status" role="status">
-                {autoTailorStatus}
-              </p>
-            )}
-
-            {!analysis && draftReady && hasJobDescription && (
-              <p className="selection-analysis-notice">
-                Analyze this job description on the{" "}
-                <Link href="/">Job description</Link> page before requesting AI
-                recommendations.
-              </p>
-            )}
-            {selectionError && (
-              <p className="generation-error-message" role="alert">
-                {selectionError}
-              </p>
-            )}
-            {recommendation && (
-              <section
-                className="selection-recommendation"
-                aria-label="AI recommendations"
-                aria-live="polite"
-              >
-                <div className="selection-recommendation-heading">
+            {(!result || showGenerationSettings) && (
+              <>
+                <div className="generation-section-heading">
                   <div>
-                    <h3>
-                      {recommendation.mode === "ai"
-                        ? "AI recommendations"
-                        : "Local matching fallback"}
-                    </h3>
-                    <p>{recommendation.recommendations.summary}</p>
+                    <h2 id="selection-title">Choose achievements</h2>
+                    <p>
+                      {selectedIds.length} selected · {enabledIds.length}{" "}
+                      enabled
+                    </p>
                   </div>
-                  {hasRecommendationEdits && (
-                    <button onClick={applyRecommendations} type="button">
-                      Apply suggestions
+                  <div className="generation-selection-actions">
+                    <button
+                      className="generation-ai-button"
+                      disabled={
+                        !draftReady ||
+                        !hasJobDescription ||
+                        !analysis ||
+                        isRecommending ||
+                        isTailoring ||
+                        isAutoTailoring ||
+                        enabledIds.length === 0
+                      }
+                      onClick={handleRecommend}
+                      type="button"
+                    >
+                      {isRecommending
+                        ? "Finding matches…"
+                        : selectionError
+                          ? "Retry suggestions"
+                          : "Suggest points"}
                     </button>
-                  )}
+                    <button
+                      className="generation-ai-button"
+                      disabled={
+                        !draftReady ||
+                        !hasJobDescription ||
+                        !analysis ||
+                        isRecommending ||
+                        isTailoring ||
+                        isAutoTailoring ||
+                        selectedIds.length === 0 ||
+                        selectedIds.length > 100
+                      }
+                      onClick={handleTailorSelected}
+                      type="button"
+                    >
+                      {isTailoring
+                        ? "Drafting wording…"
+                        : tailoringError
+                          ? "Retry Guided Tailor"
+                          : "Guided Tailor"}
+                    </button>
+                    <button
+                      className="generation-ai-button"
+                      disabled={
+                        !draftReady ||
+                        !hasJobDescription ||
+                        !analysis ||
+                        isRecommending ||
+                        isTailoring ||
+                        isAutoTailoring ||
+                        enabledIds.length === 0
+                      }
+                      onClick={handleAutoTailor}
+                      type="button"
+                    >
+                      {isAutoTailoring ? "Auto tailoring…" : "Auto Tailor"}
+                    </button>
+                    <button
+                      disabled={
+                        isRecommending || isTailoring || isAutoTailoring
+                      }
+                      type="button"
+                      onClick={selectAll}
+                    >
+                      Select all
+                    </button>
+                    <button
+                      disabled={
+                        isRecommending || isTailoring || isAutoTailoring
+                      }
+                      type="button"
+                      onClick={clearSelection}
+                    >
+                      Clear
+                    </button>
+                  </div>
                 </div>
-                <p className="selection-budget" role="status">
-                  Confidence estimate:{" "}
-                  {Math.round(recommendation.recommendations.confidence * 100)}%
-                  <span aria-hidden="true"> · </span>
-                  Estimated content budget: {
-                    recommendation.budget.usedLines
-                  } / {recommendation.budget.availableLines} lines
-                </p>
-                {recommendation.notice && (
-                  <p className="selection-fallback-notice" role="status">
-                    {recommendation.notice}
+
+                {autoTailorStatus && (
+                  <p className="auto-tailor-status" role="status">
+                    {autoTailorStatus}
                   </p>
                 )}
-                <div className="selection-coverage">
-                  <div className="selection-coverage-heading">
-                    <h4>Requirement coverage</h4>
-                    <strong>
-                      {coveredCount} / {coverageItems.length} supported
-                      {partialCount ? ` · ${partialCount} partial` : ""}
-                    </strong>
-                  </div>
-                  {coverageItems.length ? (
-                    <>
-                      <progress
-                        aria-label="Requirements covered by selected achievements"
-                        max={coverageItems.length}
-                        value={coveredCount}
-                      />
-                      {[
-                        ...new Set(coverageItems.map((item) => item.category)),
-                      ].map((category) => (
-                        <div className="coverage-category" key={category}>
-                          <h5>{category}</h5>
-                          <ul>
-                            {coverageItems
-                              .filter((item) => item.category === category)
-                              .map((item) => {
-                                const status =
-                                  item.status === "supported"
-                                    ? "Covered"
-                                    : item.status === "partial"
-                                      ? "Partial support"
-                                      : item.status === "uncertain"
-                                        ? "Needs confirmation"
-                                        : item.status ===
-                                            "evidence-not-selected"
-                                          ? "Not selected"
-                                          : "No match found";
-                                const evidenceIds = item.selectedEvidenceIds
-                                  .length
-                                  ? item.selectedEvidenceIds
-                                  : item.availableIds;
-                                return (
-                                  <li key={item.requirement}>
-                                    <details>
-                                      <summary>
-                                        <span
-                                          className={
-                                            status === "Covered"
-                                              ? "coverage-status is-covered"
-                                              : "coverage-status"
-                                          }
-                                        >
-                                          {status}
-                                        </span>
-                                        <span>{item.requirement}</span>
-                                      </summary>
-                                      <p>
-                                        {item.evidence.length
-                                          ? `${item.reason ?? ""} ${item.evidence.map((evidence) => `${evidence.kind}: ${evidence.label} — ${evidence.quote}`).join("; ")}`
-                                          : evidenceIds.length
-                                            ? `${item.selectedEvidenceIds.length ? "Selected evidence" : "Available evidence"}: ${evidenceIds
-                                                .map((id) => {
-                                                  const source =
-                                                    pointById.get(id);
-                                                  return source
-                                                    ? `${source.group.title}${source.group.subtitle ? `, ${source.group.subtitle}` : ""}: ${source.point.text}`
-                                                    : id;
-                                                })
-                                                .join("; ")}`
-                                            : "No supporting achievement was identified in the enabled library."}
-                                      </p>
-                                    </details>
-                                  </li>
-                                );
-                              })}
-                          </ul>
-                        </div>
-                      ))}
-                    </>
-                  ) : (
-                    <p>
-                      No explicit requirements or responsibilities were
-                      extracted.
-                    </p>
-                  )}
-                </div>
-                {recommendedSkillIds.length > 0 && (
-                  <div className="selection-skill-recommendations">
-                    <h4>Job-relevant skills to add</h4>
-                    {recommendation.recommendations.skillRecommendations.map(
-                      (suggestion) => {
-                        const skill = skillById.get(suggestion.skillId);
-                        if (!skill) return null;
-                        return (
-                          <label
-                            className="selection-skill-option"
-                            key={skill.id}
-                          >
-                            <input
-                              aria-label={`Add ${skill.name} to skills`}
-                              checked={
-                                selectedSkillIds?.includes(skill.id) ?? false
-                              }
-                              onChange={(event) => {
-                                setSelectedSkillIds((current) => {
-                                  const base =
-                                    current ??
-                                    library.skills
-                                      .filter(
-                                        (item) => item.isListedOnCurrentResume,
-                                      )
-                                      .map((item) => item.id);
-                                  return event.target.checked
-                                    ? [...new Set([...base, skill.id])]
-                                    : base.filter((id) => id !== skill.id);
-                                });
-                                clearPdfOutput();
-                                setResult(null);
-                                setRequestError("");
-                                setCopyMessage("");
-                              }}
-                              type="checkbox"
-                            />
-                            <span>
-                              <strong>{skill.name}</strong>
-                              <small>{suggestion.rationale}</small>
-                            </span>
-                          </label>
-                        );
-                      },
-                    )}
-                  </div>
-                )}
-              </section>
-            )}
 
-            {tailoring && (
-              <section
-                className="guided-tailor-review"
-                aria-label={
-                  tailoringWorkflow === "auto"
-                    ? "Auto Tailor review"
-                    : "Guided Tailor review"
-                }
-                aria-live="polite"
-              >
-                <div className="guided-tailor-heading">
-                  <div>
-                    <h3>
-                      {tailoringWorkflow === "auto"
-                        ? "Auto Tailor review"
-                        : "Guided Tailor"}
-                    </h3>
-                    <p>{tailoring.summary}</p>
-                    {tailoring.resumeSummary && (
+                {!analysis && draftReady && hasJobDescription && (
+                  <p className="selection-analysis-notice">
+                    Analyze this job description on the{" "}
+                    <Link href="/">Job description</Link> page before requesting
+                    AI recommendations.
+                  </p>
+                )}
+                {selectionError && (
+                  <p className="generation-error-message" role="alert">
+                    {selectionError}
+                  </p>
+                )}
+                {recommendation && (
+                  <section
+                    className="selection-recommendation"
+                    aria-label="AI recommendations"
+                    aria-live="polite"
+                  >
+                    <div className="selection-recommendation-heading">
                       <div>
-                        <h4>Resume summary</h4>
-                        <p>{tailoring.resumeSummary}</p>
-                        {tailoringWorkflow !== "auto" && (
-                          <label>
-                            <input
-                              type="checkbox"
-                              checked={summaryApproved}
-                              onChange={(event) => {
-                                setSummaryApproved(event.target.checked);
-                                setResult(null);
-                                clearPdfOutput();
-                              }}
-                            />{" "}
-                            Use this generated summary
-                          </label>
+                        <h3>
+                          {recommendation.mode === "ai"
+                            ? "AI recommendations"
+                            : "Local matching fallback"}
+                        </h3>
+                        <p>{recommendation.recommendations.summary}</p>
+                      </div>
+                      {hasRecommendationEdits && (
+                        <button onClick={applyRecommendations} type="button">
+                          Apply suggestions
+                        </button>
+                      )}
+                    </div>
+                    <p className="selection-budget" role="status">
+                      Confidence estimate:{" "}
+                      {Math.round(
+                        recommendation.recommendations.confidence * 100,
+                      )}
+                      %<span aria-hidden="true"> · </span>
+                      Estimated content budget:{" "}
+                      {recommendation.budget.usedLines} /{" "}
+                      {recommendation.budget.availableLines} lines
+                    </p>
+                    {recommendation.notice && (
+                      <p className="selection-fallback-notice" role="status">
+                        {recommendation.notice}
+                      </p>
+                    )}
+                    <div className="selection-coverage">
+                      <div className="selection-coverage-heading">
+                        <h4>Requirement coverage</h4>
+                        <strong>
+                          {coveredCount} / {coverageItems.length} supported
+                          {partialCount ? ` · ${partialCount} partial` : ""}
+                        </strong>
+                      </div>
+                      {coverageItems.length ? (
+                        <>
+                          <progress
+                            aria-label="Requirements covered by selected achievements"
+                            max={coverageItems.length}
+                            value={coveredCount}
+                          />
+                          {[
+                            ...new Set(
+                              coverageItems.map((item) => item.category),
+                            ),
+                          ].map((category) => (
+                            <div className="coverage-category" key={category}>
+                              <h5>{category}</h5>
+                              <ul>
+                                {coverageItems
+                                  .filter((item) => item.category === category)
+                                  .map((item) => {
+                                    const status =
+                                      item.status === "supported"
+                                        ? "Covered"
+                                        : item.status === "partial"
+                                          ? "Partial support"
+                                          : item.status === "uncertain"
+                                            ? "Needs confirmation"
+                                            : item.status ===
+                                                "evidence-not-selected"
+                                              ? "Not selected"
+                                              : "No match found";
+                                    const evidenceIds = item.selectedEvidenceIds
+                                      .length
+                                      ? item.selectedEvidenceIds
+                                      : item.availableIds;
+                                    return (
+                                      <li key={item.requirement}>
+                                        <details>
+                                          <summary>
+                                            <span
+                                              className={
+                                                status === "Covered"
+                                                  ? "coverage-status is-covered"
+                                                  : "coverage-status"
+                                              }
+                                            >
+                                              {status}
+                                            </span>
+                                            <span>{item.requirement}</span>
+                                          </summary>
+                                          <p>
+                                            {item.evidence.length
+                                              ? `${item.reason ?? ""} ${item.evidence.map((evidence) => `${evidence.kind}: ${evidence.label} — ${evidence.quote}`).join("; ")}`
+                                              : evidenceIds.length
+                                                ? `${item.selectedEvidenceIds.length ? "Selected evidence" : "Available evidence"}: ${evidenceIds
+                                                    .map((id) => {
+                                                      const source =
+                                                        pointById.get(id);
+                                                      return source
+                                                        ? `${source.group.title}${source.group.subtitle ? `, ${source.group.subtitle}` : ""}: ${source.point.text}`
+                                                        : id;
+                                                    })
+                                                    .join("; ")}`
+                                                : "No supporting achievement was identified in the enabled library."}
+                                          </p>
+                                        </details>
+                                      </li>
+                                    );
+                                  })}
+                              </ul>
+                            </div>
+                          ))}
+                        </>
+                      ) : (
+                        <p>
+                          No explicit requirements or responsibilities were
+                          extracted.
+                        </p>
+                      )}
+                    </div>
+                    {recommendedSkillIds.length > 0 && (
+                      <div className="selection-skill-recommendations">
+                        <h4>Job-relevant skills to add</h4>
+                        {recommendation.recommendations.skillRecommendations.map(
+                          (suggestion) => {
+                            const skill = skillById.get(suggestion.skillId);
+                            if (!skill) return null;
+                            return (
+                              <label
+                                className="selection-skill-option"
+                                key={skill.id}
+                              >
+                                <input
+                                  aria-label={`Add ${skill.name} to skills`}
+                                  checked={
+                                    selectedSkillIds?.includes(skill.id) ??
+                                    false
+                                  }
+                                  onChange={(event) => {
+                                    setSelectedSkillIds((current) => {
+                                      const base =
+                                        current ??
+                                        library.skills
+                                          .filter(
+                                            (item) =>
+                                              item.isListedOnCurrentResume,
+                                          )
+                                          .map((item) => item.id);
+                                      return event.target.checked
+                                        ? [...new Set([...base, skill.id])]
+                                        : base.filter((id) => id !== skill.id);
+                                    });
+                                    clearPdfOutput();
+                                    setResult(null);
+                                    setRequestError("");
+                                    setCopyMessage("");
+                                  }}
+                                  type="checkbox"
+                                />
+                                <span>
+                                  <strong>{skill.name}</strong>
+                                  <small>{suggestion.rationale}</small>
+                                </span>
+                              </label>
+                            );
+                          },
                         )}
                       </div>
                     )}
-                    {tailoring.qualityNotes?.map((note) => (
-                      <p className="selection-fallback-notice" key={note}>
-                        {note}
-                      </p>
-                    ))}
-                  </div>
-                  <span className="guided-tailor-count" role="status">
-                    {
-                      approvedTailoredIds.filter((id) =>
-                        selectedIds.includes(id),
-                      ).length
-                    }{" "}
-                    /{" "}
-                    {
-                      tailoring.proposals.filter((proposal) =>
-                        selectedIds.includes(proposal.achievementId),
-                      ).length
-                    }{" "}
-                    approved
-                  </span>
-                </div>
-                <div className="guided-tailor-actions">
-                  <button
-                    disabled={!hasUnapprovedBulkProposals}
-                    onClick={() => {
-                      setApprovedTailoredIds((current) => [
-                        ...new Set([...current, ...bulkApprovableIds]),
-                      ]);
-                      clearPdfOutput();
-                      setResult(null);
-                    }}
-                    type="button"
-                  >
-                    Approve all unchanged
-                  </button>
-                  <button
-                    disabled={approvedTailoredIds.length === 0}
-                    onClick={() => {
-                      setApprovedTailoredIds([]);
-                      clearPdfOutput();
-                      setResult(null);
-                    }}
-                    type="button"
-                  >
-                    Revoke all
-                  </button>
-                </div>
-                <p className="guided-tailor-note">
-                  Review disclosed framework inferences before using them. Only
-                  approved wording for selected points replaces the originals in
-                  the generated resume.
-                </p>
-                {tailoring.notice && (
-                  <p className="selection-fallback-notice" role="status">
-                    {tailoring.notice}
-                  </p>
+                  </section>
                 )}
-                <details className="draft-handoff">
-                  <summary>
-                    Draft context · {tailoring.handoff.job.company || "Company"}
-                    {tailoring.handoff.job.roleTitle
-                      ? " · " + tailoring.handoff.job.roleTitle
-                      : ""}
-                  </summary>
-                  <p>
-                    Context {tailoring.handoff.job.contextId.slice(0, 12)} ·{" "}
-                    {tailoring.handoff.selectedAchievements.length} selected
-                    sources · {tailoring.handoff.suggestedEvidence.length}{" "}
-                    evidence suggestions
-                  </p>
-                  <ul>
-                    {tailoring.handoff.requirements.map((requirement) => (
-                      <li key={requirement.id}>
-                        <strong>
-                          {requirement.status === "supported"
-                            ? "Supported"
-                            : requirement.status === "uncertain"
-                              ? "Uncertain"
-                              : requirement.status === "evidence-not-selected"
-                                ? "Evidence not selected"
-                                : "No evidence found"}
-                        </strong>
-                        <span>{requirement.text}</span>
-                        <small>
-                          {requirement.reason}
-                          {requirement.selectedAchievementIds.length
-                            ? " Selected: " +
-                              requirement.selectedAchievementIds.join(", ") +
-                              "."
-                            : ""}
-                          {requirement.availableAchievementIds.length &&
-                          !requirement.selectedAchievementIds.length
-                            ? " Available: " +
-                              requirement.availableAchievementIds.join(", ") +
-                              "."
-                            : ""}
-                        </small>
-                      </li>
-                    ))}
-                  </ul>
-                  <p>
-                    Estimated content budget:{" "}
-                    {tailoring.handoff.contentBudgetLines} lines.
-                  </p>
-                </details>
-                {tailoring.handoff.suggestedEvidence.length > 0 && (
-                  <div className="draft-evidence-suggestions">
-                    <h4>Other evidence to review</h4>
-                    <p>
-                      These points may help with open requirements. Add one or
-                      explicitly replace a selected point; they are never
-                      inserted automatically in Guided Tailor.
-                    </p>
-                    {tailoring.handoff.suggestedEvidence.map((suggestion) => {
-                      const supportingRequirements =
-                        tailoring.handoff.requirements.filter((requirement) =>
-                          suggestion.supportedRequirementIds.includes(
-                            requirement.id,
-                          ),
-                        );
-                      const replaceChoices = selectedIds.filter(
-                        (id) => id !== suggestion.achievementId,
-                      );
-                      return (
-                        <article key={suggestion.achievementId}>
-                          <strong>
-                            {suggestion.groupTitle}
-                            {suggestion.groupSubtitle
-                              ? " · " + suggestion.groupSubtitle
-                              : ""}
-                          </strong>
-                          <p>{suggestion.text}</p>
-                          <small>
-                            May support:{" "}
-                            {supportingRequirements
-                              .map((requirement) => requirement.text)
-                              .join("; ")}
-                          </small>
-                          <div className="guided-tailor-actions">
-                            <button
-                              disabled={isTailoring || isAutoTailoring}
-                              onClick={() =>
-                                applyDraftEvidenceAction(
-                                  suggestion.achievementId,
-                                )
-                              }
-                              type="button"
-                            >
-                              Add to selection
-                            </button>
-                            {replaceChoices.length > 0 && (
-                              <select
-                                aria-label={
-                                  "Replace a selected point with " +
-                                  suggestion.groupTitle
-                                }
-                                defaultValue=""
-                                disabled={isTailoring || isAutoTailoring}
-                                onChange={(event) => {
-                                  if (event.target.value) {
-                                    applyDraftEvidenceAction(
-                                      suggestion.achievementId,
-                                      event.target.value,
-                                    );
-                                  }
-                                }}
-                              >
-                                <option value="">
-                                  Replace selected point…
-                                </option>
-                                {replaceChoices.map((id) => (
-                                  <option key={id} value={id}>
-                                    {pointById.get(id)?.group.title ?? id}
-                                  </option>
-                                ))}
-                              </select>
-                            )}
-                          </div>
-                        </article>
-                      );
-                    })}
-                  </div>
-                )}
-                <div className="guided-tailor-proposals">
-                  {tailoring.proposals.map((proposal) => {
-                    const sourcePoint = pointById.get(proposal.achievementId);
-                    if (
-                      !sourcePoint ||
-                      !selectedIds.includes(proposal.achievementId)
-                    ) {
-                      return null;
+
+                {tailoring && (
+                  <section
+                    className="guided-tailor-review"
+                    aria-label={
+                      tailoringWorkflow === "auto"
+                        ? "Auto Tailor review"
+                        : "Guided Tailor review"
                     }
-                    const editedText =
-                      tailoredText[proposal.achievementId] ??
-                      proposal.proposedText;
-                    const originalNormalized = normalizeKeywordText(
-                      proposal.originalText,
-                    );
-                    const proposedNormalized = normalizeKeywordText(editedText);
-                    const addedTerms = tailoring.analyzedTerms.filter(
-                      (term) => {
-                        const normalizedTerm = normalizeKeywordText(term);
-                        return (
-                          normalizedTerm.length > 0 &&
-                          proposedNormalized.includes(normalizedTerm) &&
-                          !originalNormalized.includes(normalizedTerm)
-                        );
-                      },
-                    );
-                    const sourceContext =
-                      tailoring.handoff.selectedAchievements.find(
-                        (item) => item.achievementId === proposal.achievementId,
-                      );
-                    const supportedRequirements =
-                      tailoring.handoff.requirements.filter((requirement) =>
-                        sourceContext?.supportedRequirementIds.includes(
-                          requirement.id,
-                        ),
-                      );
-                    return (
-                      <article
-                        className="guided-tailor-proposal"
-                        key={proposal.achievementId}
-                      >
-                        <h4>
-                          {sourcePoint.group.title}
-                          {sourcePoint.group.subtitle
-                            ? ` · ${sourcePoint.group.subtitle}`
-                            : ""}
-                        </h4>
-                        <div className="guided-tailor-comparison">
+                    aria-live="polite"
+                  >
+                    <div className="guided-tailor-heading">
+                      <div>
+                        <h3>
+                          {tailoringWorkflow === "auto"
+                            ? "Auto Tailor review"
+                            : "Guided Tailor"}
+                        </h3>
+                        <p>{tailoring.summary}</p>
+                        {tailoring.resumeSummary && (
                           <div>
-                            <span className="guided-tailor-label">
-                              Original
-                            </span>
-                            <p>{proposal.originalText}</p>
-                            {(
-                              proposal.sourceAchievementIds ?? [
-                                proposal.achievementId,
-                              ]
-                            )
-                              .flatMap(
-                                (id) => pointById.get(id)?.point.metrics ?? [],
-                              )
-                              .map((metric) => (
-                                <p
-                                  className="guided-tailor-rationale"
-                                  key={metric.id}
-                                >
-                                  Recorded metric: {metric.label} —{" "}
-                                  {metric.value}
-                                  {metric.unit === "%"
-                                    ? "%"
-                                    : ` ${metric.unit ?? ""}`}
-                                </p>
-                              ))}
-                          </div>
-                          <label>
-                            <span className="guided-tailor-label">
-                              Proposed wording
-                            </span>
-                            <textarea
-                              aria-label={`Tailored wording for ${proposal.achievementId}`}
-                              maxLength={8_000}
-                              onChange={(event) => {
-                                setTailoredText((current) => ({
-                                  ...current,
-                                  [proposal.achievementId]: event.target.value,
-                                }));
-                                setApprovedTailoredIds((current) =>
-                                  current.filter(
-                                    (id) => id !== proposal.achievementId,
-                                  ),
-                                );
-                                clearPdfOutput();
-                                setResult(null);
-                                setRequestError("");
-                                setCopyMessage("");
-                              }}
-                              rows={4}
-                              value={editedText}
-                            />
-                          </label>
-                        </div>
-                        <p className="guided-tailor-rationale">
-                          {proposal.rationale}
-                        </p>
-                        {proposal.inferredTerms?.length ? (
-                          <p className="selection-fallback-notice">
-                            Inferred, not directly recorded:{" "}
-                            {proposal.inferredTerms.join(", ")}. Check that this
-                            describes your work.
-                          </p>
-                        ) : null}
-                        <p className="guided-tailor-rationale">
-                          Source: {sourceContext?.section ?? "resume"} ·{" "}
-                          {sourceContext?.groupId ?? proposal.achievementId}
-                          {sourceContext?.selectionConfidence !== undefined
-                            ? " · " +
-                              Math.round(
-                                sourceContext.selectionConfidence * 100,
-                              ) +
-                              "% selection confidence"
-                            : ""}
-                        </p>
-                        <p className="guided-tailor-rationale">
-                          Supports:{" "}
-                          {supportedRequirements.length
-                            ? supportedRequirements
-                                .map((requirement) => requirement.text)
-                                .join("; ")
-                            : "No direct requirement match identified; wording stays grounded in the source."}
-                        </p>
-                        {addedTerms.length > 0 ? (
-                          <div className="guided-tailor-terms">
-                            <span>New JD terms reflected</span>
-                            <ul>
-                              {addedTerms.map((term) => (
-                                <li key={term}>{term}</li>
-                              ))}
-                            </ul>
-                          </div>
-                        ) : (
-                          <p className="guided-tailor-rationale">
-                            No new exact JD terms were detected in this wording.
-                          </p>
-                        )}
-                        <label className="guided-tailor-approve">
-                          <input
-                            checked={approvedTailoredIds.includes(
-                              proposal.achievementId,
+                            <h4>Resume summary</h4>
+                            <p>{tailoring.resumeSummary}</p>
+                            {tailoringWorkflow !== "auto" && (
+                              <label>
+                                <input
+                                  type="checkbox"
+                                  checked={summaryApproved}
+                                  onChange={(event) => {
+                                    setSummaryApproved(event.target.checked);
+                                    setResult(null);
+                                    clearPdfOutput();
+                                  }}
+                                />{" "}
+                                Use this generated summary
+                              </label>
                             )}
-                            onChange={(event) => {
-                              setApprovedTailoredIds((current) =>
-                                event.target.checked
-                                  ? [
-                                      ...new Set([
-                                        ...current,
-                                        proposal.achievementId,
-                                      ]),
-                                    ]
-                                  : current.filter(
-                                      (id) => id !== proposal.achievementId,
-                                    ),
+                          </div>
+                        )}
+                        {tailoring.qualityNotes?.map((note) => (
+                          <p className="selection-fallback-notice" key={note}>
+                            {note}
+                          </p>
+                        ))}
+                      </div>
+                      <span className="guided-tailor-count" role="status">
+                        {
+                          approvedTailoredIds.filter((id) =>
+                            selectedIds.includes(id),
+                          ).length
+                        }{" "}
+                        /{" "}
+                        {
+                          tailoring.proposals.filter((proposal) =>
+                            selectedIds.includes(proposal.achievementId),
+                          ).length
+                        }{" "}
+                        approved
+                      </span>
+                    </div>
+                    <div className="guided-tailor-actions">
+                      <button
+                        disabled={!hasUnapprovedBulkProposals}
+                        onClick={() => {
+                          setApprovedTailoredIds((current) => [
+                            ...new Set([...current, ...bulkApprovableIds]),
+                          ]);
+                          clearPdfOutput();
+                          setResult(null);
+                        }}
+                        type="button"
+                      >
+                        Approve all unchanged
+                      </button>
+                      <button
+                        disabled={approvedTailoredIds.length === 0}
+                        onClick={() => {
+                          setApprovedTailoredIds([]);
+                          clearPdfOutput();
+                          setResult(null);
+                        }}
+                        type="button"
+                      >
+                        Revoke all
+                      </button>
+                    </div>
+                    <p className="guided-tailor-note">
+                      Review disclosed framework inferences before using them.
+                      Only approved wording for selected points replaces the
+                      originals in the generated resume.
+                    </p>
+                    {tailoring.notice && (
+                      <p className="selection-fallback-notice" role="status">
+                        {tailoring.notice}
+                      </p>
+                    )}
+                    <details className="draft-handoff">
+                      <summary>
+                        Draft context ·{" "}
+                        {tailoring.handoff.job.company || "Company"}
+                        {tailoring.handoff.job.roleTitle
+                          ? " · " + tailoring.handoff.job.roleTitle
+                          : ""}
+                      </summary>
+                      <p>
+                        Context {tailoring.handoff.job.contextId.slice(0, 12)} ·{" "}
+                        {tailoring.handoff.selectedAchievements.length} selected
+                        sources · {tailoring.handoff.suggestedEvidence.length}{" "}
+                        evidence suggestions
+                      </p>
+                      <ul>
+                        {tailoring.handoff.requirements.map((requirement) => (
+                          <li key={requirement.id}>
+                            <strong>
+                              {requirement.status === "supported"
+                                ? "Supported"
+                                : requirement.status === "uncertain"
+                                  ? "Uncertain"
+                                  : requirement.status ===
+                                      "evidence-not-selected"
+                                    ? "Evidence not selected"
+                                    : "No evidence found"}
+                            </strong>
+                            <span>{requirement.text}</span>
+                            <small>
+                              {requirement.reason}
+                              {requirement.selectedAchievementIds.length
+                                ? " Selected: " +
+                                  requirement.selectedAchievementIds.join(
+                                    ", ",
+                                  ) +
+                                  "."
+                                : ""}
+                              {requirement.availableAchievementIds.length &&
+                              !requirement.selectedAchievementIds.length
+                                ? " Available: " +
+                                  requirement.availableAchievementIds.join(
+                                    ", ",
+                                  ) +
+                                  "."
+                                : ""}
+                            </small>
+                          </li>
+                        ))}
+                      </ul>
+                      <p>
+                        Estimated content budget:{" "}
+                        {tailoring.handoff.contentBudgetLines} lines.
+                      </p>
+                    </details>
+                    {tailoring.handoff.suggestedEvidence.length > 0 && (
+                      <div className="draft-evidence-suggestions">
+                        <h4>Other evidence to review</h4>
+                        <p>
+                          These points may help with open requirements. Add one
+                          or explicitly replace a selected point; they are never
+                          inserted automatically in Guided Tailor.
+                        </p>
+                        {tailoring.handoff.suggestedEvidence.map(
+                          (suggestion) => {
+                            const supportingRequirements =
+                              tailoring.handoff.requirements.filter(
+                                (requirement) =>
+                                  suggestion.supportedRequirementIds.includes(
+                                    requirement.id,
+                                  ),
                               );
-                              clearPdfOutput();
-                              setResult(null);
-                              setRequestError("");
-                              setCopyMessage("");
-                            }}
-                            type="checkbox"
-                          />
-                          <span>Use tailored wording for this point</span>
-                        </label>
-                      </article>
-                    );
-                  })}
-                </div>
-              </section>
-            )}
-            {tailoringError && (
-              <p className="generation-error-message" role="alert">
-                {tailoringError}
-              </p>
+                            const replaceChoices = selectedIds.filter(
+                              (id) => id !== suggestion.achievementId,
+                            );
+                            return (
+                              <article key={suggestion.achievementId}>
+                                <strong>
+                                  {suggestion.groupTitle}
+                                  {suggestion.groupSubtitle
+                                    ? " · " + suggestion.groupSubtitle
+                                    : ""}
+                                </strong>
+                                <p>{suggestion.text}</p>
+                                <small>
+                                  May support:{" "}
+                                  {supportingRequirements
+                                    .map((requirement) => requirement.text)
+                                    .join("; ")}
+                                </small>
+                                <div className="guided-tailor-actions">
+                                  <button
+                                    disabled={isTailoring || isAutoTailoring}
+                                    onClick={() =>
+                                      applyDraftEvidenceAction(
+                                        suggestion.achievementId,
+                                      )
+                                    }
+                                    type="button"
+                                  >
+                                    Add to selection
+                                  </button>
+                                  {replaceChoices.length > 0 && (
+                                    <select
+                                      aria-label={
+                                        "Replace a selected point with " +
+                                        suggestion.groupTitle
+                                      }
+                                      defaultValue=""
+                                      disabled={isTailoring || isAutoTailoring}
+                                      onChange={(event) => {
+                                        if (event.target.value) {
+                                          applyDraftEvidenceAction(
+                                            suggestion.achievementId,
+                                            event.target.value,
+                                          );
+                                        }
+                                      }}
+                                    >
+                                      <option value="">
+                                        Replace selected point…
+                                      </option>
+                                      {replaceChoices.map((id) => (
+                                        <option key={id} value={id}>
+                                          {pointById.get(id)?.group.title ?? id}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  )}
+                                </div>
+                              </article>
+                            );
+                          },
+                        )}
+                      </div>
+                    )}
+                    <div className="guided-tailor-proposals">
+                      {tailoring.proposals.map((proposal) => {
+                        const sourcePoint = pointById.get(
+                          proposal.achievementId,
+                        );
+                        if (
+                          !sourcePoint ||
+                          !selectedIds.includes(proposal.achievementId)
+                        ) {
+                          return null;
+                        }
+                        const editedText =
+                          tailoredText[proposal.achievementId] ??
+                          proposal.proposedText;
+                        const originalNormalized = normalizeKeywordText(
+                          proposal.originalText,
+                        );
+                        const proposedNormalized =
+                          normalizeKeywordText(editedText);
+                        const addedTerms = tailoring.analyzedTerms.filter(
+                          (term) => {
+                            const normalizedTerm = normalizeKeywordText(term);
+                            return (
+                              normalizedTerm.length > 0 &&
+                              proposedNormalized.includes(normalizedTerm) &&
+                              !originalNormalized.includes(normalizedTerm)
+                            );
+                          },
+                        );
+                        const sourceContext =
+                          tailoring.handoff.selectedAchievements.find(
+                            (item) =>
+                              item.achievementId === proposal.achievementId,
+                          );
+                        const supportedRequirements =
+                          tailoring.handoff.requirements.filter((requirement) =>
+                            sourceContext?.supportedRequirementIds.includes(
+                              requirement.id,
+                            ),
+                          );
+                        return (
+                          <article
+                            className="guided-tailor-proposal"
+                            key={proposal.achievementId}
+                          >
+                            <h4>
+                              {sourcePoint.group.title}
+                              {sourcePoint.group.subtitle
+                                ? ` · ${sourcePoint.group.subtitle}`
+                                : ""}
+                            </h4>
+                            <div className="guided-tailor-comparison">
+                              <div>
+                                <span className="guided-tailor-label">
+                                  Original
+                                </span>
+                                <p>{proposal.originalText}</p>
+                                {(
+                                  proposal.sourceAchievementIds ?? [
+                                    proposal.achievementId,
+                                  ]
+                                )
+                                  .flatMap(
+                                    (id) =>
+                                      pointById.get(id)?.point.metrics ?? [],
+                                  )
+                                  .map((metric) => (
+                                    <p
+                                      className="guided-tailor-rationale"
+                                      key={metric.id}
+                                    >
+                                      Recorded metric: {metric.label} —{" "}
+                                      {metric.value}
+                                      {metric.unit === "%"
+                                        ? "%"
+                                        : ` ${metric.unit ?? ""}`}
+                                    </p>
+                                  ))}
+                              </div>
+                              <label>
+                                <span className="guided-tailor-label">
+                                  Proposed wording
+                                </span>
+                                <textarea
+                                  aria-label={`Tailored wording for ${proposal.achievementId}`}
+                                  maxLength={8_000}
+                                  onChange={(event) => {
+                                    setTailoredText((current) => ({
+                                      ...current,
+                                      [proposal.achievementId]:
+                                        event.target.value,
+                                    }));
+                                    setApprovedTailoredIds((current) =>
+                                      current.filter(
+                                        (id) => id !== proposal.achievementId,
+                                      ),
+                                    );
+                                    clearPdfOutput();
+                                    setResult(null);
+                                    setRequestError("");
+                                    setCopyMessage("");
+                                  }}
+                                  rows={4}
+                                  value={editedText}
+                                />
+                              </label>
+                            </div>
+                            <p className="guided-tailor-rationale">
+                              {proposal.rationale}
+                            </p>
+                            {proposal.inferredTerms?.length ? (
+                              <p className="selection-fallback-notice">
+                                Inferred, not directly recorded:{" "}
+                                {proposal.inferredTerms.join(", ")}. Check that
+                                this describes your work.
+                              </p>
+                            ) : null}
+                            <p className="guided-tailor-rationale">
+                              Source: {sourceContext?.section ?? "resume"} ·{" "}
+                              {sourceContext?.groupId ?? proposal.achievementId}
+                              {sourceContext?.selectionConfidence !== undefined
+                                ? " · " +
+                                  Math.round(
+                                    sourceContext.selectionConfidence * 100,
+                                  ) +
+                                  "% selection confidence"
+                                : ""}
+                            </p>
+                            <p className="guided-tailor-rationale">
+                              Supports:{" "}
+                              {supportedRequirements.length
+                                ? supportedRequirements
+                                    .map((requirement) => requirement.text)
+                                    .join("; ")
+                                : "No direct requirement match identified; wording stays grounded in the source."}
+                            </p>
+                            {addedTerms.length > 0 ? (
+                              <div className="guided-tailor-terms">
+                                <span>New JD terms reflected</span>
+                                <ul>
+                                  {addedTerms.map((term) => (
+                                    <li key={term}>{term}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            ) : (
+                              <p className="guided-tailor-rationale">
+                                No new exact JD terms were detected in this
+                                wording.
+                              </p>
+                            )}
+                            <label className="guided-tailor-approve">
+                              <input
+                                checked={approvedTailoredIds.includes(
+                                  proposal.achievementId,
+                                )}
+                                onChange={(event) => {
+                                  setApprovedTailoredIds((current) =>
+                                    event.target.checked
+                                      ? [
+                                          ...new Set([
+                                            ...current,
+                                            proposal.achievementId,
+                                          ]),
+                                        ]
+                                      : current.filter(
+                                          (id) => id !== proposal.achievementId,
+                                        ),
+                                  );
+                                  clearPdfOutput();
+                                  setResult(null);
+                                  setRequestError("");
+                                  setCopyMessage("");
+                                }}
+                                type="checkbox"
+                              />
+                              <span>Use tailored wording for this point</span>
+                            </label>
+                          </article>
+                        );
+                      })}
+                    </div>
+                  </section>
+                )}
+                {tailoringError && (
+                  <p className="generation-error-message" role="alert">
+                    {tailoringError}
+                  </p>
+                )}
+              </>
             )}
 
             {result && (
-              <section
-                className="resume-review-workspace"
-                aria-label="Generated resume review"
-              >
-                <div className="resume-review-heading">
-                  <div>
-                    <h3>Review generated content</h3>
-                    <p>
-                      {reviewBullets.filter((bullet) => bullet.included).length}{" "}
-                      of {reviewBullets.length} bullets included
-                    </p>
-                  </div>
-                  <button
-                    className="primary-button"
-                    disabled={isGenerating || isCompiling}
-                    onClick={applyReviewChanges}
-                    type="button"
-                  >
-                    {isGenerating ? "Updating resume…" : "Apply review changes"}
-                  </button>
-                </div>
-                {analysis && (
-                  <details className="resume-review-analysis">
-                    <summary>
-                      Job analysis · {analysis.targetTitle}
-                      {analysis.seniority ? ` · ${analysis.seniority}` : ""}
-                    </summary>
-                    <div>
-                      {[
-                        [
-                          "Required qualifications",
-                          analysis.requiredQualifications,
-                        ],
-                        ["Responsibilities", analysis.responsibilities],
-                        [
-                          "Preferred qualifications",
-                          analysis.preferredQualifications,
-                        ],
-                        ["Tools and platforms", analysis.toolsAndPlatforms],
-                        ["Domain concepts", analysis.domainConcepts],
-                      ].map(([heading, items]) =>
-                        Array.isArray(items) && items.length ? (
-                          <section key={heading as string}>
-                            <h4>{heading as string}</h4>
-                            <ul>
-                              {items.map((item) => (
-                                <li key={item as string}>{item as string}</li>
-                              ))}
-                            </ul>
-                          </section>
-                        ) : null,
-                      )}
-                    </div>
-                  </details>
-                )}
-                <div className="resume-review-sections">
-                  <label>
-                    <input
-                      checked={includeProjects}
-                      onChange={(event) =>
-                        setIncludeProjects(event.target.checked)
-                      }
-                      type="checkbox"
-                    />
-                    Include Projects section
-                  </label>
-                  <label>
-                    <input
-                      checked={includeCredentials}
-                      onChange={(event) =>
-                        setIncludeCredentials(event.target.checked)
-                      }
-                      type="checkbox"
-                    />
-                    Include credentials
-                  </label>
-                </div>
-                <fieldset className="resume-review-skills">
-                  <legend>Skills to include</legend>
-                  <div>
-                    {library.skills.map((skill) => (
-                      <label key={skill.id}>
-                        <input
-                          aria-label={`Include skill ${skill.name}`}
-                          checked={reviewSkillIds.includes(skill.id)}
-                          onChange={(event) =>
-                            setReviewSkillIds((current) =>
-                              event.target.checked
-                                ? [...new Set([...current, skill.id])]
-                                : current.filter((id) => id !== skill.id),
-                            )
-                          }
-                          type="checkbox"
-                        />
-                        {skill.name}
-                      </label>
-                    ))}
-                  </div>
-                </fieldset>
-                <div className="resume-review-bullets">
-                  {reviewBullets.map((bullet, index) => {
-                    const group = pointById.get(bullet.achievementId)?.group;
-                    const sameGroupIndexes = reviewBullets
-                      .map((item, itemIndex) =>
-                        pointById.get(item.achievementId)?.group.id ===
-                        group?.id
-                          ? itemIndex
-                          : -1,
-                      )
-                      .filter((itemIndex) => itemIndex >= 0);
-                    const position = sameGroupIndexes.indexOf(index);
-                    return (
-                      <article
-                        className="resume-review-bullet"
-                        key={bullet.achievementId}
-                      >
-                        <div className="resume-review-bullet-heading">
-                          <label>
+              <ResumeStudio
+                key={studioSession}
+                library={library}
+                source={source}
+                generation={result}
+                hasPdf={Boolean(pdfUrl)}
+                analysis={analysis}
+                recommendedSkillIds={recommendedSkillIds}
+                qualityNotes={tailoring?.qualityNotes}
+                onSetup={() => setShowGenerationSettings((current) => !current)}
+                onApplied={(generation, base64) => {
+                  const bytes = Uint8Array.from(atob(base64), (character) =>
+                    character.charCodeAt(0),
+                  );
+                  setResult(generation);
+                  setPdfBase64(base64);
+                  setPdfUrl(
+                    URL.createObjectURL(
+                      new Blob([bytes], { type: "application/pdf" }),
+                    ),
+                  );
+                  setOutputView("pdf");
+                  setCompileError(null);
+                  setCompileStatus(
+                    `PDF ready · 1 page${generation.metadata.layout ? ` · ${Math.round(generation.metadata.layout.utilization * 100)}% page fill` : ""}.`,
+                  );
+                }}
+              />
+            )}
+            {(!result || showGenerationSettings) &&
+              (groups.length === 0 ? (
+                <p className="generation-empty" role="status">
+                  This library has no enabled achievement points.
+                </p>
+              ) : (
+                <div className="generation-groups">
+                  {groups.map((group) => (
+                    <fieldset className="generation-group" key={group.id}>
+                      <legend>
+                        <span>{group.kind}</span>
+                        <strong>{group.title}</strong>
+                        {group.subtitle && <small>{group.subtitle}</small>}
+                      </legend>
+                      <div className="generation-points">
+                        {group.points.map((point) => (
+                          <label className="generation-point" key={point.id}>
                             <input
-                              checked={bullet.included}
+                              aria-label={`Select achievement ${point.id}`}
+                              checked={selectedIds.includes(point.id)}
+                              disabled={
+                                isRecommending || isTailoring || isAutoTailoring
+                              }
                               onChange={(event) =>
-                                setReviewBullets((current) =>
-                                  current.map((item) =>
-                                    item.achievementId === bullet.achievementId
-                                      ? {
-                                          ...item,
-                                          included: event.target.checked,
-                                        }
-                                      : item,
-                                  ),
-                                )
+                                changeSelection(point.id, event.target.checked)
                               }
                               type="checkbox"
                             />
-                            Include
+                            <span>
+                              {point.text}
+                              {recommendation &&
+                                (() => {
+                                  const suggestion = recommendedSelections.find(
+                                    (item) => item.achievementId === point.id,
+                                  );
+                                  return suggestion ? (
+                                    <small className="selection-point-reason">
+                                      {suggestion.rationale} ·{" "}
+                                      {Math.round(suggestion.confidence * 100)}%
+                                      confidence
+                                    </small>
+                                  ) : null;
+                                })()}
+                            </span>
                           </label>
-                          <strong>
-                            {group?.title ?? "Resume achievement"}
-                            {group?.subtitle ? ` · ${group.subtitle}` : ""}
-                          </strong>
-                          <div className="resume-review-order-actions">
-                            <button
-                              aria-label={`Move bullet up: ${bullet.achievementId}`}
-                              disabled={position <= 0}
-                              onClick={() =>
-                                moveReviewBullet(bullet.achievementId, -1)
-                              }
-                              title="Move bullet up"
-                              type="button"
-                            >
-                              ↑
-                            </button>
-                            <button
-                              aria-label={`Move bullet down: ${bullet.achievementId}`}
-                              disabled={
-                                position < 0 ||
-                                position === sameGroupIndexes.length - 1
-                              }
-                              onClick={() =>
-                                moveReviewBullet(bullet.achievementId, 1)
-                              }
-                              title="Move bullet down"
-                              type="button"
-                            >
-                              ↓
-                            </button>
-                          </div>
-                        </div>
-                        <textarea
-                          aria-label={`Review bullet ${bullet.achievementId}`}
-                          maxLength={8_000}
-                          onChange={(event) =>
-                            setReviewBullets((current) =>
-                              current.map((item) =>
-                                item.achievementId === bullet.achievementId
-                                  ? { ...item, text: event.target.value }
-                                  : item,
-                              ),
-                            )
-                          }
-                          rows={3}
-                          value={bullet.text}
-                        />
-                        <details>
-                          <summary>
-                            Evidence · {bullet.sourceAchievementIds.join(", ")}
-                          </summary>
-                          <ul>
-                            {bullet.sourceAchievementIds.map((id) => (
-                              <li key={id}>
-                                <strong>
-                                  {pointById.get(id)?.group.title ?? id}
-                                </strong>
-                                :{" "}
-                                {pointById.get(id)?.point.text ??
-                                  "Source unavailable"}
-                              </li>
-                            ))}
-                          </ul>
-                        </details>
-                      </article>
-                    );
-                  })}
+                        ))}
+                      </div>
+                    </fieldset>
+                  ))}
                 </div>
-              </section>
-            )}
-
-            {groups.length === 0 ? (
-              <p className="generation-empty" role="status">
-                This library has no enabled achievement points.
-              </p>
-            ) : (
-              <div className="generation-groups">
-                {groups.map((group) => (
-                  <fieldset className="generation-group" key={group.id}>
-                    <legend>
-                      <span>{group.kind}</span>
-                      <strong>{group.title}</strong>
-                      {group.subtitle && <small>{group.subtitle}</small>}
-                    </legend>
-                    <div className="generation-points">
-                      {group.points.map((point) => (
-                        <label className="generation-point" key={point.id}>
-                          <input
-                            aria-label={`Select achievement ${point.id}`}
-                            checked={selectedIds.includes(point.id)}
-                            disabled={
-                              isRecommending || isTailoring || isAutoTailoring
-                            }
-                            onChange={(event) =>
-                              changeSelection(point.id, event.target.checked)
-                            }
-                            type="checkbox"
-                          />
-                          <span>
-                            {point.text}
-                            {recommendation &&
-                              (() => {
-                                const suggestion = recommendedSelections.find(
-                                  (item) => item.achievementId === point.id,
-                                );
-                                return suggestion ? (
-                                  <small className="selection-point-reason">
-                                    {suggestion.rationale} ·{" "}
-                                    {Math.round(suggestion.confidence * 100)}%
-                                    confidence
-                                  </small>
-                                ) : null;
-                              })()}
-                          </span>
-                        </label>
-                      ))}
-                    </div>
-                  </fieldset>
-                ))}
-              </div>
-            )}
+              ))}
           </section>
+
+          {result && (
+            <div
+              className="studio-panel-resizer"
+              role="slider"
+              aria-label="Resize resume preview"
+              aria-orientation="horizontal"
+              aria-valuemin={30}
+              aria-valuemax={60}
+              aria-valuenow={previewShare}
+              tabIndex={0}
+              onKeyDown={(event) => {
+                if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+                  event.preventDefault();
+                  setPreviewShare((value) =>
+                    Math.max(
+                      30,
+                      Math.min(
+                        60,
+                        value + (event.key === "ArrowLeft" ? 2 : -2),
+                      ),
+                    ),
+                  );
+                }
+              }}
+              onPointerDown={(event) =>
+                event.currentTarget.setPointerCapture(event.pointerId)
+              }
+              onPointerMove={(event) => {
+                if (!event.currentTarget.hasPointerCapture(event.pointerId))
+                  return;
+                const parent =
+                  event.currentTarget.parentElement!.getBoundingClientRect();
+                setPreviewShare(
+                  Math.max(
+                    30,
+                    Math.min(
+                      60,
+                      ((parent.right - event.clientX) / parent.width) * 100,
+                    ),
+                  ),
+                );
+              }}
+              onPointerUp={(event) =>
+                event.currentTarget.releasePointerCapture(event.pointerId)
+              }
+            />
+          )}
 
           <section
             className="generation-preview"
@@ -2261,10 +2200,8 @@ export default function ResumeGenerator({ library, source }: Props) {
                 <p className="generation-metadata" role="status">
                   Generated{" "}
                   {new Date(result.metadata.generatedAt).toLocaleString()} ·{" "}
-                  {result.metadata.selectedAchievementIds.length} achievement
-                  {result.metadata.selectedAchievementIds.length === 1
-                    ? ""
-                    : "s"}
+                  {renderedAchievementCount} achievement
+                  {renderedAchievementCount === 1 ? "" : "s"}
                   {" · "}
                   {result.metadata.renderedSkillIds.length} skills shown
                   {requestedSkillCount >
@@ -2288,25 +2225,49 @@ export default function ResumeGenerator({ library, source }: Props) {
                           <button
                             aria-label="Zoom out"
                             disabled={pdfZoom <= 50}
-                            onClick={() =>
-                              setPdfZoom((zoom) => Math.max(50, zoom - 10))
-                            }
+                            onClick={() => {
+                              setPdfFit(null);
+                              setPdfZoom((zoom) => Math.max(50, zoom - 10));
+                            }}
                             title="Zoom out"
                             type="button"
                           >
                             −
                           </button>
-                          <span aria-live="polite">{pdfZoom}%</span>
+                          <span aria-live="polite">
+                            {pdfFit
+                              ? pdfFit === "width"
+                                ? "Fit width"
+                                : "Fit page"
+                              : `${pdfZoom}%`}
+                          </span>
                           <button
                             aria-label="Zoom in"
                             disabled={pdfZoom >= 200}
-                            onClick={() =>
-                              setPdfZoom((zoom) => Math.min(200, zoom + 10))
-                            }
+                            onClick={() => {
+                              setPdfFit(null);
+                              setPdfZoom((zoom) => Math.min(200, zoom + 10));
+                            }}
                             title="Zoom in"
                             type="button"
                           >
                             +
+                          </button>
+                          <button
+                            type="button"
+                            className="pdf-fit-button"
+                            aria-pressed={pdfFit === "width"}
+                            onClick={() => setPdfFit("width")}
+                          >
+                            Fit width
+                          </button>
+                          <button
+                            type="button"
+                            className="pdf-fit-button"
+                            aria-pressed={pdfFit === "page"}
+                            onClick={() => setPdfFit("page")}
+                          >
+                            Fit page
                           </button>
                         </div>
                         <button
@@ -2328,8 +2289,7 @@ export default function ResumeGenerator({ library, source }: Props) {
                       </div>
                       <iframe
                         className="pdf-preview-frame"
-                        key={`${pdfUrl}-${pdfZoom}`}
-                        src={`${pdfUrl}#zoom=${pdfZoom}`}
+                        src={`${pdfUrl}#${pdfFit ? `view=${pdfFit === "width" ? "FitH" : "Fit"}` : `zoom=${pdfZoom}`}&toolbar=0`}
                         title="Generated resume PDF"
                       />
                     </div>
@@ -2352,20 +2312,22 @@ export default function ResumeGenerator({ library, source }: Props) {
           </section>
         </div>
 
-        <div className="generation-footer">
-          <span>
-            {source === "personal"
-              ? "Using your local resume data"
-              : "Using fictional demo data"}
-          </span>
-          <button
-            className="primary-button"
-            disabled={isGenerating || isCompiling || !draftReady}
-            type="submit"
-          >
-            {isGenerating ? "Generating…" : "Generate LaTeX"}
-          </button>
-        </div>
+        {(!result || showGenerationSettings) && (
+          <div className="generation-footer">
+            <span>
+              {source === "personal"
+                ? "Using your local resume data"
+                : "Using fictional demo data"}
+            </span>
+            <button
+              className="primary-button"
+              disabled={isGenerating || isCompiling || !draftReady}
+              type="submit"
+            >
+              {isGenerating ? "Generating…" : "Generate LaTeX"}
+            </button>
+          </div>
+        )}
       </form>
     </section>
   );

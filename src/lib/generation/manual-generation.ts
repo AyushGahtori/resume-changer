@@ -63,6 +63,7 @@ export type ManualGenerationRequest = z.input<
 >;
 
 export type ManualGenerationMetadata = {
+  studioDocument?: import("./studio-document").StudioDocument;
   id: string;
   generatedAt: string;
   dataSource: ResumeDataSource;

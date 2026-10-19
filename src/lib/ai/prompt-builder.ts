@@ -20,6 +20,16 @@ import { SELECT_ACHIEVEMENTS_INSTRUCTIONS } from "./prompts/v1/select-achievemen
 import { PROMPT_VERSION, SHARED_INSTRUCTIONS } from "./prompts/v1/shared";
 import { JAKE_STYLE_TEMPLATE } from "../latex/jake-template";
 import { AiProviderError } from "./provider";
+import {
+  AchievementWritingInputSchema,
+  AchievementWritingResultSchema,
+  type AchievementWritingInput,
+} from "./achievement-writing";
+import {
+  ACHIEVEMENT_EDIT_INSTRUCTIONS,
+  ACHIEVEMENT_MERGE_INSTRUCTIONS,
+  ACHIEVEMENT_CREATE_INSTRUCTIONS,
+} from "./prompts/v1/achievement-writing";
 
 export const MAX_PROMPT_CHARACTERS = 360_000;
 
@@ -39,12 +49,30 @@ export function loadApprovedTemplateContext(): string {
 }
 
 export type AiTask =
+  | "achievementEdit"
+  | "achievementMerge"
+  | "achievementCreate"
   | "analyzeJobDescription"
   | "selectAchievements"
   | "draftResume"
   | "repairLatexContent";
 
 const taskConfiguration = {
+  achievementEdit: {
+    instructions: ACHIEVEMENT_EDIT_INSTRUCTIONS,
+    inputSchema: AchievementWritingInputSchema,
+    outputSchema: AchievementWritingResultSchema,
+  },
+  achievementMerge: {
+    instructions: ACHIEVEMENT_MERGE_INSTRUCTIONS,
+    inputSchema: AchievementWritingInputSchema,
+    outputSchema: AchievementWritingResultSchema,
+  },
+  achievementCreate: {
+    instructions: ACHIEVEMENT_CREATE_INSTRUCTIONS,
+    inputSchema: AchievementWritingInputSchema,
+    outputSchema: AchievementWritingResultSchema,
+  },
   analyzeJobDescription: {
     instructions: ANALYZE_JOB_DESCRIPTION_INSTRUCTIONS,
     inputSchema: JobAnalysisInputSchema,
@@ -68,6 +96,9 @@ const taskConfiguration = {
 } as const;
 
 export type PromptInputByTask = {
+  achievementEdit: AchievementWritingInput;
+  achievementMerge: AchievementWritingInput;
+  achievementCreate: AchievementWritingInput;
   analyzeJobDescription: JobAnalysisInput;
   selectAchievements: AchievementSelectionInput;
   draftResume: ResumeDraftInput;

@@ -3,6 +3,7 @@ import {
   analyzePdfLayout,
   layoutFromPageTextBoxes,
   layoutFromTextBoxes,
+  readPdfTextBoxes,
 } from "../../../src/lib/pdf/layout-analysis";
 
 function createSinglePagePdf(text: string): Uint8Array {
@@ -113,5 +114,13 @@ describe("PDF content measurements", () => {
     expect(analysis.layout.pageCount).toBe(1);
     expect(analysis.layout.visibleWordCount).toBe(4);
     expect(analysis.text).toContain("PDF parser smoke test");
-  });
+    const boxes = await readPdfTextBoxes(
+      createSinglePagePdf("Measured glyphs"),
+    );
+    expect(
+      boxes[0].some(
+        (box) => box.text.includes("Measured glyphs") && box.width > 0,
+      ),
+    ).toBe(true);
+  }, 20000);
 });

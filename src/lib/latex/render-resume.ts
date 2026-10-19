@@ -25,6 +25,9 @@ const RenderInputSchema = z
     library: ResumeLibrarySchema,
     selectedAchievementIds: z.array(StableIdSchema),
     selectedSkillIds: z.array(StableIdSchema).optional(),
+    skillRows: z
+      .tuple([z.array(StableIdSchema), z.array(StableIdSchema)])
+      .optional(),
     jobDescription: z.string().max(30_000).optional(),
     achievementTextOverrides: z
       .array(
@@ -366,6 +369,7 @@ export type RenderResumeLatexInput = {
   library: ResumeLibrary;
   selectedAchievementIds: string[];
   selectedSkillIds?: string[];
+  skillRows?: [string[], string[]];
   sectionOrder?: ResumeSectionType[];
   jobDescription?: string;
   achievementTextOverrides?: Array<{
@@ -390,6 +394,7 @@ export function renderResumeLatex(input: RenderResumeLatexInput): string {
     library,
     selectedAchievementIds,
     selectedSkillIds,
+    skillRows,
     jobDescription,
     achievementTextOverrides = [],
     sectionOrder,
@@ -488,12 +493,29 @@ export function renderResumeLatex(input: RenderResumeLatexInput): string {
   const selectedById = new Map(
     selectedAchievementIds.map((id) => [id, pointById.get(id)!]),
   );
-  const compactSkills = selectSkillsForResume(
-    skills,
-    [...selectedById.values()],
-    jobDescription,
-    analysis,
-  );
+  if (
+    skillRows &&
+    (skillRows.flat().length !== chosenSkillIds.length ||
+      new Set(skillRows.flat()).size !== chosenSkillIds.length ||
+      skillRows.flat().some((id) => !chosenSkillIds.includes(id)))
+  ) {
+    throw new ResumeRenderError(
+      "The skill rows must contain every selected skill exactly once.",
+    );
+  }
+  const compactSkills = skillRows
+    ? skillRows.flatMap((row, index) =>
+        row.map((id) => ({
+          ...skillById.get(id)!,
+          category: index === 0 ? "Relevant Skills" : "Additional Skills",
+        })),
+      )
+    : selectSkillsForResume(
+        skills,
+        [...selectedById.values()],
+        jobDescription,
+        analysis,
+      );
   const context = {
     library,
     selectedById,

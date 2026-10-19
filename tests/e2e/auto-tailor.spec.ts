@@ -363,7 +363,16 @@ test("Auto Tailor reports wording repair and exposes summary, partial coverage a
             selectedSkillIds: [],
             renderedSkillIds: [],
             sourceProvenance: [],
-            generatedBullets: [],
+            generatedBullets: [
+              {
+                achievementId,
+                sourceAchievementIds: [achievementId],
+                text: originalText,
+                inferredTerms: ["TensorFlow"],
+              },
+            ],
+            resumeSummary:
+              "Delivered reliable cloud services with source-backed outcomes.",
             visibleWordCount: 520,
             layout: { utilization: 0.97 },
             fitting: {
@@ -399,16 +408,18 @@ test("Auto Tailor reports wording repair and exposes summary, partial coverage a
       "PDF ready · 1 page · 97% page fill. Wording repair used 1 time.",
     ),
   ).toBeVisible();
-  await expect(page.getByText("0 / 1 supported · 1 partial")).toBeVisible();
+  await page.getByRole("button", { name: "Job match", exact: true }).click();
   await expect(
-    page.getByText(
-      "Delivered reliable cloud services with source-backed outcomes.",
-    ),
+    page.getByText("0 / 1 supported · 1 partial", { exact: true }),
   ).toBeVisible();
   await expect(
     page.getByText(
       "Inferred framework usage: TensorFlow. Review this assumption.",
     ),
   ).toBeVisible();
+  await page.getByRole("button", { name: "Overview", exact: true }).click();
+  await expect(page.getByLabel("Resume summary", { exact: true })).toHaveValue(
+    "Delivered reliable cloud services with source-backed outcomes.",
+  );
   expect(repeatedGeneration).toBe(0);
 });

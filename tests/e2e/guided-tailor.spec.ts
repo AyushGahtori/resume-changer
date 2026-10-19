@@ -118,6 +118,10 @@ test("Guided Tailor requires approval and renders only the approved rewrite", as
     "Delivered reliable AWS infrastructure",
   );
 
+  await page
+    .getByRole("button", { name: "Generation settings ↗", exact: true })
+    .click();
+
   await review
     .getByRole("checkbox", { name: "Use this generated summary" })
     .check();
