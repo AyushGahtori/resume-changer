@@ -204,6 +204,15 @@ describe("resume data loaders", () => {
     });
   });
 
+  it("treats an absent generation history file as an empty local history", async () => {
+    const rootDir = await createTemporaryRoot();
+
+    await expect(loadGenerationHistory({ rootDir })).resolves.toEqual({
+      schemaVersion: 1,
+      entries: [],
+    });
+  });
+
   it("distinguishes missing, unreadable, invalid JSON, and schema failures", async () => {
     expect(
       formatDataLoadError({

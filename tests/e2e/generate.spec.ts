@@ -48,6 +48,23 @@ test("selects points, generates LaTeX, copies and downloads the output", async (
   await expect(
     page.getByRole("region", { name: "Generated resume review" }),
   ).toBeVisible();
+  await expect(
+    page.getByText("Saved to generation history on this device."),
+  ).toBeVisible();
+  const historyResponse = await page.request.get("/api/history");
+  expect(historyResponse.ok()).toBe(true);
+  await expect(historyResponse.json()).resolves.toEqual(
+    expect.objectContaining({
+      entries: expect.arrayContaining([
+        expect.objectContaining({
+          company: "Example Systems",
+          role: "Platform Engineer",
+          status: "drafted",
+          provider: "none",
+        }),
+      ]),
+    }),
+  );
 
   await page.getByRole("button", { name: "Copy LaTeX" }).click();
   await expect(page.getByText("LaTeX copied.", { exact: true })).toBeVisible();
@@ -67,9 +84,12 @@ test("selects points, generates LaTeX, copies and downloads the output", async (
   expect((await packageDownload).suggestedFilename()).toBe(
     "example-systems-platform-engineer.zip",
   );
-  await expect(page.locator(".generation-notice")).toContainText(
-    "No verified PDF was available to include.",
-  );
+  await expect(
+    page.getByText(
+      "Export package downloaded with LaTeX and metadata. No verified PDF was available to include.",
+      { exact: true },
+    ),
+  ).toBeVisible();
 });
 
 test("returns structured validation and renderer errors from the API", async ({
@@ -123,6 +143,18 @@ test("compiles, previews, zooms, exits full screen, and downloads a PDF", async 
   ).toBeVisible();
   await expect(page.getByTitle("Generated resume PDF")).toBeVisible();
   await expect(page.getByText("PDF ready · 1 page.")).toBeVisible();
+  await expect(
+    page.getByText("Saved to generation history on this device."),
+  ).toBeVisible();
+  const compiledHistory = await page.request.get("/api/history");
+  expect((await compiledHistory.json()).entries).toContainEqual(
+    expect.objectContaining({
+      company: "Example Systems",
+      role: "Platform Engineer",
+      status: "compiled",
+      pdfPath: expect.stringMatching(/\.pdf$/),
+    }),
+  );
 
   await page.getByRole("button", { name: "Zoom in" }).click();
   await expect(page.getByText("110%", { exact: true })).toBeVisible();
@@ -202,6 +234,25 @@ test("shows actionable PDF compile errors and keeps the LaTeX available", async 
     "Jordan Example",
   );
   await expect(page.getByRole("tab", { name: "PDF" })).toBeDisabled();
+  await expect(
+    page.getByText("Saved to generation history on this device."),
+  ).toBeVisible();
+  await expect
+    .poll(async () => {
+      const response = await page.request.get("/api/history");
+      const entries = (await response.json()).entries as Array<{
+        company?: string;
+        role: string;
+        status: string;
+      }>;
+      return entries.some(
+        (entry) =>
+          entry.company === "Example Systems" &&
+          entry.role === "Platform Engineer" &&
+          entry.status === "failed",
+      );
+    })
+    .toBe(true);
 });
 
 test("rejects a successful HTTP response that is not a valid PDF", async ({

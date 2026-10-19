@@ -1,5 +1,5 @@
-import WorkspacePlaceholder from "@/components/workspace-placeholder";
+import GenerationHistory from "@/components/generation-history";
 
 export default function HistoryPage() {
-  return <WorkspacePlaceholder eyebrow="PREVIOUS WORK" title="History" />;
+  return <GenerationHistory />;
 }

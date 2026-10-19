@@ -360,7 +360,7 @@ export const GeneratedBulletSchema = z
   })
   .strict();
 
-export const GenerationHistoryEntrySchema = z
+export const GenerationHistoryEntryFieldsSchema = z
   .object({
     id: StableIdSchema,
     createdAt: z.iso.datetime(),
@@ -374,8 +374,41 @@ export const GenerationHistoryEntrySchema = z
     pdfPath: nonEmptyText.optional(),
     repairAttemptCount: z.number().int().nonnegative(),
   })
-  .strict()
-  .superRefine((entry, context) => {
+  .strict();
+
+export const GenerationHistoryEntrySchema =
+  GenerationHistoryEntryFieldsSchema.superRefine((entry, context) => {
+    if (
+      entry.texPath &&
+      !new RegExp(`^data/generations/${entry.id}-[a-f0-9]{12}\\.tex$`).test(
+        entry.texPath,
+      )
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["texPath"],
+        message: "LaTeX references must point to a generation artifact.",
+      });
+    }
+    if (
+      entry.pdfPath &&
+      !new RegExp(`^data/generations/${entry.id}-[a-f0-9]{12}\\.pdf$`).test(
+        entry.pdfPath,
+      )
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["pdfPath"],
+        message: "PDF references must point to a generation artifact.",
+      });
+    }
+    if (entry.status === "compiled" && !entry.pdfPath) {
+      context.addIssue({
+        code: "custom",
+        path: ["pdfPath"],
+        message: "Compiled generations must reference their PDF artifact.",
+      });
+    }
     if (
       new Set(entry.selectedAchievementIds).size !==
       entry.selectedAchievementIds.length
