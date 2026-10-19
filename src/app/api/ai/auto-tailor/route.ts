@@ -137,18 +137,24 @@ export async function POST(request: Request) {
         (providerCreationError instanceof AiProviderError
           ? providerCreationError.message
           : "AI is unavailable.");
-      tailoring = createOriginalsFallbackResponse({
-        input: draftInput,
-        notice: `${notice} Auto Tailor kept the selected source wording unchanged.`,
-      });
+      tailoring = {
+        ...createOriginalsFallbackResponse({
+          input: draftInput,
+          notice: `${notice} Auto Tailor kept the selected source wording unchanged.`,
+        }),
+        providerName: provider?.name ?? null,
+      };
     } else {
       try {
         const draftResult = await provider.draftResume(draftInput);
-        tailoring = createTailoringResponse({
-          input: draftInput,
-          result: draftResult,
-          repairInvalid: true,
-        });
+        tailoring = {
+          ...createTailoringResponse({
+            input: draftInput,
+            result: draftResult,
+            repairInvalid: true,
+          }),
+          providerName: provider.name,
+        };
       } catch (error) {
         if (
           error instanceof AiProviderError ||
@@ -156,13 +162,16 @@ export async function POST(request: Request) {
             error.code === "INVALID_AI_OUTPUT")
         ) {
           if (!parsed.data.allowLocalFallback) throw error;
-          tailoring = createOriginalsFallbackResponse({
-            input: draftInput,
-            notice:
-              error instanceof AiProviderError
-                ? `${error.message} Auto Tailor kept the selected source wording unchanged.`
-                : "The AI draft did not pass evidence checks. Auto Tailor kept the selected source wording unchanged.",
-          });
+          tailoring = {
+            ...createOriginalsFallbackResponse({
+              input: draftInput,
+              notice:
+                error instanceof AiProviderError
+                  ? `${error.message} Auto Tailor kept the selected source wording unchanged.`
+                  : "The AI draft did not pass evidence checks. Auto Tailor kept the selected source wording unchanged.",
+            }),
+            providerName: provider.name,
+          };
         } else {
           throw error;
         }
@@ -255,6 +264,10 @@ export async function POST(request: Request) {
       });
       compiled = {
         ...fitted.generation,
+        metadata: {
+          ...fitted.generation.metadata,
+          aiProvider: provider?.name ?? null,
+        },
         pdfBase64: fitted.pdf.toString("base64"),
       };
     }

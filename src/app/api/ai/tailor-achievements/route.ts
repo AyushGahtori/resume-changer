@@ -43,10 +43,12 @@ export async function POST(request: Request) {
     const library = await loadResumeLibrary({ source: parsed.data.dataSource });
     const input = await buildResumeDraftInput(library, parsed.data);
     try {
-      const result = await createAiProvider().draftResume(input);
-      return NextResponse.json(
-        createTailoringResponse({ input, result, repairInvalid: true }),
-      );
+      const provider = createAiProvider();
+      const result = await provider.draftResume(input);
+      return NextResponse.json({
+        ...createTailoringResponse({ input, result, repairInvalid: true }),
+        providerName: provider.name,
+      });
     } catch (error) {
       if (error instanceof AiProviderError) {
         if (!parsed.data.allowOriginalsFallback) throw error;

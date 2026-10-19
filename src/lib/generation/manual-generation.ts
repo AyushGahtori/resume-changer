@@ -73,6 +73,7 @@ export type ManualGenerationMetadata = {
   selectedAchievementIds: string[];
   sectionOrder?: ResumeSectionType[];
   tailoringMode: "manual" | "guided" | "auto";
+  aiProvider?: string | null;
   sourceProvenance: Array<{
     achievementId: string;
     section: "experience" | "projects";
@@ -236,6 +237,7 @@ export function createManualGeneration(
       selectedAchievementIds: normalized.selectedAchievementIds,
       sectionOrder: normalized.sectionOrder as ResumeSectionType[] | undefined,
       tailoringMode: normalized.tailoringMode,
+      aiProvider: null,
       sourceProvenance,
       renderedSkillIds,
       resumeSummary: normalized.summaryOverride ?? library.profile.summary,

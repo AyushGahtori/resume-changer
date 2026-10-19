@@ -25,6 +25,7 @@ import { assessRequirementCoverage } from "@/lib/ai/requirement-coverage";
 import { createJobContextId } from "@/lib/ai/job-context";
 import { readJobAnalysisCache } from "@/lib/jd-analysis-cache";
 import { createResumeFilename } from "@/lib/generation/resume-filename";
+import { createResumeExportPackage } from "@/lib/generation/export-package";
 import ResumeStudio from "./resume-studio";
 import { parseStudioSession } from "@/lib/generation/studio-session";
 import { getGenerationOriginNotice } from "@/lib/generation/generation-origin";
@@ -838,6 +839,10 @@ export default function ResumeGenerator({ library, source }: Props) {
         return null;
       }
 
+      payload.metadata.aiProvider =
+        options.workflow === "manual"
+          ? null
+          : (options.tailoring?.providerName ?? null);
       clearPdfOutput();
       setStudioSession((current) => current + 1);
       setResult(payload);
@@ -979,6 +984,22 @@ export default function ResumeGenerator({ library, source }: Props) {
     );
     anchor.click();
     URL.revokeObjectURL(url);
+  }
+
+  function downloadExportPackage() {
+    if (!result) return;
+    const exported = createResumeExportPackage(result, pdfBase64);
+    const url = URL.createObjectURL(exported.blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = exported.filename;
+    anchor.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    setCopyMessage(
+      exported.includedPdf
+        ? "Export package downloaded with LaTeX, PDF, and metadata."
+        : "Export package downloaded with LaTeX and metadata. No verified PDF was available to include.",
+    );
   }
 
   const hasJobDescription = Boolean(draft.jobDescription.trim());
@@ -1944,7 +1965,13 @@ export default function ResumeGenerator({ library, source }: Props) {
                   const bytes = Uint8Array.from(atob(base64), (character) =>
                     character.charCodeAt(0),
                   );
-                  setResult(generation);
+                  setResult({
+                    ...generation,
+                    metadata: {
+                      ...generation.metadata,
+                      aiProvider: result?.metadata.aiProvider ?? null,
+                    },
+                  });
                   setPdfBase64(base64);
                   setPdfUrl(
                     URL.createObjectURL(
@@ -2149,6 +2176,16 @@ export default function ResumeGenerator({ library, source }: Props) {
                         {isCompiling ? "Creating PDF…" : "Create PDF"}
                       </button>
                     </>
+                  )}
+                  {result && (
+                    <button
+                      aria-label="Download export package"
+                      onClick={downloadExportPackage}
+                      title="Download LaTeX, PDF when available, and generation metadata"
+                      type="button"
+                    >
+                      Export package
+                    </button>
                   )}
                 </div>
               )}
