@@ -305,6 +305,7 @@ export const TailorAchievementsResponseSchema = z
     summary: z.string().trim().min(1).max(1_500),
     analyzedTerms: z.array(shortText).max(2000),
     mode: z.enum(["ai", "originals-fallback"]),
+    providerName: z.string().trim().min(1).max(80).nullable().optional(),
     handoff: ResumeDraftHandoffSchema,
     notice: shortText.optional(),
   })

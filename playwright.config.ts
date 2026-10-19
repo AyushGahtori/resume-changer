@@ -30,5 +30,9 @@ export default defineConfig({
     url: `${e2eUrl}/generate?source=demo`,
     reuseExistingServer: false,
     timeout: 180_000,
+    gracefulShutdown: {
+      signal: "SIGTERM",
+      timeout: 5_000,
+    },
   },
 });

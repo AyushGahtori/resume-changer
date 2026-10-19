@@ -61,6 +61,15 @@ test("selects points, generates LaTeX, copies and downloads the output", async (
   expect(download.suggestedFilename()).toBe(
     "example-systems-platform-engineer.tex",
   );
+
+  const packageDownload = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download export package" }).click();
+  expect((await packageDownload).suggestedFilename()).toBe(
+    "example-systems-platform-engineer.zip",
+  );
+  await expect(page.locator(".generation-notice")).toContainText(
+    "No verified PDF was available to include.",
+  );
 });
 
 test("returns structured validation and renderer errors from the API", async ({
@@ -137,6 +146,17 @@ test("compiles, previews, zooms, exits full screen, and downloads a PDF", async 
   expect(download.suggestedFilename()).toBe(
     "example-systems-platform-engineer.pdf",
   );
+
+  const packageDownload = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download export package" }).click();
+  expect((await packageDownload).suggestedFilename()).toBe(
+    "example-systems-platform-engineer.zip",
+  );
+  await expect(
+    page.getByText("Export package downloaded with LaTeX, PDF, and metadata.", {
+      exact: true,
+    }),
+  ).toBeVisible();
 
   await page.getByRole("tab", { name: "LaTeX" }).click();
   await expect(page.getByLabel("Generated LaTeX")).toContainText(
