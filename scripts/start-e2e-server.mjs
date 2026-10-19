@@ -71,7 +71,7 @@ process.on("SIGTERM", () => stop("SIGTERM"));
 
 server.on("exit", async (code, signal) => {
   await rm(fixtureRoot, { recursive: true, force: true });
-  process.exit(code ?? (signal ? 1 : 0));
+  process.exit(shuttingDown ? 0 : code ?? (signal ? 1 : 0));
 });
 
 server.on("error", async () => {
