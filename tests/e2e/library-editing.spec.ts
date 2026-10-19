@@ -7,8 +7,8 @@ test.beforeEach(async ({ page }) => {
   await copyFile(
     join(process.cwd(), "examples", "sample-resume-library.json"),
     join(
-      tmpdir(),
-      "resume-changer-playwright-data",
+      process.env.RESUME_LIBRARY_ROOT ??
+        join(tmpdir(), "resume-changer-playwright-data-3010"),
       "data",
       "resume-library.json",
     ),
@@ -38,7 +38,8 @@ test("achievement library remains scrollable on a full desktop viewport", async 
 test("creates a point with a metric and persists it after reload", async ({
   page,
 }) => {
-  await page.getByRole("button", { name: "Add achievement" }).click();
+  test.setTimeout(60000);
+  await page.getByRole("button", { name: "Detailed entry" }).click();
   await page.getByLabel("Achievement ID").fill("achievement-e2e-created");
   await page
     .getByLabel("Achievement text")
@@ -57,7 +58,13 @@ test("creates a point with a metric and persists it after reload", async ({
     .locator(".metric-fields")
     .getByLabel("Evidence")
     .fill("Synthetic test evidence.");
+  const saved = page.waitForResponse(
+    (response) =>
+      response.url().endsWith("/api/library/points") &&
+      response.request().method() === "POST",
+  );
   await page.getByRole("button", { name: "Save achievement" }).click();
+  expect((await saved).ok()).toBe(true);
 
   await expect(page.getByText("achievement-e2e-created")).toBeVisible();
   await expect(page.getByText("Saved to your local library.")).toBeVisible();
@@ -66,6 +73,35 @@ test("creates a point with a metric and persists it after reload", async ({
     page.getByText("Created in the synthetic browser test."),
   ).toBeVisible();
   await expect(page.getByText("Test coverage")).toBeVisible();
+});
+
+test("saves a manual point through the shared Imagination Canvas", async ({
+  page,
+}) => {
+  test.setTimeout(60000);
+  await page
+    .getByRole("button", { name: "Add achievement", exact: true })
+    .click();
+  await page
+    .getByLabel("Achievement text")
+    .fill("A user-verified achievement created in the shared canvas.");
+  const saved = page.waitForResponse(
+    (response) =>
+      response.url().endsWith("/api/library/points") &&
+      response.request().method() === "POST",
+  );
+  await page
+    .getByRole("button", { name: "Save achievement", exact: true })
+    .click();
+  expect((await saved).ok()).toBe(true);
+  await expect(page.getByText("Saved to your local library.")).toBeVisible();
+  await page.reload();
+  await expect(
+    page.getByText(
+      "A user-verified achievement created in the shared canvas.",
+      { exact: true },
+    ),
+  ).toBeVisible();
 });
 
 test("updates text, tags, provenance, and enabled state", async ({ page }) => {
@@ -82,7 +118,14 @@ test("updates text, tags, provenance, and enabled state", async ({ page }) => {
   await page.getByLabel("Provenance type").selectOption("direct-user");
   await page.getByLabel("Source label").fill("Browser test update");
   await page.getByLabel("Use this point in resume selection").uncheck();
+  const saved = page.waitForResponse(
+    (response) =>
+      response.request().method() === "PATCH" &&
+      response.url().includes("/api/library/points/"),
+  );
   await page.getByRole("button", { name: "Save achievement" }).click();
+  expect((await saved).ok()).toBe(true);
+  await expect(page.getByText("Saved to your local library.")).toBeVisible();
 
   await expect(
     page.getByText("Updated synthetic workflow achievement."),
@@ -119,7 +162,7 @@ test("cancel discards the unsaved editor changes", async ({ page }) => {
 test("rejects a duplicate point ID without altering existing data", async ({
   page,
 }) => {
-  await page.getByRole("button", { name: "Add achievement" }).click();
+  await page.getByRole("button", { name: "Detailed entry" }).click();
   await page.getByLabel("Achievement ID").fill("achievement-ci-cd-pipeline");
   await page
     .getByLabel("Achievement text")
@@ -154,7 +197,7 @@ test("keeps the point editor within a narrow viewport", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole("button", { name: "Add achievement" }).click();
   await expect(
-    page.getByRole("heading", { name: "Add achievement" }),
+    page.getByRole("heading", { name: "Imagination Canvas" }),
   ).toBeVisible();
   const dimensions = await page.evaluate(() => ({
     documentWidth: document.documentElement.scrollWidth,

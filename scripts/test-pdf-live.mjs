@@ -28,7 +28,12 @@ const vitestPath = fileURLToPath(
 );
 const result = spawnSync(
   process.execPath,
-  [vitestPath, "run", "tests/unit/pdf/compile-integration.test.ts"],
+  [
+    vitestPath,
+    "run",
+    "tests/unit/pdf/compile-integration.test.ts",
+    "tests/unit/pdf/studio-integration.test.ts",
+  ],
   { stdio: "inherit", env: process.env },
 );
 

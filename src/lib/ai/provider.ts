@@ -10,6 +10,10 @@ import type {
 } from "./contracts";
 
 export interface AiProvider {
+  writeAchievement?(
+    operation: import("./achievement-writing").AchievementWritingOperation,
+    input: import("./achievement-writing").AchievementWritingInput,
+  ): Promise<import("./achievement-writing").AchievementWritingResult>;
   readonly name: "mock" | "gemini";
   analyzeJobDescription(input: JobAnalysisInput): Promise<JobAnalysisResult>;
   selectAchievements(

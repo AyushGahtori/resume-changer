@@ -242,6 +242,12 @@ Skill rows are independent of achievement bullets: a skill selected from the use
 
 Required workflow: update `main`, create `codex/task-19-review-and-overrides`, implement the review screen and correction controls together, add unit and Playwright coverage, run all quality commands, manually inspect the full flow, then push or merge only after checks pass.
 
+### Task 19.5: Resume Studio And Post-Generation Editing
+
+Replace the combined post-generation review with a shared draft editor for Manual, Guided Tailor, and Auto Tailor. Keep the current verified PDF, pending edits, and unaccepted AI suggestions separate. Support independent measured skill changes, manual and focused AI achievement editing, source-preserving merges, unused achievement insertion, contextual creation, undo/redo, and local recovery. Use orange for document actions and violet for Imagination. Preserve the detailed library entry workflow and the existing generation approval flow.
+
+Implementation, architecture, and validation evidence are recorded in [Task 19.5](task-19.5-resume-studio.md). The branch is `codex/task-19.5-resume-editing-system`, based on synced `main` at `aff0e2a`.
+
 ### Task 20: Add Export Package
 
 Implement export actions for the final `.tex`, `.pdf`, and generation metadata. Metadata should include JD title/company, timestamp, selected achievement IDs, AI provider name, and validation/repair status. This makes each generated resume reproducible later.

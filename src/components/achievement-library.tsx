@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import AchievementPointEditor from "@/components/achievement-point-editor";
+import AchievementImagination from "@/components/achievement-imagination";
 import {
   EMPTY_LIBRARY_FILTERS,
   filterAchievementLibrary,
@@ -171,6 +172,7 @@ export default function AchievementLibrary({ library, source }: Props) {
   const router = useRouter();
   const [filters, setFilters] = useState<LibraryFilters>(EMPTY_LIBRARY_FILTERS);
   const [editor, setEditor] = useState<EditorState>(null);
+  const [creating, setCreating] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
   const result = useMemo(
     () => filterAchievementLibrary(library, filters),
@@ -233,10 +235,19 @@ export default function AchievementLibrary({ library, source }: Props) {
         <div className="library-edit-toolbar">
           <span>{saveMessage}</span>
           <button
-            className="primary-button"
+            type="button"
             onClick={() => {
               setSaveMessage("");
               setEditor({ mode: "create" });
+            }}
+          >
+            Detailed entry
+          </button>
+          <button
+            className="primary-button"
+            onClick={() => {
+              setSaveMessage("");
+              setCreating(true);
             }}
             type="button"
           >
@@ -287,6 +298,19 @@ export default function AchievementLibrary({ library, source }: Props) {
           }}
           parents={parentOptions}
           skills={library.skills}
+        />
+      )}
+      {creating && (
+        <AchievementImagination
+          library={library}
+          source={source}
+          operation="create"
+          allowResume={false}
+          onClose={() => setCreating(false)}
+          onAccept={() => {
+            setSaveMessage("Saved to your local library.");
+            router.refresh();
+          }}
         />
       )}
 
