@@ -915,6 +915,42 @@ a:focus-visible {
   line-height: var(--type-micro-label-line-height);
 }
 
+.jd-page .page-heading-copy {
+  min-width: 0;
+}
+
+.jd-page .eyebrow {
+  margin: 0 0 var(--space-8);
+  color: var(--color-orange-strong);
+  font-weight: 600;
+}
+
+.jd-page .eyebrow span {
+  margin: 0 0 0 var(--space-8);
+  color: var(--color-text-muted);
+  font-weight: 400;
+}
+
+.jd-page h1 {
+  max-width: 100%;
+  font-weight: 700;
+  text-wrap: balance;
+}
+
+.jd-page .page-intro {
+  max-width: 680px;
+  margin: var(--space-8) 0 0;
+  color: var(--color-text-secondary);
+  font-size: 16px;
+  line-height: 24px;
+  text-wrap: balance;
+}
+
+.jd-page .draft-state {
+  flex: 0 0 auto;
+  max-width: 100%;
+}
+
 .note-mark {
   color: var(--accent);
   font-size: 15px;
