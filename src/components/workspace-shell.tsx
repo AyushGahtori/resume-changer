@@ -348,11 +348,13 @@ export default function WorkspaceShell({ children }: { children: ReactNode }) {
                 )}
               </svg>
             </button>
-            <div className="breadcrumbs" aria-label="Current location">
+            <nav aria-label="Breadcrumb" className="breadcrumbs">
               <span>Workspace</span>
               <span aria-hidden="true">/</span>
-              <strong>{currentPage?.label ?? "Workspace"}</strong>
-            </div>
+              <strong aria-current="page">
+                {currentPage?.label ?? "Workspace"}
+              </strong>
+            </nav>
           </div>
           <div className="topbar-actions">
             <span className="local-status">
@@ -365,7 +367,21 @@ export default function WorkspaceShell({ children }: { children: ReactNode }) {
               title={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
               type="button"
             >
-              <span aria-hidden="true">{theme === "light" ? "☾" : "☼"}</span>
+              <svg
+                aria-hidden="true"
+                className="theme-icon"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                {theme === "light" ? (
+                  <>
+                    <circle cx="12" cy="12" r="3.5" />
+                    <path d="M12 2.75v2M12 19.25v2M21.25 12h-2M4.75 12h-2M18.54 5.46l-1.42 1.42M6.88 17.12l-1.42 1.42M18.54 18.54l-1.42-1.42M6.88 6.88 5.46 5.46" />
+                  </>
+                ) : (
+                  <path d="M20.25 15.1A8.35 8.35 0 0 1 8.9 3.75 8.5 8.5 0 1 0 20.25 15.1Z" />
+                )}
+              </svg>
             </button>
           </div>
         </header>
