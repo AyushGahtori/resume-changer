@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { ArrowUpRight, LoaderCircle, Sparkles } from "lucide-react";
 import type { JobAnalysisResult } from "@/lib/ai/contracts";
 import {
   clearJobAnalysisCache,
@@ -342,30 +343,46 @@ export default function JDWorkspace() {
           </div>
           <div className="form-actions">
             <button
-              className="clear-button"
+              className="home-action-button home-action-button--ghost"
               onClick={handleClear}
               type="button"
             >
               Clear draft
             </button>
             <button
-              className="clear-button analyze-button"
+              aria-busy={analysisState === "loading"}
+              className="home-action-button home-action-button--secondary analyze-button"
               disabled={!isReady || analysisState === "loading"}
               onClick={handleAnalyze}
               type="button"
             >
-              {analysisState === "loading"
-                ? "Analyzing..."
-                : analysisState === "error"
-                  ? "Retry analysis"
-                  : "Analyze job description"}
+              {analysisState === "loading" ? (
+                <>
+                  <LoaderCircle
+                    aria-hidden="true"
+                    className="home-action-spinner"
+                    size={18}
+                  />
+                  <span>Analyzing...</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles aria-hidden="true" size={18} />
+                  <span>
+                    {analysisState === "error"
+                      ? "Retry analysis"
+                      : "Analyze job description"}
+                  </span>
+                </>
+              )}
             </button>
             <button
-              className="primary-button"
+              className="home-action-button home-action-button--primary"
               disabled={!isReady}
               type="submit"
             >
-              Save draft <span aria-hidden="true">↗</span>
+              <span>Save draft</span>
+              <ArrowUpRight aria-hidden="true" size={18} />
             </button>
           </div>
         </div>

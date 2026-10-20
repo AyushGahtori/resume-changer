@@ -662,8 +662,7 @@ h1 {
 }
 
 .form-actions button:disabled {
-  cursor: wait;
-  opacity: 0.7;
+  cursor: not-allowed;
 }
 
 .form-save-feedback {
@@ -717,6 +716,123 @@ h1 {
 .primary-button:disabled {
   cursor: wait;
   opacity: 0.65;
+}
+
+.home-action-button {
+  display: inline-flex;
+  min-width: 0;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 18px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+  text-align: center;
+  white-space: nowrap;
+  transition:
+    border-color 200ms ease,
+    background-color 200ms ease,
+    color 200ms ease,
+    transform 100ms ease;
+}
+
+.home-action-button svg {
+  flex: 0 0 auto;
+}
+
+.home-action-button:focus-visible {
+  outline: 3px solid var(--color-focus-ring);
+  outline-offset: 3px;
+}
+
+.home-action-button:active:not(:disabled) {
+  transform: scale(0.98);
+  transition-duration: 100ms;
+}
+
+.home-action-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.home-action-button--ghost {
+  min-width: 132px;
+  border-color: var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+}
+
+.home-action-button--ghost:hover:not(:disabled) {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface-alt);
+}
+
+.home-action-button--ghost:active:not(:disabled) {
+  background: var(--color-surface-hover);
+}
+
+.home-action-button--secondary {
+  min-width: 228px;
+  border-color: color-mix(
+    in srgb,
+    var(--color-violet) 20%,
+    var(--color-violet-subtle)
+  );
+  background: var(--color-violet-subtle);
+  color: var(--color-violet-strong);
+}
+
+.home-action-button--secondary:hover:not(:disabled) {
+  border-color: var(--color-violet);
+  background: var(--color-violet-light);
+  color: var(--color-text-primary);
+}
+
+.home-action-button--secondary:active:not(:disabled) {
+  border-color: var(--color-violet);
+  background: var(--color-violet);
+  color: var(--color-text-inverse);
+}
+
+.home-action-button--primary {
+  min-width: 136px;
+  border-color: var(--color-orange);
+  background: var(--color-orange);
+  color: var(--color-text-on-orange);
+}
+
+.home-action-button--primary:hover:not(:disabled) {
+  border-color: var(--color-orange-strong);
+  background: var(--color-orange-strong);
+  color: var(--color-text-on-orange-hover);
+}
+
+.home-action-button--primary:active:not(:disabled) {
+  border-color: var(--color-orange-strong);
+  background: var(--color-orange-strong);
+  color: var(--color-text-on-orange-hover);
+}
+
+.home-action-button--primary:disabled {
+  border-color: var(--color-orange-light);
+  background: var(--color-orange-light);
+  color: var(--color-text-on-orange);
+  opacity: 1;
+}
+
+.home-action-spinner {
+  animation: home-action-spin 900ms linear infinite;
+}
+
+@keyframes home-action-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 button:focus-visible,
@@ -1869,6 +1985,23 @@ a:focus-visible {
   }
 }
 
+@media (max-width: 950px) and (min-width: 701px) {
+  .jd-workspace-frame .form-footer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .jd-workspace-frame .form-actions {
+    width: 100%;
+    min-width: 0;
+    flex-wrap: wrap;
+  }
+
+  .jd-workspace-frame .form-actions button {
+    flex: 1 1 auto;
+  }
+}
+
 @media (max-width: 700px) {
   .jd-page {
     --type-page-title-size: 32px;
@@ -1978,6 +2111,7 @@ a:focus-visible {
   }
 
   .form-actions button {
+    min-width: 0;
     flex: 1 1 0;
   }
 
@@ -3124,6 +3258,10 @@ a:focus-visible {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .home-action-spinner {
+    animation: none;
+  }
+
   *,
   *::before,
   *::after {
