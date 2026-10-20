@@ -23,7 +23,7 @@ test("shows structured JD analysis with evidence distinctions and terminology", 
 }) => {
   await page.getByLabel("Role title").fill("ML Platform Engineer");
   await page
-    .getByLabel("Job description")
+    .getByRole("textbox", { name: "Job description", exact: true })
     .fill("Build and optimize machine learning infrastructure.");
   await page.route("**/api/ai/analyze-job-description", async (route) => {
     await route.fulfill({
@@ -49,7 +49,9 @@ test("shows structured JD analysis with evidence distinctions and terminology", 
 test("shows a retry action after transient analysis failure and keeps the draft", async ({
   page,
 }) => {
-  await page.getByLabel("Job description").fill("Build reliable services.");
+  await page
+    .getByRole("textbox", { name: "Job description", exact: true })
+    .fill("Build reliable services.");
   let attempts = 0;
   await page.route("**/api/ai/analyze-job-description", async (route) => {
     attempts += 1;
@@ -76,9 +78,9 @@ test("shows a retry action after transient analysis failure and keeps the draft"
   await expect(
     page.getByText("AI service is temporarily unavailable."),
   ).toBeVisible();
-  await expect(page.getByLabel("Job description")).toHaveValue(
-    "Build reliable services.",
-  );
+  await expect(
+    page.getByRole("textbox", { name: "Job description", exact: true }),
+  ).toHaveValue("Build reliable services.");
 
   await page.getByRole("button", { name: "Retry analysis" }).click();
   await expect(

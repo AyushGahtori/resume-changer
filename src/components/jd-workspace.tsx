@@ -222,12 +222,15 @@ export default function JDWorkspace() {
   return (
     <section className="jd-page" aria-labelledby="page-title">
       <div className="page-heading-row">
-        <div>
+        <div className="page-heading-copy">
           <p className="eyebrow">
             NEW APPLICATION <span>01 / 04</span>
           </p>
           <h1 id="page-title">Start with the role.</h1>
-          <p className="page-intro">Job description</p>
+          <p className="page-intro">
+            Add the job description and let AI analyze it for a stronger,
+            ATS-optimized resume.
+          </p>
         </div>
         <div className="draft-state" role="status" aria-live="polite">
           <span className={`draft-dot draft-${saveState}`} aria-hidden="true" />

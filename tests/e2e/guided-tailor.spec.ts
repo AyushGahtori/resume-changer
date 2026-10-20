@@ -28,7 +28,9 @@ test("Guided Tailor requires approval and renders only the approved rewrite", as
   await page.goto("/");
   await page.getByLabel("Company").fill("Example Cloud");
   await page.getByLabel("Role title").fill("Cloud Platform Engineer");
-  await page.getByLabel("Job description").fill(jobDescription);
+  await page
+    .getByRole("textbox", { name: "Job description", exact: true })
+    .fill(jobDescription);
   await expect(page.getByRole("status")).toContainText("Saved locally");
 
   await page.route("**/api/ai/analyze-job-description", async (route) => {
@@ -152,7 +154,9 @@ test("Guided Tailor adds suggested evidence only after explicit user action", as
   await page.goto("/");
   await page.getByLabel("Company").fill("Example Cloud");
   await page.getByLabel("Role title").fill("Cloud Platform Engineer");
-  await page.getByLabel("Job description").fill(jobDescription);
+  await page
+    .getByRole("textbox", { name: "Job description", exact: true })
+    .fill(jobDescription);
   await expect(page.getByRole("status")).toContainText("Saved locally");
 
   await page.route("**/api/ai/analyze-job-description", async (route) => {

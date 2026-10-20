@@ -17,7 +17,7 @@ test.beforeEach(async ({ page }) => {
   await page.getByLabel("Company").fill("Example Systems");
   await page.getByLabel("Role title").fill("Platform Engineer");
   await page
-    .getByLabel("Job description")
+    .getByRole("textbox", { name: "Job description", exact: true })
     .fill("Build reliable platform services and improve deployment workflows.");
   await expect(page.getByRole("status")).toContainText("Saved locally");
   await page.goto("/generate?source=demo");
