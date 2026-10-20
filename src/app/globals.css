@@ -90,8 +90,10 @@
   --radius-full: 999px;
   --border-default: 1px solid var(--color-border);
   --border-control: 1px solid var(--color-border);
-  --shadow-xs: 0 1px 2px color-mix(in srgb, var(--color-text-primary) 5%, transparent);
-  --shadow-sm: 0 2px 4px color-mix(in srgb, var(--color-text-primary) 8%, transparent);
+  --shadow-xs: 0 1px 2px
+    color-mix(in srgb, var(--color-text-primary) 5%, transparent);
+  --shadow-sm: 0 2px 4px
+    color-mix(in srgb, var(--color-text-primary) 8%, transparent);
   --focus-ring: 0 0 0 3px var(--focus);
   --focus-outline: 3px solid var(--focus);
 }
@@ -258,22 +260,23 @@ a {
 
 .main-navigation {
   display: grid;
-  gap: 4px;
+  gap: 8px;
 }
 
 .nav-link {
   display: flex;
   align-items: center;
-  gap: 11px;
+  gap: 12px;
   min-width: 0;
-  min-height: 42px;
-  padding: 7px 10px;
+  min-height: 48px;
+  padding: 8px 12px;
   border: 1px solid transparent;
-  border-radius: 6px;
+  border-radius: 8px;
   color: var(--muted);
   text-decoration: none;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 550;
+  line-height: 20px;
   transition:
     color 120ms ease,
     background-color 120ms ease,
@@ -286,26 +289,34 @@ a {
 }
 
 .nav-link.is-active {
-  border-color: var(--line);
-  background: var(--surface);
-  color: var(--ink);
-  box-shadow: 0 1px 2px rgb(19 28 23 / 4%);
+  background: var(--accent-soft);
+  color: var(--accent-hover);
+  font-weight: 600;
 }
 
 .nav-link.is-active .nav-icon {
-  color: var(--accent);
+  color: var(--accent-hover);
+}
+
+:root[data-theme="dark"] .nav-link.is-active {
+  background: var(--imagination-soft);
+  color: var(--color-violet-light);
+}
+
+:root[data-theme="dark"] .nav-link.is-active .nav-icon {
+  color: var(--color-violet-light);
 }
 
 .nav-icon {
-  display: grid;
-  width: 23px;
-  height: 23px;
-  flex: 0 0 23px;
-  place-items: center;
-  border-radius: 5px;
+  display: block;
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
   color: var(--quiet);
-  font-size: 10px;
-  font-weight: 700;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .sidebar-bottom {
@@ -1850,6 +1861,11 @@ a:focus-visible {
     width: 220px;
   }
 
+  .main-navigation .nav-link {
+    padding-right: 8px;
+    padding-left: 8px;
+  }
+
   .page-content {
     padding-right: 38px;
     padding-left: 38px;
@@ -1901,25 +1917,18 @@ a:focus-visible {
 
   .main-navigation {
     display: flex;
-    gap: 5px;
+    gap: 8px;
     overflow-x: auto;
     padding-bottom: 2px;
     scrollbar-width: thin;
   }
 
   .nav-link {
-    min-height: 37px;
+    min-height: 48px;
     flex: 0 0 auto;
-    gap: 7px;
-    padding: 6px 9px;
-    font-size: 11px;
-  }
-
-  .nav-icon {
-    width: 20px;
-    height: 20px;
-    flex-basis: 20px;
-    font-size: 9px;
+    gap: 12px;
+    padding: 8px 10px;
+    font-size: 14px;
   }
 
   .topbar {
