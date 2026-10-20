@@ -146,7 +146,10 @@ test("applies shared color tokens in light and dark themes", async ({
 test("keeps the orange save action legible and the focus ring contrasted", async ({
   page,
 }) => {
-  const jobDescription = page.getByLabel("Job description");
+  const jobDescription = page.getByRole("textbox", {
+    name: "Job description",
+    exact: true,
+  });
   const saveButton = page.getByRole("button", { name: "Save draft" });
 
   const focusAppearance = async () => {
