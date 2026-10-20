@@ -78,8 +78,25 @@ The app uses a server-side Gemini key when `AI_PROVIDER=gemini`; keep it local. 
 
 The project plan's Task 25 can expand setup instructions after the remaining AI workflow tasks exist.
 
+### Personal data in Git worktrees
+
+Git ignores `data/`, so a new clone or worktree does not receive a copy of
+`data/resume-library.json`. When running from a linked Git worktree without its
+own library, the app automatically uses the primary checkout's personal library,
+library backups, and generation history. Library edits made there update that
+shared personal library. A library present in the current worktree takes
+precedence, including when it is invalid and needs repair.
+
+To choose a different data location, set `RESUME_LIBRARY_ROOT` in the running
+checkout's `.env.local` to the absolute folder containing `data/`, then restart
+the server. For example, `RESUME_LIBRARY_ROOT=C:/path/to/resume-changer` reads
+`C:/path/to/resume-changer/data/resume-library.json`. This explicit setting
+disables automatic discovery, even if the configured file is missing. Demo
+mode always reads the fictional example from the running checkout.
+
 ## Common Problems
 
+- **`data/resume-library.json` was not found:** Check that the personal library exists in the running checkout or its primary Git checkout. For another location, configure `RESUME_LIBRARY_ROOT` as described above and restart. A fresh clone needs your personal data restored separately, or you can explicitly select fictional demo data.
 - **Port 3000 is already in use:** Stop the other server or use the alternate port printed by Next.js.
 - **Playwright cannot find Chromium:** Run `npx playwright install chromium` and retry the E2E command.
 - **Dependencies appear inconsistent:** Run `npm ci` from the repository root to recreate `node_modules` from the lockfile.
