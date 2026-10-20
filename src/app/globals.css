@@ -77,6 +77,23 @@
   --type-caption-line-height: 16px;
   --type-micro-label-size: 11px;
   --type-micro-label-line-height: 14px;
+  --space-4: 4px;
+  --space-8: 8px;
+  --space-12: 12px;
+  --space-16: 16px;
+  --space-24: 24px;
+  --space-32: 32px;
+  --space-48: 48px;
+  --space-64: 64px;
+  --radius-control: 6px;
+  --radius-card: 8px;
+  --radius-full: 999px;
+  --border-default: 1px solid var(--color-border);
+  --border-control: 1px solid var(--color-border);
+  --shadow-xs: 0 1px 2px color-mix(in srgb, var(--color-text-primary) 5%, transparent);
+  --shadow-sm: 0 2px 4px color-mix(in srgb, var(--color-text-primary) 8%, transparent);
+  --focus-ring: 0 0 0 3px var(--focus);
+  --focus-outline: 3px solid var(--focus);
 }
 
 :root[data-theme="dark"] {
@@ -138,6 +155,8 @@
   --danger-soft: var(--color-error-subtle);
   --focus: var(--color-focus-ring);
   --shadow: 0 16px 48px rgb(0 0 0 / 18%);
+  --shadow-xs: none;
+  --shadow-sm: none;
 }
 
 * {
@@ -379,8 +398,8 @@ a {
   width: 36px;
   height: 36px;
   place-items: center;
-  border: 1px solid var(--line);
-  border-radius: 6px;
+  border: var(--border-default);
+  border-radius: var(--radius-full);
   background: var(--surface);
   color: var(--muted);
   cursor: pointer;
@@ -477,19 +496,19 @@ h1 {
 }
 
 .jd-form {
-  padding: 30px 32px 24px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
+  padding: var(--space-24);
+  border: var(--border-default);
+  border-radius: var(--radius-card);
   background: var(--surface);
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow-xs);
 }
 
 .form-topline {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 14px;
-  margin-bottom: 24px;
+  gap: var(--space-16);
+  margin-bottom: var(--space-24);
 }
 
 .form-topline h2 {
@@ -537,8 +556,8 @@ h1 {
   min-width: 0;
   height: 43px;
   padding: 0 12px;
-  border: 1px solid var(--line-strong);
-  border-radius: 5px;
+  border: var(--border-control);
+  border-radius: var(--radius-control);
   outline: none;
   background: var(--surface);
   color: var(--ink);
@@ -557,7 +576,7 @@ h1 {
 .field-group input:focus,
 .jd-form textarea:focus {
   border-color: var(--focus);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus) 18%, transparent);
+  box-shadow: var(--focus-ring);
 }
 
 .field-group input[aria-invalid="true"],
@@ -574,7 +593,7 @@ h1 {
 
 .form-divider {
   height: 1px;
-  margin: 25px 0 21px;
+  margin: var(--space-24) 0 var(--space-16);
   background: var(--line);
 }
 
@@ -598,8 +617,8 @@ h1 {
   min-height: 260px;
   padding: 14px 15px;
   resize: vertical;
-  border: 1px solid var(--line-strong);
-  border-radius: 5px;
+  border: var(--border-control);
+  border-radius: var(--radius-control);
   outline: none;
   background: var(--surface-soft);
   color: var(--ink);
@@ -614,8 +633,8 @@ h1 {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  margin-top: 15px;
+  gap: var(--space-16);
+  margin-top: var(--space-16);
 }
 
 .input-metrics {
@@ -639,7 +658,7 @@ h1 {
 .form-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--space-12);
 }
 
 .form-actions button:disabled {
@@ -666,8 +685,8 @@ h1 {
   justify-content: center;
   gap: 9px;
   padding: 0 14px;
-  border: 1px solid var(--line-strong);
-  border-radius: 5px;
+  border: var(--border-control);
+  border-radius: var(--radius-control);
   background: var(--surface);
   color: var(--ink);
   cursor: pointer;
@@ -702,25 +721,26 @@ h1 {
 
 button:focus-visible,
 a:focus-visible {
-  outline: 3px solid var(--focus);
+  outline: var(--focus-outline);
   outline-offset: 2px;
 }
 
 .workspace-note {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-top: 19px;
+  gap: var(--space-8);
+  margin-top: var(--space-16);
   color: var(--muted);
   font-size: 11px;
 }
 
 .jd-analysis {
-  margin-top: 18px;
-  padding: 22px 24px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
+  margin-top: var(--space-16);
+  padding: var(--space-24);
+  border: var(--border-default);
+  border-radius: var(--radius-card);
   background: var(--surface);
+  box-shadow: var(--shadow-xs);
 }
 
 .jd-analysis > p {
@@ -771,9 +791,9 @@ a:focus-visible {
 .analysis-role {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
-  margin-top: 18px;
-  padding: 14px 0;
+  gap: var(--space-16);
+  margin-top: var(--space-16);
+  padding: var(--space-16) 0;
   border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
 }
@@ -798,8 +818,8 @@ a:focus-visible {
 .analysis-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px 28px;
-  margin-top: 18px;
+  gap: var(--space-16) var(--space-24);
+  margin-top: var(--space-16);
 }
 
 .analysis-section {
@@ -1799,7 +1819,7 @@ a:focus-visible {
     min-height: 0;
     flex: 1;
     flex-direction: column;
-    padding: 24px 28px 20px;
+    padding: var(--space-24);
   }
 
   .jd-workspace-frame .form-topline {
@@ -1833,6 +1853,11 @@ a:focus-visible {
   .page-content {
     padding-right: 38px;
     padding-left: 38px;
+  }
+
+  .jd-workspace-frame .jd-form,
+  .jd-workspace-frame .jd-analysis {
+    padding: var(--space-16);
   }
 
   .metadata-fields {
@@ -1926,7 +1951,7 @@ a:focus-visible {
   }
 
   .jd-form {
-    padding: 22px 19px 18px;
+    padding: var(--space-16);
   }
 
   .metadata-fields {
@@ -1961,7 +1986,7 @@ a:focus-visible {
   }
 
   .jd-analysis {
-    padding: 18px;
+    padding: var(--space-16);
   }
 
   .analysis-grid {
@@ -3104,5 +3129,12 @@ a:focus-visible {
   *::after {
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+@media (max-width: 380px) {
+  .jd-workspace-frame .jd-form,
+  .jd-workspace-frame .jd-analysis {
+    padding: var(--space-12);
   }
 }
