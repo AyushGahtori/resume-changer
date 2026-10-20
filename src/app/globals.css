@@ -61,6 +61,22 @@
   --danger-soft: var(--color-error-subtle);
   --focus: var(--color-focus-ring);
   --shadow: 0 14px 40px rgb(32 44 37 / 5%);
+  --type-page-title-size: 40px;
+  --type-page-title-line-height: 48px;
+  --type-section-heading-size: 24px;
+  --type-section-heading-line-height: 32px;
+  --type-card-heading-size: 16px;
+  --type-card-heading-line-height: 24px;
+  --type-field-label-size: 14px;
+  --type-field-label-line-height: 20px;
+  --type-body-size: 14px;
+  --type-body-line-height: 20px;
+  --type-helper-size: 12px;
+  --type-helper-line-height: 16px;
+  --type-caption-size: 12px;
+  --type-caption-line-height: 16px;
+  --type-micro-label-size: 11px;
+  --type-micro-label-line-height: 14px;
 }
 
 :root[data-theme="dark"] {
@@ -810,6 +826,73 @@ a:focus-visible {
 
 .analysis-section li + li {
   margin-top: 3px;
+}
+
+.jd-page {
+  letter-spacing: 0;
+}
+
+.jd-page h1 {
+  font-size: var(--type-page-title-size);
+  line-height: var(--type-page-title-line-height);
+}
+
+.jd-page .eyebrow,
+.jd-page .eyebrow span,
+.jd-page .draft-state,
+.jd-page .input-metrics,
+.jd-page .workspace-note,
+.jd-page .analysis-role span {
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line-height);
+}
+
+.jd-page .form-topline h2 {
+  font-size: var(--type-section-heading-size);
+  font-weight: 600;
+  line-height: var(--type-section-heading-line-height);
+}
+
+.jd-page .jd-analysis-heading h2 {
+  font-size: var(--type-card-heading-size);
+  font-weight: 600;
+  line-height: var(--type-card-heading-line-height);
+}
+
+.jd-page .field-group label,
+.jd-page .description-heading label {
+  font-size: var(--type-field-label-size);
+  line-height: var(--type-field-label-line-height);
+}
+
+.jd-page .page-intro,
+.jd-page .form-topline p,
+.jd-page .field-group input,
+.jd-page .jd-form textarea,
+.jd-page .clear-button,
+.jd-page .primary-button,
+.jd-page .jd-analysis > p,
+.jd-page .jd-analysis-heading p,
+.jd-page .analysis-role strong,
+.jd-page .analysis-section ul,
+.jd-page .analysis-section p {
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
+}
+
+.jd-page .storage-notice,
+.jd-page .field-error,
+.jd-page .form-save-feedback,
+.jd-page .jd-analysis .analysis-cache-notice,
+.jd-page .jd-analysis-error > span {
+  font-size: var(--type-helper-size);
+  line-height: var(--type-helper-line-height);
+}
+
+.jd-page .optional-label,
+.jd-page .required-label {
+  font-size: var(--type-micro-label-size);
+  line-height: var(--type-micro-label-line-height);
 }
 
 .note-mark {
@@ -1762,6 +1845,11 @@ a:focus-visible {
 }
 
 @media (max-width: 700px) {
+  .jd-page {
+    --type-page-title-size: 32px;
+    --type-page-title-line-height: 40px;
+  }
+
   .app-frame {
     display: flex;
     flex-direction: column;
