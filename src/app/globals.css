@@ -3,55 +3,124 @@
 
 :root {
   color-scheme: light;
-  --canvas: #f7f8f6;
-  --sidebar: #f1f3ef;
-  --surface: #ffffff;
-  --surface-soft: #f8f9f7;
-  --surface-hover: #e9ede8;
-  --ink: #252a27;
-  --muted: #69716b;
-  --quiet: #8c948e;
-  --line: #dce2dc;
-  --line-strong: #c9d1ca;
-  --accent: #e87532;
-  --accent-hover: #c95b22;
-  --accent-soft: #fff0e5;
-  --accent-contrast: #2d1a0e;
-  --imagination: #7846d7;
-  --imagination-hover: #6232bf;
-  --imagination-soft: #f1ebff;
-  --teal: #356e61;
-  --teal-soft: #e5f0eb;
-  --danger: #a43e32;
-  --danger-soft: #f9eae7;
-  --focus: #7846d7;
+  --color-canvas: #f8fafc;
+  --color-sidebar: #ffffff;
+  --color-surface: #ffffff;
+  --color-surface-alt: #f1f5f9;
+  --color-surface-hover: #e8eef5;
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #475569;
+  --color-text-muted: #64748b;
+  --color-text-inverse: #ffffff;
+  --color-text-on-orange: #0f172a;
+  --color-text-on-orange-hover: #ffffff;
+  --color-border: #e2e8f0;
+  --color-border-strong: #cbd5e1;
+  --color-violet: #7c3aed;
+  --color-violet-light: #a78bfa;
+  --color-violet-subtle: #ede9fe;
+  --color-violet-strong: #6d28d9;
+  --color-orange: #f97316;
+  --color-orange-light: #fdba74;
+  --color-orange-subtle: #fff7ed;
+  --color-orange-strong: #c2410c;
+  --color-success: #10b981;
+  --color-success-strong: #047857;
+  --color-success-subtle: #ecfdf5;
+  --color-warning: #f59e0b;
+  --color-warning-strong: #92400e;
+  --color-warning-subtle: #fffbeb;
+  --color-error: #ef4444;
+  --color-error-strong: #b91c1c;
+  --color-error-subtle: #fef2f2;
+  --color-info: #3b82f6;
+  --color-info-strong: #1d4ed8;
+  --color-focus-ring: #7c3aed;
+
+  /* Compatibility aliases keep existing app and studio styles theme-aware. */
+  --canvas: var(--color-canvas);
+  --sidebar: var(--color-sidebar);
+  --surface: var(--color-surface);
+  --surface-soft: var(--color-surface-alt);
+  --surface-hover: var(--color-surface-hover);
+  --ink: var(--color-text-primary);
+  --muted: var(--color-text-secondary);
+  --quiet: var(--color-text-muted);
+  --line: var(--color-border);
+  --line-strong: var(--color-border-strong);
+  --accent: var(--color-orange);
+  --accent-hover: var(--color-orange-strong);
+  --accent-soft: var(--color-orange-subtle);
+  --accent-contrast: var(--color-text-on-orange);
+  --imagination: var(--color-violet);
+  --imagination-hover: var(--color-violet-strong);
+  --imagination-soft: var(--color-violet-subtle);
+  --teal: var(--color-success-strong);
+  --teal-soft: var(--color-success-subtle);
+  --danger: var(--color-error-strong);
+  --danger-soft: var(--color-error-subtle);
+  --focus: var(--color-focus-ring);
   --shadow: 0 14px 40px rgb(32 44 37 / 5%);
 }
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --canvas: #101014;
-  --sidebar: #121217;
-  --surface: #17171e;
-  --surface-soft: #1e1e27;
-  --surface-hover: #292933;
-  --ink: #f0f1ed;
-  --muted: #a5aeaa;
-  --quiet: #7f8985;
-  --line: #30303c;
-  --line-strong: #444453;
-  --accent: #fb923c;
-  --accent-hover: #fdba74;
-  --accent-soft: #382519;
-  --accent-contrast: #241306;
-  --imagination: #b69aff;
-  --imagination-hover: #cfbdff;
-  --imagination-soft: #281e3a;
-  --teal: #91cbb9;
-  --teal-soft: #1e302c;
-  --danger: #ff9b8c;
-  --danger-soft: #392321;
-  --focus: #c4b5fd;
+  --color-canvas: #171421;
+  --color-sidebar: #14111f;
+  --color-surface: #211d2e;
+  --color-surface-alt: #2a2538;
+  --color-surface-hover: #342f43;
+  --color-text-primary: #f8fafc;
+  --color-text-secondary: #b7b3c7;
+  --color-text-muted: #a49fb4;
+  --color-text-inverse: #ffffff;
+  --color-text-on-orange: #171421;
+  --color-text-on-orange-hover: #171421;
+  --color-border: #3a3548;
+  --color-border-strong: #514a61;
+  --color-violet: #7c3aed;
+  --color-violet-light: #a78bfa;
+  --color-violet-subtle: #322548;
+  --color-violet-strong: #a78bfa;
+  --color-orange: #f97316;
+  --color-orange-light: #fdba74;
+  --color-orange-subtle: #442719;
+  --color-orange-strong: #fdba74;
+  --color-success: #34d399;
+  --color-success-strong: #34d399;
+  --color-success-subtle: #18382f;
+  --color-warning: #fbbf24;
+  --color-warning-strong: #fbbf24;
+  --color-warning-subtle: #3b2f14;
+  --color-error: #f87171;
+  --color-error-strong: #f87171;
+  --color-error-subtle: #3b2228;
+  --color-info: #60a5fa;
+  --color-info-strong: #60a5fa;
+  --color-focus-ring: #a78bfa;
+
+  --canvas: var(--color-canvas);
+  --sidebar: var(--color-sidebar);
+  --surface: var(--color-surface);
+  --surface-soft: var(--color-surface-alt);
+  --surface-hover: var(--color-surface-hover);
+  --ink: var(--color-text-primary);
+  --muted: var(--color-text-secondary);
+  --quiet: var(--color-text-muted);
+  --line: var(--color-border);
+  --line-strong: var(--color-border-strong);
+  --accent: var(--color-orange);
+  --accent-hover: var(--color-orange-strong);
+  --accent-soft: var(--color-orange-subtle);
+  --accent-contrast: var(--color-text-on-orange);
+  --imagination: var(--color-violet);
+  --imagination-hover: var(--color-violet-strong);
+  --imagination-soft: var(--color-violet-subtle);
+  --teal: var(--color-success-strong);
+  --teal-soft: var(--color-success-subtle);
+  --danger: var(--color-error-strong);
+  --danger-soft: var(--color-error-subtle);
+  --focus: var(--color-focus-ring);
   --shadow: 0 16px 48px rgb(0 0 0 / 18%);
 }
 
@@ -220,7 +289,7 @@ a {
   flex: 0 0 8px;
   margin-top: 4px;
   border-radius: 50%;
-  background: var(--teal);
+  background: var(--color-success);
 }
 
 .sidebar-bottom-title,
@@ -378,11 +447,11 @@ h1 {
 }
 
 .draft-saved {
-  background: var(--teal);
+  background: var(--color-success);
 }
 
 .draft-error {
-  background: var(--danger);
+  background: var(--color-error);
 }
 
 .storage-notice {
@@ -601,12 +670,13 @@ h1 {
 .primary-button {
   border-color: var(--accent);
   background: var(--accent);
-  color: #fff;
+  color: var(--color-text-on-orange);
 }
 
 .primary-button:hover:not(:disabled) {
   border-color: var(--accent-hover);
   background: var(--accent-hover);
+  color: var(--color-text-on-orange-hover);
 }
 
 .primary-button:disabled {
@@ -616,7 +686,7 @@ h1 {
 
 button:focus-visible,
 a:focus-visible {
-  outline: 3px solid color-mix(in srgb, var(--focus) 55%, transparent);
+  outline: 3px solid var(--focus);
   outline-offset: 2px;
 }
 
