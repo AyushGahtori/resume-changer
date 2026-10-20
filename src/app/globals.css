@@ -200,8 +200,9 @@ a {
 
 .app-frame {
   display: grid;
-  grid-template-columns: 248px minmax(0, 1fr);
+  grid-template-columns: 260px minmax(0, 1fr);
   min-height: 100vh;
+  min-height: 100dvh;
 }
 
 .sidebar {
@@ -209,8 +210,10 @@ a {
   top: 0;
   display: flex;
   flex-direction: column;
-  width: 248px;
+  width: 260px;
+  min-width: 0;
   height: 100vh;
+  height: 100dvh;
   padding: 26px 16px 18px;
   border-right: 1px solid var(--line);
   background: var(--sidebar);
@@ -349,10 +352,12 @@ a {
 
 .topbar {
   display: flex;
-  height: 68px;
+  min-width: 0;
+  height: 60px;
   align-items: center;
   justify-content: space-between;
-  padding: 0 48px;
+  gap: 16px;
+  padding: 0 32px;
   border-bottom: 1px solid var(--line);
   background: var(--surface);
 }
@@ -364,9 +369,11 @@ a {
 }
 
 .breadcrumbs {
+  min-width: 0;
   gap: 10px;
   color: var(--quiet);
   font-size: 12px;
+  white-space: nowrap;
 }
 
 .breadcrumbs strong {
@@ -375,6 +382,7 @@ a {
 }
 
 .topbar-actions {
+  flex: 0 0 auto;
   gap: 18px;
 }
 
@@ -415,8 +423,9 @@ a {
 
 .page-content {
   width: min(100%, 1320px);
+  min-width: 0;
   margin: 0 auto;
-  padding: 58px 70px 72px;
+  padding: 32px;
 }
 
 .jd-page,
@@ -1916,7 +1925,7 @@ a:focus-visible {
     min-height: 0;
     flex: 1;
     flex-direction: column;
-    padding: 34px 56px 26px;
+    padding: 24px 32px;
   }
 
   .jd-workspace-frame .jd-page {
@@ -1967,8 +1976,8 @@ a:focus-visible {
   }
 
   .page-content {
-    padding-right: 38px;
-    padding-left: 38px;
+    padding-right: 24px;
+    padding-left: 24px;
   }
 
   .jd-workspace-frame .jd-form,
@@ -2056,8 +2065,8 @@ a:focus-visible {
   }
 
   .topbar {
-    height: 54px;
-    padding: 0 18px;
+    height: 56px;
+    padding: 0 16px;
   }
 
   .topbar-actions {
@@ -2065,7 +2074,7 @@ a:focus-visible {
   }
 
   .page-content {
-    padding: 36px 20px 48px;
+    padding: 28px 16px 40px;
   }
 
   .page-heading-row {
@@ -2196,8 +2205,8 @@ a:focus-visible {
   }
 
   .page-content {
-    padding-right: 15px;
-    padding-left: 15px;
+    padding-right: 16px;
+    padding-left: 16px;
   }
 
   .jd-form {

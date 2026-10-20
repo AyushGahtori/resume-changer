@@ -87,11 +87,13 @@ export default function WorkspaceShell({ children }: { children: ReactNode }) {
 
       <div className="main-column">
         <header className="topbar">
-          <div className="breadcrumbs" aria-label="Current location">
+          <nav aria-label="Breadcrumb" className="breadcrumbs">
             <span>Workspace</span>
             <span aria-hidden="true">/</span>
-            <strong>{currentPage?.label ?? "Workspace"}</strong>
-          </div>
+            <strong aria-current="page">
+              {currentPage?.label ?? "Workspace"}
+            </strong>
+          </nav>
           <div className="topbar-actions">
             <span className="local-status">
               <span aria-hidden="true" /> Local mode
