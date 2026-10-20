@@ -1,131 +1,236 @@
 import { expect, test } from "@playwright/test";
 
+const destinations = [
+  { href: "/", label: "Job description" },
+  { href: "/library", label: "Achievement library" },
+  { href: "/generate", label: "Resume builder" },
+  { href: "/history", label: "History" },
+  { href: "/settings", label: "Settings" },
+];
+
+function parseRgb(color: string) {
+  const channels = color
+    .match(/[\d.]+/g)
+    ?.slice(0, 3)
+    .map(Number);
+  if (!channels || channels.length !== 3) {
+    throw new Error("Expected an RGB color, received: " + color);
+  }
+
+  return channels.map((channel) => {
+    const normalized = channel / 255;
+    return normalized <= 0.04045
+      ? normalized / 12.92
+      : ((normalized + 0.055) / 1.055) ** 2.4;
+  });
+}
+
+function contrastRatio(foreground: string, background: string) {
+  const luminance = (color: string) => {
+    const [red, green, blue] = parseRgb(color);
+    return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+  };
+
+  const foregroundLuminance = luminance(foreground);
+  const backgroundLuminance = luminance(background);
+  const lighter = Math.max(foregroundLuminance, backgroundLuminance);
+  const darker = Math.min(foregroundLuminance, backgroundLuminance);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
 });
 
-test("shows the brand, workspace label, and local workspace status in both themes", async ({
+test("marks only the current destination on every route, including after refresh", async ({
   page,
 }) => {
-  const brand = page.getByRole("link", { name: "Resume Changer home" });
-  const workspaceLabel = page.getByText("WORKSPACE", { exact: true });
+  test.setTimeout(90_000);
 
-  await expect(brand).toHaveAttribute("href", "/");
-  await expect(brand).toBeVisible();
-  await expect(workspaceLabel).toBeVisible();
-  await expect(
-    page.getByText("Private workspace", { exact: true }),
-  ).toBeVisible();
-  await expect(
-    page.getByText("Saved on this device", { exact: true }),
-  ).toBeVisible();
-  await expect(page.getByText("Go Pro", { exact: true })).toHaveCount(0);
+  await page.goto("/");
+  for (const destination of destinations) {
+    const navigation = page.getByRole("navigation", {
+      name: "Main navigation",
+    });
+    if (destination.href !== "/") {
+      await navigation.getByRole("link", { name: destination.label }).click();
+    }
+    await expect(page).toHaveURL(new RegExp(destination.href + "$"), {
+      timeout: 30_000,
+    });
+    const activeLink = navigation.getByRole("link", {
+      name: destination.label,
+    });
 
-  const brandStyle = await brand.evaluate((element) => {
-    const textStyle = getComputedStyle(element);
-    const markStyle = getComputedStyle(element.querySelector(".brand-mark")!);
-    return {
-      fontSize: textStyle.fontSize,
-      fontWeight: textStyle.fontWeight,
-      markWidth: markStyle.width,
-      markHeight: markStyle.height,
-      markColor: markStyle.color,
-    };
-  });
-  expect(brandStyle).toEqual({
-    fontSize: "16px",
-    fontWeight: "700",
-    markWidth: "24px",
-    markHeight: "24px",
-    markColor: "rgb(249, 115, 22)",
-  });
+    await expect(navigation.getByRole("link")).toHaveCount(5);
+    await expect(activeLink).toHaveAttribute("aria-current", "page");
+    await expect(navigation.locator('[aria-current="page"]')).toHaveCount(1);
 
-  const lightSidebarWidth = await page
-    .locator(".sidebar")
-    .evaluate((sidebar) => getComputedStyle(sidebar).width);
-  expect(lightSidebarWidth).toBe("260px");
-
-  await page.getByRole("button", { name: "Switch to dark mode" }).click();
-  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-  await expect(brand).toBeVisible();
-  await expect(workspaceLabel).toBeVisible();
-  await expect(
-    page.getByText("Private workspace", { exact: true }),
-  ).toBeVisible();
-  await expect(
-    page.getByText("Saved on this device", { exact: true }),
-  ).toBeVisible();
+    await page.reload();
+    await expect(activeLink).toHaveAttribute("aria-current", "page");
+    await expect(navigation.locator('[aria-current="page"]')).toHaveCount(1);
+  }
 });
 
-test("brand link is first keyboard destination and returns to the home route", async ({
+test("provides visible active, hover, and keyboard focus states in both themes", async ({
   page,
 }) => {
-  await page.goto("/settings");
-
-  const brand = page.getByRole("link", { name: "Resume Changer home" });
-  await page.keyboard.press("Tab");
-  await expect(brand).toBeFocused();
-
-  const focusStyle = await brand.evaluate((element) => {
-    const style = getComputedStyle(element);
-    return {
-      outlineStyle: style.outlineStyle,
-      outlineWidth: style.outlineWidth,
-    };
+  const navigation = page.getByRole("navigation", {
+    name: "Main navigation",
   });
-  expect(focusStyle).toEqual({ outlineStyle: "solid", outlineWidth: "3px" });
-
-  await page.keyboard.press("Enter");
-  await expect(page).toHaveURL(/\/$/);
-  await expect(
-    page.getByRole("heading", { level: 1, name: "Start with the role." }),
-  ).toBeVisible();
-});
-
-test("brand link responds to pointer hover and press", async ({ page }) => {
-  await page.goto("/settings");
-
-  const brand = page.getByRole("link", { name: "Resume Changer home" });
-  await brand.hover();
-  await expect(brand).toBeVisible();
-  await page.mouse.down();
-  await page.mouse.up();
-
-  await expect(page).toHaveURL(/\/$/);
-});
-
-test("keeps the longest destination label readable at desktop and compact desktop widths", async ({
-  page,
-}) => {
-  const longestDestination = page.getByRole("link", {
+  const activeLink = navigation.getByRole("link", {
+    name: "Job description",
+  });
+  const inactiveLink = navigation.getByRole("link", {
     name: "Achievement library",
   });
 
-  for (const width of [1440, 1024]) {
-    await page.setViewportSize({ width, height: 900 });
-    await expect(longestDestination).toBeVisible();
+  for (const theme of ["light", "dark"] as const) {
+    if (theme === "dark") {
+      await page.getByRole("button", { name: "Switch to dark mode" }).click();
+      await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+    }
 
-    const geometry = await longestDestination.evaluate((link) => {
-      const label = link.querySelector(":scope > span:last-child");
-      const range = document.createRange();
-      if (label) range.selectNodeContents(label);
-      const labelBounds = range.getBoundingClientRect();
-      const linkBounds = link.getBoundingClientRect();
+    const readActiveStyles = () =>
+      activeLink.evaluate((element) => {
+        const style = getComputedStyle(element);
+        return {
+          color: style.color,
+          backgroundColor: style.backgroundColor,
+          fontWeight: Number(style.fontWeight),
+        };
+      });
+    await expect
+      .poll(async () => {
+        const styles = await readActiveStyles();
+        return contrastRatio(styles.color, styles.backgroundColor);
+      })
+      .toBeGreaterThanOrEqual(4.5);
+    const activeStyles = await readActiveStyles();
+    const inactiveWeight = Number(
+      await inactiveLink.evaluate(
+        (element) => getComputedStyle(element).fontWeight,
+      ),
+    );
+
+    expect(activeStyles.fontWeight).toBeGreaterThan(inactiveWeight);
+    expect(
+      contrastRatio(activeStyles.color, activeStyles.backgroundColor),
+    ).toBeGreaterThanOrEqual(4.5);
+
+    await page.mouse.move(0, 0);
+    const idleBackground = await inactiveLink.evaluate(
+      (element) => getComputedStyle(element).backgroundColor,
+    );
+    await inactiveLink.hover();
+    await expect
+      .poll(() =>
+        inactiveLink.evaluate(
+          (element) => getComputedStyle(element).backgroundColor,
+        ),
+      )
+      .not.toBe(idleBackground);
+
+    await page.evaluate(() => {
+      const focusedElement = document.activeElement;
+      if (focusedElement instanceof HTMLElement) focusedElement.blur();
+      document.body.tabIndex = -1;
+      document.body.focus();
+    });
+    await page.keyboard.press("Tab");
+    await expect(
+      page.getByRole("link", { name: "Resume Changer home" }),
+    ).toBeFocused();
+
+    for (const destination of destinations) {
+      await page.keyboard.press("Tab");
+      const destinationLink = navigation.getByRole("link", {
+        name: destination.label,
+      });
+      await expect(destinationLink).toBeFocused();
+
+      if (destination.href === "/") {
+        const focusStyles = await activeLink.evaluate((element) => {
+          const style = getComputedStyle(element);
+          return {
+            outlineColor: style.outlineColor,
+            outlineStyle: style.outlineStyle,
+            outlineWidth: Number.parseFloat(style.outlineWidth),
+            backgroundColor: style.backgroundColor,
+          };
+        });
+        expect(focusStyles.outlineStyle).toBe("solid");
+        expect(focusStyles.outlineWidth).toBeGreaterThanOrEqual(3);
+        expect(
+          contrastRatio(focusStyles.outlineColor, focusStyles.backgroundColor),
+        ).toBeGreaterThanOrEqual(3);
+      }
+    }
+  }
+});
+
+test("keeps sidebar rows contained across desktop, zoom-equivalent, and mobile widths", async ({
+  page,
+}) => {
+  for (const width of [1440, 1152, 1024, 768, 720, 390, 320]) {
+    await page.setViewportSize({ width, height: 900 });
+
+    const metrics = await page.evaluate(() => {
+      const sidebar = document.querySelector<HTMLElement>(".sidebar")!;
+      const navigation =
+        document.querySelector<HTMLElement>(".main-navigation")!;
+      const sidebarRight = sidebar.getBoundingClientRect().right;
+      const items = Array.from(
+        navigation.querySelectorAll<HTMLElement>(".nav-link"),
+      ).map((link) => {
+        const label = link.lastElementChild as HTMLElement;
+        const icon = link.querySelector("svg")!;
+        const bounds = link.getBoundingClientRect();
+        return {
+          left: bounds.left,
+          right: bounds.right,
+          height: bounds.height,
+          gap: getComputedStyle(link).gap,
+          labelRight: label.getBoundingClientRect().right,
+          iconWidth: icon.getBoundingClientRect().width,
+          iconHeight: icon.getBoundingClientRect().height,
+        };
+      });
 
       return {
-        labelRight: labelBounds.right,
-        contentRight:
-          linkBounds.right -
-          Number.parseFloat(getComputedStyle(link).paddingRight),
-        scrollWidth: link.scrollWidth,
-        clientWidth: link.clientWidth,
-        viewportWidth: document.documentElement.clientWidth,
+        viewportWidth: window.innerWidth,
         documentWidth: document.documentElement.scrollWidth,
+        sidebarRight,
+        overflowX: getComputedStyle(navigation).overflowX,
+        navRowGap: getComputedStyle(navigation).rowGap,
+        navColumnGap: getComputedStyle(navigation).columnGap,
+        activeLeft: document
+          .querySelector(".nav-link.is-active")!
+          .getBoundingClientRect().left,
+        items,
       };
     });
 
-    expect(geometry.labelRight).toBeLessThanOrEqual(geometry.contentRight + 1);
-    expect(geometry.scrollWidth).toBeLessThanOrEqual(geometry.clientWidth);
-    expect(geometry.documentWidth).toBeLessThanOrEqual(geometry.viewportWidth);
+    expect(metrics.documentWidth).toBeLessThanOrEqual(metrics.viewportWidth);
+    expect(metrics.sidebarRight).toBeLessThanOrEqual(metrics.viewportWidth);
+    expect(metrics.items).toHaveLength(5);
+    expect(metrics.navRowGap).toBe("8px");
+    expect(metrics.navColumnGap).toBe("8px");
+    expect(metrics.activeLeft).toBeGreaterThanOrEqual(0);
+    if (width <= 700) {
+      expect(metrics.overflowX).toBe("auto");
+    }
+
+    for (const item of metrics.items) {
+      expect(item.height, "row height at viewport " + width + "px").toBe(48);
+      expect(item.gap).toBe("12px");
+      expect(item.iconWidth).toBe(20);
+      expect(item.iconHeight).toBe(20);
+      expect(item.labelRight).toBeLessThanOrEqual(item.right);
+      if (width > 700) {
+        expect(item.left).toBeGreaterThanOrEqual(0);
+        expect(item.right).toBeLessThanOrEqual(metrics.sidebarRight);
+      }
+    }
   }
 });
