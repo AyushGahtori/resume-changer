@@ -9,6 +9,9 @@ test.beforeEach(async ({ page }) => {
 test("renders the workspace shell and all primary destinations", async ({
   page,
 }) => {
+  // Next dev compiles destination routes on first navigation.
+  test.setTimeout(90_000);
+
   await expect(
     page.getByRole("heading", { name: "Start with the role." }),
   ).toBeVisible();
@@ -20,23 +23,23 @@ test("renders the workspace shell and all primary destinations", async ({
   ).toHaveAttribute("aria-current", "page");
 
   await page.getByRole("link", { name: "Achievement library" }).click();
-  await expect(page).toHaveURL(/\/library$/);
+  await expect(page).toHaveURL(/\/library$/, { timeout: 30_000 });
   await expect(
     page.getByRole("heading", { name: "Achievement library" }),
   ).toBeVisible();
 
   await page.getByRole("link", { name: "Resume builder" }).click();
-  await expect(page).toHaveURL(/\/generate$/);
+  await expect(page).toHaveURL(/\/generate$/, { timeout: 30_000 });
   await expect(
     page.getByRole("heading", { name: "Build your resume." }),
   ).toBeVisible();
 
   await page.getByRole("link", { name: "History" }).click();
-  await expect(page).toHaveURL(/\/history$/);
+  await expect(page).toHaveURL(/\/history$/, { timeout: 30_000 });
   await expect(page.getByRole("heading", { name: "History" })).toBeVisible();
 
   await page.getByRole("link", { name: "Settings" }).click();
-  await expect(page).toHaveURL(/\/settings$/);
+  await expect(page).toHaveURL(/\/settings$/, { timeout: 30_000 });
   await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
 });
 
@@ -128,6 +131,116 @@ test("persists the selected theme and remains usable on a narrow viewport", asyn
     () => document.documentElement.scrollWidth - window.innerWidth,
   );
   expect(pageWidth).toBeLessThanOrEqual(0);
+});
+
+test("uses the home typography scale across desktop and mobile widths", async ({
+  page,
+}) => {
+  const title = page.getByRole("heading", {
+    level: 1,
+    name: "Start with the role.",
+  });
+  const sectionTitle = page.getByRole("heading", {
+    level: 2,
+    name: "Role details",
+  });
+
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.getByRole("button", { name: "Save draft" }).click();
+  await expect(page.locator(".field-error")).toHaveText(
+    "Enter a job description before saving.",
+  );
+
+  const desktopTypography = await page.evaluate(() => {
+    const read = (selector: string) => {
+      const element = document.querySelector(selector);
+      if (!element) return null;
+      const style = getComputedStyle(element);
+      return {
+        fontFamily: style.fontFamily,
+        fontSize: style.fontSize,
+        lineHeight: style.lineHeight,
+        letterSpacing: style.letterSpacing,
+      };
+    };
+
+    return {
+      title: read(".jd-page h1"),
+      section: read(".form-topline h2"),
+      cardToken: getComputedStyle(document.documentElement)
+        .getPropertyValue("--type-card-heading-size")
+        .trim(),
+      fieldLabel: read(".field-group label"),
+      body: read(".jd-form textarea"),
+      helper: read(".field-error"),
+      helperToken: getComputedStyle(document.documentElement)
+        .getPropertyValue("--type-helper-size")
+        .trim(),
+      caption: read(".input-metrics"),
+      microLabel: read(".required-label"),
+    };
+  });
+
+  expect(desktopTypography.title).toMatchObject({
+    fontFamily: expect.stringContaining("Georgia"),
+    fontSize: "40px",
+    lineHeight: "48px",
+  });
+  expect(desktopTypography.section).toMatchObject({
+    fontSize: "24px",
+    lineHeight: "32px",
+  });
+  expect(desktopTypography.cardToken).toBe("16px");
+  expect(desktopTypography.fieldLabel).toMatchObject({
+    fontSize: "14px",
+    lineHeight: "20px",
+  });
+  expect(desktopTypography.body).toMatchObject({
+    fontFamily: expect.stringContaining("Arial"),
+    fontSize: "14px",
+    lineHeight: "20px",
+  });
+  expect(desktopTypography.helperToken).toBe("12px");
+  expect(desktopTypography.helper).toMatchObject({
+    fontSize: "12px",
+    lineHeight: "16px",
+  });
+  expect(desktopTypography.caption).toMatchObject({
+    fontSize: "12px",
+    lineHeight: "16px",
+  });
+  expect(desktopTypography.microLabel).toMatchObject({
+    fontSize: "11px",
+    lineHeight: "14px",
+  });
+  expect(["normal", "0px"]).toContain(desktopTypography.title?.letterSpacing);
+
+  // These desktop widths match the effective CSS viewport at 125%, 150%,
+  // and 200% browser zoom from a 1440px-wide display.
+  for (const width of [1152, 1024, 960, 768, 720, 390, 320]) {
+    await page.setViewportSize({ width, height: 844 });
+
+    const typography = await title.evaluate((element) => {
+      const style = getComputedStyle(element);
+      const bounds = element.getBoundingClientRect();
+      return {
+        fontSize: style.fontSize,
+        lineHeight: style.lineHeight,
+        titleRight: bounds.right,
+        viewportWidth: window.innerWidth,
+        documentWidth: document.documentElement.scrollWidth,
+      };
+    });
+
+    expect(typography.fontSize).toBe(width <= 700 ? "32px" : "40px");
+    expect(typography.lineHeight).toBe(width <= 700 ? "40px" : "48px");
+    expect(typography.titleRight).toBeLessThanOrEqual(width);
+    expect(typography.documentWidth).toBeLessThanOrEqual(
+      typography.viewportWidth,
+    );
+    await expect(title).toBeVisible();
+    await expect(sectionTitle).toBeVisible();
+  }
 });
 
 test("fits the JD workspace within a standard desktop viewport", async ({
