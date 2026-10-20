@@ -51,7 +51,9 @@ test("Auto Tailor selects, drafts, generates, and verifies a one-page PDF", asyn
   await page.goto("/");
   await page.getByLabel("Company").fill("Example Cloud");
   await page.getByLabel("Role title").fill("Cloud Platform Engineer");
-  await page.getByLabel("Job description").fill(jobDescription);
+  await page
+    .getByRole("textbox", { name: "Job description", exact: true })
+    .fill(jobDescription);
   await expect(page.getByRole("status")).toContainText("Saved locally");
 
   await page.route("**/api/ai/analyze-job-description", async (route) => {
@@ -191,7 +193,9 @@ test("local matching is offered only after explaining the AI failure and request
   await page.goto("/");
   await page.getByLabel("Company").fill("Example Cloud");
   await page.getByLabel("Role title").fill("Cloud Platform Engineer");
-  await page.getByLabel("Job description").fill(jobDescription);
+  await page
+    .getByRole("textbox", { name: "Job description", exact: true })
+    .fill(jobDescription);
   await expect(page.getByRole("status")).toContainText("Saved locally");
   await page.route("**/api/ai/analyze-job-description", (route) =>
     route.fulfill({
@@ -266,7 +270,9 @@ test("Auto Tailor reports wording repair and exposes summary, partial coverage a
   await page.goto("/");
   await page.getByLabel("Company").fill("Example Cloud");
   await page.getByLabel("Role title").fill("Cloud Platform Engineer");
-  await page.getByLabel("Job description").fill(jobDescription);
+  await page
+    .getByRole("textbox", { name: "Job description", exact: true })
+    .fill(jobDescription);
   await expect(page.getByRole("status")).toContainText("Saved locally");
   await page.route("**/api/ai/analyze-job-description", (route) =>
     route.fulfill({

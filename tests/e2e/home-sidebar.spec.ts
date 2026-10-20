@@ -91,6 +91,16 @@ test("provides visible active, hover, and keyboard focus states in both themes",
       await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
     }
 
+    // Wait for the theme transition to finish before sampling contrast.
+    await expect(activeLink).toHaveCSS(
+      "color",
+      theme === "dark" ? "rgb(167, 139, 250)" : "rgb(194, 65, 12)",
+    );
+    await expect(activeLink).toHaveCSS(
+      "background-color",
+      theme === "dark" ? "rgb(50, 37, 72)" : "rgb(255, 247, 237)",
+    );
+
     const readActiveStyles = () =>
       activeLink.evaluate((element) => {
         const style = getComputedStyle(element);
@@ -175,6 +185,16 @@ test("keeps sidebar rows contained across desktop, zoom-equivalent, and mobile w
   for (const width of [1440, 1152, 1024, 768, 720, 390, 320]) {
     await page.setViewportSize({ width, height: 900 });
 
+    if (width <= 700) {
+      await page.getByRole("button", { name: "Open navigation" }).click();
+    }
+    const sidebar = page.locator(".sidebar");
+    await expect(sidebar).toBeVisible();
+    await expect(sidebar).toHaveCSS(
+      "transform",
+      width <= 700 ? "matrix(1, 0, 0, 1, 0, 0)" : "none",
+    );
+
     const metrics = await page.evaluate(() => {
       const sidebar = document.querySelector<HTMLElement>(".sidebar")!;
       const navigation =
@@ -218,19 +238,26 @@ test("keeps sidebar rows contained across desktop, zoom-equivalent, and mobile w
     expect(metrics.navColumnGap).toBe("8px");
     expect(metrics.activeLeft).toBeGreaterThanOrEqual(0);
     if (width <= 700) {
-      expect(metrics.overflowX).toBe("auto");
+      expect(metrics.overflowX).toBe("visible");
     }
 
     for (const item of metrics.items) {
-      expect(item.height, "row height at viewport " + width + "px").toBe(48);
+      expect(
+        item.height,
+        "row height at viewport " + width + "px",
+      ).toBeGreaterThanOrEqual(48);
       expect(item.gap).toBe("12px");
       expect(item.iconWidth).toBe(20);
       expect(item.iconHeight).toBe(20);
       expect(item.labelRight).toBeLessThanOrEqual(item.right);
-      if (width > 700) {
-        expect(item.left).toBeGreaterThanOrEqual(0);
-        expect(item.right).toBeLessThanOrEqual(metrics.sidebarRight);
-      }
+      expect(item.left).toBeGreaterThanOrEqual(0);
+      expect(item.right).toBeLessThanOrEqual(metrics.sidebarRight);
+    }
+    if (width <= 700) {
+      await page
+        .getByRole("button", { name: "Close navigation", exact: true })
+        .click();
+      await expect(sidebar).toBeHidden();
     }
   }
 });

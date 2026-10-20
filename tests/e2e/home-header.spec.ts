@@ -230,7 +230,7 @@ test("keeps restore notices adjacent and announces draft saves", async ({
   }
 
   await page
-    .getByLabel("Job description")
+    .getByRole("textbox", { name: "Job description", exact: true })
     .fill("Build dependable services for customers.");
   const save = page.getByRole("button", { name: "Save draft" });
   await save.hover();
