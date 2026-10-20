@@ -9,6 +9,9 @@ test.beforeEach(async ({ page }) => {
 test("renders the workspace shell and all primary destinations", async ({
   page,
 }) => {
+  // Next dev compiles destination routes on first navigation.
+  test.setTimeout(90_000);
+
   await expect(
     page.getByRole("heading", { name: "Start with the role." }),
   ).toBeVisible();
@@ -20,23 +23,23 @@ test("renders the workspace shell and all primary destinations", async ({
   ).toHaveAttribute("aria-current", "page");
 
   await page.getByRole("link", { name: "Achievement library" }).click();
-  await expect(page).toHaveURL(/\/library$/);
+  await expect(page).toHaveURL(/\/library$/, { timeout: 30_000 });
   await expect(
     page.getByRole("heading", { name: "Achievement library" }),
   ).toBeVisible();
 
   await page.getByRole("link", { name: "Resume builder" }).click();
-  await expect(page).toHaveURL(/\/generate$/);
+  await expect(page).toHaveURL(/\/generate$/, { timeout: 30_000 });
   await expect(
     page.getByRole("heading", { name: "Build your resume." }),
   ).toBeVisible();
 
   await page.getByRole("link", { name: "History" }).click();
-  await expect(page).toHaveURL(/\/history$/);
+  await expect(page).toHaveURL(/\/history$/, { timeout: 30_000 });
   await expect(page.getByRole("heading", { name: "History" })).toBeVisible();
 
   await page.getByRole("link", { name: "Settings" }).click();
-  await expect(page).toHaveURL(/\/settings$/);
+  await expect(page).toHaveURL(/\/settings$/, { timeout: 30_000 });
   await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
 });
 
