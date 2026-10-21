@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { AnalysisState } from "@/components/home/job-analysis-panel";
 import { ATSAnalysisPreview } from "@/components/home/ats-analysis-preview";
+import { FieldError } from "@/components/home/field-error";
 import type { JobAnalysisResult } from "@/lib/ai/contracts";
 import {
   clearJobAnalysisCache,
@@ -40,6 +41,15 @@ export default function JDWorkspace() {
   const analysisRequest = useRef<AbortController | null>(null);
   const autosaveTimeout = useRef<number | null>(null);
   const draftChanged = useRef(false);
+
+  function focusField(field: "jobDescription" | "jobUrl") {
+    const input = document.getElementById(
+      field === "jobDescription" ? "job-description" : "job-url",
+    );
+    window.requestAnimationFrame(() => {
+      if (input?.isConnected) input.focus();
+    });
+  }
 
   // Storage access itself can throw, before the storage helpers can catch it.
   function localStorageOrUnavailable(): Storage {
@@ -129,6 +139,7 @@ export default function JDWorkspace() {
       }));
       setAnalysisError("Check the job description and try again.");
       setAnalysisState("error");
+      focusField("jobDescription");
       return;
     }
 
@@ -197,6 +208,7 @@ export default function JDWorkspace() {
     if (Object.keys(nextErrors).length > 0) {
       setSaveFeedbackError(true);
       setSaveFeedback("Fix the highlighted fields before saving.");
+      focusField(nextErrors.jobDescription ? "jobDescription" : "jobUrl");
       return;
     }
 
@@ -310,9 +322,7 @@ export default function JDWorkspace() {
                 value={draft.jobUrl}
               />
               {errors.jobUrl && (
-                <span className="field-error" id="job-url-error">
-                  {errors.jobUrl}
-                </span>
+                <FieldError id="job-url-error" message={errors.jobUrl} />
               )}
             </div>
           </div>
@@ -323,11 +333,17 @@ export default function JDWorkspace() {
             <label htmlFor="job-description">Job description</label>
             <span className="required-label">REQUIRED</span>
           </div>
+          <p className="jd-helper" id="jd-helper">
+            Paste the job description from the company&apos;s career page.
+          </p>
           <textarea
             aria-describedby={
-              errors.jobDescription ? "jd-error jd-count" : "jd-count"
+              errors.jobDescription
+                ? "jd-helper jd-error jd-count"
+                : "jd-helper jd-count"
             }
             aria-invalid={Boolean(errors.jobDescription)}
+            required
             id="job-description"
             name="jobDescription"
             onChange={(event) =>
@@ -338,9 +354,7 @@ export default function JDWorkspace() {
             value={draft.jobDescription}
           />
           {errors.jobDescription && (
-            <p className="field-error" id="jd-error" role="alert">
-              {errors.jobDescription}
-            </p>
+            <FieldError id="jd-error" message={errors.jobDescription} />
           )}
 
           <div className="form-footer">

@@ -315,7 +315,8 @@ test("uses a focus-trapped mobile drawer and exposes every destination", async (
 
       await toggle.click();
       await navigation.getByRole("link", { name: "History" }).click();
-      await expect(page).toHaveURL(/\/history$/);
+      // Next dev compiles this destination on its first navigation.
+      await expect(page).toHaveURL(/\/history$/, { timeout: 30_000 });
       await expect(sidebar).toBeHidden();
 
       const navigatedLayout = await page.evaluate(() => ({

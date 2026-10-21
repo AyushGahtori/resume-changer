@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
 const THEME_STORAGE_KEY = "resume-changer.theme.v1";
@@ -124,16 +124,6 @@ export default function WorkspaceShell({ children }: { children: ReactNode }) {
     setIsMobileNavigationOpen(false);
   }, [pathname]);
 
-  useLayoutEffect(() => {
-    if (!isMobile || !isMobileNavigationOpen) return;
-
-    const focusFrame = window.requestAnimationFrame(() => {
-      mobileCloseButtonRef.current?.focus({ preventScroll: true });
-    });
-
-    return () => window.cancelAnimationFrame(focusFrame);
-  }, [isMobile, isMobileNavigationOpen]);
-
   useEffect(() => {
     if (!isMobile || !isMobileNavigationOpen) return;
 
@@ -176,18 +166,38 @@ export default function WorkspaceShell({ children }: { children: ReactNode }) {
       }
     }
 
-    function keepFocusInSidebar(event: FocusEvent) {
-      if (!sidebar!.contains(event.target as Node)) {
-        mobileCloseButtonRef.current?.focus();
+    let recoveryFrame: number | null = null;
+    function focusDrawerWhenVisible() {
+      if (!sidebar?.isConnected || sidebar.contains(document.activeElement))
+        return;
+      mobileCloseButtonRef.current?.focus({ preventScroll: true });
+      // Focus can be rejected while a reopened drawer is still being painted.
+      // Keep checking the rendered state until focus enters, or cleanup closes it.
+      if (!sidebar.contains(document.activeElement)) {
+        recoveryFrame = window.requestAnimationFrame(focusDrawerWhenVisible);
       }
+    }
+
+    function recoverFocusAfterBlur() {
+      if (recoveryFrame !== null) window.cancelAnimationFrame(recoveryFrame);
+      recoveryFrame = window.requestAnimationFrame(focusDrawerWhenVisible);
+    }
+
+    function keepFocusInSidebar(event: FocusEvent) {
+      if (!sidebar!.contains(event.target as Node)) recoverFocusAfterBlur();
     }
 
     document.addEventListener("keydown", handleKeyDown);
     document.addEventListener("focusin", keepFocusInSidebar);
+    document.addEventListener("focusout", recoverFocusAfterBlur);
+    sidebar.scrollTop = 0;
+    recoverFocusAfterBlur();
 
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
       document.removeEventListener("focusin", keepFocusInSidebar);
+      document.removeEventListener("focusout", recoverFocusAfterBlur);
+      if (recoveryFrame !== null) window.cancelAnimationFrame(recoveryFrame);
       document.body.style.overflow = previousBodyOverflow;
     };
   }, [isMobile, isMobileNavigationOpen]);
@@ -246,6 +256,9 @@ export default function WorkspaceShell({ children }: { children: ReactNode }) {
 
   return (
     <div className={frameClassName}>
+      <a className="workspace-skip-link" href="#workspace-content">
+        Skip to main content
+      </a>
       <button
         aria-hidden="true"
         className="nav-scrim"
@@ -395,7 +408,9 @@ export default function WorkspaceShell({ children }: { children: ReactNode }) {
             </button>
           </div>
         </header>
-        <main className="page-content">{children}</main>
+        <main className="page-content" id="workspace-content" tabIndex={-1}>
+          {children}
+        </main>
       </div>
     </div>
   );
