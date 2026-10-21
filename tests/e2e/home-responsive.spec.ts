@@ -149,7 +149,7 @@ for (const theme of ["light", "dark"]) {
           overflow: document.documentElement.scrollWidth > innerWidth,
         };
       });
-      expect(geometry.inset).toBe("32px");
+      expect(geometry.inset).toBe(width <= 1100 ? "24px" : "32px");
       expect(geometry.overflow).toBe(false);
       expect(geometry.heading.x).toBe(geometry.grid.x);
       expect(geometry.grid.y - geometry.heading.bottom).toBe(24);
