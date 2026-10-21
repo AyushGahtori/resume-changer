@@ -14,31 +14,23 @@ import type { ResumeLibrary } from "../../../src/lib/schemas/resume-data";
 import { describe, expect, it } from "vitest";
 import { analyzePdfLayout } from "../../../src/lib/pdf/layout-analysis";
 import { compileLatexToPdf } from "../../../src/lib/pdf/compile-service";
+import {
+  describeMissingToolchain,
+  detectPdfToolchain,
+  requirePdfToolchain,
+} from "../../helpers/pdf-toolchain";
 
 const library = sampleLibrary as ResumeLibrary;
 const firstAchievementId = library.jobs[0]?.points[0]?.id;
 
-function isExecutableAvailable(executable: string, args: string[]): boolean {
-  const result = spawnSync(executable, args, {
-    encoding: "utf8",
-    timeout: 5_000,
-    windowsHide: true,
-  });
-  return !result.error && result.status === 0;
-}
-
-const tectonic = process.env.TECTONIC_BINARY ?? "tectonic";
-const pdfInfo = process.env.PDFINFO_BINARY ?? "pdfinfo";
-const hasLocalToolchain =
-  isExecutableAvailable(tectonic, ["--version"]) &&
-  isExecutableAvailable(pdfInfo, ["-v"]);
+const toolchain = detectPdfToolchain();
+const hasLocalToolchain = toolchain.available;
+const tectonic = toolchain.tectonic;
+const pdfInfo = toolchain.pdfInfo;
 const toolchainRequired = process.env.PDF_TOOLCHAIN_REQUIRED === "1";
 
-if (toolchainRequired && !hasLocalToolchain) {
-  throw new Error(
-    "The required real PDF integration test needs Tectonic and pdfinfo. Install both or set TECTONIC_BINARY and PDFINFO_BINARY.",
-  );
-}
+if (toolchainRequired) requirePdfToolchain(toolchain);
+else if (!hasLocalToolchain) console.log(describeMissingToolchain(toolchain));
 
 async function warmTectonicCache(latex: string) {
   if (process.env.PDF_TOOLCHAIN_WARM_CACHE !== "1") return;
