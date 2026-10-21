@@ -815,6 +815,20 @@ h1 {
   opacity: 1;
 }
 
+.jd-form textarea::-webkit-scrollbar {
+  width: 12px;
+}
+
+.jd-form textarea::-webkit-scrollbar-track {
+  background: var(--surface);
+}
+
+.jd-form textarea::-webkit-scrollbar-thumb {
+  border: 3px solid var(--surface);
+  border-radius: var(--radius-control);
+  background: var(--quiet);
+}
+
 .field-group input:focus,
 .jd-form textarea:focus {
   border-color: var(--focus);
@@ -928,20 +942,50 @@ h1 {
 
 .jd-form textarea {
   display: block;
-  width: min(100%, 880px);
-  min-height: 260px;
-  padding: 14px 15px;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  height: 190px;
+  min-height: 190px;
+  padding: 12px 14px;
   resize: vertical;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  scrollbar-gutter: stable;
   border: var(--border-control);
   border-radius: var(--radius-control);
   outline: none;
-  background: var(--surface-soft);
+  background: var(--surface);
   color: var(--ink);
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: 14px;
+  line-height: 20px;
   transition:
     border-color 120ms ease,
     box-shadow 120ms ease;
+}
+
+.jd-form textarea:focus {
+  box-shadow: 0 0 0 2px var(--focus);
+}
+
+.jd-form textarea:disabled {
+  cursor: not-allowed;
+  background: var(--surface-soft);
+  color: var(--muted);
+  opacity: 1;
+}
+
+.jd-form textarea + .field-error {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+  margin-top: var(--space-8);
+}
+
+.jd-form textarea + .field-error svg {
+  flex: none;
 }
 
 .form-footer {
@@ -956,10 +1000,31 @@ h1 {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 9px;
+  gap: var(--space-12);
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
+  line-height: 16px;
   font-variant-numeric: tabular-nums;
+}
+
+.input-metrics > span {
+  white-space: nowrap;
+}
+
+.token-metric {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-12);
+}
+
+.metrics-announcement {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .metric-separator {
@@ -2319,8 +2384,9 @@ a:focus-visible {
   }
 
   .jd-workspace-frame .jd-form textarea {
-    min-height: 0;
-    flex: 1;
+    /* Keep actions visible in the fixed-height desktop workspace. */
+    min-height: 120px;
+    flex: 0 1 190px;
     resize: none;
   }
 
@@ -2591,7 +2657,7 @@ a:focus-visible {
   }
 
   .jd-form textarea {
-    min-height: 230px;
+    min-height: 190px;
   }
 
   .form-footer {
@@ -3993,5 +4059,12 @@ a:focus-visible {
   .jd-workspace-frame .jd-form,
   .jd-workspace-frame .jd-analysis {
     padding: var(--space-12);
+  }
+}
+
+/* Analysis content must follow the form instead of shrinking it over its actions. */
+@media (min-width: 701px) {
+  .jd-workspace-frame .jd-page:has(> .jd-analysis) > .jd-form {
+    flex: 0 0 auto;
   }
 }

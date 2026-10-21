@@ -271,13 +271,25 @@ test("fits the JD workspace within a standard desktop viewport", async ({
         document: document.documentElement.scrollHeight - window.innerHeight,
         textareaBottom: textarea.bottom,
         textareaWidth: textarea.width,
+        formContentWidth: (() => {
+          const form = document.querySelector(".jd-form")!;
+          const style = getComputedStyle(form);
+          return (
+            form.clientWidth -
+            parseFloat(style.paddingLeft) -
+            parseFloat(style.paddingRight)
+          );
+        })(),
         footerBottom: footer.bottom,
         footerTop: footer.top,
       };
     });
     expect(pageHeight.document).toBeLessThanOrEqual(0);
     expect(pageHeight.textareaBottom).toBeLessThanOrEqual(height);
-    expect(pageHeight.textareaWidth).toBeLessThanOrEqual(880);
+    expect(pageHeight.textareaWidth).toBeCloseTo(
+      pageHeight.formContentWidth,
+      0,
+    );
     expect(pageHeight.footerBottom).toBeLessThanOrEqual(height);
     expect(pageHeight.footerTop).toBeGreaterThan(0);
   }
