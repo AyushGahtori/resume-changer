@@ -106,7 +106,7 @@ for (const theme of ["light", "dark"] as const) {
         );
       });
       for (const ratio of contrast) expect(ratio).toBeGreaterThanOrEqual(4.5);
-      expect(geometry.height).toBe(190);
+      expect(geometry.height).toBe(240);
       expect(geometry.width).toBeCloseTo(geometry.parentWidth, 0);
       expect(geometry).toMatchObject({
         fontSize: "14px",
