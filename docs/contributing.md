@@ -28,7 +28,6 @@ Run the quality commands from the repository root:
 
 ```bash
 npm run format:check
-npx prettier --check README.md docs/index.md docs/architecture.md docs/local-setup.md docs/contributing.md
 npm run lint
 npm run typecheck
 npm test
@@ -36,7 +35,18 @@ npm run test:e2e
 npm run build
 ```
 
+`npm run format:check` covers the sources, tests, scripts, docs, and GitHub Actions workflows, so it replaces the separate `npx prettier --check` invocation that earlier revisions of this guide used.
+
 Install Playwright Chromium first if it is missing: `npx playwright install chromium`. Inspect test failures, fix the cause, and rerun the relevant checks. Do not report a check as passing if it was not run successfully.
+
+The optional live integration checks need extra setup and are not part of the local gate:
+
+```bash
+npm run test:ai-live
+npm run test:pdf-live
+```
+
+They fail when their credentials or tools are missing, so run them only when `GEMINI_API_KEY`, Tectonic, and `pdfinfo` are configured.
 
 Review the exact changes before staging and pushing:
 
@@ -56,6 +66,8 @@ git push -u origin codex/task-XX-short-name
 
 Open a pull request against `main`. Include a concise summary, tests actually run, and any known limitations. Keep the branch and PR focused; wait for checks and review before merging. Do not push feature work directly to `main`.
 
+`main` requires three status checks before a pull request can merge: `local-quality`, `Gemini live API`, and `Real Tectonic and PDF toolchain`. A failing check names the broken step, so read its log rather than rerunning the same command blindly.
+
 ## After Merge
 
 Confirm the PR is merged, then return to `main`, pull the merged result, and verify the working tree is clean before starting another task:
@@ -66,4 +78,4 @@ git pull --ff-only origin main
 git status --short --branch
 ```
 
-See [What A Good Test Should Check](project-plan.md#4-what-a-good-test-should-check) for the test-quality checklist and [Local Setup](local-setup.md) for environment commands.
+See [What A Good Test Should Check](project-plan.md#4-what-a-good-test-should-check) for the test-quality checklist and [Local Setup](local-setup.md) for environment commands. The [Setup Guide](setup-guide.md) is the complete reference for configuring Gemini, installing the PDF toolchain, and running the app against real data.

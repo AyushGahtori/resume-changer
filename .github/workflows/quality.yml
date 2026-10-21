@@ -15,28 +15,51 @@ concurrency:
 
 jobs:
   local-quality:
+    name: local-quality
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     env:
       NEXT_TELEMETRY_DISABLED: "1"
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: npm
-      - run: npm ci
-      - run: npm run lint
-      - run: npm run typecheck
-      - run: npm test
-      - run: npm run build
-      - run: npx playwright install --with-deps chromium
-      - run: npm run test:e2e
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check formatting
+        run: npm run format:check
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit and integration tests
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      - name: Install Chromium for browser tests
+        run: npx playwright install --with-deps chromium
+
+      - name: Playwright end-to-end tests
+        run: npm run test:e2e
+
       - name: E2E suite completed
         if: success()
         run: echo "End-to-end tests passed; the test server shut down cleanly."
-      - uses: actions/upload-artifact@v4
+
+      - name: Upload browser test artifacts
         if: failure()
+        uses: actions/upload-artifact@v4
         with:
           name: browser-test-results
           path: test-results/
+          retention-days: 7
