@@ -27,6 +27,11 @@ jobs:
       # leaves the model unset and lets the provider walk its model chain.
       # Pinning a single model here would collapse that chain and spend the
       # whole daily budget of one model on a single run.
+      #
+      # The free tier is also slow and its latency varies a lot, so the
+      # per-request budget is generous. A request that is cut short cannot
+      # be retried for the same quota cost.
+      GEMINI_REQUEST_TIMEOUT_MS: "300000"
     steps:
       - uses: actions/checkout@v4
 

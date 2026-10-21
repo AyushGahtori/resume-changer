@@ -74,6 +74,13 @@ describe("live integration workflow", () => {
     expect(liveIntegrations).not.toContain("GEMINI_LIVE_MODEL");
   });
 
+  it("gives the live Gemini check a request budget that fits the free tier", () => {
+    // A free-tier request is slow and its latency varies a lot, so the live
+    // job raises the per-request budget. A request that is cut short cannot
+    // be retried for the same quota cost.
+    expect(liveIntegrations).toContain("GEMINI_REQUEST_TIMEOUT_MS");
+  });
+
   it("fails instead of skipping when the Gemini secret is missing", () => {
     expect(liveIntegrations).toContain("GEMINI_API_KEY is not configured");
     expect(liveIntegrations).toContain("exit 1");

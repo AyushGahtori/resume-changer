@@ -122,16 +122,28 @@ describe("AI provider contracts and selection", () => {
       expect.objectContaining({ code: "REQUEST_FAILED" }),
     );
   });
+
+  it("accepts a request budget from the environment", () => {
+    // The live check needs a longer budget than the default because the
+    // free tier is slow, and the value is passed through the factory.
+    expect(() =>
+      createAiProvider({
+        AI_PROVIDER: "gemini",
+        GEMINI_API_KEY: "test-key",
+        GEMINI_REQUEST_TIMEOUT_MS: "300000",
+      }),
+    ).not.toThrow();
+  });
 });
 
 describe("Gemini adapter", () => {
   it("keeps the request budget above the measured free-tier latency", () => {
-    // A measured structured-output request on a Gemini free-tier flash-lite
-    // model takes 20 to 60 seconds, and the timeout is sent upstream as a
-    // deadline, so a budget below that range kills the request before the
-    // model can answer. Sixty seconds is the floor; the budget leaves room
-    // for the slowest measured response.
-    expect(REQUEST_TIMEOUT_MS).toBeGreaterThanOrEqual(60_000);
+    // The same draft request was measured at 12 seconds and at over 120
+    // seconds on the same model on the same day, and the timeout is sent
+    // upstream as a deadline, so a budget below the slow end kills the
+    // request before the model can answer. A request that is cut short
+    // cannot be retried for the same quota cost.
+    expect(REQUEST_TIMEOUT_MS).toBeGreaterThanOrEqual(120_000);
   });
 
   it("sends modular prompt context and validates structured JSON output", async () => {
@@ -188,10 +200,14 @@ describe("Gemini adapter", () => {
       .mockRejectedValueOnce(
         Object.assign(new Error("Unavailable"), { status: 503 }),
       )
+      .mockRejectedValueOnce(
+        Object.assign(new Error("Unavailable"), { status: 503 }),
+      )
       .mockResolvedValueOnce(JSON.stringify(analysis));
     const provider = createGeminiProvider({
       apiKey: "do-not-log-this-key",
       request,
+      sleep: async () => {},
     });
 
     await expect(
@@ -201,11 +217,16 @@ describe("Gemini adapter", () => {
       }),
     ).resolves.toEqual(analysis);
 
-    expect(request).toHaveBeenCalledTimes(2);
+    // A transient failure is retried on the same model first, so the
+    // fallback only sees the request after the first model has failed twice.
+    expect(request).toHaveBeenCalledTimes(3);
     expect(request.mock.calls[0][0]).toMatchObject({
       model: "gemini-3.6-flash",
     });
     expect(request.mock.calls[1][0]).toMatchObject({
+      model: "gemini-3.6-flash",
+    });
+    expect(request.mock.calls[2][0]).toMatchObject({
       model: FALLBACK_MODEL,
     });
   });
@@ -443,7 +464,7 @@ describe("Gemini adapter", () => {
     }
   });
 
-  it("falls back to Gemini 2.5 Flash-Lite when the configured model is unavailable", async () => {
+  it("falls back to the next model when the configured model stays unavailable", async () => {
     const models: string[] = [];
     const provider = createGeminiProvider({
       apiKey: "test-key",
@@ -455,12 +476,14 @@ describe("Gemini adapter", () => {
         }
         return JSON.stringify(analysis);
       },
+      sleep: async () => {},
     });
 
     await expect(
       provider.analyzeJobDescription({ jobDescription: "Platform role." }),
     ).resolves.toEqual(analysis);
-    expect(models).toEqual([DEFAULT_MODEL, FALLBACK_MODEL]);
+    // The first model is retried once before the request moves on.
+    expect(models).toEqual([DEFAULT_MODEL, DEFAULT_MODEL, FALLBACK_MODEL]);
   });
 
   it("retries malformed structured output with Gemini Flash-Lite", async () => {
@@ -554,6 +577,109 @@ describe("Gemini adapter", () => {
     ).resolves.toEqual(analysis);
     expect(models[0]).toBe("gemini-3.6-flash");
     expect(models[1]).not.toBe("gemini-3.6-flash");
+  });
+
+  it("retries a timed-out request on the same model before moving on", async () => {
+    const models: string[] = [];
+    const provider = createGeminiProvider({
+      apiKey: "test-key",
+      model: "gemini-3.6-flash",
+      request: async ({ model }) => {
+        models.push(model);
+        if (models.length === 1) {
+          throw Object.assign(
+            new Error(
+              JSON.stringify({
+                error: {
+                  code: 504,
+                  message: "Deadline exceeded before operation could complete.",
+                  status: "DEADLINE_EXCEEDED",
+                },
+              }),
+            ),
+            { status: 504 },
+          );
+        }
+        return JSON.stringify(analysis);
+      },
+      sleep: async () => {},
+    });
+
+    // A slow free-tier model often answers on the second try, and asking the
+    // same model again costs one request rather than another model's daily
+    // budget.
+    await expect(
+      provider.analyzeJobDescription({ jobDescription: "Platform role." }),
+    ).resolves.toEqual(analysis);
+    expect(models).toEqual(["gemini-3.6-flash", "gemini-3.6-flash"]);
+  });
+
+  it("retries a transient server failure on the same model", async () => {
+    const models: string[] = [];
+    const provider = createGeminiProvider({
+      apiKey: "test-key",
+      model: "gemini-3.6-flash",
+      request: async ({ model }) => {
+        models.push(model);
+        if (models.length === 1) {
+          throw Object.assign(new Error("unavailable"), { status: 503 });
+        }
+        return JSON.stringify(analysis);
+      },
+      sleep: async () => {},
+    });
+
+    await expect(
+      provider.analyzeJobDescription({ jobDescription: "Platform role." }),
+    ).resolves.toEqual(analysis);
+    expect(models).toEqual(["gemini-3.6-flash", "gemini-3.6-flash"]);
+  });
+
+  it("moves on after a transient failure persists on the same model", async () => {
+    const models: string[] = [];
+    const provider = createGeminiProvider({
+      apiKey: "test-key",
+      model: "gemini-3.6-flash",
+      request: async ({ model }) => {
+        models.push(model);
+        if (model === "gemini-3.6-flash") {
+          throw Object.assign(new Error("unavailable"), { status: 503 });
+        }
+        return JSON.stringify(analysis);
+      },
+      sleep: async () => {},
+    });
+
+    await expect(
+      provider.analyzeJobDescription({ jobDescription: "Platform role." }),
+    ).resolves.toEqual(analysis);
+    // The first model is retried once, and only then does the request move
+    // to a model that still has budget.
+    expect(models[0]).toBe("gemini-3.6-flash");
+    expect(models[1]).toBe("gemini-3.6-flash");
+    expect(models[2]).not.toBe("gemini-3.6-flash");
+  });
+
+  it("stops walking the chain once the total request budget is spent", async () => {
+    const models: string[] = [];
+    const provider = createGeminiProvider({
+      apiKey: "test-key",
+      model: "gemini-3.6-flash",
+      request: async ({ model }) => {
+        models.push(model);
+        throw Object.assign(new Error("unavailable"), { status: 503 });
+      },
+      sleep: async () => {},
+    });
+
+    // The per-request budget is generous because the free tier is slow, so
+    // the total budget is what stops a full walk from outlasting the caller
+    // that is waiting for it.
+    await expect(
+      provider.analyzeJobDescription({ jobDescription: "Platform role." }),
+    ).rejects.toMatchObject({ code: "SERVICE_UNAVAILABLE" });
+    expect(models.length).toBeGreaterThan(0);
+    expect(models.length).toBeLessThanOrEqual(6);
   });
 
   it("reports the upstream retry delay for a rate limit", async () => {

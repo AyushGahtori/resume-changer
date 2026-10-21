@@ -8,6 +8,7 @@ export type AiProviderEnvironment = {
   AI_PROVIDER?: string;
   GEMINI_API_KEY?: string;
   GEMINI_MODEL?: string;
+  GEMINI_REQUEST_TIMEOUT_MS?: string;
 };
 
 export function createAiProvider(
@@ -15,6 +16,7 @@ export function createAiProvider(
     AI_PROVIDER: process.env.AI_PROVIDER,
     GEMINI_API_KEY: process.env.GEMINI_API_KEY,
     GEMINI_MODEL: process.env.GEMINI_MODEL,
+    GEMINI_REQUEST_TIMEOUT_MS: process.env.GEMINI_REQUEST_TIMEOUT_MS,
   },
 ): AiProvider {
   const selectedProvider = environment.AI_PROVIDER ?? "gemini";
@@ -34,5 +36,8 @@ export function createAiProvider(
   return createGeminiProvider({
     apiKey: environment.GEMINI_API_KEY,
     model: environment.GEMINI_MODEL,
+    requestTimeoutMs: environment.GEMINI_REQUEST_TIMEOUT_MS
+      ? Number(environment.GEMINI_REQUEST_TIMEOUT_MS)
+      : undefined,
   });
 }

@@ -39,12 +39,13 @@ export const DEFAULT_MODEL = "gemini-3.6-flash";
 export const FALLBACK_MODEL = "gemini-flash-lite-latest";
 export const LAST_RESORT_MODEL = "gemini-flash-latest";
 // The free tier serves requests on models that are noticeably slower than
-// the paid tier. A measured structured-output request on a free-tier
-// flash-lite model takes 20 to 60 seconds, so a 30 second budget aborted
-// the request before the model could answer. The timeout is sent to the
-// server as a deadline, and a request that runs past it comes back as
+// the paid tier, and the latency varies a lot: the same draft request was
+// measured at 12 seconds and at over 120 seconds on the same model and the
+// same day. The budget is therefore generous, because a request that is cut
+// short cannot be retried for the same quota cost. The timeout is sent to
+// the server as a deadline, and a request that runs past it comes back as
 // HTTP 504 rather than a client-side abort.
-export const REQUEST_TIMEOUT_MS = 120_000;
+export const REQUEST_TIMEOUT_MS = 240_000;
 // The model occasionally returns a duplicated or unknown achievement ID. That
 // is a recoverable generation mistake, so the same model is asked again a
 // bounded number of times before the request moves on to the fallback model.
@@ -56,6 +57,15 @@ const MAX_MODEL_ATTEMPTS = 2;
 const MAX_RATE_LIMIT_WAIT_MS = 60_000;
 const RATE_LIMIT_BACKOFF_MS = 2_000;
 const DAILY_QUOTA_DIAGNOSTIC = "HTTP_429_DAILY_QUOTA";
+// A transient upstream failure is worth one more attempt on the same model
+// before the request gives up on it. A slow free-tier model that times out
+// often answers on the second try, and a retry costs one request against
+// the daily budget rather than a whole model.
+const TRANSIENT_RETRY_BACKOFF_MS = 2_000;
+// A request walks up to three models and retries a few times. The per
+// request budget is generous because the free tier is slow, so without a
+// total budget a full walk could outlast the caller that is waiting for it.
+const TOTAL_REQUEST_BUDGET_MS = 600_000;
 
 /**
  * A response that parsed cleanly but broke the evidence-grounding contract,
@@ -80,6 +90,12 @@ type GeminiProviderOptions = {
   apiKey?: string;
   model?: string;
   request?: GeminiRequest;
+  /**
+   * How long a single request may take. The default leaves room for the
+   * slow free-tier models; a caller that knows it is on a fast model can
+   * shorten it.
+   */
+  requestTimeoutMs?: number;
   /**
    * Waits out a rate limit that is expected to clear shortly. Injectable so
    * tests never wait in real time.
@@ -176,13 +192,32 @@ function readRateLimitDetails(message: string): RateLimitDetails {
   }
 }
 
+/**
+ * Reads a request budget from the environment. A value that is not a
+ * positive number is ignored, so a typo falls back to the default instead
+ * of disabling the request budget.
+ */
+function parseRequestTimeout(value: string | undefined): number | undefined {
+  if (!value?.trim()) return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+}
+
 function mapRequestError(error: unknown): AiProviderError {
   if (error instanceof AiProviderError) return error;
   const status = errorStatus(error);
   const name = error instanceof Error ? error.name : "";
   const detail = error instanceof Error ? error.message : "";
 
-  if (name === "AbortError" || name === "TimeoutError") {
+  // The SDK reports a client-side timeout as "RequestTimeoutError" and an
+  // aborted request as "RequestAbortedError". A native abort or timeout
+  // from the runtime is named "AbortError" or "TimeoutError".
+  if (
+    name === "AbortError" ||
+    name === "TimeoutError" ||
+    name === "RequestTimeoutError" ||
+    name === "RequestAbortedError"
+  ) {
     return new AiProviderError(
       "Gemini did not respond before the request timed out. Try again.",
       "REQUEST_TIMEOUT",
@@ -387,6 +422,10 @@ export function createGeminiProvider(
 ): AiProvider {
   const apiKey = options.apiKey ?? process.env.GEMINI_API_KEY;
   const model = options.model ?? process.env.GEMINI_MODEL ?? DEFAULT_MODEL;
+  const requestTimeoutMs =
+    options.requestTimeoutMs ??
+    parseRequestTimeout(process.env.GEMINI_REQUEST_TIMEOUT_MS) ??
+    REQUEST_TIMEOUT_MS;
   const sleep =
     options.sleep ??
     ((milliseconds: number) =>
@@ -405,7 +444,7 @@ export function createGeminiProvider(
       const client = new GoogleGenAI({
         apiKey,
         httpOptions: {
-          timeout: REQUEST_TIMEOUT_MS,
+          timeout: requestTimeoutMs,
           retryOptions: { attempts: 1 },
         },
       });
@@ -461,6 +500,7 @@ export function createGeminiProvider(
     // own budget. A configured model that is already one of the fallbacks
     // still keeps a distinct last-resort model ahead of giving up.
     const models = [...new Set([model, FALLBACK_MODEL, LAST_RESORT_MODEL])];
+    const startedAt = Date.now();
     let lastError: AiProviderError | undefined;
 
     const parseResponse = (
@@ -557,18 +597,45 @@ export function createGeminiProvider(
             (status !== undefined && status >= 500) ||
             errorName === "AbortError" ||
             errorName === "TimeoutError";
+          // The total budget bounds the whole walk. Once it is spent the
+          // request stops rather than starting another attempt that would
+          // outlast the caller waiting for it.
+          const budgetSpent = Date.now() - startedAt >= TOTAL_REQUEST_BUDGET_MS;
           // A grounding violation means the model produced a well-formed but
           // unusable answer, so the same model is asked again before the
           // request falls back to a different one.
           const groundingViolation =
             providerError instanceof GroundingViolationError;
-          if (groundingViolation && attempt < MAX_MODEL_ATTEMPTS) {
+          if (
+            groundingViolation &&
+            attempt < MAX_MODEL_ATTEMPTS &&
+            !budgetSpent
+          ) {
             console.warn("Gemini request retrying the same model.", {
               task,
               attempt,
               maxAttempts: MAX_MODEL_ATTEMPTS,
               diagnostic: providerError.diagnosticCode ?? providerError.code,
             });
+            continue;
+          }
+          // A timeout or a transient server failure says nothing about the
+          // request itself. The same model is asked again first, because a
+          // slow free-tier model that timed out often answers on the next
+          // try, and moving on would spend another model's daily budget
+          // for a failure this model could have recovered from.
+          const transient =
+            providerError.code === "REQUEST_TIMEOUT" ||
+            providerError.code === "SERVICE_UNAVAILABLE";
+          if (transient && attempt < MAX_MODEL_ATTEMPTS && !budgetSpent) {
+            console.warn("Gemini request retrying the same model.", {
+              task,
+              attempt,
+              maxAttempts: MAX_MODEL_ATTEMPTS,
+              model: requestedModel,
+              diagnostic: providerError.diagnosticCode ?? providerError.code,
+            });
+            await sleep(TRANSIENT_RETRY_BACKOFF_MS * attempt);
             continue;
           }
           // A rate limit is never a fault in the request, so the same model
@@ -592,7 +659,7 @@ export function createGeminiProvider(
               await sleep(waitMs);
               continue;
             }
-            if (index < models.length - 1) {
+            if (index < models.length - 1 && !budgetSpent) {
               console.warn("Gemini request moving to another model.", {
                 task,
                 model: requestedModel,
@@ -603,7 +670,7 @@ export function createGeminiProvider(
             }
             throw providerError;
           }
-          if (index < models.length - 1 && recoverable) {
+          if (index < models.length - 1 && recoverable && !budgetSpent) {
             console.warn("Gemini request retrying with fallback model.", {
               task,
               diagnostic: providerError.diagnosticCode ?? providerError.code,
