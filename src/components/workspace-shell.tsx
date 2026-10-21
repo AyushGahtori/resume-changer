@@ -20,9 +20,15 @@ import type { ReactNode } from "react";
 
 const THEME_STORAGE_KEY = "resume-changer.theme.v1";
 
+/**
+ * The library route carries its own active-navigation treatment, so the
+ * route lives in one named constant instead of being repeated as a string.
+ */
+const LIBRARY_ROUTE = "/library";
+
 const navigation = [
   { href: "/", label: "Job description", icon: "description" },
-  { href: "/library", label: "Achievement library", icon: "library" },
+  { href: LIBRARY_ROUTE, label: "Achievement library", icon: "library" },
   { href: "/generate", label: "Resume builder", icon: "resume" },
   { href: "/history", label: "History", icon: "history" },
   { href: "/settings", label: "Settings", icon: "settings" },
@@ -211,6 +217,7 @@ export default function WorkspaceShell({ children }: { children: ReactNode }) {
   const frameClassName = [
     "app-frame",
     pathname === "/" && "jd-workspace-frame",
+    pathname === LIBRARY_ROUTE && "is-library-route",
     !isMobile && isSidebarCollapsed && "is-sidebar-collapsed",
     isMobile && isMobileNavigationOpen && "is-mobile-nav-open",
   ]

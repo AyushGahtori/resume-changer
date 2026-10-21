@@ -38,6 +38,15 @@
   --color-focus-ring: #7c3aed;
 
   /*
+   * Active navigation state. The surface, text, and outline tokens let a
+   * route present its own active row without a second palette: every value
+   * is drawn from the shared orange and violet families above.
+   */
+  --color-nav-active-surface: var(--color-orange-subtle);
+  --color-nav-active-text: var(--color-orange-strong);
+  --color-nav-active-border: transparent;
+
+  /*
    * Home action-bar state tokens. Each variant carries an explicit
    * default/hover/pressed/disabled surface plus a matching label color so
    * every state keeps a text contrast of at least 4.5:1 in both themes.
@@ -163,6 +172,15 @@
   --color-info: #60a5fa;
   --color-info-strong: #60a5fa;
   --color-focus-ring: #a78bfa;
+
+  /*
+   * Dark active navigation keeps the home board's restrained violet surface
+   * and text. The library route overrides these with the warm deep-brown
+   * surface and orange text printed on its own board.
+   */
+  --color-nav-active-surface: var(--color-violet-subtle);
+  --color-nav-active-text: var(--color-violet-light);
+  --color-nav-active-border: transparent;
 
   /*
    * Dark action-bar states. Dark surfaces rely on a visible border and a
@@ -371,22 +389,25 @@ a {
 }
 
 .nav-link.is-active {
-  background: var(--accent-soft);
-  color: var(--accent-hover);
+  background: var(--color-nav-active-surface);
+  border-color: var(--color-nav-active-border);
+  color: var(--color-nav-active-text);
   font-weight: 600;
 }
 
 .nav-link.is-active .nav-icon {
-  color: var(--accent-hover);
+  color: var(--color-nav-active-text);
 }
 
-:root[data-theme="dark"] .nav-link.is-active {
-  background: var(--imagination-soft);
-  color: var(--color-violet-light);
-}
-
-:root[data-theme="dark"] .nav-link.is-active .nav-icon {
-  color: var(--color-violet-light);
+/*
+ * The library board prints its active row with a warm deep-brown surface
+ * and orange text in dark mode. The values stay in the shared design
+ * system, and every other route keeps the treatment it already had.
+ */
+:root[data-theme="dark"] .app-frame.is-library-route {
+  --color-nav-active-surface: #2a1f17;
+  --color-nav-active-text: #ff8a3d;
+  --color-nav-active-border: #4f3122;
 }
 
 .nav-icon {
