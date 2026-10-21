@@ -1,4 +1,119 @@
 import { expect, test } from "@playwright/test";
+import { homeAnalysis } from "../helpers/home-analysis";
+
+for (const theme of ["light", "dark"]) {
+  test(`desktop grid alignment and growing content in ${theme}`, async ({
+    page,
+  }) => {
+    if (theme === "dark")
+      await page.getByRole("button", { name: "Switch to dark mode" }).click();
+    for (const [width, height] of [
+      [1440, 900],
+      [1280, 800],
+      [1024, 768],
+    ]) {
+      await page.setViewportSize({ width, height });
+      const geometry = await page.evaluate(() => {
+        const bounds = (selector: string) => {
+          const r = document.querySelector(selector)!.getBoundingClientRect();
+          return {
+            x: r.x,
+            y: r.y,
+            width: r.width,
+            height: r.height,
+            right: r.right,
+            bottom: r.bottom,
+          };
+        };
+        return {
+          content: bounds(".page-content"),
+          heading: bounds(".page-heading-row"),
+          form: bounds(".jd-form"),
+          preview: bounds(".ats-preview"),
+          grid: bounds(".jd-work-grid"),
+          inset: getComputedStyle(document.querySelector(".page-content")!)
+            .paddingLeft,
+          overflow: document.documentElement.scrollWidth > innerWidth,
+        };
+      });
+      expect(geometry.inset).toBe("32px");
+      expect(geometry.overflow).toBe(false);
+      expect(geometry.heading.x).toBe(geometry.grid.x);
+      expect(geometry.grid.y - geometry.heading.bottom).toBe(24);
+      expect(geometry.grid.width).toBe(geometry.heading.width);
+      if (width >= 1280) {
+        expect(Math.abs(geometry.form.y - geometry.preview.y)).toBeLessThan(1);
+        expect(geometry.preview.x - geometry.form.right).toBeCloseTo(24, 0);
+        expect(geometry.form.width / geometry.preview.width).toBeCloseTo(2, 1);
+        await expect(page.locator(".sidebar")).toHaveCSS("width", "260px");
+      } else expect(geometry.preview.y).toBeGreaterThan(geometry.form.bottom);
+      await page.evaluate(() => scrollTo(0, 0));
+      await page.screenshot({
+        path: `docs/ui-review/task-26/${theme}-${width}-idle.png`,
+        fullPage: true,
+        animations: "disabled",
+        style: "nextjs-portal{display:none}",
+      });
+      await page
+        .getByLabel("Company", { exact: true })
+        .fill("A very long company name ".repeat(6));
+      await page
+        .getByLabel("Role title")
+        .fill("Senior platform and infrastructure engineer ".repeat(4));
+      await page.getByLabel("Job link").fill("invalid-link");
+      await page
+        .getByRole("textbox", { name: "Job description", exact: true })
+        .fill("Build reliable services and accessible interfaces.");
+      await page
+        .getByRole("button", { name: "Save draft", exact: true })
+        .click();
+      await expect(page.locator("#job-url-error")).toBeVisible();
+      await page.evaluate(() => scrollTo(0, 0));
+      await page.screenshot({
+        path: `docs/ui-review/task-26/${theme}-${width}-error.png`,
+        fullPage: true,
+        animations: "disabled",
+        style: "nextjs-portal{display:none}",
+      });
+      await page.getByLabel("Job link").fill("https://example.test/job");
+      await page.route("**/api/ai/analyze-job-description", (route) =>
+        route.fulfill({
+          json: {
+            analysis: {
+              ...homeAnalysis,
+              requiredQualifications: [
+                "A long requirement that remains readable without overlapping the form or its actions. ".repeat(
+                  4,
+                ),
+              ],
+            },
+          },
+        }),
+      );
+      await page
+        .getByRole("button", { name: "Analyze job description", exact: true })
+        .click();
+      await expect(page.locator(".analysis-role")).toContainText(
+        homeAnalysis.targetTitle,
+      );
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+      ).toBe(true);
+      await page.evaluate(() => scrollTo(0, 0));
+      await page.screenshot({
+        path: `docs/ui-review/task-26/${theme}-${width}-analysis.png`,
+        fullPage: true,
+        animations: "disabled",
+        style: "nextjs-portal{display:none}",
+      });
+      await page
+        .getByRole("button", { name: "Clear draft", exact: true })
+        .click();
+    }
+  });
+}
 
 test.beforeEach(async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });

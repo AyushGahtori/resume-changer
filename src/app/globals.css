@@ -1445,25 +1445,6 @@ a:focus-visible {
     animation: none;
   }
 }
-@media (min-width: 1101px) and (min-height: 640px) {
-  .jd-workspace-frame:has(.analysis-panel) {
-    height: auto;
-    min-height: 100dvh;
-    overflow: visible;
-  }
-  .jd-workspace-frame:has(.analysis-panel) .main-column {
-    height: auto;
-    min-height: 100dvh;
-  }
-  .jd-workspace-frame:has(.analysis-panel) .jd-form {
-    flex: none;
-  }
-  .jd-workspace-frame:has(.analysis-panel) .jd-form textarea {
-    min-height: 240px;
-    resize: vertical;
-  }
-}
-
 .jd-page {
   letter-spacing: 0;
 }
@@ -2397,66 +2378,26 @@ a:focus-visible {
   gap: 10px;
 }
 
-@media (min-width: 1101px) and (min-height: 640px) {
-  .jd-workspace-frame {
-    height: 100dvh;
-    min-height: 0;
-    overflow: hidden;
-  }
-
-  .jd-workspace-frame .main-column {
-    display: flex;
-    min-height: 0;
-    flex-direction: column;
-    height: 100dvh;
-  }
-
+/* Home workspace: content grows naturally; the header spans both surfaces. */
+@media (min-width: 701px) {
   .jd-workspace-frame .page-content {
-    display: flex;
-    min-height: 0;
-    flex: 1;
-    flex-direction: column;
-    padding: 34px 56px 26px;
+    width: min(100%, 1440px);
+    padding: 32px;
   }
-
   .jd-workspace-frame .jd-page {
-    display: flex;
-    min-height: 0;
-    flex: 1;
-    flex-direction: column;
+    width: 100%;
+    max-width: none;
+    margin: 0;
   }
-
   .jd-workspace-frame .page-heading-row {
-    margin-bottom: 20px;
+    margin-bottom: 24px;
   }
-
-  .jd-workspace-frame .jd-form {
-    display: flex;
-    min-height: 0;
-    flex: 1;
-    flex-direction: column;
-    padding: var(--space-24);
-  }
-
-  .jd-workspace-frame .form-topline {
-    margin-bottom: 18px;
-  }
-
-  .jd-workspace-frame .form-divider {
-    margin: 18px 0 16px;
-  }
-
   .jd-workspace-frame .jd-form textarea {
-    min-height: 0;
-    flex: 1;
-    resize: none;
-  }
-
-  .jd-workspace-frame .workspace-note {
-    margin-top: 12px;
+    min-height: 240px;
+    max-width: none;
+    resize: vertical;
   }
 }
-
 @media (max-width: 1100px) {
   .app-frame {
     grid-template-columns: 220px minmax(0, 1fr);
