@@ -1084,6 +1084,161 @@ a:focus-visible {
   margin-top: 3px;
 }
 
+/* Task 21: current-response analysis, with natural page scrolling. */
+.analysis-panel {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.analysis-panel .jd-analysis-heading {
+  flex-wrap: wrap;
+}
+.analysis-panel .jd-analysis-heading > div {
+  flex: 1 1 180px;
+}
+.analysis-panel .jd-analysis-heading button {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+.jd-page .analysis-panel .analysis-status {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 16px;
+}
+.analysis-loading {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding-top: 16px;
+  min-height: 160px;
+}
+.analysis-spinner {
+  display: inline-block;
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--line);
+  border-top-color: var(--imagination);
+  border-radius: 50%;
+  animation: analysis-spin 800ms linear infinite;
+}
+@keyframes analysis-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.analysis-skeleton {
+  display: grid;
+  flex: 1;
+  gap: 12px;
+}
+.analysis-skeleton span {
+  height: 16px;
+  border-radius: 4px;
+  background: var(--surface-soft);
+}
+.analysis-skeleton span:nth-child(2) {
+  width: 80%;
+}
+.analysis-skeleton span:nth-child(4) {
+  width: 65%;
+}
+.analysis-error-notice {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px solid var(--danger);
+  border-radius: 6px;
+  background: var(--danger-soft);
+}
+.analysis-notice-icon {
+  display: inline-flex;
+  flex: 0 0 20px;
+  width: 20px;
+  height: 20px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  color: var(--danger);
+  font-weight: 700;
+}
+.analysis-error-notice p {
+  margin: 0 0 8px;
+  color: var(--danger);
+  font-size: 14px;
+  line-height: 20px;
+}
+.analysis-error-notice p + p {
+  color: var(--muted);
+}
+.jd-page .analysis-panel button {
+  min-height: 44px;
+}
+.analysis-role dt {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 16px;
+}
+.analysis-role dd {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+}
+.jd-page .analysis-panel .analysis-section h3 {
+  margin-bottom: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 24px;
+}
+.jd-page .analysis-panel .analysis-section li {
+  margin-top: 8px;
+  font-size: 14px;
+  line-height: 20px;
+}
+.jd-page .analysis-panel .analysis-empty-category {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 20px;
+}
+.analysis-inferred {
+  padding: 12px;
+  border-radius: 6px;
+  background: var(--imagination-soft);
+}
+.jd-page .analysis-panel .analysis-cache-notice {
+  margin: 12px 0 0;
+  padding: 12px;
+  border-left: 2px solid var(--accent);
+  color: var(--muted);
+  background: var(--surface-soft);
+}
+@media (prefers-reduced-motion: reduce) {
+  .analysis-spinner {
+    animation: none;
+  }
+}
+@media (min-width: 1101px) and (min-height: 640px) {
+  .jd-workspace-frame:has(.analysis-panel) {
+    height: auto;
+    min-height: 100dvh;
+    overflow: visible;
+  }
+  .jd-workspace-frame:has(.analysis-panel) .main-column {
+    height: auto;
+    min-height: 100dvh;
+  }
+  .jd-workspace-frame:has(.analysis-panel) .jd-form {
+    flex: none;
+  }
+  .jd-workspace-frame:has(.analysis-panel) .jd-form textarea {
+    min-height: 240px;
+    resize: vertical;
+  }
+}
+
 .jd-page {
   letter-spacing: 0;
 }
