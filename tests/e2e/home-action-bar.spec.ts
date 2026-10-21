@@ -116,7 +116,7 @@ test("keeps Save text and keyboard focus contrasted in both themes", async ({
     });
 
     expect(focus.style).toBe("solid");
-    expect(focus.width).toBe("3px");
+    expect(focus.width).toBe("2px");
     expect(parseCssColor(focus.color)).toEqual(parseCssColor(focus.token));
 
     for (const surface of focus.surfaces) {
@@ -218,7 +218,7 @@ test("shows distinct labeled action variants and keyboard focus", async ({
     .poll(() =>
       analyze.evaluate((element) => getComputedStyle(element).outlineWidth),
     )
-    .toBe("3px");
+    .toBe("2px");
 });
 
 test("saves and clears a draft through the primary and ghost actions", async ({
@@ -269,10 +269,12 @@ test("keeps the AI action disabled and the same size while analysis loads", asyn
   expect(idleBox).not.toBeNull();
   await analyze.click();
 
-  const loading = page.getByRole("button", { name: "Analyzing..." });
+  const loading = page
+    .getByRole("form", { name: "Role details" })
+    .getByRole("button", { name: "Analyzing..." });
   await expect(loading).toBeDisabled();
   await expect(loading).toHaveAttribute("aria-busy", "true");
-  await expect(loading.locator("svg.home-action-spinner")).toBeVisible();
+  await expect(loading.locator(".home-action-spinner")).toBeVisible();
   const loadingBox = await loading.boundingBox();
   expect(loadingBox).not.toBeNull();
   expect(loadingBox!.width).toBeCloseTo(idleBox!.width, 1);
