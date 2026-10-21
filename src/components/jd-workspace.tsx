@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Asterisk, ArrowUpRight, LoaderCircle, Sparkles } from "lucide-react";
-import PasteFromUrl from "@/components/home/paste-from-url";
 import type { JobAnalysisResult } from "@/lib/ai/contracts";
 import {
   clearJobAnalysisCache,
@@ -22,6 +21,7 @@ import type {
   DraftFields,
   JobDescriptionDraft,
 } from "@/lib/jd-draft";
+import PasteFromUrl from "@/components/home/paste-from-url";
 
 type SaveState = "loading" | "saving" | "saved" | "error" | "idle";
 type AnalysisState = "idle" | "loading" | "success" | "error";
