@@ -37,6 +37,33 @@
   --color-info-strong: #1d4ed8;
   --color-focus-ring: #7c3aed;
 
+  /*
+   * Home action-bar state tokens. Each variant carries an explicit
+   * default/hover/pressed/disabled surface plus a matching label color so
+   * every state keeps a text contrast of at least 4.5:1 in both themes.
+   */
+  --action-ghost-surface: #ffffff;
+  --action-ghost-surface-hover: #f1f5f9;
+  --action-ghost-surface-pressed: #e2e8f0;
+  --action-ghost-surface-disabled: #f8fafc;
+  --action-ghost-label: #0f172a;
+  --action-ghost-label-disabled: #64748b;
+  --action-violet-surface: #ede9fe;
+  --action-violet-surface-hover: #ddd0fb;
+  --action-violet-surface-pressed: #7c3aed;
+  --action-violet-surface-disabled: #ddd6fe;
+  --action-violet-label: #6d28d9;
+  --action-violet-label-pressed: #ffffff;
+  --action-violet-label-disabled: #6d28d9;
+  --action-orange-surface: #f97316;
+  --action-orange-surface-hover: #c2410c;
+  --action-orange-surface-pressed: #9a3412;
+  --action-orange-surface-disabled: #fdba74;
+  --action-orange-label: #0f172a;
+  --action-orange-label-hover: #ffffff;
+  --action-orange-label-pressed: #ffffff;
+  --action-orange-label-disabled: #0f172a;
+
   /* Compatibility aliases keep existing app and studio styles theme-aware. */
   --canvas: var(--color-canvas);
   --sidebar: var(--color-sidebar);
@@ -96,6 +123,9 @@
     color-mix(in srgb, var(--color-text-primary) 8%, transparent);
   --focus-ring: 0 0 0 3px var(--focus);
   --focus-outline: 3px solid var(--focus);
+  /* Role field focus uses a 2px violet ring, per the input reference. */
+  --field-focus-ring: 0 0 0 2px var(--color-violet);
+  --field-error-ring: 0 0 0 2px var(--color-error);
 }
 
 :root[data-theme="dark"] {
@@ -134,6 +164,32 @@
   --color-info-strong: #60a5fa;
   --color-focus-ring: #a78bfa;
 
+  /*
+   * Dark action-bar states. Dark surfaces rely on a visible border and a
+   * surface step rather than a light-mode shadow.
+   */
+  --action-ghost-surface: #211d2e;
+  --action-ghost-surface-hover: #2a2538;
+  --action-ghost-surface-pressed: #342f43;
+  --action-ghost-surface-disabled: #1a1626;
+  --action-ghost-label: #f8fafc;
+  --action-ghost-label-disabled: #a49fb4;
+  --action-violet-surface: #7c3aed;
+  --action-violet-surface-hover: #6d28d9;
+  --action-violet-surface-pressed: #5b21b6;
+  --action-violet-surface-disabled: #2a2140;
+  --action-violet-label: #ffffff;
+  --action-violet-label-pressed: #ffffff;
+  --action-violet-label-disabled: #a49fb4;
+  --action-orange-surface: #f97316;
+  --action-orange-surface-hover: #fdba74;
+  --action-orange-surface-pressed: #c2410c;
+  --action-orange-surface-disabled: #4a2a19;
+  --action-orange-label: #171421;
+  --action-orange-label-hover: #171421;
+  --action-orange-label-pressed: #ffffff;
+  --action-orange-label-disabled: #e0a578;
+
   --canvas: var(--color-canvas);
   --sidebar: var(--color-sidebar);
   --surface: var(--color-surface);
@@ -159,6 +215,9 @@
   --shadow: 0 16px 48px rgb(0 0 0 / 18%);
   --shadow-xs: none;
   --shadow-sm: none;
+
+  --field-focus-ring: 0 0 0 2px var(--color-violet-light);
+  --field-error-ring: 0 0 0 2px var(--color-error);
 }
 
 * {
@@ -791,11 +850,39 @@ h1 {
   font-weight: 600;
 }
 
+/*
+ * The leading icon is a decorative adornment: it is positioned over the
+ * control so it never takes grid width away from the input, and the input
+ * reserves matching left padding so entered text still starts at the same
+ * offset in every field.
+ */
+.field-control {
+  position: relative;
+  min-width: 0;
+}
+
+.field-icon {
+  position: absolute;
+  top: 50%;
+  left: 12px;
+  display: grid;
+  place-items: center;
+  color: var(--quiet);
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.field-icon svg {
+  width: 17px;
+  height: 17px;
+  stroke: currentColor;
+}
+
 .field-group input {
   width: 100%;
   min-width: 0;
-  height: 43px;
-  padding: 0 12px;
+  height: 44px;
+  padding: 0 12px 0 38px;
   border: var(--border-control);
   border-radius: var(--radius-control);
   outline: none;
@@ -813,22 +900,105 @@ h1 {
   opacity: 1;
 }
 
+.jd-form textarea::-webkit-scrollbar {
+  width: 12px;
+}
+
+.jd-form textarea::-webkit-scrollbar-track {
+  background: var(--surface);
+}
+
+.jd-form textarea::-webkit-scrollbar-thumb {
+  border: 3px solid var(--surface);
+  border-radius: var(--radius-control);
+  background: var(--quiet);
+}
+
 .field-group input:focus,
 .jd-form textarea:focus {
   border-color: var(--focus);
   box-shadow: var(--focus-ring);
 }
 
-.field-group input[aria-invalid="true"],
+.field-group input:focus {
+  box-shadow: var(--field-focus-ring);
+}
+
+/*
+ * Hover keeps the resting border and instead deepens the surface, so the
+ * default treatment in the reference is preserved.
+ */
+.field-group input:hover:not(:disabled) {
+  background: var(--surface-soft);
+}
+
+.field-group input:hover:not(:disabled):not([aria-invalid="true"]) {
+  border-color: var(--color-border-strong);
+}
+
+.field-group input[aria-invalid="true"] {
+  border-color: var(--color-error);
+}
+
+.field-group input[aria-invalid="true"]:focus {
+  border-color: var(--color-error);
+  box-shadow: var(--field-error-ring);
+}
+
 .jd-form textarea[aria-invalid="true"] {
   border-color: var(--danger);
 }
 
-.field-error {
+.field-group input:disabled {
+  border-color: var(--line);
+  background: var(--surface-soft);
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+.field-group input:disabled::placeholder {
+  color: var(--quiet);
+}
+
+.field-error,
+.role-field-error {
   margin: 0;
   color: var(--danger);
   font-size: 11px;
   line-height: 1.5;
+}
+
+/* The JD error pairs a red outlined alert icon with the message so the
+   failure is never communicated by color alone. */
+.jd-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin-top: var(--space-8);
+}
+
+.jd-error svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+
+/*
+ * Role field errors pair a small icon with the message so the failure is
+ * never communicated by color alone.
+ */
+.role-field-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  overflow-wrap: anywhere;
+}
+
+.role-field-error svg {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 14px;
+  margin-top: 1px;
+  stroke: currentColor;
 }
 
 .form-divider {
@@ -837,36 +1007,70 @@ h1 {
   background: var(--line);
 }
 
+/* The JD label row keeps "Job description" and the REQUIRED badge on one
+   line, wrapping gracefully when the column gets narrow. */
 .description-heading {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 9px;
+  gap: var(--space-8) var(--space-12);
+  flex-wrap: wrap;
+  margin-bottom: 0;
 }
 
-.required-label {
-  border-color: transparent;
-  background: var(--accent-soft);
-  color: var(--accent);
+.description-helper {
+  margin: 5px 0 var(--space-8);
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 18px;
 }
 
 .jd-form textarea {
   display: block;
-  width: min(100%, 880px);
-  min-height: 260px;
-  padding: 14px 15px;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  height: 190px;
+  min-height: 190px;
+  padding: 12px 14px;
   resize: vertical;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  scrollbar-gutter: stable;
   border: var(--border-control);
   border-radius: var(--radius-control);
   outline: none;
-  background: var(--surface-soft);
+  background: var(--surface);
   color: var(--ink);
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: 14px;
+  line-height: 20px;
   transition:
     border-color 120ms ease,
     box-shadow 120ms ease;
+}
+
+.jd-form textarea:focus {
+  box-shadow: 0 0 0 2px var(--focus);
+}
+
+.jd-form textarea:disabled {
+  cursor: not-allowed;
+  background: var(--surface-soft);
+  color: var(--muted);
+  opacity: 1;
+}
+
+.jd-form textarea + .field-error {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+  margin-top: var(--space-8);
+}
+
+.jd-form textarea + .field-error svg {
+  flex: none;
 }
 
 .form-footer {
@@ -881,10 +1085,31 @@ h1 {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 9px;
+  gap: var(--space-12);
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
+  line-height: 16px;
   font-variant-numeric: tabular-nums;
+}
+
+.input-metrics > span {
+  white-space: nowrap;
+}
+
+.token-metric {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-12);
+}
+
+.metrics-announcement {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .metric-separator {
@@ -985,6 +1210,26 @@ h1 {
   flex: 0 0 auto;
 }
 
+/*
+ * The icon slot keeps its footprint in every state so swapping a glyph for
+ * the loading spinner never resizes the control.
+ */
+.home-action-icon {
+  display: inline-flex;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  align-items: center;
+  justify-content: center;
+}
+
+/* The loading spinner is 16px so it reads as a progress indicator. */
+.home-action-spinner {
+  width: 16px;
+  height: 16px;
+  animation: home-action-spin 900ms linear infinite;
+}
+
 .home-action-button:focus-visible {
   outline: 3px solid var(--color-focus-ring);
   outline-offset: 3px;
@@ -997,76 +1242,119 @@ h1 {
 
 .home-action-button:disabled {
   cursor: not-allowed;
-  opacity: 0.58;
+  opacity: 1;
 }
 
+/*
+ * Clear draft - ghost/tertiary. A neutral outlined control that keeps the
+ * lowest visual emphasis of the three actions.
+ */
 .home-action-button--ghost {
   min-width: 132px;
   border-color: var(--color-border);
-  background: var(--color-surface);
-  color: var(--color-text-primary);
+  background: var(--action-ghost-surface);
+  color: var(--action-ghost-label);
 }
 
 .home-action-button--ghost:hover:not(:disabled) {
   border-color: var(--color-border-strong);
-  background: var(--color-surface-alt);
+  background: var(--action-ghost-surface-hover);
+  color: var(--action-ghost-label);
 }
 
 .home-action-button--ghost:active:not(:disabled) {
-  background: var(--color-surface-hover);
+  border-color: var(--color-border-strong);
+  background: var(--action-ghost-surface-pressed);
+  color: var(--action-ghost-label);
 }
 
+.home-action-button--ghost:disabled {
+  border-color: var(--color-border);
+  background: var(--action-ghost-surface-disabled);
+  color: var(--action-ghost-label-disabled);
+}
+
+/*
+ * Analyze job description - secondary AI action. Soft violet in light mode
+ * and a stronger violet in dark mode, as the reference action bar shows.
+ */
 .home-action-button--secondary {
   min-width: 228px;
   border-color: color-mix(
     in srgb,
     var(--color-violet) 20%,
-    var(--color-violet-subtle)
+    var(--action-violet-surface)
   );
-  background: var(--color-violet-subtle);
-  color: var(--color-violet-strong);
+  background: var(--action-violet-surface);
+  color: var(--action-violet-label);
 }
 
 .home-action-button--secondary:hover:not(:disabled) {
   border-color: var(--color-violet);
-  background: var(--color-violet-light);
-  color: var(--color-text-primary);
+  background: var(--action-violet-surface-hover);
+  color: var(--action-violet-label);
 }
 
 .home-action-button--secondary:active:not(:disabled) {
-  border-color: var(--color-violet);
-  background: var(--color-violet);
-  color: var(--color-text-inverse);
+  border-color: var(--action-violet-surface-pressed);
+  background: var(--action-violet-surface-pressed);
+  color: var(--action-violet-label-pressed);
 }
 
+.home-action-button--secondary:disabled {
+  border-color: color-mix(
+    in srgb,
+    var(--color-violet) 20%,
+    var(--action-violet-surface-disabled)
+  );
+  background: var(--action-violet-surface-disabled);
+  color: var(--action-violet-label-disabled);
+}
+
+/*
+ * A busy action is still the live control, so it keeps the default surface
+ * and label rather than the muted disabled treatment. The spinner and the
+ * changed label carry the state, so colour is never the only signal.
+ */
+.home-action-button[aria-busy="true"]:disabled {
+  border-color: var(--color-violet);
+  background: var(--action-violet-surface);
+  color: var(--action-violet-label);
+}
+
+/*
+ * Save draft - primary CTA. Orange by default, deepening on hover and
+ * press, and fading to a pale orange when it cannot run.
+ */
 .home-action-button--primary {
   min-width: 136px;
-  border-color: var(--color-orange);
-  background: var(--color-orange);
-  color: var(--color-text-on-orange);
+  border-color: var(--action-orange-surface);
+  background: var(--action-orange-surface);
+  color: var(--action-orange-label);
 }
 
 .home-action-button--primary:hover:not(:disabled) {
-  border-color: var(--color-orange-strong);
-  background: var(--color-orange-strong);
-  color: var(--color-text-on-orange-hover);
+  border-color: var(--action-orange-surface-hover);
+  background: var(--action-orange-surface-hover);
+  color: var(--action-orange-label-hover);
 }
 
 .home-action-button--primary:active:not(:disabled) {
-  border-color: var(--color-orange-strong);
-  background: var(--color-orange-strong);
-  color: var(--color-text-on-orange-hover);
+  border-color: var(--action-orange-surface-pressed);
+  background: var(--action-orange-surface-pressed);
+  color: var(--action-orange-label-pressed);
 }
 
 .home-action-button--primary:disabled {
-  border-color: var(--color-orange-light);
-  background: var(--color-orange-light);
-  color: var(--color-text-on-orange);
-  opacity: 1;
+  border-color: var(--action-orange-surface-disabled);
+  background: var(--action-orange-surface-disabled);
+  color: var(--action-orange-label-disabled);
 }
 
-.home-action-spinner {
-  animation: home-action-spin 900ms linear infinite;
+.home-action-button--primary[aria-busy="true"]:disabled {
+  border-color: var(--action-orange-surface);
+  background: var(--action-orange-surface);
+  color: var(--action-orange-label);
 }
 
 @keyframes home-action-spin {
@@ -1570,6 +1858,7 @@ a:focus-visible {
 
 .jd-page .storage-notice,
 .jd-page .field-error,
+.jd-page .role-field-error,
 .jd-page .form-save-feedback,
 .jd-page .jd-analysis .analysis-cache-notice,
 .jd-page .jd-analysis-error > span {
@@ -1581,6 +1870,26 @@ a:focus-visible {
 .jd-page .required-label {
   font-size: var(--type-micro-label-size);
   line-height: var(--type-micro-label-line-height);
+}
+
+/* The REQUIRED badge is a compact attention marker, sized independently of
+   the LINK OPTIONAL chip it shares the base rule with. It keeps the
+   micro-label type token (11px/14px) for the uppercase treatment. */
+.jd-page .required-label {
+  padding: 6px 8px;
+  border-color: transparent;
+  border-radius: 4px;
+  background: var(--color-orange-subtle);
+  color: var(--color-orange-strong);
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+/* The helper line under the JD label is one step below body copy so it reads
+   as guidance rather than as the field's value. */
+.jd-page .description-helper {
+  font-size: 13px;
+  line-height: 18px;
 }
 
 .jd-page .page-heading-copy {
@@ -2535,8 +2844,9 @@ a:focus-visible {
   }
 
   .jd-workspace-frame .jd-form textarea {
-    min-height: 0;
-    flex: 1;
+    /* Keep actions visible in the fixed-height desktop workspace. */
+    min-height: 120px;
+    flex: 0 1 190px;
     resize: none;
   }
 
@@ -2568,7 +2878,8 @@ a:focus-visible {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .field-url {
+  /* The job link keeps its own full-width row on tablet. */
+  .metadata-fields > .field-group:last-child {
     grid-column: 1 / -1;
   }
 }
@@ -2801,12 +3112,12 @@ a:focus-visible {
     gap: 14px;
   }
 
-  .field-url {
+  .metadata-fields > .field-group:last-child {
     grid-column: auto;
   }
 
   .jd-form textarea {
-    min-height: 230px;
+    min-height: 190px;
   }
 
   .form-footer {
@@ -2939,6 +3250,225 @@ a:focus-visible {
   .editor-actions > button {
     width: 100%;
   }
+}
+
+/*
+ * Task 17 "Paste from URL".
+ *
+ * The control renders only when an approved extraction service exists. The
+ * reference shows it at the end of the metrics row as a text button with a
+ * chain-link icon, violet label, no filled background, a 36-40px minimum hit
+ * height, a visible focus ring, a pale violet hover surface, and a brief
+ * pressed tint.
+ */
+
+/*
+ * The optional URL action sits at the end of the metrics row, so the footer
+ * becomes two rows whenever the control is present: the character/token
+ * counts on the left and the URL action on the right, then the action
+ * buttons on the row below with 16px of separation, as in the reference.
+ * Without the control the footer keeps its single metrics-and-actions row,
+ * which is the action bar own composition.
+ */
+@media (min-width: 951px) {
+  .form-footer:has(.paste-from-url) {
+    flex-wrap: wrap;
+  }
+
+  .form-footer:has(.paste-from-url) .form-actions {
+    flex: 1 1 100%;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 700px) {
+  .paste-from-url,
+  .paste-from-url-form {
+    width: 100%;
+    align-items: flex-start;
+    justify-content: flex-start;
+  }
+
+  .paste-from-url-panel {
+    width: 100%;
+    align-items: flex-start;
+  }
+
+  .paste-from-url-input {
+    width: 100%;
+  }
+}
+.paste-from-url-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 38px;
+  padding: 0 var(--space-8);
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--color-violet);
+  font-family: inherit;
+  font-size: var(--type-field-label-size);
+  font-weight: 500;
+  line-height: var(--type-field-label-line-height);
+  cursor: pointer;
+  transition:
+    background-color 200ms ease,
+    color 200ms ease;
+}
+
+/*
+ * The violet primary is the right accent on the light surface, but it only
+ * reaches 2.88:1 on the dark form surface, which is below the 4.5:1 the plan
+ * requires for body text. The dark theme therefore uses the lighter violet
+ * the plan defines for "focus/highlight/icon", which reaches 6:1.
+ */
+:root[data-theme="dark"] .paste-from-url-trigger {
+  color: var(--color-violet-light);
+}
+
+.paste-from-url-trigger svg {
+  flex: 0 0 auto;
+}
+
+.paste-from-url-trigger:hover {
+  background: var(--color-violet-subtle);
+}
+
+.paste-from-url-trigger:active {
+  background: color-mix(
+    in srgb,
+    var(--color-violet) 18%,
+    var(--color-violet-subtle)
+  );
+}
+
+.paste-from-url-trigger:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.paste-from-url {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.paste-from-url-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  max-width: 100%;
+}
+
+.paste-from-url-form {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.paste-from-url-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.paste-from-url-input {
+  min-height: 38px;
+  width: 260px;
+  max-width: 100%;
+  padding: 0 var(--space-12);
+  border: var(--border-control);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
+}
+
+.paste-from-url-input::placeholder {
+  color: var(--quiet);
+}
+
+.paste-from-url-input:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.paste-from-url-input[aria-invalid="true"] {
+  border-color: var(--danger);
+}
+
+.paste-from-url-submit,
+.paste-from-url-cancel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 38px;
+  padding: 0 var(--space-12);
+  border: var(--border-control);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: var(--type-field-label-size);
+  font-weight: 500;
+  line-height: var(--type-field-label-line-height);
+  cursor: pointer;
+}
+
+.paste-from-url-submit {
+  border-color: transparent;
+  background: var(--color-violet);
+  color: var(--color-text-inverse);
+}
+
+.paste-from-url-submit svg {
+  flex: 0 0 auto;
+}
+
+.paste-from-url-submit:hover:not(:disabled) {
+  background: var(--color-violet-strong);
+}
+
+.paste-from-url-submit:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.paste-from-url-cancel:hover {
+  background: var(--surface-hover);
+}
+
+.paste-from-url-submit:focus-visible,
+.paste-from-url-cancel:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.paste-from-url-message {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--type-helper-size);
+  line-height: var(--type-helper-line-height);
+}
+
+.paste-from-url-message.is-error {
+  color: var(--danger);
 }
 
 .generation-page {
@@ -3990,4 +4520,25 @@ a:focus-visible {
   .jd-workspace-frame .jd-analysis {
     padding: var(--space-12);
   }
+}
+
+/* Analysis content must follow the form instead of shrinking it over its actions. */
+@media (min-width: 701px) {
+  .jd-workspace-frame .jd-page:has(> .jd-analysis) > .jd-form {
+    flex: 0 0 auto;
+  }
+}
+
+/* Expanded URL controls must remain reachable in the compact desktop frame. */
+.jd-workspace-frame:has(.paste-from-url-panel) {
+  height: auto;
+  min-height: 100dvh;
+  overflow: visible;
+}
+.jd-workspace-frame:has(.paste-from-url-panel) .main-column {
+  height: auto;
+  min-height: 100dvh;
+}
+.jd-workspace-frame:has(.paste-from-url-panel) .jd-form {
+  flex: 0 0 auto;
 }
