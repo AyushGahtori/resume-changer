@@ -35,4 +35,3 @@ screen-reader test or a guarantee of complete WCAG conformance.
 No backend/schema/storage-contract changes, dependencies, personal files or
 other-agent edits. Prior generated task screenshots are restored before
 commit; the evidence here represents task 28 specifically.
-
