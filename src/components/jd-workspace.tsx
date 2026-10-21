@@ -1,11 +1,17 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Asterisk, ArrowUpRight } from "lucide-react";
 import type { AnalysisState } from "@/components/home/job-analysis-panel";
 import { ATSAnalysisPreview } from "@/components/home/ats-analysis-preview";
-import { FieldError } from "@/components/home/field-error";
+import {
+  Asterisk,
+  ArrowUpRight,
+  CircleAlert,
+  LoaderCircle,
+  Sparkles,
+} from "lucide-react";
 import type { JobAnalysisResult } from "@/lib/ai/contracts";
+import RoleDetailField from "@/components/home/role-detail-field";
 import {
   clearJobAnalysisCache,
   writeJobAnalysisCache,
@@ -24,10 +30,16 @@ import type {
   DraftFields,
   JobDescriptionDraft,
 } from "@/lib/jd-draft";
+import PasteFromUrl from "@/components/home/paste-from-url";
+import { ROLE_FIELDS } from "@/lib/ui/role-fields";
 
 type SaveState = "loading" | "saving" | "saved" | "error" | "idle";
 
-export default function JDWorkspace() {
+export default function JDWorkspace({
+  pasteFromUrlAvailable = false,
+}: {
+  pasteFromUrlAvailable?: boolean;
+}) {
   const [draft, setDraft] = useState<JobDescriptionDraft>(EMPTY_DRAFT);
   const [errors, setErrors] = useState<DraftErrors>({});
   const [isReady, setIsReady] = useState(false);
@@ -70,6 +82,25 @@ export default function JDWorkspace() {
       } as unknown as Storage;
     }
   }
+
+  const [metricsAnnouncement, setMetricsAnnouncement] = useState("");
+  const characterCount = draft.jobDescription.length;
+  const tokenCount = estimateTokenCount(draft.jobDescription);
+  const isOverLimit = characterCount > MAX_JD_CHARACTERS;
+  const descriptionError = isOverLimit
+    ? `Keep the description under ${MAX_JD_CHARACTERS.toLocaleString()} characters.`
+    : errors.jobDescription;
+
+  useEffect(() => {
+    if (!isReady) return;
+    // Wait for a pause in typing instead of announcing every keystroke.
+    const timeoutId = window.setTimeout(() => {
+      setMetricsAnnouncement(
+        `${characterCount.toLocaleString()} of ${MAX_JD_CHARACTERS.toLocaleString()} characters, approximately ${tokenCount.toLocaleString()} tokens${isOverLimit ? ". Character limit exceeded." : "."}`,
+      );
+    }, 1000);
+    return () => window.clearTimeout(timeoutId);
+  }, [characterCount, tokenCount, isOverLimit, isReady]);
 
   useEffect(() => {
     const result = readDraft(localStorageOrUnavailable());
@@ -244,6 +275,10 @@ export default function JDWorkspace() {
     setSaveState(cleared ? "idle" : "error");
   }
 
+  function handleExtractedJobDescription(text: string) {
+    updateField("jobDescription", text);
+  }
+
   const saveMessage =
     saveState === "loading"
       ? "Loading draft"
@@ -254,6 +289,17 @@ export default function JDWorkspace() {
           : saveState === "error"
             ? "Could not save locally"
             : "No saved draft";
+
+  /*
+   * A local write is pending only while the debounced save is queued. The
+   * explicit Save action writes synchronously, so it never shows a spinner
+   * for work that has already finished.
+   */
+  const hasDraftContent = Object.values(draft).some(
+    (value) => typeof value === "string" && value.trim().length > 0,
+  );
+  const isSaving = saveState === "saving" && hasDraftContent;
+  const isAnalyzing = analysisState === "loading";
 
   return (
     <section className="jd-page" aria-labelledby="page-title">
@@ -293,47 +339,15 @@ export default function JDWorkspace() {
           </div>
 
           <div className="metadata-fields">
-            <div className="field-group">
-              <label htmlFor="company">Company</label>
-              <input
-                autoComplete="organization"
-                id="company"
-                name="company"
-                onChange={(event) => updateField("company", event.target.value)}
-                placeholder="Company name"
-                value={draft.company}
+            {ROLE_FIELDS.map((descriptor) => (
+              <RoleDetailField
+                descriptor={descriptor}
+                error={errors[descriptor.field]}
+                key={descriptor.field}
+                onChange={(value) => updateField(descriptor.field, value)}
+                value={draft[descriptor.field]}
               />
-            </div>
-            <div className="field-group">
-              <label htmlFor="role-title">Role title</label>
-              <input
-                autoComplete="organization-title"
-                id="role-title"
-                name="roleTitle"
-                onChange={(event) =>
-                  updateField("roleTitle", event.target.value)
-                }
-                placeholder="e.g. Backend Engineer"
-                value={draft.roleTitle}
-              />
-            </div>
-            <div className="field-group field-url">
-              <label htmlFor="job-url">Job link</label>
-              <input
-                aria-describedby={errors.jobUrl ? "job-url-error" : undefined}
-                aria-invalid={Boolean(errors.jobUrl)}
-                autoComplete="url"
-                id="job-url"
-                inputMode="url"
-                name="jobUrl"
-                onChange={(event) => updateField("jobUrl", event.target.value)}
-                placeholder="https://"
-                value={draft.jobUrl}
-              />
-              {errors.jobUrl && (
-                <FieldError id="job-url-error" message={errors.jobUrl} />
-              )}
-            </div>
+            ))}
           </div>
 
           <div className="form-divider" />
@@ -342,98 +356,124 @@ export default function JDWorkspace() {
             <label htmlFor="job-description">Job description</label>
             <span className="required-label">REQUIRED</span>
           </div>
-          <p className="jd-helper" id="jd-helper">
+          <p className="description-helper" id="jd-helper">
             Paste the job description from the company&apos;s career page.
           </p>
           <textarea
             aria-describedby={
-              errors.jobDescription
+              descriptionError
                 ? "jd-helper jd-error jd-count"
                 : "jd-helper jd-count"
             }
-            aria-invalid={Boolean(errors.jobDescription)}
-            required
+            aria-invalid={Boolean(descriptionError)}
+            disabled={!isReady}
             id="job-description"
             name="jobDescription"
             onChange={(event) =>
               updateField("jobDescription", event.target.value)
             }
             placeholder="Paste the job description"
+            rows={7}
             spellCheck="false"
             value={draft.jobDescription}
           />
-          {errors.jobDescription && (
-            <FieldError id="jd-error" message={errors.jobDescription} />
+          {descriptionError && (
+            <p className="field-error jd-error" id="jd-error" role="alert">
+              <CircleAlert aria-hidden="true" size={14} />
+              <span>{descriptionError}</span>
+            </p>
           )}
 
           <div className="form-footer">
             <div className="input-metrics" id="jd-count">
-              <span
-                className={
-                  draft.jobDescription.length > MAX_JD_CHARACTERS
-                    ? "metric-over-limit"
-                    : ""
-                }
-              >
-                {draft.jobDescription.length.toLocaleString()} /{" "}
+              <span className={isOverLimit ? "metric-over-limit" : undefined}>
+                {characterCount.toLocaleString()} /{" "}
                 {MAX_JD_CHARACTERS.toLocaleString()} characters
               </span>
-              <span aria-hidden="true" className="metric-separator">
-                ·
+              <span className="token-metric">
+                <span aria-hidden="true" className="metric-separator">
+                  {"\u00b7"}
+                </span>
+                <span>~{tokenCount.toLocaleString()} tokens</span>
               </span>
-              <span>
-                ~{estimateTokenCount(draft.jobDescription).toLocaleString()}{" "}
-                tokens
+              <span
+                className="metrics-announcement"
+                aria-live="polite"
+                aria-atomic="true"
+              >
+                {metricsAnnouncement}
               </span>
             </div>
+            <PasteFromUrl
+              available={pasteFromUrlAvailable}
+              jobUrl={draft.jobUrl}
+              onExtracted={handleExtractedJobDescription}
+            />
             <div className="form-actions">
               <button
                 className="home-action-button home-action-button--ghost"
+                disabled={!isReady}
                 onClick={handleClear}
                 type="button"
               >
                 Clear draft
               </button>
               <button
-                aria-busy={analysisState === "loading"}
+                aria-busy={isAnalyzing}
                 className="home-action-button home-action-button--secondary analyze-button"
-                disabled={!isReady || analysisState === "loading"}
+                disabled={!isReady || isAnalyzing}
                 onClick={handleAnalyze}
                 type="button"
               >
-                {analysisState === "loading" ? (
-                  <span
-                    className="analysis-spinner home-action-spinner"
-                    aria-hidden="true"
-                  />
+                {isAnalyzing ? (
+                  <>
+                    <span className="home-action-icon">
+                      <LoaderCircle
+                        aria-hidden="true"
+                        className="home-action-spinner"
+                        size={16}
+                      />
+                    </span>
+                    <span>Analyzing...</span>
+                  </>
                 ) : (
-                  <svg
-                    aria-hidden="true"
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="m12 3 2.4 6.6L21 12l-6.6 2.4L12 21l-2.4-6.6L3 12l6.6-2.4L12 3ZM20 3v4m-2-2h4" />
-                  </svg>
+                  <>
+                    <span className="home-action-icon">
+                      <Sparkles aria-hidden="true" size={16} />
+                    </span>
+                    <span>
+                      {analysisState === "error"
+                        ? "Retry analysis"
+                        : "Analyze job description"}
+                    </span>
+                  </>
                 )}
-                {analysisState === "loading"
-                  ? "Analyzing..."
-                  : analysisState === "error"
-                    ? "Retry analysis"
-                    : "Analyze job description"}
               </button>
               <button
+                aria-busy={isSaving}
                 className="home-action-button home-action-button--primary"
                 disabled={!isReady}
                 type="submit"
               >
-                <span>Save draft</span>
-                <ArrowUpRight aria-hidden="true" size={18} />
+                {isSaving ? (
+                  <>
+                    <span className="home-action-icon">
+                      <LoaderCircle
+                        aria-hidden="true"
+                        className="home-action-spinner"
+                        size={16}
+                      />
+                    </span>
+                    <span>Saving...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Save draft</span>
+                    <span className="home-action-icon">
+                      <ArrowUpRight aria-hidden="true" size={18} />
+                    </span>
+                  </>
+                )}
               </button>
             </div>
           </div>
