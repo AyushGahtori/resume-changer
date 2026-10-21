@@ -54,6 +54,21 @@ function relativeLuminance([red, green, blue]: Rgb) {
   );
 }
 
+/**
+ * Returns the color as a canonical six-digit hex string.
+ *
+ * The token value is compared as a resolved color rather than as source
+ * text, because a production build may rewrite `#ffffff` as `#fff`. The
+ * applied color is the behavior under test; its spelling is not.
+ */
+function normalizeCssColor(color: string): string {
+  const { channels } = parseCssColor(color);
+  return (
+    "#" +
+    channels.map((channel) => channel.toString(16).padStart(2, "0")).join("")
+  );
+}
+
 function contrastRatio(first: Rgb, second: Rgb) {
   const firstLuminance = relativeLuminance(first);
   const secondLuminance = relativeLuminance(second);
@@ -99,7 +114,17 @@ test("applies shared color tokens in light and dark themes", async ({
       };
     });
 
-  expect(await palette()).toMatchObject({
+  const normalized = async () => {
+    const tokens = await palette();
+    return Object.fromEntries(
+      Object.entries(tokens).map(([name, value]) => [
+        name,
+        normalizeCssColor(value),
+      ]),
+    );
+  };
+
+  expect(await normalized()).toMatchObject({
     canvas: "#f8fafc",
     sidebar: "#ffffff",
     surface: "#ffffff",
@@ -121,7 +146,7 @@ test("applies shared color tokens in light and dark themes", async ({
   });
 
   await page.getByRole("button", { name: "Switch to dark mode" }).click();
-  expect(await palette()).toMatchObject({
+  expect(await normalized()).toMatchObject({
     canvas: "#171421",
     sidebar: "#14111f",
     surface: "#211d2e",
