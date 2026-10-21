@@ -172,9 +172,9 @@ for (const theme of ["light", "dark"] as const) {
           .getByRole("alert")
           .filter({ hasText: "Enter a job description before saving." }),
       ).toContainText("Enter a job description before saving.");
-      expect(
-        await editor.evaluate((el) => getComputedStyle(el).borderColor),
-      ).not.toBe(geometry.border);
+      await expect
+        .poll(() => editor.evaluate((el) => getComputedStyle(el).borderColor))
+        .not.toBe(geometry.border);
       await page.screenshot({
         path: testInfo.outputPath("error.png"),
         fullPage: true,
