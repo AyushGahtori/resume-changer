@@ -28,6 +28,7 @@ import type {
   DraftFields,
   JobDescriptionDraft,
 } from "@/lib/jd-draft";
+import PasteFromUrl from "@/components/home/paste-from-url";
 import { ROLE_FIELDS } from "@/lib/ui/role-fields";
 
 type SaveState = "loading" | "saving" | "saved" | "error" | "idle";
@@ -55,7 +56,11 @@ const ANALYSIS_SECTIONS: Array<{
   { key: "inferredContext", title: "Inferred context, not requirements" },
 ];
 
-export default function JDWorkspace() {
+export default function JDWorkspace({
+  pasteFromUrlAvailable = false,
+}: {
+  pasteFromUrlAvailable?: boolean;
+}) {
   const [draft, setDraft] = useState<JobDescriptionDraft>(EMPTY_DRAFT);
   const [errors, setErrors] = useState<DraftErrors>({});
   const [isReady, setIsReady] = useState(false);
@@ -68,6 +73,24 @@ export default function JDWorkspace() {
   const [analysisError, setAnalysisError] = useState("");
   const [analysisCacheSaved, setAnalysisCacheSaved] = useState(false);
   const analysisRequest = useRef<AbortController | null>(null);
+  const [metricsAnnouncement, setMetricsAnnouncement] = useState("");
+  const characterCount = draft.jobDescription.length;
+  const tokenCount = estimateTokenCount(draft.jobDescription);
+  const isOverLimit = characterCount > MAX_JD_CHARACTERS;
+  const descriptionError = isOverLimit
+    ? `Keep the description under ${MAX_JD_CHARACTERS.toLocaleString()} characters.`
+    : errors.jobDescription;
+
+  useEffect(() => {
+    if (!isReady) return;
+    // Wait for a pause in typing instead of announcing every keystroke.
+    const timeoutId = window.setTimeout(() => {
+      setMetricsAnnouncement(
+        `${characterCount.toLocaleString()} of ${MAX_JD_CHARACTERS.toLocaleString()} characters, approximately ${tokenCount.toLocaleString()} tokens${isOverLimit ? ". Character limit exceeded." : "."}`,
+      );
+    }, 1000);
+    return () => window.clearTimeout(timeoutId);
+  }, [characterCount, tokenCount, isOverLimit, isReady]);
 
   useEffect(() => {
     const result = readDraft(window.localStorage);
@@ -217,6 +240,10 @@ export default function JDWorkspace() {
     setSaveState(cleared ? "idle" : "error");
   }
 
+  function handleExtractedJobDescription(text: string) {
+    updateField("jobDescription", text);
+  }
+
   const saveMessage =
     saveState === "loading"
       ? "Loading draft"
@@ -301,11 +328,11 @@ export default function JDWorkspace() {
         </p>
         <textarea
           aria-describedby={
-            errors.jobDescription
+            descriptionError
               ? "jd-helper jd-error jd-count"
               : "jd-helper jd-count"
           }
-          aria-invalid={Boolean(errors.jobDescription)}
+          aria-invalid={Boolean(descriptionError)}
           disabled={!isReady}
           id="job-description"
           name="jobDescription"
@@ -317,33 +344,38 @@ export default function JDWorkspace() {
           spellCheck="false"
           value={draft.jobDescription}
         />
-        {errors.jobDescription && (
+        {descriptionError && (
           <p className="field-error jd-error" id="jd-error" role="alert">
             <CircleAlert aria-hidden="true" size={14} />
-            <span>{errors.jobDescription}</span>
+            <span>{descriptionError}</span>
           </p>
         )}
 
         <div className="form-footer">
           <div className="input-metrics" id="jd-count">
-            <span
-              className={
-                draft.jobDescription.length > MAX_JD_CHARACTERS
-                  ? "metric-over-limit"
-                  : ""
-              }
-            >
-              {draft.jobDescription.length.toLocaleString()} /{" "}
+            <span className={isOverLimit ? "metric-over-limit" : undefined}>
+              {characterCount.toLocaleString()} /{" "}
               {MAX_JD_CHARACTERS.toLocaleString()} characters
             </span>
-            <span aria-hidden="true" className="metric-separator">
-              ·
+            <span className="token-metric">
+              <span aria-hidden="true" className="metric-separator">
+                {"\u00b7"}
+              </span>
+              <span>~{tokenCount.toLocaleString()} tokens</span>
             </span>
-            <span>
-              ~{estimateTokenCount(draft.jobDescription).toLocaleString()}{" "}
-              tokens
+            <span
+              className="metrics-announcement"
+              aria-live="polite"
+              aria-atomic="true"
+            >
+              {metricsAnnouncement}
             </span>
           </div>
+          <PasteFromUrl
+            available={pasteFromUrlAvailable}
+            jobUrl={draft.jobUrl}
+            onExtracted={handleExtractedJobDescription}
+          />
           <div className="form-actions">
             <button
               className="home-action-button home-action-button--ghost"
