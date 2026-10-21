@@ -175,20 +175,33 @@ consecutive repeats of the whole file.
 
 - `npm run lint`: passed.
 - `npm run typecheck`: passed.
-- `npm test`: 498 passed, 10 skipped (3 opt-in live AI tests and the PDF
-  toolchain tests).
-- Full `PLAYWRIGHT_PORT=3149 npm run test:e2e`: 92 passed, 1 failed. The
-  failure is `home-action-bar.spec.ts` "keeps the AI action disabled and the
-  same size while analysis loads", which asserts that the Analyze button
-  keeps its width while loading. It is **pre-existing on `main`** and was
-  verified there in a separate clean worktree with the identical 23px
-  difference; it also fails identically on the Task 18 and Task 19 branches.
-  Its cause is that the idle button's content (a 25.36px sparkle icon, an 8px
-  gap, and the label) exceeds its `min-width: 228px`, so the idle width is
-  251px while the loading width falls back to the 228px minimum. Task 19
-  owns that control, so the fix belongs there and was not made here.
-- `tests/e2e/home-paste-from-url.spec.ts` with `--repeat-each=3`: 27 passed,
-  confirming the transition-aware colour read is stable.
+- `npm test`: 533 passed, 10 skipped (3 opt-in live AI tests and the PDF
+  toolchain tests). The count rose from 498 when this branch was rebased onto
+  the newer `main`, which added the CI and AI-provider work.
+- Full `PLAYWRIGHT_PORT=3151 npm run test:e2e`: see the handoff report for the
+  final count. One pre-existing failure remains, described below.
+- `npm run build`: passed. The build needs a clean dist directory: the
+  repository's development server and the build share `.next` by default and
+  the build overwrites `next-env.d.ts` and `tsconfig.json`, both of which
+  were restored afterwards.
+- `npm run format:check`: passed.
+- `git diff --check`: passed.
+
+### The one remaining failure is pre-existing
+
+`home-action-bar.spec.ts` → _"keeps the AI action disabled and the same size
+while analysis loads"_ asserts that the Analyze button keeps its width while
+loading. It is **pre-existing on `main`** and was verified there in a
+separate clean worktree with the identical 23px difference; it also fails
+identically on the Task 18 and Task 19 branches. Its cause is that the idle
+button's content (a 25.36px sparkle icon, an 8px gap, and the label) exceeds
+its `min-width: 228px`, so the idle width is 251px while the loading width
+falls back to the 228px minimum. Task 19 owns that control, so the fix
+belongs there and was not made here.
+
+`tests/e2e/home-paste-from-url.spec.ts` with `--repeat-each=3`: 27 passed,
+confirming the transition-aware colour read is stable.
+
 - `npm run build`: passed. The build needs a clean dist directory: the
   repository's development server and the build share `.next` by default and
   the build overwrites `next-env.d.ts` and `tsconfig.json`, both of which
