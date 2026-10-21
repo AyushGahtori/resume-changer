@@ -3692,3 +3692,10 @@ a:focus-visible {
     padding: var(--space-12);
   }
 }
+
+/* Analysis content must follow the form instead of shrinking it over its actions. */
+@media (min-width: 701px) {
+  .jd-workspace-frame .jd-page:has(> .jd-analysis) > .jd-form {
+    flex: 0 0 auto;
+  }
+}
