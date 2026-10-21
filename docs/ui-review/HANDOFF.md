@@ -5,13 +5,13 @@ worktree, branch, commit, dev-server checks, screenshots and visual review.
 The branches build on one another in the order below. Nothing was merged or
 pushed, and the original checkout's unfinished work was not edited.
 
-| Task | Branch | Commit | Frontend and API |
-| --- | --- | --- | --- |
-| 20: draft persistence feedback | `codex/home-ui-task-20-draft-feedback` | `3e4300fa81f72ede04b466889ece02998743d414` | `http://127.0.0.1:3220` |
-| 21: analysis loading/error/success | `codex/home-ui-task-21-analysis-states` | `11b99784a51aebf13e5efa0933f9521806de2182` | `http://127.0.0.1:3221` |
-| 22: responsive ATS preview | `codex/home-ui-task-22-ats-preview` | `e740df02f02aaa014082496161fd250b80853126` | `http://127.0.0.1:3222` |
-| 23: score contract restriction | `codex/home-ui-task-23-score-contract` | `d4165404c2782a6199500e0414b38b1c7445de8f` | `http://127.0.0.1:3223` |
-| 24: textual analysis signals | `codex/home-ui-task-24-analysis-signals` | HEAD of this branch; final hash in chat handoff | `http://127.0.0.1:3224` |
+| Task                               | Branch                                   | Commit                                          | Frontend and API        |
+| ---------------------------------- | ---------------------------------------- | ----------------------------------------------- | ----------------------- |
+| 20: draft persistence feedback     | `codex/home-ui-task-20-draft-feedback`   | `3e4300fa81f72ede04b466889ece02998743d414`      | `http://127.0.0.1:3220` |
+| 21: analysis loading/error/success | `codex/home-ui-task-21-analysis-states`  | `11b99784a51aebf13e5efa0933f9521806de2182`      | `http://127.0.0.1:3221` |
+| 22: responsive ATS preview         | `codex/home-ui-task-22-ats-preview`      | `e740df02f02aaa014082496161fd250b80853126`      | `http://127.0.0.1:3222` |
+| 23: score contract restriction     | `codex/home-ui-task-23-score-contract`   | `d4165404c2782a6199500e0414b38b1c7445de8f`      | `http://127.0.0.1:3223` |
+| 24: textual analysis signals       | `codex/home-ui-task-24-analysis-signals` | HEAD of this branch; final hash in chat handoff | `http://127.0.0.1:3224` |
 
 The worktrees are under `C:/Users/Ayush/.codex/worktrees/`, named
 `home-ui-task-20-draft-feedback`, `home-ui-task-21-analysis-states`,
