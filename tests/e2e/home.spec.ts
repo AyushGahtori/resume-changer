@@ -199,8 +199,8 @@ test("uses the home typography scale across desktop and mobile widths", async ({
     lineHeight: "48px",
   });
   expect(desktopTypography.section).toMatchObject({
-    fontSize: "24px",
-    lineHeight: "32px",
+    fontSize: "20px",
+    lineHeight: "28px",
   });
   expect(desktopTypography.cardToken).toBe("16px");
   expect(desktopTypography.fieldLabel).toMatchObject({

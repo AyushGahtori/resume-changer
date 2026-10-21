@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { waitForAnimationsToSettle } from "../helpers/animations";
 
 const destinations = [
   { href: "/", label: "Job description" },
@@ -91,11 +92,17 @@ test("provides visible active, hover, and keyboard focus states in both themes",
       await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
     }
 
-    await activeLink.evaluate(async (element) => {
-      await Promise.all(
-        element.getAnimations().map((animation) => animation.finished),
-      );
-    });
+    await waitForAnimationsToSettle(activeLink);
+
+    // Keep explicit theme-color checks as well as waiting for transitions.
+    await expect(activeLink).toHaveCSS(
+      "color",
+      theme === "dark" ? "rgb(167, 139, 250)" : "rgb(194, 65, 12)",
+    );
+    await expect(activeLink).toHaveCSS(
+      "background-color",
+      theme === "dark" ? "rgb(50, 37, 72)" : "rgb(255, 247, 237)",
+    );
 
     const readActiveStyles = () =>
       activeLink.evaluate((element) => {
@@ -187,13 +194,7 @@ test("keeps sidebar rows contained across desktop, zoom-equivalent, and mobile w
         page.getByRole("dialog", { name: "Navigation menu" }),
       ).toBeVisible();
     }
-    await page.locator(".app-frame").evaluate(async (element) => {
-      await Promise.all(
-        element
-          .getAnimations({ subtree: true })
-          .map((animation) => animation.finished),
-      );
-    });
+    await waitForAnimationsToSettle(page.locator(".app-frame"));
 
     const metrics = await page.evaluate(() => {
       const sidebar = document.querySelector<HTMLElement>(".sidebar")!;
@@ -217,6 +218,7 @@ test("keeps sidebar rows contained across desktop, zoom-equivalent, and mobile w
           labelRight: labelBounds.right,
           labelTop: labelBounds.top,
           labelBottom: labelBounds.bottom,
+          labelVisible: labelBounds.width > 1 && labelBounds.height > 1,
           iconWidth: icon.getBoundingClientRect().width,
           iconHeight: icon.getBoundingClientRect().height,
         };
@@ -226,6 +228,11 @@ test("keeps sidebar rows contained across desktop, zoom-equivalent, and mobile w
         viewportWidth: window.innerWidth,
         documentWidth: document.documentElement.scrollWidth,
         sidebarRight,
+        collapsed: document
+          .querySelector(".app-frame")!
+          .classList.contains("is-sidebar-collapsed"),
+        navigationWidth: navigation.clientWidth,
+        navigationScrollWidth: navigation.scrollWidth,
         overflowX: getComputedStyle(navigation).overflowX,
         navRowGap: getComputedStyle(navigation).rowGap,
         navColumnGap: getComputedStyle(navigation).columnGap,
@@ -242,6 +249,14 @@ test("keeps sidebar rows contained across desktop, zoom-equivalent, and mobile w
     expect(metrics.navRowGap).toBe("8px");
     expect(metrics.navColumnGap).toBe("8px");
     expect(metrics.activeLeft).toBeGreaterThanOrEqual(0);
+    if (metrics.collapsed) {
+      // Collapsed-rail tooltips intentionally extend beyond the rail.
+      expect(metrics.overflowX).toBe("visible");
+    } else {
+      expect(metrics.navigationScrollWidth).toBeLessThanOrEqual(
+        metrics.navigationWidth,
+      );
+    }
     if (width <= 700) {
       expect(metrics.overflowX).toBe("visible");
     }
@@ -251,12 +266,15 @@ test("keeps sidebar rows contained across desktop, zoom-equivalent, and mobile w
         item.height,
         "row height at viewport " + width + "px",
       ).toBeGreaterThanOrEqual(48);
-      expect(item.gap).toBe("12px");
+      expect(item.gap).toBe(metrics.collapsed ? "0px" : "12px");
       expect(item.iconWidth).toBe(20);
       expect(item.iconHeight).toBe(20);
-      expect(item.labelRight).toBeLessThanOrEqual(item.right);
-      expect(item.labelTop).toBeGreaterThanOrEqual(item.top);
-      expect(item.labelBottom).toBeLessThanOrEqual(item.bottom);
+      expect(item.labelVisible).toBe(!metrics.collapsed);
+      if (item.labelVisible) {
+        expect(item.labelRight).toBeLessThanOrEqual(item.right);
+        expect(item.labelTop).toBeGreaterThanOrEqual(item.top);
+        expect(item.labelBottom).toBeLessThanOrEqual(item.bottom);
+      }
       expect(item.left).toBeGreaterThanOrEqual(0);
       expect(item.right).toBeLessThanOrEqual(metrics.sidebarRight);
     }
