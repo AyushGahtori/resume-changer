@@ -15,6 +15,7 @@ Nothing in the product was changed for this task. No visual component, data file
 - Content screenshots use the **fictional demo library** (`/library?source=demo`). No personal profile, job, company, achievement text, metric, or source reference appears in any capture.
 - Theme is set through the app's own key, `resume-changer.theme.v1`, before the page loads. The captures are taken with `prefers-reduced-motion: reduce` so no transition is caught mid-flight.
 - Reproduce with `node scripts/capture-library-baseline.mjs` (port 3021 by default, override with `BASELINE_PORT`).
+- The baseline was recorded against `main` at `4a701ac`, then re-verified after that commit landed. No library source file and no measured design token changed between the two, and re-running the capture reproduced `measurements.json` byte for byte; the only difference across all eighteen screenshots was 34 pixels of anti-aliasing noise in the two dark-mode captures.
 
 ## 1. Routes and data-source behavior
 
