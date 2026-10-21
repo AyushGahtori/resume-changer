@@ -1,9 +1,50 @@
 import { expect, test } from "@playwright/test";
 import { MAX_JD_CHARACTERS } from "../../src/lib/jd-draft";
+import { homeAnalysis } from "../helpers/home-analysis";
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("status")).toContainText("No saved draft");
+});
+
+test("clearing during analysis cannot restore an obsolete result or local cache", async ({
+  page,
+}) => {
+  let release: () => void = () => {};
+  const pending = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let finish: () => void = () => {};
+  const completed = new Promise<void>((resolve) => {
+    finish = resolve;
+  });
+  await page.route("**/api/ai/analyze-job-description", async (route) => {
+    await pending;
+    await route.fulfill({ json: { analysis: homeAnalysis } }).catch(() => {});
+    finish();
+  });
+  const jd = page.getByRole("textbox", {
+    name: "Job description",
+    exact: true,
+  });
+  await jd.fill("Description to clear while its analysis is pending.");
+  await page
+    .getByRole("button", { name: "Analyze job description", exact: true })
+    .click();
+  await expect(page.locator(".analysis-status")).toContainText("Analyzing");
+  await page.getByRole("button", { name: "Clear draft", exact: true }).click();
+  release();
+  await completed;
+  await expect(jd).toHaveValue("");
+  await expect(page.locator(".analysis-panel")).toHaveCount(0);
+  expect(
+    await page.evaluate(() =>
+      localStorage.getItem("resume-changer.jd-analysis.v1"),
+    ),
+  ).toBeNull();
+  await expect(page.locator(".draft-state")).toHaveText("No saved draft");
+  await page.reload();
+  await expect(jd).toHaveValue("");
 });
 
 test("renders the workspace shell and all primary destinations", async ({

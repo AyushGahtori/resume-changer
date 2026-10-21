@@ -262,7 +262,10 @@ export default function JDWorkspace() {
             NEW APPLICATION <span>01 / 04</span>
           </p>
           <h1 id="page-title">Start with the role.</h1>
-          <p className="page-intro">Job description</p>
+          <p className="page-intro">
+            Add the job description and let AI analyze it for a stronger,
+            ATS-optimized resume.
+          </p>
         </div>
       </div>
 
@@ -386,11 +389,29 @@ export default function JDWorkspace() {
                 Clear draft
               </button>
               <button
+                aria-busy={analysisState === "loading"}
                 className="clear-button analyze-button"
                 disabled={!isReady || analysisState === "loading"}
                 onClick={handleAnalyze}
                 type="button"
               >
+                {analysisState === "loading" ? (
+                  <span className="analysis-spinner" aria-hidden="true" />
+                ) : (
+                  <svg
+                    aria-hidden="true"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="m12 3 2.4 6.6L21 12l-6.6 2.4L12 21l-2.4-6.6L3 12l6.6-2.4L12 3ZM20 3v4m-2-2h4" />
+                  </svg>
+                )}
                 {analysisState === "loading"
                   ? "Analyzing..."
                   : analysisState === "error"
