@@ -71,12 +71,14 @@ for (const theme of ["light", "dark"]) {
       await expect(actions.getByRole("button")).toHaveText([
         "Clear draft",
         "Analyze job description",
-        "Save draft ↗",
+        "Save draft",
       ]);
       await expect(analyze.locator("svg")).toHaveAttribute(
         "aria-hidden",
         "true",
       );
+      await expect(save.locator("svg")).toHaveClass(/lucide-arrow-up-right/);
+      await expect(save.locator("svg")).toHaveAttribute("aria-hidden", "true");
       await expect(analyze).toHaveCSS(
         "background-color",
         theme === "light" ? "rgb(237, 233, 254)" : "rgb(124, 58, 237)",
@@ -140,7 +142,7 @@ for (const theme of ["light", "dark"]) {
       await expect(analyze).toBeDisabled();
       await expect(analyze).toHaveAttribute("aria-busy", "true");
       await expect(analyze).toHaveText("Analyzing...");
-      await expect(analyze.locator(".analysis-spinner")).toHaveCSS(
+      await expect(analyze.locator(".home-action-spinner")).toHaveCSS(
         "width",
         "16px",
       );
@@ -214,7 +216,7 @@ for (const theme of ["light", "dark"]) {
         .fill(`Pending draft at ${width}.`);
       await expect(page.locator(".draft-state")).toHaveText("Saving...");
       await expect(
-        page.getByRole("button", { name: "Save draft", exact: true }),
+        page.locator(".form-actions .home-action-button--primary"),
       ).toBeEnabled();
       await capture(page, `${theme}-${width}-saving`);
       await page.clock.runFor(350);

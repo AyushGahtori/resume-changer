@@ -4702,6 +4702,8 @@ a:focus-visible {
   width: 244px;
   min-width: 244px;
   gap: 8px;
+}
+.jd-page .form-actions .analyze-button:where(:enabled, [aria-busy="true"]) {
   border-color: var(--color-violet);
   background: var(--color-violet-subtle);
   color: #6d28d9;
@@ -4736,12 +4738,14 @@ a:focus-visible {
 }
 .jd-page .form-actions button:disabled {
   cursor: not-allowed;
-  opacity: 0.6;
+  opacity: 1;
 }
 .jd-page .form-actions .analyze-button[aria-busy="true"] {
   cursor: wait;
 }
-:root[data-theme="dark"] .jd-page .analyze-button {
+:root[data-theme="dark"]
+  .jd-page
+  .analyze-button:where(:enabled, [aria-busy="true"]) {
   background: #7c3aed;
   color: white;
   border-color: #a78bfa;
