@@ -45,7 +45,7 @@ policy, limits, content handling, AI-grounding rules, privacy fit and tests.
 | Area                  | Implementation                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Capability resolution | `src/lib/jd-url-extraction-availability.ts` — a `server-only` module whose `isJdUrlExtractionAvailable()` returns `false`, with a comment explaining exactly which backend must exist before it can return `true`. The decision is made on the server so client state cannot flip it.                                                                                                                                                                                                                                                                                                                                  |
-| Page wiring           | `src/app/page.tsx` resolves the capability and passes it to `JDWorkspace`; `src/components/jd-workspace.tsx` accepts `pasteFromUrlAvailable` (default `false`) and renders `<PasteFromUrl>` at the end of the metrics row.                                                                                                                                                                                                                                                                                                                                                                                             |
+| Page wiring           | `src/app/page.tsx` resolves the capability and passes it to `JDWorkspace`; `src/components/jd-workspace.tsx` accepts `pasteFromUrlAvailable` (default `false`) and renders `<PasteFromUrl>` as a sibling of the metrics and the action bar, so it sits at the end of the metrics row without wrapping either of them.                                                                                                                                                                                                                                                                                                  |
 | Control               | `src/components/home/paste-from-url.tsx` returns `null` while unavailable, so the browser never sees a clickable-looking control. When available it is a persistent text button labelled `Paste from URL` with a 16px `Link2` chain-link icon before the label, violet 13-14px medium text, transparent background, 38px minimum hit height, a visible focus ring, a pale violet hover surface and a pressed tint, opening a panel with the URL field, Fetch and Cancel controls.                                                                                                                                      |
 | States                | The panel implements idle, loading (`Fetching...`, `aria-busy`), error (`role="alert"`, `aria-invalid` on the field) and success (`role="status"`). The current draft is preserved until an extraction succeeds; only then is the description replaced through the parent's `onExtracted` callback, which routes through the existing `updateField` so the analysis cache and validation state are invalidated exactly as for a manual edit. Cancel closes the panel and resets the state. The transitions live in `src/lib/paste-from-url-state.ts` as a pure reducer so every one of them is testable without a DOM. |
 | Network safety        | `src/lib/jd-url-extraction.ts` posts to `/api/jd/extract`. The client-side check accepts only `http:`/`https:` URLs, but the module's own doc comment and the project-plan section both state that the server must repeat every validation regardless of the client check.                                                                                                                                                                                                                                                                                                                                             |
@@ -62,23 +62,40 @@ observable, and the panel is the element the trigger controls.
 
 ### Layout
 
-`.form-footer` became a column: a new `.form-metrics-row` holds the metrics
-on the left and the optional URL action on the right, and `.form-actions`
-sits on the row below. This is the composition the plan specifies in four
-places — Task 16 ("the optional URL action right-aligned on desktop"), Task
-17 ("align it at the end of the metrics row"), Task 18 ("the action footer
-_follows_ the live count row with 16px top separation") and the mandatory
-full-page board, whose markers 04/05 sit on the metrics row and marker 06 on
-the action row beneath it. The Task 18 `action-bar-light-dark.png` crop is a
-component board and, per the plan's Task 01 precedence rule ("use the
-full-page concept as the composition reference and component boards as detail
+The metrics, the optional URL action and the action bar are siblings in the
+footer, and the two-row composition is expressed in CSS: when the URL
+control is present the footer wraps and the action bar takes the full width
+of the next line, so the counts and the URL action share the first row and
+the three action buttons sit on the row below with 16px of separation.
+
+This is the composition the plan specifies in four places — Task 16 ("the
+optional URL action right-aligned on desktop"), Task 17 ("align it at the
+end of the metrics row"), Task 18 ("the action footer _follows_ the live
+count row with 16px top separation") and the mandatory full-page board,
+whose markers 04/05 sit on the metrics row and marker 06 on the action row
+beneath it. The Task 18 `action-bar-light-dark.png` crop is a component
+board and, per the plan's Task 01 precedence rule ("use the full-page
+concept as the composition reference and component boards as detail
 specifications"), governs the action buttons' size, colour and hierarchy
 rather than page composition.
 
-The conflict with Task 18's single-row footer was reported to the other
-agents before this branch was finalised, along with the one Task 18 assertion
-that encodes the shared-row model
-(`expect(geometry.metrics.top).toBeGreaterThanOrEqual(geometry.actions.top)`).
+Two consequences of the two-row model are worth stating plainly:
+
+- The Task 18 branch's assertion
+  `expect(geometry.metrics.top).toBeGreaterThanOrEqual(geometry.actions.top)`
+  encodes a single-row footer and cannot hold for the two-row board
+  composition. The equivalent assertion here is that the action bar starts
+  below the metrics row, which the browser test checks.
+- Because the URL control does not exist in this build, the shipped footer
+  keeps the single metrics-and-actions row. The two-row layout applies only
+  once the extraction service exists, so no current page changes.
+
+No wrapper element was added around the metrics. The rules that express the
+two-row layout live in a dedicated section of `src/app/globals.css`, and
+the shared `.form-footer` and `.form-actions` rules are left exactly as
+`main` has them. The diff against `main` is therefore one inserted hunk
+with no shared line touched, which keeps this branch merging cleanly with
+the other home-page branches.
 
 ### Dark-mode label contrast
 
@@ -123,6 +140,7 @@ the action bar below it are both visible.
 | Viewport                    | Light                                         | Dark                                        |
 | --------------------------- | --------------------------------------------- | ------------------------------------------- |
 | 1440x900 desktop            | [Light](screenshots/paste-from-url-light.png) | [Dark](screenshots/paste-from-url-dark.png) |
+| 1440x900, panel open        | [Light](screenshots/panel-light.png)          | [Dark](screenshots/panel-dark.png)          |
 | 1440x900 desktop, full form | [Light](screenshots/form-light.png)           | [Dark](screenshots/form-dark.png)           |
 
 ## Tests
@@ -141,22 +159,24 @@ the action bar below it are both visible.
   retry clears the previous error, a cancel returns to idle while keeping
   the typed URL, and success is never reached without a successful
   submission.
-- `tests/e2e/home-jd-editor.spec.ts` — the control is absent while the
-  capability is unavailable; the page issues no request to the extraction
-  route and no outbound request for a user-supplied URL even with a job link
-  saved; the metrics row keeps its content and does not overflow in light and
-  dark themes at 1440, 1024, 390 and 320 pixels.
+- `tests/e2e/home-paste-from-url-absent.spec.ts` — the control is absent
+  while the capability is unavailable; the page issues no request to the
+  extraction route and no outbound request for a user-supplied URL even with
+  a job link saved; the metrics row keeps its content and does not overflow
+  in light and dark themes at 1440, 1024, 390 and 320 pixels.
 - `tests/e2e/home-paste-from-url.spec.ts` — the available path. These tests
   flip the server-resolved capability in the server-rendered payload before
   hydration, so the component still decides what to render from the prop it
   is given, and no test-only route or query flag is added to the shipped app.
   They cover the reference anatomy (16px chain-link icon, transparent
   background, 38px hit height, alignment at the end of the metrics row, and
-  a WCAG AA contrast ratio in both themes), the focus ring, the invalid-URL
-  and non-HTTP-scheme paths (neither of which contacts the service), the
-  loading state, the success path (the draft survives the request and is
-  replaced only when it succeeds), the failure path (the draft is kept and
-  the control becomes usable again), cancel, and the job-link pre-fill.
+  a WCAG AA contrast ratio in both themes), the action bar sitting on its own
+  row below the metrics row with the 16px separation, the focus ring, the
+  invalid-URL and non-HTTP-scheme paths (neither of which contacts the
+  service), the loading state, the success path (the draft survives the
+  request and is replaced only when it succeeds), the failure path (the
+  draft is kept and the control becomes usable again), cancel, and the
+  job-link pre-fill.
 
 Two defects were found by these tests and fixed here: the entry field was
 seeded from the job link only at mount, so a link restored from local
@@ -176,10 +196,9 @@ consecutive repeats of the whole file.
 - `npm run lint`: passed.
 - `npm run typecheck`: passed.
 - `npm test`: 533 passed, 10 skipped (3 opt-in live AI tests and the PDF
-  toolchain tests). The count rose from 498 when this branch was rebased onto
-  the newer `main`, which added the CI and AI-provider work.
-- Full `PLAYWRIGHT_PORT=3151 npm run test:e2e`: see the handoff report for the
-  final count. One pre-existing failure remains, described below.
+  toolchain tests).
+- `PLAYWRIGHT_PORT=3153 npm run test:e2e`: 93 passed, 1 failed. The failure
+  is pre-existing and is described below.
 - `npm run build`: passed. The build needs a clean dist directory: the
   repository's development server and the build share `.next` by default and
   the build overwrites `next-env.d.ts` and `tsconfig.json`, both of which
@@ -191,26 +210,53 @@ consecutive repeats of the whole file.
 
 `home-action-bar.spec.ts` → _"keeps the AI action disabled and the same size
 while analysis loads"_ asserts that the Analyze button keeps its width while
-loading. It is **pre-existing on `main`** and was verified there in a
-separate clean worktree with the identical 23px difference; it also fails
-identically on the Task 18 and Task 19 branches. Its cause is that the idle
-button's content (a 25.36px sparkle icon, an 8px gap, and the label) exceeds
-its `min-width: 228px`, so the idle width is 251px while the loading width
-falls back to the 228px minimum. Task 19 owns that control, so the fix
-belongs there and was not made here.
+loading. It is **pre-existing on `main`** and was verified there on
+21 October 2026 in a separate clean worktree at `origin/main` (`ab01244`),
+with the identical 23px difference (251px idle against 228px loading). Its
+cause is that the idle button's content (a 25.36px sparkle icon, an 8px gap,
+and the label) exceeds its `min-width: 228px`, so the idle width is 251px
+while the loading width falls back to the 228px minimum. Task 19 owns that
+control, so the fix belongs there and was not made here.
 
-`tests/e2e/home-paste-from-url.spec.ts` with `--repeat-each=3`: 27 passed,
+`tests/e2e/home-paste-from-url.spec.ts` with `--repeat-each=3`: 30 passed,
 confirming the transition-aware colour read is stable.
 
-- `npm run build`: passed. The build needs a clean dist directory: the
-  repository's development server and the build share `.next` by default and
-  the build overwrites `next-env.d.ts` and `tsconfig.json`, both of which
-  were restored afterwards.
-- `npm run format:check`: passed for every file this branch touches. Two
-  files still report formatting warnings — `src/app/api/generate/route.ts`
-  and `tests/unit/api/tailor-achievements-route.test.ts` — both of which are
-  unmodified on `main` and were left alone.
-- `git diff --check`: passed.
+## Merging with the other branches
+
+This branch was restructured so that it merges cleanly with the other
+home-page branches, which all edit the same two files. Measured with
+`git merge-tree --write-tree`:
+
+| Branch                                                    | Result                                                                                         |
+| --------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `codex/task-16-home-live-metrics`                         | clean                                                                                          |
+| `codex/task-14-restyle-required-jd-label-and-helper-copy` | clean                                                                                          |
+| `codex/ui-task-18-action-bar`                             | clean                                                                                          |
+| `codex/ui-task-19-button-states`                          | clean                                                                                          |
+| `codex/home-ui-task-27-responsive-workflow`               | conflicts in `globals.css` and `jd-workspace.tsx`, but these conflict with `main` on their own |
+| `codex/home-ui-task-26-desktop-grid`                      | conflicts in `globals.css` and `jd-workspace.tsx`, but these conflict with `main` on their own |
+
+Three changes got there:
+
+1. The spec file was renamed to `home-paste-from-url-absent.spec.ts`.
+   Tasks 14, 16 and this task had each created `tests/e2e/home-jd-editor.spec.ts`
+   independently, which is an add/add conflict even though the three files
+   have nothing in common. The file does not exist on `main`, so a
+   task-specific name removes the collision without touching the other two
+   agents' work.
+2. The metrics row is no longer wrapped in a new element. The metrics, the
+   URL action and the action bar are siblings, and the two-row composition
+   is expressed in CSS. This removed the re-indentation that made the
+   change conflict with every branch that also touched those lines.
+3. The control's styles moved to a dedicated section of `src/app/globals.css`
+   in a region no other branch edits, and the shared `.form-footer` and
+   `.form-actions` rules are left exactly as `main` has them. The diff
+   against `main` is one inserted hunk with no shared line touched.
+
+The Task 27 and Task 26 branches are 11 commits behind `main` and already
+conflict with `main` in both files before this branch is involved. This
+branch's changes survive that merge unchanged; the conflicts are theirs to
+resolve.
 
 No live AI request, personal data, or external reference board is used at
 runtime. The reference images remain documentation only and were not added to

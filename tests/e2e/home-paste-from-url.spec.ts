@@ -172,7 +172,9 @@ for (const theme of ["light", "dark"] as const) {
       const button = document
         .querySelector(".paste-from-url-trigger")!
         .getBoundingClientRect();
-      const row = document.querySelector(".form-footer")!.getBoundingClientRect();
+      const row = document
+        .querySelector(".form-footer")!
+        .getBoundingClientRect();
       return {
         metricsRight: metrics.right,
         buttonLeft: button.left,
