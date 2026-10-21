@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import sampleLibrary from "../../../examples/sample-resume-library.json";
+import { JAKE_STYLE_TEMPLATE } from "../../../src/lib/latex/jake-template";
 import { renderResumeLatex } from "../../../src/lib/latex/render-resume";
 import { validateResumeLatex } from "../../../src/lib/latex/validate-resume-latex";
 import type { ResumeLibrary } from "../../../src/lib/schemas/resume-data";
@@ -84,5 +85,17 @@ describe("validateResumeLatex", () => {
     );
 
     expect(validateResumeLatex(commented).valid).toBe(true);
+  });
+
+  it("accepts generated LaTeX when the template is read with Windows line endings", () => {
+    // A checkout with CRLF line endings produced a template that the
+    // validator compared against LF LaTeX, so a correct document was
+    // reported as not matching the approved template.
+    expect(JAKE_STYLE_TEMPLATE).not.toContain("\r\n");
+    expect(validLatex).not.toContain("\r\n");
+    expect(validateResumeLatex(validLatex)).toEqual({
+      valid: true,
+      errors: [],
+    });
   });
 });
