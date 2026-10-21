@@ -190,7 +190,8 @@ test("shows distinct labeled action variants and keyboard focus", async ({
     (element) => getComputedStyle(element).backgroundColor,
   );
   await analyze.hover();
-  await expect(analyze).toHaveCSS("background-color", "rgb(167, 139, 250)");
+  // The AI action deepens to a stronger violet on hover.
+  await expect(analyze).toHaveCSS("background-color", "rgb(221, 208, 251)");
   expect(
     await analyze.evaluate(
       (element) => getComputedStyle(element).backgroundColor,
@@ -296,7 +297,7 @@ test("keeps action buttons within tablet and narrow dark viewports", async ({
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await expect(
     page.getByRole("button", { name: "Analyze job description" }),
-  ).toHaveCSS("background-color", "rgb(50, 37, 72)");
+  ).toHaveCSS("background-color", "rgb(124, 58, 237)");
   await expect(page.getByRole("button", { name: "Save draft" })).toHaveCSS(
     "background-color",
     "rgb(249, 115, 22)",
