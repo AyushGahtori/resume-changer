@@ -38,16 +38,10 @@ export async function POST(request: Request) {
     return NextResponse.json(generated);
   } catch (error) {
     if (error instanceof ResumeRenderError) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: error.message }, { status: 400 });
     }
     if (error instanceof DataLoadError) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 409 },
-      );
+      return NextResponse.json({ error: error.message }, { status: 409 });
     }
     return NextResponse.json(
       { error: "The resume could not be generated. Try again." },

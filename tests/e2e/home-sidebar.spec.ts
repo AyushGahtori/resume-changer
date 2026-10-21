@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { waitForAnimationsToSettle } from "../helpers/animations";
 
 const destinations = [
   { href: "/", label: "Job description" },
@@ -91,11 +92,17 @@ test("provides visible active, hover, and keyboard focus states in both themes",
       await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
     }
 
-    await activeLink.evaluate(async (element) => {
-      await Promise.all(
-        element.getAnimations().map((animation) => animation.finished),
-      );
-    });
+    await waitForAnimationsToSettle(activeLink);
+
+    // Keep explicit theme-color checks as well as waiting for transitions.
+    await expect(activeLink).toHaveCSS(
+      "color",
+      theme === "dark" ? "rgb(167, 139, 250)" : "rgb(194, 65, 12)",
+    );
+    await expect(activeLink).toHaveCSS(
+      "background-color",
+      theme === "dark" ? "rgb(50, 37, 72)" : "rgb(255, 247, 237)",
+    );
 
     const readActiveStyles = () =>
       activeLink.evaluate((element) => {
@@ -191,13 +198,7 @@ test("keeps sidebar rows contained across desktop, zoom-equivalent, and mobile w
         page.getByRole("dialog", { name: "Navigation menu" }),
       ).toBeVisible();
     }
-    await page.locator(".app-frame").evaluate(async (element) => {
-      await Promise.all(
-        element
-          .getAnimations({ subtree: true })
-          .map((animation) => animation.finished),
-      );
-    });
+    await waitForAnimationsToSettle(page.locator(".app-frame"));
 
     const metrics = await page.evaluate(() => {
       const sidebar = document.querySelector<HTMLElement>(".sidebar")!;
@@ -228,12 +229,12 @@ test("keeps sidebar rows contained across desktop, zoom-equivalent, and mobile w
       });
 
       return {
-        collapsed: document
-          .querySelector(".app-frame")!
-          .classList.contains("is-sidebar-collapsed"),
         viewportWidth: window.innerWidth,
         documentWidth: document.documentElement.scrollWidth,
         sidebarRight,
+        collapsed: document
+          .querySelector(".app-frame")!
+          .classList.contains("is-sidebar-collapsed"),
         overflowX: getComputedStyle(navigation).overflowX,
         navRowGap: getComputedStyle(navigation).rowGap,
         navColumnGap: getComputedStyle(navigation).columnGap,

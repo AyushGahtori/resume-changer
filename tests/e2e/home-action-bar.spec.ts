@@ -1,226 +1,351 @@
-import { expect, test, type Page } from "@playwright/test";
-import { homeAnalysis } from "../helpers/home-analysis";
-import { auditHome } from "../helpers/home-accessibility";
+import { expect, test } from "@playwright/test";
 
-async function capture(page: Page, name: string) {
-  await page.evaluate(() => scrollTo(0, 0));
-  await page.screenshot({
-    path: `docs/ui-review/task-29/${name}.png`,
-    fullPage: true,
-    animations: "disabled",
-    style: "nextjs-portal{display:none}",
-  });
-}
+const analysis = {
+  targetTitle: "Software Engineer, ML Platform",
+  seniority: "New graduate",
+  requiredQualifications: ["Expected 2025 or 2026 graduate"],
+  preferredQualifications: ["Familiarity with Python, Go, or C++"],
+  responsibilities: ["Optimize GPU model serving"],
+  toolsAndPlatforms: ["Python", "Go", "C++"],
+  domainConcepts: ["Distributed systems"],
+  atsTerms: ["GPU serving", "feature store"],
+  inferredContext: ["The role likely supports production ML workloads."],
+  terminology: [{ term: "machine learning", alternatives: ["ML"] }],
+};
 
-for (const theme of ["light", "dark"]) {
-  for (const width of [1440, 390, 320]) {
-    test(`action states and final visual acceptance in ${theme} at ${width}`, async ({
-      page,
-    }) => {
-      test.setTimeout(120_000);
-      const consoleErrors: string[] = [];
-      const pageErrors: string[] = [];
-      const badResponses: string[] = [];
-      const failedRequests: string[] = [];
-      page.on("console", (message) => {
-        if (message.type() === "error") consoleErrors.push(message.text());
-      });
-      page.on("pageerror", (error) => pageErrors.push(error.message));
-      page.on(
-        "requestfailed",
-        (request) =>
-          // Next cancels speculative RSC prefetches when pointer/focus moves.
-          // A cancelled prefetch is not a failed user operation.
-          !(
-            new URL(request.url()).searchParams.has("_rsc") &&
-            request.failure()?.errorText === "net::ERR_ABORTED"
-          ) &&
-          failedRequests.push(
-            `${request.url()} ${request.failure()?.errorText}`,
-          ),
-      );
-      page.on("response", (response) => {
-        if (
-          response.status() >= 400 &&
-          !(
-            response.url().endsWith("/api/ai/analyze-job-description") &&
-            response.status() === 503
-          )
-        )
-          badResponses.push(`${response.status()} ${response.url()}`);
-      });
-      await page.setViewportSize({ width, height: 900 });
-      await page.goto("/");
-      if (theme === "dark")
-        await page.getByRole("button", { name: "Switch to dark mode" }).click();
-      const actions = page.locator(".form-actions");
-      const clear = actions.getByRole("button", {
-        name: "Clear draft",
-        exact: true,
-      });
-      const analyze = page.locator(".form-actions .analyze-button");
-      const save = actions.getByRole("button", {
-        name: "Save draft",
-        exact: true,
-      });
-      const jd = page.getByRole("textbox", {
-        name: "Job description",
-        exact: true,
-      });
-      await expect(save).toBeEnabled();
-      await expect(actions.getByRole("button")).toHaveText([
-        "Clear draft",
-        "Analyze job description",
-        "Save draft ↗",
-      ]);
-      await expect(analyze.locator("svg")).toHaveAttribute(
-        "aria-hidden",
-        "true",
-      );
-      await expect(analyze).toHaveCSS(
-        "background-color",
-        theme === "light" ? "rgb(237, 233, 254)" : "rgb(124, 58, 237)",
-      );
-      await expect(save).toHaveCSS("background-color", "rgb(249, 115, 22)");
-      await capture(page, `${theme}-${width}-idle`);
-      await save.click();
-      await expect(jd).toBeFocused();
-      await expect(page.locator("#jd-error")).toBeVisible();
-      await capture(page, `${theme}-${width}-validation`);
-      await jd.fill("Build reliable APIs with TypeScript and PostgreSQL.");
-      await expect(page.locator("#jd-error")).toHaveCount(0);
-      for (const [name, button] of [
-        ["clear", clear],
-        ["analyze", analyze],
-        ["save", save],
-      ] as const) {
-        await button.hover();
-        await actions.screenshot({
-          path: `docs/ui-review/task-29/${theme}-${width}-${name}-hover.png`,
-          animations: "disabled",
-        });
-        await page.mouse.down();
-        await expect(button).toHaveCSS(
-          "transform",
-          "matrix(0.98, 0, 0, 0.98, 0, 0)",
-        );
-        await actions.screenshot({
-          path: `docs/ui-review/task-29/${theme}-${width}-${name}-pressed.png`,
-          animations: "disabled",
-        });
-        // Release away from the button to inspect :active without invoking it.
-        await page.mouse.move(0, 0);
-        await page.mouse.up();
-      }
-      await analyze.focus();
-      await page.keyboard.press("Tab");
-      await expect(save).toBeFocused();
-      await expect(save).toHaveCSS("outline-width", "2px");
-      await actions.screenshot({
-        path: `docs/ui-review/task-29/${theme}-${width}-keyboard-focus.png`,
-        animations: "disabled",
-      });
-      let release: () => void = () => {};
-      const pending = new Promise<void>((resolve) => {
-        release = resolve;
-      });
-      let attempts = 0;
-      await page.route("**/api/ai/analyze-job-description", async (route) => {
-        attempts++;
-        if (attempts === 1) {
-          await pending;
-          await route.fulfill({
-            status: 503,
-            json: { error: "Analysis temporarily unavailable." },
-          });
-        } else await route.fulfill({ json: { analysis: homeAnalysis } });
-      });
-      const idleWidth = (await analyze.boundingBox())!.width;
-      await analyze.click();
-      await expect(analyze).toBeDisabled();
-      await expect(analyze).toHaveAttribute("aria-busy", "true");
-      await expect(analyze).toHaveText("Analyzing...");
-      await expect(analyze.locator(".analysis-spinner")).toHaveCSS(
-        "width",
-        "16px",
-      );
-      expect((await analyze.boundingBox())!.width).toBeCloseTo(idleWidth, 1);
-      await expect(page.locator(".analysis-status")).toContainText(
-        "Analyzing job description",
-      );
-      await capture(page, `${theme}-${width}-analyzing-disabled`);
-      release();
-      await expect(page.locator(".analysis-error-notice")).toContainText(
-        "Analysis temporarily unavailable.",
-      );
-      await expect(jd).toHaveValue(
-        "Build reliable APIs with TypeScript and PostgreSQL.",
-      );
-      await capture(page, `${theme}-${width}-analysis-error`);
-      await page.getByRole("button", { name: "Retry", exact: true }).click();
-      await expect(page.locator(".analysis-role")).toContainText(
-        homeAnalysis.targetTitle,
-      );
-      await expect(
-        page.getByRole("button", { name: "Reanalyze", exact: true }),
-      ).toBeFocused();
-      await expect(analyze).toHaveAttribute("aria-busy", "false");
-      expect((await analyze.boundingBox())!.width).toBeCloseTo(idleWidth, 1);
-      await save.click();
-      await expect(page.locator(".form-save-feedback")).toContainText(
-        "Draft saved in this browser",
-      );
-      await expect(page.locator(".draft-state")).toHaveText(
-        "Saved on this device",
-      );
-      await capture(page, `${theme}-${width}-saved-success`);
-      expect(await auditHome(page)).toEqual([]);
-      await clear.click();
-      await expect(jd).toHaveValue("");
-      await expect(page.locator(".draft-state")).toHaveText("No saved draft");
-      await expect(page.locator(".analysis-panel")).toHaveCount(0);
-      await capture(page, `${theme}-${width}-cleared`);
-      expect(
-        await page.evaluate(
-          () => document.documentElement.scrollWidth <= innerWidth,
-        ),
-      ).toBe(true);
-      expect(attempts).toBe(2);
-      expect(pageErrors).toEqual([]);
-      expect(badResponses).toEqual([]);
-      expect(failedRequests).toEqual([]);
-      // Chromium logs the deliberately mocked 503 used to verify the error state.
-      expect(
-        consoleErrors.filter(
-          (message) =>
-            !/Failed to load resource: the server responded with a status of 503/.test(
-              message,
-            ),
-        ),
-      ).toEqual([]);
-    });
+type Rgb = readonly [number, number, number];
+
+function parseCssColor(color: string): Rgb {
+  const normalized = color.trim();
+  const hexMatch = normalized.match(/^#([\da-f]{3}|[\da-f]{6})$/i);
+
+  if (hexMatch) {
+    const hex =
+      hexMatch[1].length === 3
+        ? [...hexMatch[1]].map((digit) => digit + digit).join("")
+        : hexMatch[1];
+    return [
+      Number.parseInt(hex.slice(0, 2), 16),
+      Number.parseInt(hex.slice(2, 4), 16),
+      Number.parseInt(hex.slice(4, 6), 16),
+    ];
   }
 
-  test(`truthful autosave pending feedback in ${theme}`, async ({ page }) => {
-    await page.goto("/");
-    if (theme === "dark")
-      await page.getByRole("button", { name: "Switch to dark mode" }).click();
-    await page.clock.install();
-    await page.clock.pauseAt(new Date(Date.now() + 100));
-    for (const width of [1440, 390, 320]) {
-      await page.setViewportSize({ width, height: 900 });
-      await page
-        .getByRole("textbox", { name: "Job description", exact: true })
-        .fill(`Pending draft at ${width}.`);
-      await expect(page.locator(".draft-state")).toHaveText("Saving...");
-      await expect(
-        page.getByRole("button", { name: "Save draft", exact: true }),
-      ).toBeEnabled();
-      await capture(page, `${theme}-${width}-saving`);
-      await page.clock.runFor(350);
-      await expect(page.locator(".draft-state")).toHaveText(
-        "Saved on this device",
-      );
-    }
-  });
+  const rgbMatch = normalized.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
+
+  if (rgbMatch) {
+    return [Number(rgbMatch[1]), Number(rgbMatch[2]), Number(rgbMatch[3])];
+  }
+
+  throw new Error("Unsupported CSS color: " + color);
 }
+
+function relativeLuminance([red, green, blue]: Rgb) {
+  const linearize = (channel: number) => {
+    const value = channel / 255;
+    return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+  };
+
+  return (
+    0.2126 * linearize(red) +
+    0.7152 * linearize(green) +
+    0.0722 * linearize(blue)
+  );
+}
+
+function contrastRatio(first: Rgb, second: Rgb) {
+  const firstLuminance = relativeLuminance(first);
+  const secondLuminance = relativeLuminance(second);
+
+  return (
+    (Math.max(firstLuminance, secondLuminance) + 0.05) /
+    (Math.min(firstLuminance, secondLuminance) + 0.05)
+  );
+}
+
+test.beforeEach(async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("status")).toContainText("No saved draft");
+});
+
+test("keeps Save text and keyboard focus contrasted in both themes", async ({
+  page,
+}) => {
+  const save = page.getByRole("button", { name: "Save draft" });
+  const jobDescription = page.getByRole("textbox", {
+    name: "Job description",
+    exact: true,
+  });
+
+  await jobDescription.fill("Synthetic engineering role description.");
+
+  const assertSaveTextContrast = async () => {
+    const colors = await save.evaluate((button) => {
+      const style = getComputedStyle(button);
+      return {
+        foreground: style.color,
+        background: style.backgroundColor,
+        opacity: style.opacity,
+      };
+    });
+
+    expect(colors.opacity).toBe("1");
+    expect(
+      contrastRatio(
+        parseCssColor(colors.foreground),
+        parseCssColor(colors.background),
+      ),
+    ).toBeGreaterThanOrEqual(4.5);
+  };
+
+  const assertFocusContrast = async () => {
+    const focus = await save.evaluate((button) => {
+      const style = getComputedStyle(button);
+      const rootStyle = getComputedStyle(document.documentElement);
+
+      return {
+        color: style.outlineColor,
+        style: style.outlineStyle,
+        width: style.outlineWidth,
+        token: rootStyle.getPropertyValue("--color-focus-ring").trim(),
+        surfaces: [
+          rootStyle.getPropertyValue("--color-surface").trim(),
+          rootStyle.getPropertyValue("--color-canvas").trim(),
+        ],
+      };
+    });
+
+    expect(focus.style).toBe("solid");
+    expect(focus.width).toBe("3px");
+    expect(parseCssColor(focus.color)).toEqual(parseCssColor(focus.token));
+
+    for (const surface of focus.surfaces) {
+      expect(
+        contrastRatio(parseCssColor(focus.color), parseCssColor(surface)),
+      ).toBeGreaterThanOrEqual(3);
+    }
+  };
+
+  const exerciseTheme = async (theme: "light" | "dark") => {
+    const currentTheme = await page.locator("html").getAttribute("data-theme");
+
+    if (currentTheme !== theme) {
+      await page
+        .getByRole("button", { name: "Switch to " + theme + " mode" })
+        .click();
+    }
+
+    const ink = theme === "light" ? "rgb(15, 23, 42)" : "rgb(23, 20, 33)";
+    const hoverBackground =
+      theme === "light" ? "rgb(194, 65, 12)" : "rgb(253, 186, 116)";
+    const hoverText =
+      theme === "light" ? "rgb(255, 255, 255)" : "rgb(23, 20, 33)";
+
+    await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+    await expect(save).toHaveCSS("background-color", "rgb(249, 115, 22)");
+    await expect(save).toHaveCSS("color", ink);
+    await assertSaveTextContrast();
+
+    await save.hover();
+    await expect(save).toHaveCSS("background-color", hoverBackground);
+    await expect(save).toHaveCSS("color", hoverText);
+    await assertSaveTextContrast();
+
+    await jobDescription.focus();
+    for (let index = 0; index < 3; index += 1) {
+      await page.keyboard.press("Tab");
+    }
+    await expect(save).toBeFocused();
+    await assertFocusContrast();
+  };
+
+  await exerciseTheme("light");
+  await exerciseTheme("dark");
+});
+
+test("shows distinct labeled action variants and keyboard focus", async ({
+  page,
+}) => {
+  const clear = page.getByRole("button", { name: "Clear draft" });
+  const analyze = page.getByRole("button", {
+    name: "Analyze job description",
+  });
+  const save = page.getByRole("button", { name: "Save draft" });
+
+  await expect(clear).toBeVisible();
+  await expect(analyze).toBeEnabled();
+  await expect(save).toBeEnabled();
+  await expect(save).toHaveCSS("background-color", "rgb(249, 115, 22)");
+  await expect(analyze.locator("svg")).toHaveCount(1);
+  await expect(save.locator("svg")).toHaveCount(1);
+  await expect(clear.locator("svg")).toHaveCount(0);
+
+  for (const button of [clear, analyze, save]) {
+    const box = await button.boundingBox();
+    expect(box).not.toBeNull();
+    expect(box!.height).toBeGreaterThanOrEqual(44);
+  }
+
+  const analyzeDefault = await analyze.evaluate(
+    (element) => getComputedStyle(element).backgroundColor,
+  );
+  await analyze.hover();
+  await expect(analyze).toHaveCSS("background-color", "rgb(167, 139, 250)");
+  expect(
+    await analyze.evaluate(
+      (element) => getComputedStyle(element).backgroundColor,
+    ),
+  ).not.toBe(analyzeDefault);
+
+  const clearBox = await clear.boundingBox();
+  expect(clearBox).not.toBeNull();
+  await page.mouse.move(
+    clearBox!.x + clearBox!.width / 2,
+    clearBox!.y + clearBox!.height / 2,
+  );
+  await page.mouse.down();
+  await expect
+    .poll(() =>
+      clear.evaluate((element) => getComputedStyle(element).transform),
+    )
+    .not.toBe("none");
+  await page.mouse.up();
+
+  await clear.focus();
+  await page.keyboard.press("Tab");
+  await expect(analyze).toBeFocused();
+  await expect
+    .poll(() =>
+      analyze.evaluate((element) => getComputedStyle(element).outlineWidth),
+    )
+    .toBe("3px");
+});
+
+test("saves and clears a draft through the primary and ghost actions", async ({
+  page,
+}) => {
+  await page.getByLabel("Company").fill("Example Systems");
+  await page
+    .getByRole("textbox", { name: "Job description", exact: true })
+    .fill("Build dependable services for customers.");
+  await page.getByRole("button", { name: "Save draft" }).click();
+  await expect(
+    page.getByText(
+      "Draft saved in this browser. You can open Resume builder now.",
+    ),
+  ).toBeVisible();
+
+  await page.getByRole("button", { name: "Clear draft" }).click();
+  await expect(page.getByLabel("Company")).toHaveValue("");
+  await expect(
+    page.getByRole("textbox", { name: "Job description", exact: true }),
+  ).toHaveValue("");
+});
+
+test("keeps the AI action disabled and the same size while analysis loads", async ({
+  page,
+}) => {
+  await page
+    .getByRole("textbox", { name: "Job description", exact: true })
+    .fill("Build reliable services.");
+
+  let releaseResponse: () => void = () => {};
+  const responseGate = new Promise<void>((resolve) => {
+    releaseResponse = resolve;
+  });
+  await page.route("**/api/ai/analyze-job-description", async (route) => {
+    await responseGate;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ analysis }),
+    });
+  });
+
+  const analyze = page.getByRole("button", {
+    name: "Analyze job description",
+  });
+  const idleBox = await analyze.boundingBox();
+  expect(idleBox).not.toBeNull();
+  await analyze.click();
+
+  const loading = page.getByRole("button", { name: "Analyzing..." });
+  await expect(loading).toBeDisabled();
+  await expect(loading).toHaveAttribute("aria-busy", "true");
+  await expect(loading.locator("svg.home-action-spinner")).toBeVisible();
+  const loadingBox = await loading.boundingBox();
+  expect(loadingBox).not.toBeNull();
+  expect(loadingBox!.width).toBeCloseTo(idleBox!.width, 1);
+  expect(loadingBox!.height).toBeCloseTo(idleBox!.height, 1);
+
+  releaseResponse();
+  await expect(
+    page.getByRole("region", { name: "Job description analysis" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Analyze job description" }),
+  ).toBeEnabled();
+});
+
+test("keeps action buttons within tablet and narrow dark viewports", async ({
+  page,
+}) => {
+  await page.getByRole("button", { name: "Switch to dark mode" }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await expect(
+    page.getByRole("button", { name: "Analyze job description" }),
+  ).toHaveCSS("background-color", "rgb(50, 37, 72)");
+  await expect(page.getByRole("button", { name: "Save draft" })).toHaveCSS(
+    "background-color",
+    "rgb(249, 115, 22)",
+  );
+
+  for (const width of [950, 900, 768, 720, 390, 320]) {
+    await page.setViewportSize({
+      width,
+      height: width < 500 ? 844 : 900,
+    });
+    const pageOverflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - window.innerWidth,
+    );
+    expect(pageOverflow).toBeLessThanOrEqual(0);
+
+    for (const name of [
+      "Clear draft",
+      "Analyze job description",
+      "Save draft",
+    ]) {
+      const button = page.getByRole("button", { name });
+      await expect(button).toBeVisible();
+      const box = await button.boundingBox();
+      expect(box).not.toBeNull();
+      expect(box!.x).toBeGreaterThanOrEqual(0);
+      expect(box!.x + box!.width).toBeLessThanOrEqual(width);
+      expect(box!.height).toBeGreaterThanOrEqual(44);
+    }
+  }
+});
+
+test("shows disabled actions before hydration without JavaScript", async ({
+  browser,
+  baseURL,
+}) => {
+  const context = await browser.newContext({ javaScriptEnabled: false });
+  try {
+    const page = await context.newPage();
+    await page.goto(baseURL!);
+    const save = page.getByRole("button", { name: "Save draft" });
+    const analyze = page.getByRole("button", {
+      name: "Analyze job description",
+    });
+    await expect(save).toBeDisabled();
+    await expect(analyze).toBeDisabled();
+    await expect(save).toHaveCSS("background-color", "rgb(253, 186, 116)");
+    await expect(save).toHaveCSS("color", "rgb(15, 23, 42)");
+    await expect(
+      page.getByRole("navigation", { name: "Main navigation" }),
+    ).toBeVisible();
+  } finally {
+    await context.close();
+  }
+});

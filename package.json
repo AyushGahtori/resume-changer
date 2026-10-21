@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\" \"tests/**/*.{ts,tsx}\" \"*.{json,mjs,ts}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\" \"tests/**/*.{ts,tsx}\" \"scripts/**/*.mjs\" \"docs/**/*.md\" \".github/**/*.yml\" \"*.{json,mjs,ts,md}\"",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:ai-live": "node scripts/test-gemini-live.mjs",
@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@google/genai": "^2.29.1",
+    "lucide-react": "^1.60.0",
     "next": "^15.5.6",
     "pdfjs-dist": "^6.4.299",
     "react": "^19.1.1",
