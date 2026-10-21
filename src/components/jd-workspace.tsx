@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Asterisk, ArrowUpRight, LoaderCircle, Sparkles } from "lucide-react";
 import type { JobAnalysisResult } from "@/lib/ai/contracts";
 import {
   clearJobAnalysisCache,
@@ -222,12 +223,15 @@ export default function JDWorkspace() {
   return (
     <section className="jd-page" aria-labelledby="page-title">
       <div className="page-heading-row">
-        <div>
+        <div className="page-heading-copy">
           <p className="eyebrow">
             NEW APPLICATION <span>01 / 04</span>
           </p>
           <h1 id="page-title">Start with the role.</h1>
-          <p className="page-intro">Job description</p>
+          <p className="page-intro">
+            Add the job description and let AI analyze it for a stronger,
+            ATS-optimized resume.
+          </p>
         </div>
         <div className="draft-state" role="status" aria-live="polite">
           <span className={`draft-dot draft-${saveState}`} aria-hidden="true" />
@@ -241,10 +245,15 @@ export default function JDWorkspace() {
         </p>
       )}
 
-      <form className="jd-form" onSubmit={handleSubmit} noValidate>
+      <form
+        aria-labelledby="role-details-title"
+        className="jd-form"
+        onSubmit={handleSubmit}
+        noValidate
+      >
         <div className="form-topline">
           <div>
-            <h2>Role details</h2>
+            <h2 id="role-details-title">Role details</h2>
             <p>Target position</p>
           </div>
           <span className="optional-label">LINK OPTIONAL</span>
@@ -342,30 +351,46 @@ export default function JDWorkspace() {
           </div>
           <div className="form-actions">
             <button
-              className="clear-button"
+              className="home-action-button home-action-button--ghost"
               onClick={handleClear}
               type="button"
             >
               Clear draft
             </button>
             <button
-              className="clear-button analyze-button"
+              aria-busy={analysisState === "loading"}
+              className="home-action-button home-action-button--secondary analyze-button"
               disabled={!isReady || analysisState === "loading"}
               onClick={handleAnalyze}
               type="button"
             >
-              {analysisState === "loading"
-                ? "Analyzing..."
-                : analysisState === "error"
-                  ? "Retry analysis"
-                  : "Analyze job description"}
+              {analysisState === "loading" ? (
+                <>
+                  <LoaderCircle
+                    aria-hidden="true"
+                    className="home-action-spinner"
+                    size={18}
+                  />
+                  <span>Analyzing...</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles aria-hidden="true" size={18} />
+                  <span>
+                    {analysisState === "error"
+                      ? "Retry analysis"
+                      : "Analyze job description"}
+                  </span>
+                </>
+              )}
             </button>
             <button
-              className="primary-button"
+              className="home-action-button home-action-button--primary"
               disabled={!isReady}
               type="submit"
             >
-              Save draft <span aria-hidden="true">↗</span>
+              <span>Save draft</span>
+              <ArrowUpRight aria-hidden="true" size={18} />
             </button>
           </div>
         </div>
@@ -462,7 +487,7 @@ export default function JDWorkspace() {
 
       <div className="workspace-note">
         <span className="note-mark" aria-hidden="true">
-          ✳
+          <Asterisk aria-hidden="true" size={16} />
         </span>
         <span>Drafts are stored locally in this browser.</span>
       </div>

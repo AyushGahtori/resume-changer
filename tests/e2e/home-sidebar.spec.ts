@@ -97,6 +97,16 @@ test("provides visible active, hover, and keyboard focus states in both themes",
       );
     });
 
+    // Keep explicit theme-color checks as well as waiting for transitions.
+    await expect(activeLink).toHaveCSS(
+      "color",
+      theme === "dark" ? "rgb(167, 139, 250)" : "rgb(194, 65, 12)",
+    );
+    await expect(activeLink).toHaveCSS(
+      "background-color",
+      theme === "dark" ? "rgb(50, 37, 72)" : "rgb(255, 247, 237)",
+    );
+
     const readActiveStyles = () =>
       activeLink.evaluate((element) => {
         const style = getComputedStyle(element);
