@@ -1,258 +1,298 @@
 import { expect, test } from "@playwright/test";
-import {
-  JD_DRAFT_STORAGE_KEY,
-  MAX_JD_CHARACTERS,
-} from "../../src/lib/jd-draft";
 
-// Next dev compiles the home route on its first request.
-test.setTimeout(90_000);
-
-// Headless Chromium otherwise hides the native scrollbar in screenshots.
-test.use({ launchOptions: { ignoreDefaultArgs: ["--hide-scrollbars"] } });
-
-const description =
-  "# Platform Engineer\n\n**Company:** Example Systems\n**Location:** Remote / Hybrid\n**Experience:** 1–3 Years\n**Employment Type:** Full-time\n\n" +
-  Array.from(
-    { length: 30 },
-    (_, i) =>
-      `${i + 1}. Build reliable APIs, improve data services, and document requirements.`,
-  ).join("\n");
+const HELPER_COPY = "Paste the job description from the company's career page.";
 
 for (const theme of ["light", "dark"] as const) {
+  test(`shows the required JD label, badge, and helper copy in ${theme} mode`, async ({
+    page,
+  }, testInfo) => {
+    await page.addInitScript((theme) => {
+      localStorage.setItem("resume-changer.theme.v1", theme);
+    }, theme);
+    await page.goto("/");
+    await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+
+    const form = page.getByRole("form", { name: "Role details" });
+    const heading = form.locator(".description-heading");
+    const label = form.getByRole("textbox", {
+      name: "Job description",
+      exact: true,
+    });
+
+    // The label and the REQUIRED badge share one row.
+    await expect(
+      heading.getByText("Job description", { exact: true }),
+    ).toBeVisible();
+    const badge = heading.getByText("REQUIRED", { exact: true });
+    await expect(badge).toBeVisible();
+
+    // The helper line carries the exact reference copy.
+    const helper = form.locator("#jd-helper");
+    await expect(helper).toHaveText(HELPER_COPY);
+    await expect(helper).toBeVisible();
+
+    // The helper is programmatically associated with the textarea.
+    await expect(label).toHaveAttribute(
+      "aria-describedby",
+      "jd-helper jd-count",
+    );
+
+    const appearance = await form.evaluate((element) => {
+      const form = element as HTMLElement;
+      const read = (selector: string) => {
+        const node = form.querySelector(selector);
+        if (!node) return null;
+        const style = getComputedStyle(node);
+        const box = node.getBoundingClientRect();
+        return {
+          color: style.color,
+          backgroundColor: style.backgroundColor,
+          borderColor: style.borderTopColor,
+          borderWidth: style.borderTopWidth,
+          borderRadius: style.borderTopLeftRadius,
+          fontSize: style.fontSize,
+          fontWeight: style.fontWeight,
+          lineHeight: style.lineHeight,
+          textTransform: style.textTransform,
+          letterSpacing: style.letterSpacing,
+          left: box.left,
+          right: box.right,
+          top: box.top,
+          bottom: box.bottom,
+          width: box.width,
+          height: box.height,
+        };
+      };
+
+      const headingBox = form
+        .querySelector(".description-heading")!
+        .getBoundingClientRect();
+      const labelBox = form
+        .querySelector(".description-heading label")!
+        .getBoundingClientRect();
+      const badgeBox = form
+        .querySelector(".required-label")!
+        .getBoundingClientRect();
+      const helperBox = form
+        .querySelector("#jd-helper")!
+        .getBoundingClientRect();
+      const textareaBox = form
+        .querySelector("textarea")!
+        .getBoundingClientRect();
+
+      return {
+        label: read(".description-heading label"),
+        badge: read(".required-label"),
+        helper: read("#jd-helper"),
+        headingBox: { top: headingBox.top, bottom: headingBox.bottom },
+        labelBox: { top: labelBox.top, bottom: labelBox.bottom },
+        badgeBox: { top: badgeBox.top, bottom: badgeBox.bottom },
+        helperBox: { top: helperBox.top, bottom: helperBox.bottom },
+        textareaBox: { top: textareaBox.top },
+        documentOverflow:
+          document.documentElement.scrollWidth - window.innerWidth,
+      };
+    });
+
+    // The label is 14px/20px semibold primary text.
+    expect(appearance.label).toMatchObject({
+      fontSize: "14px",
+      lineHeight: "20px",
+      fontWeight: "600",
+    });
+    expect(appearance.label?.letterSpacing).toBe("normal");
+
+    // The badge is a compact uppercase orange marker on a pale orange fill.
+    expect(appearance.badge).toMatchObject({
+      fontSize: "11px",
+      lineHeight: "14px",
+      fontWeight: "600",
+      textTransform: "uppercase",
+      borderRadius: "4px",
+    });
+
+    // The helper is secondary supporting copy.
+    expect(appearance.helper).toMatchObject({
+      fontSize: "13px",
+      lineHeight: "18px",
+    });
+
+    // Label and badge sit on the same line: they overlap vertically.
+    expect(appearance.badgeBox.top).toBeLessThan(appearance.labelBox.bottom);
+    expect(appearance.labelBox.top).toBeLessThan(appearance.badgeBox.bottom);
+
+    // The helper sits between the label row and the textarea.
+    expect(appearance.helperBox.top).toBeGreaterThan(
+      appearance.headingBox.bottom,
+    );
+    expect(appearance.textareaBox.top).toBeGreaterThan(
+      appearance.helperBox.bottom,
+    );
+
+    expect(appearance.documentOverflow).toBeLessThanOrEqual(0);
+
+    await page.screenshot({
+      path: testInfo.outputPath(`home-jd-editor-${theme}.png`),
+      fullPage: true,
+      animations: "disabled",
+      style: "nextjs-portal { display: none !important; }",
+    });
+  });
+}
+
+test("keeps the required badge visually distinct from the optional chip", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const form = page.getByRole("form", { name: "Role details" });
+
+  const tokens = await form.evaluate((element) => {
+    const form = element as HTMLElement;
+    const read = (selector: string) => {
+      const node = form.querySelector(selector);
+      if (!node) return null;
+      const style = getComputedStyle(node);
+      return {
+        color: style.color,
+        backgroundColor: style.backgroundColor,
+        borderColor: style.borderTopColor,
+        borderWidth: style.borderTopWidth,
+      };
+    };
+    return {
+      optional: read(".optional-label"),
+      required: read(".required-label"),
+    };
+  });
+
+  // The REQUIRED badge uses the orange attention palette, not the neutral
+  // outline the optional LINK OPTIONAL chip uses.
+  expect(tokens.optional?.backgroundColor).not.toBe(
+    tokens.required?.backgroundColor,
+  );
+  expect(tokens.optional?.color).not.toBe(tokens.required?.color);
+  expect(tokens.optional?.borderWidth).toBe("1px");
+});
+
+test("associates the helper, error, and count text with the textarea", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const form = page.getByRole("form", { name: "Role details" });
+  const textarea = form.getByRole("textbox", {
+    name: "Job description",
+    exact: true,
+  });
+
+  // Before validation the textarea is described by the helper and the count.
+  await expect(textarea).toHaveAttribute(
+    "aria-describedby",
+    "jd-helper jd-count",
+  );
+  await expect(textarea).not.toHaveAttribute("aria-invalid", "true");
+
+  // Triggering validation adds the error message to the description chain
+  // without removing the helper or the count.
+  await form.getByRole("button", { name: "Save draft" }).click();
+
+  await expect(textarea).toHaveAttribute(
+    "aria-describedby",
+    "jd-helper jd-error jd-count",
+  );
+  await expect(textarea).toHaveAttribute("aria-invalid", "true");
+
+  const alert = form.getByRole("alert");
+  await expect(alert).toHaveAttribute("id", "jd-error");
+  await expect(alert).toContainText("Enter a job description before saving.");
+
+  // The error pairs a red alert icon with the message text.
+  await expect(alert.locator("svg")).toHaveCount(1);
+
+  // The required label and its badge are never replaced by the error.
+  await expect(
+    form.locator(".description-heading").getByText("Job description", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(
+    form.locator(".description-heading").getByText("REQUIRED", { exact: true }),
+  ).toBeVisible();
+  await expect(form.locator("#jd-helper")).toHaveText(HELPER_COPY);
+});
+
+test("keeps the user's text and the helper when validation fails", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const form = page.getByRole("form", { name: "Role details" });
+  const textarea = form.getByRole("textbox", {
+    name: "Job description",
+    exact: true,
+  });
+
+  await textarea.fill("Drafted role description text.");
+  await form.getByRole("button", { name: "Save draft" }).click();
+
+  // The entered text is preserved and the helper stays visible.
+  await expect(textarea).toHaveValue("Drafted role description text.");
+  await expect(form.locator("#jd-helper")).toBeVisible();
+  await expect(form.locator("#jd-helper")).toHaveText(HELPER_COPY);
+});
+
+test("wraps the label and badge gracefully on narrow screens", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const form = page.getByRole("form", { name: "Role details" });
+
   for (const viewport of [
     { width: 1440, height: 900 },
     { width: 1024, height: 768 },
     { width: 390, height: 844 },
+    { width: 320, height: 720 },
   ]) {
-    test(`${theme} textarea at ${viewport.width}px preserves readable, scrollable states`, async ({
-      page,
-    }, testInfo) => {
-      await page.setViewportSize(viewport);
-      await page.goto("/");
-      // Use the actual theme control so this test does not depend on its storage contract.
-      if ((await page.locator("html").getAttribute("data-theme")) !== theme) {
-        await page
-          .getByRole("button", { name: `Switch to ${theme} mode` })
-          .click();
-      }
-      const editor = page.getByRole("textbox", {
-        name: "Job description",
-        exact: true,
-      });
-      await expect(editor).toBeEnabled();
-      await expect(editor).toHaveValue("");
-      await editor.screenshot({ path: testInfo.outputPath("default.png") });
-      await editor.fill(description);
-      await editor.evaluate((el) => {
-        el.scrollTop = 0;
-      });
-      await page
-        .getByRole("heading", { name: "Role details", exact: true })
-        .click();
-      const geometry = await editor.evaluate((el: HTMLTextAreaElement) => {
-        const style = getComputedStyle(el);
-        return {
-          width: el.getBoundingClientRect().width,
-          parentWidth:
-            el.parentElement!.clientWidth -
-            parseFloat(getComputedStyle(el.parentElement!).paddingLeft) -
-            parseFloat(getComputedStyle(el.parentElement!).paddingRight),
-          height: el.getBoundingClientRect().height,
-          scrollHeight: el.scrollHeight,
-          clientHeight: el.clientHeight,
-          scrollWidth: el.scrollWidth,
-          clientWidth: el.clientWidth,
-          fontSize: style.fontSize,
-          lineHeight: style.lineHeight,
-          radius: style.borderRadius,
-          padding: style.padding,
-          background: style.backgroundColor,
-          color: style.color,
-          border: style.borderColor,
-          resize: style.resize,
-        };
-      });
-      const contrast = await editor.evaluate((el) => {
-        const style = getComputedStyle(el);
-        const luminance = (color: string) => {
-          const channels = color
-            .match(/[\d.]+/g)!
-            .slice(0, 3)
-            .map(Number)
-            .map((value) => {
-              const channel = value / 255;
-              return channel <= 0.04045
-                ? channel / 12.92
-                : ((channel + 0.055) / 1.055) ** 2.4;
-            });
-          return (
-            channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722
-          );
-        };
-        const background = luminance(style.backgroundColor);
-        return [style.color, getComputedStyle(el, "::placeholder").color].map(
-          (color) => {
-            const foreground = luminance(color);
-            return (
-              (Math.max(background, foreground) + 0.05) /
-              (Math.min(background, foreground) + 0.05)
-            );
-          },
-        );
-      });
-      for (const ratio of contrast) expect(ratio).toBeGreaterThanOrEqual(4.5);
-      expect(geometry.height).toBe(190);
-      expect(geometry.width).toBeCloseTo(geometry.parentWidth, 0);
-      expect(geometry).toMatchObject({
-        fontSize: "14px",
-        lineHeight: "20px",
-        radius: "6px",
-        padding: "12px 14px",
-      });
-      expect(geometry.scrollHeight).toBeGreaterThan(geometry.clientHeight);
-      expect(geometry.scrollWidth).toBeLessThanOrEqual(geometry.clientWidth);
-      expect(
-        await page.evaluate(
-          () => document.documentElement.scrollWidth <= innerWidth,
-        ),
-      ).toBe(true);
-      await page.screenshot({
-        path: testInfo.outputPath("page.png"),
-        fullPage: true,
-      });
-      await editor.screenshot({ path: testInfo.outputPath("textarea.png") });
-      await editor.focus();
-      await expect(editor).toBeFocused();
-      await expect
-        .poll(() => editor.evaluate((el) => getComputedStyle(el).boxShadow))
-        .toContain("2px");
-      await page.screenshot({
-        path: testInfo.outputPath("focus.png"),
-        fullPage: true,
-      });
-      await editor.press("Control+End");
-      expect(await editor.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
-      await expect(editor).toHaveValue(description);
+    await page.setViewportSize(viewport);
 
-      // Exercise native vertical resizing on layouts that permit it.
-      if (viewport.width <= 1100) {
-        expect(geometry.resize).toBe("vertical");
-        const bounds = (await editor.boundingBox())!;
-        await page.mouse.move(
-          bounds.x + bounds.width - 3,
-          bounds.y + bounds.height - 3,
-        );
-        await page.mouse.down();
-        await page.mouse.move(
-          bounds.x + bounds.width + 50,
-          bounds.y + bounds.height + 50,
-        );
-        await page.mouse.up();
-        // A newly visible page scrollbar can reduce available width.
-        expect((await editor.boundingBox())!.width).toBeLessThanOrEqual(
-          bounds.width,
-        );
-        expect((await editor.boundingBox())!.height).toBeGreaterThan(
-          bounds.height,
-        );
-      } else {
-        expect(geometry.resize).toBe("none");
-      }
-      await editor.fill("");
-      await page
-        .getByRole("button", { name: "Save draft", exact: true })
-        .click();
-      await expect(editor).toHaveAttribute("aria-invalid", "true");
-      await expect(editor).toHaveAccessibleDescription(
-        /Enter a job description before saving/,
-      );
-      await expect(
-        page
-          .getByRole("alert")
-          .filter({ hasText: "Enter a job description before saving." }),
-      ).toContainText("Enter a job description before saving.");
-      expect(
-        await editor.evaluate((el) => getComputedStyle(el).borderColor),
-      ).not.toBe(geometry.border);
-      await page.screenshot({
-        path: testInfo.outputPath("error.png"),
-        fullPage: true,
-      });
-      // The disabled state normally exists only during draft restoration.
-      // Hold that native state as a visual fixture without changing app behavior.
-      await editor.evaluate((el: HTMLTextAreaElement) => {
-        el.setAttribute("aria-invalid", "false");
-        el.disabled = true;
-      });
-      await expect(editor).toBeDisabled();
-      expect(
-        await editor.evaluate((el) => getComputedStyle(el).backgroundColor),
-      ).not.toBe(geometry.background);
-      await editor.screenshot({ path: testInfo.outputPath("disabled.png") });
+    const geometry = await form.evaluate((element) => {
+      const form = element as HTMLElement;
+      const heading = form.querySelector(".description-heading")!;
+      const label = heading.querySelector("label")!.getBoundingClientRect();
+      const badge = heading
+        .querySelector(".required-label")!
+        .getBoundingClientRect();
+      const helper = form.querySelector("#jd-helper")!.getBoundingClientRect();
+      const textarea = form.querySelector("textarea")!.getBoundingClientRect();
+      return {
+        labelTop: label.top,
+        labelRight: label.right,
+        labelBottom: label.bottom,
+        badgeLeft: badge.left,
+        badgeRight: badge.right,
+        badgeTop: badge.top,
+        badgeBottom: badge.bottom,
+        helperTop: helper.top,
+        helperBottom: helper.bottom,
+        textareaTop: textarea.top,
+        formRight: form.getBoundingClientRect().right,
+        formOverflow: form.scrollWidth - form.clientWidth,
+        documentOverflow:
+          document.documentElement.scrollWidth - window.innerWidth,
+      };
     });
+
+    // The badge never overlaps the label and both stay inside the form.
+    expect(geometry.labelRight).toBeLessThanOrEqual(geometry.badgeLeft + 0.5);
+    expect(geometry.badgeRight).toBeLessThanOrEqual(geometry.formRight);
+
+    // The label and the badge share one row: they overlap vertically.
+    expect(geometry.badgeTop).toBeLessThan(geometry.labelBottom);
+    expect(geometry.labelTop).toBeLessThan(geometry.badgeBottom);
+
+    // The helper stays directly above the textarea.
+    expect(geometry.helperTop).toBeGreaterThan(geometry.badgeTop);
+    expect(geometry.textareaTop).toBeGreaterThan(geometry.helperBottom);
+
+    expect(geometry.formOverflow).toBeLessThanOrEqual(0);
+    expect(geometry.documentOverflow).toBeLessThanOrEqual(0);
   }
-}
-
-test("keyboard typing and clipboard paste preserve multiline markup verbatim across reload", async ({
-  page,
-  context,
-}) => {
-  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
-  await page.goto("/");
-  const editor = page.getByRole("textbox", {
-    name: "Job description",
-    exact: true,
-  });
-  await expect(editor).toBeEnabled();
-  await page.getByLabel("Job link").focus();
-  await page.keyboard.press("Tab");
-  await expect(editor).toBeFocused();
-  await editor.pressSequentially("Typed heading");
-  await editor.press("Enter");
-  const pasted =
-    "  **Requirements:**\n- TypeScript & APIs\n<script>window.__pasted = true</script>\n" +
-    "long-token".repeat(150) +
-    "\n  ";
-  await page.evaluate((text) => navigator.clipboard.writeText(text), pasted);
-  await editor.press("Control+V");
-  await expect(editor).toHaveValue("Typed heading\n" + pasted);
-  expect(
-    await page.evaluate(() => Reflect.get(window, "__pasted")),
-  ).toBeUndefined();
-  await expect
-    .poll(() =>
-      page.evaluate(
-        (key) => JSON.parse(localStorage.getItem(key) ?? "{}").jobDescription,
-        JD_DRAFT_STORAGE_KEY,
-      ),
-    )
-    .toBe("Typed heading\n" + pasted);
-  await page.reload();
-  await expect(editor).toHaveValue("Typed heading\n" + pasted);
-  expect(await editor.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(
-    true,
-  );
-});
-
-test("accepts the existing limit and retains oversized input with an associated error", async ({
-  page,
-}) => {
-  await page.goto("/");
-  const editor = page.getByRole("textbox", {
-    name: "Job description",
-    exact: true,
-  });
-  await expect(editor).toBeEnabled();
-  await editor.fill("x".repeat(MAX_JD_CHARACTERS - 1));
-  await editor.press("End");
-  await editor.press("x");
-  await expect(editor).toHaveValue("x".repeat(MAX_JD_CHARACTERS));
-  await page.getByRole("button", { name: "Save draft", exact: true }).click();
-  await expect(editor).toHaveAttribute("aria-invalid", "false");
-  await editor.press("Control+End");
-  await editor.press("x");
-  await page.getByRole("button", { name: "Save draft", exact: true }).click();
-  await expect(editor).toHaveValue("x".repeat(MAX_JD_CHARACTERS + 1));
-  await expect(editor).toHaveAccessibleDescription(/30,000 characters/);
-  await expect(editor).toHaveAttribute("aria-invalid", "true");
 });

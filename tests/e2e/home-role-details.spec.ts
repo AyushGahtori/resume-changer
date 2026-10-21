@@ -120,7 +120,10 @@ test("keeps validation and restored-draft notices with the named form", async ({
     name: "Job description",
     exact: true,
   });
-  await expect(jd).toHaveAttribute("aria-describedby", "jd-error jd-count");
+  await expect(jd).toHaveAttribute(
+    "aria-describedby",
+    "jd-helper jd-error jd-count",
+  );
   await jd.fill("Build reliable fictional services.");
   await form
     .getByRole("textbox", { name: "Job link", exact: true })
