@@ -1,4 +1,15 @@
-export const JAKE_STYLE_TEMPLATE = String.raw`\documentclass[letterpaper,10pt]{article}
+/**
+ * The template is normalized to Unix line endings when it is loaded.
+ *
+ * A tagged template literal keeps whatever line endings its source file has.
+ * A checkout with `core.autocrlf` enabled therefore produced a template with
+ * CRLF, while the generated LaTeX used LF. The validator compares the two
+ * directly, so a correct document was reported as not matching the approved
+ * template, and the export package marked valid LaTeX as invalid. Normalizing
+ * here keeps the template identical in every environment.
+ */
+export const JAKE_STYLE_TEMPLATE =
+  String.raw`\documentclass[letterpaper,10pt]{article}
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage[letterpaper,top=0.45in,bottom=0.45in,left=0.55in,right=0.55in]{geometry}
@@ -56,7 +67,7 @@ export const JAKE_STYLE_TEMPLATE = String.raw`\documentclass[letterpaper,10pt]{a
 \begin{document}
 %%RESUME_CONTENT%%
 \end{document}
-`;
+`.replace(/\r\n/g, "\n");
 
 export function applyJakeStyleTemplate(content: string): string {
   const marker = "%%RESUME_CONTENT%%";
