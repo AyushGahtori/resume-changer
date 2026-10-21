@@ -4068,3 +4068,17 @@ a:focus-visible {
     flex: 0 0 auto;
   }
 }
+
+/* Expanded URL controls must remain reachable in the compact desktop frame. */
+.jd-workspace-frame:has(.paste-from-url-panel) {
+  height: auto;
+  min-height: 100dvh;
+  overflow: visible;
+}
+.jd-workspace-frame:has(.paste-from-url-panel) .main-column {
+  height: auto;
+  min-height: 100dvh;
+}
+.jd-workspace-frame:has(.paste-from-url-panel) .jd-form {
+  flex: 0 0 auto;
+}
