@@ -60,7 +60,7 @@ export async function openStudio(page: Page, withPdf = true) {
   await page
     .getByRole("textbox", { name: "Job description", exact: true })
     .fill("Build reliable platform services.");
-  await expect(page.getByRole("status")).toContainText("Saved locally");
+  await expect(page.getByRole("status")).toContainText("Saved on this device");
   await page.goto("/generate?source=demo");
   await page.route("**/api/generate", (route) =>
     route.fulfill({

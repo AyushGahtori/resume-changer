@@ -31,9 +31,54 @@ import {
   AchievementWritingResultSchema,
 } from "./achievement-writing";
 
-const DEFAULT_MODEL = "gemini-3.6-flash";
-const FALLBACK_MODEL = "gemini-2.5-flash-lite";
-const REQUEST_TIMEOUT_MS = 30_000;
+export const DEFAULT_MODEL = "gemini-3.6-flash";
+// The free tier applies its daily request cap per model, so every fallback
+// here is a different model with its own budget. The aliases track the
+// current stable releases, which keeps the chain serving as older models
+// age out of the free tier.
+export const FALLBACK_MODEL = "gemini-flash-lite-latest";
+export const LAST_RESORT_MODEL = "gemini-flash-latest";
+// The free tier serves requests on models that are noticeably slower than
+// the paid tier, and the latency varies a lot: the same draft request was
+// measured at 12 seconds and at over 120 seconds on the same model and the
+// same day. The budget is therefore generous, because a request that is cut
+// short cannot be retried for the same quota cost. The timeout is sent to
+// the server as a deadline, and a request that runs past it comes back as
+// HTTP 504 rather than a client-side abort.
+export const REQUEST_TIMEOUT_MS = 240_000;
+// The model occasionally returns a duplicated or unknown achievement ID. That
+// is a recoverable generation mistake, so the same model is asked again a
+// bounded number of times before the request moves on to the fallback model.
+const MAX_MODEL_ATTEMPTS = 2;
+// Gemini reports two different rate limits. A short burst window clears in
+// seconds, so waiting it out on the same model is worthwhile. The free-tier
+// daily limit does not clear for hours, so that case moves to another model
+// instead of blocking the request.
+const MAX_RATE_LIMIT_WAIT_MS = 60_000;
+const RATE_LIMIT_BACKOFF_MS = 2_000;
+const DAILY_QUOTA_DIAGNOSTIC = "HTTP_429_DAILY_QUOTA";
+// A transient upstream failure is worth one more attempt on the same model
+// before the request gives up on it. A slow free-tier model that times out
+// often answers on the second try, and a retry costs one request against
+// the daily budget rather than a whole model.
+const TRANSIENT_RETRY_BACKOFF_MS = 2_000;
+// A request walks up to three models and retries a few times. The per
+// request budget is generous because the free tier is slow, so without a
+// total budget a full walk could outlast the caller that is waiting for it.
+const TOTAL_REQUEST_BUDGET_MS = 600_000;
+
+/**
+ * A response that parsed cleanly but broke the evidence-grounding contract,
+ * for example by selecting an achievement twice or naming an achievement that
+ * was never supplied. These failures are recoverable by regenerating, so they
+ * are retried on the same model before the request falls back.
+ */
+class GroundingViolationError extends AiProviderError {
+  constructor(message: string, diagnosticCode: string) {
+    super(message, "INVALID_RESPONSE", true, diagnosticCode);
+    this.name = "GroundingViolationError";
+  }
+}
 
 type GeminiRequest = (request: {
   model: string;
@@ -45,6 +90,17 @@ type GeminiProviderOptions = {
   apiKey?: string;
   model?: string;
   request?: GeminiRequest;
+  /**
+   * How long a single request may take. The default leaves room for the
+   * slow free-tier models; a caller that knows it is on a fast model can
+   * shorten it.
+   */
+  requestTimeoutMs?: number;
+  /**
+   * Waits out a rate limit that is expected to clear shortly. Injectable so
+   * tests never wait in real time.
+   */
+  sleep?: (milliseconds: number) => Promise<void>;
 };
 
 const GEMINI_SCHEMA_KEYS = new Set([
@@ -101,12 +157,90 @@ function errorStatus(error: unknown): number | undefined {
   return typeof value === "number" ? value : undefined;
 }
 
+/**
+ * The upstream rate-limit response describes the limit that was hit: the
+ * quota name and how long the caller should wait. The SDK surfaces the raw
+ * response body as the error message, so both facts are read from there.
+ */
+type RateLimitDetails = {
+  dailyQuota: boolean;
+  retryAfterSeconds?: number;
+};
+
+function readRateLimitDetails(message: string): RateLimitDetails {
+  const dailyQuota = /GenerateRequestsPerDayPerProjectPerModel/i.test(message);
+  try {
+    const body = JSON.parse(message) as {
+      error?: { details?: Record<string, unknown>[] };
+    };
+    const details = body.error?.details ?? [];
+    let retryAfterSeconds: number | undefined;
+    for (const detail of details) {
+      if (!String(detail["@type"] ?? "").includes("RetryInfo")) continue;
+      const raw = detail.retryDelay;
+      const seconds =
+        typeof raw === "number"
+          ? raw
+          : typeof raw === "string"
+            ? Number.parseFloat(raw.replace(/s$/, ""))
+            : Number.NaN;
+      if (Number.isFinite(seconds)) retryAfterSeconds = seconds;
+    }
+    return { dailyQuota, retryAfterSeconds };
+  } catch {
+    return { dailyQuota };
+  }
+}
+
+/**
+ * Reads a request budget from the environment. A value that is not a
+ * positive number is ignored, so a typo falls back to the default instead
+ * of disabling the request budget.
+ */
+export function parseRequestTimeout(
+  value: string | undefined,
+): number | undefined {
+  if (!value?.trim()) return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+}
+
+/**
+ * Keeps a request budget that is a positive number. A caller that passes
+ * something else, such as the result of parsing a typo, falls back to the
+ * default instead of sending a nonsense deadline upstream.
+ */
+function validRequestTimeout(value: number | undefined): number | undefined {
+  if (value === undefined) return undefined;
+  return Number.isFinite(value) && value > 0 ? value : undefined;
+}
+
 function mapRequestError(error: unknown): AiProviderError {
   if (error instanceof AiProviderError) return error;
   const status = errorStatus(error);
   const name = error instanceof Error ? error.name : "";
+  const detail = error instanceof Error ? error.message : "";
 
-  if (name === "AbortError" || name === "TimeoutError") {
+  // The SDK reports a client-side timeout as "RequestTimeoutError" and an
+  // aborted request as "RequestAbortedError". A native abort or timeout
+  // from the runtime is named "AbortError" or "TimeoutError".
+  if (
+    name === "AbortError" ||
+    name === "TimeoutError" ||
+    name === "RequestTimeoutError" ||
+    name === "RequestAbortedError"
+  ) {
+    return new AiProviderError(
+      "Gemini did not respond before the request timed out. Try again.",
+      "REQUEST_TIMEOUT",
+      true,
+      "REQUEST_TIMEOUT",
+    );
+  }
+  // The request timeout is sent to the upstream as a deadline, so a request
+  // that runs past it comes back as HTTP 504 rather than as a client-side
+  // abort. It is the same condition and gets the same treatment.
+  if (status === 504 && /DEADLINE_EXCEEDED/i.test(detail)) {
     return new AiProviderError(
       "Gemini did not respond before the request timed out. Try again.",
       "REQUEST_TIMEOUT",
@@ -123,11 +257,18 @@ function mapRequestError(error: unknown): AiProviderError {
     );
   }
   if (status === 429) {
+    // The free tier caps requests per model per day, and that cap does not
+    // clear on its own. A shorter burst window does, so the upstream delay
+    // decides whether waiting is worthwhile.
+    const { dailyQuota, retryAfterSeconds } = readRateLimitDetails(detail);
     return new AiProviderError(
-      "Gemini's free-tier request limit was reached. Wait and try again.",
+      dailyQuota
+        ? "Gemini's free-tier request limit was reached. Wait and try again."
+        : "Gemini's request rate was too high. Try again shortly.",
       "RATE_LIMITED",
       true,
-      "HTTP_429",
+      dailyQuota ? DAILY_QUOTA_DIAGNOSTIC : "HTTP_429",
+      retryAfterSeconds,
     );
   }
   if (status === 400 || status === 422) {
@@ -281,10 +422,8 @@ function ensureKnownIds(returnedIds: string[], allowedIds: Set<string>): void {
     new Set(returnedIds).size !== returnedIds.length ||
     returnedIds.some((id) => !allowedIds.has(id))
   ) {
-    throw new AiProviderError(
+    throw new GroundingViolationError(
       "Gemini returned achievement IDs that were missing or duplicated in the supplied evidence.",
-      "INVALID_RESPONSE",
-      false,
       "UNKNOWN_OR_DUPLICATE_ACHIEVEMENT_ID",
     );
   }
@@ -295,6 +434,16 @@ export function createGeminiProvider(
 ): AiProvider {
   const apiKey = options.apiKey ?? process.env.GEMINI_API_KEY;
   const model = options.model ?? process.env.GEMINI_MODEL ?? DEFAULT_MODEL;
+  const requestTimeoutMs =
+    validRequestTimeout(options.requestTimeoutMs) ??
+    parseRequestTimeout(process.env.GEMINI_REQUEST_TIMEOUT_MS) ??
+    REQUEST_TIMEOUT_MS;
+  const sleep =
+    options.sleep ??
+    ((milliseconds: number) =>
+      new Promise<void>((resolve) => {
+        setTimeout(resolve, milliseconds);
+      }));
   const request: GeminiRequest =
     options.request ??
     (async ({ model: requestedModel, prompt, outputSchema }) => {
@@ -307,7 +456,7 @@ export function createGeminiProvider(
       const client = new GoogleGenAI({
         apiKey,
         httpOptions: {
-          timeout: REQUEST_TIMEOUT_MS,
+          timeout: requestTimeoutMs,
           retryOptions: { attempts: 1 },
         },
       });
@@ -336,6 +485,7 @@ export function createGeminiProvider(
     input: Parameters<typeof buildAiPrompt>[1],
     schema: { parse(value: unknown): T },
     refinement?: string,
+    validate?: (result: T) => void,
   ): Promise<T> {
     if (!apiKey && !options.request) {
       throw new AiProviderError(
@@ -358,90 +508,190 @@ export function createGeminiProvider(
       task,
       input,
     );
-    const models = model === FALLBACK_MODEL ? [model] : [model, FALLBACK_MODEL];
+    // The free tier caps requests per model per day, so each fallback has its
+    // own budget. A configured model that is already one of the fallbacks
+    // still keeps a distinct last-resort model ahead of giving up.
+    const models = [...new Set([model, FALLBACK_MODEL, LAST_RESORT_MODEL])];
+    const startedAt = Date.now();
     let lastError: AiProviderError | undefined;
-    for (const [index, requestedModel] of models.entries()) {
-      try {
-        const responseText = await request({
-          model: requestedModel,
-          prompt,
-          outputSchema: boundedOutputSchema,
-        });
-        if (!responseText?.trim()) {
-          throw new AiProviderError(
-            "Gemini returned an empty response. Try again.",
-            "INVALID_RESPONSE",
-            true,
-            "EMPTY_RESPONSE",
-          );
-        }
 
-        let decoded: unknown;
+    const parseResponse = (
+      responseText: string | undefined,
+      task: Parameters<typeof buildAiPrompt>[0],
+      input: Parameters<typeof buildAiPrompt>[1],
+    ): T => {
+      if (!responseText?.trim()) {
+        throw new AiProviderError(
+          "Gemini returned an empty response. Try again.",
+          "INVALID_RESPONSE",
+          true,
+          "EMPTY_RESPONSE",
+        );
+      }
+
+      let decoded: unknown;
+      try {
+        decoded = JSON.parse(responseText);
+      } catch {
+        throw new AiProviderError(
+          "Gemini returned invalid JSON. Try again.",
+          "INVALID_RESPONSE",
+          true,
+          "MALFORMED_JSON",
+        );
+      }
+      try {
+        const normalized =
+          task === "selectAchievements"
+            ? normalizeSelectionSupplements(
+                input as AchievementSelectionInput,
+                decoded,
+              )
+            : decoded;
+        return schema.parse(normalized);
+      } catch (error) {
+        const issuePaths =
+          error instanceof z.ZodError
+            ? [
+                ...new Set(
+                  error.issues.slice(0, 8).map((issue) => {
+                    const path = issue.path
+                      .map((part) =>
+                        typeof part === "number" ? "[]" : String(part),
+                      )
+                      .join(".");
+                    return `${path || "$"}:${issue.code}`;
+                  }),
+                ),
+              ].join(",")
+            : "unknown-schema-error";
+        throw new AiProviderError(
+          "Gemini returned an incomplete or inconsistent response. Try again.",
+          "INVALID_RESPONSE",
+          true,
+          `OUTPUT_SCHEMA_MISMATCH:${issuePaths}`,
+        );
+      }
+    };
+
+    modelLoop: for (const [index, requestedModel] of models.entries()) {
+      for (let attempt = 1; attempt <= MAX_MODEL_ATTEMPTS; attempt += 1) {
         try {
-          decoded = JSON.parse(responseText);
-        } catch {
-          throw new AiProviderError(
-            "Gemini returned invalid JSON. Try again.",
-            "INVALID_RESPONSE",
-            true,
-            "MALFORMED_JSON",
-          );
-        }
-        try {
-          const normalized =
-            task === "selectAchievements"
-              ? normalizeSelectionSupplements(
-                  input as AchievementSelectionInput,
-                  decoded,
-                )
-              : decoded;
-          const parsed = schema.parse(normalized);
+          const responseText = await request({
+            model: requestedModel,
+            prompt,
+            outputSchema: boundedOutputSchema,
+          });
+          const parsed = parseResponse(responseText, task, input);
+          // Evidence-grounding checks run after the response parses, and their
+          // failures stay distinguishable from schema mismatches so the loop
+          // can retry them on the same model.
+          try {
+            validate?.(parsed);
+          } catch (error) {
+            if (error instanceof AiProviderError) throw error;
+            throw new GroundingViolationError(
+              "Gemini returned evidence that did not match the supplied sources.",
+              "UNKNOWN_OR_DUPLICATE_ACHIEVEMENT_ID",
+            );
+          }
           return parsed;
         } catch (error) {
-          const issuePaths =
-            error instanceof z.ZodError
-              ? [
-                  ...new Set(
-                    error.issues.slice(0, 8).map((issue) => {
-                      const path = issue.path
-                        .map((part) =>
-                          typeof part === "number" ? "[]" : String(part),
-                        )
-                        .join(".");
-                      return `${path || "$"}:${issue.code}`;
-                    }),
-                  ),
-                ].join(",")
-              : "unknown-schema-error";
-          throw new AiProviderError(
-            "Gemini returned an incomplete or inconsistent response. Try again.",
-            "INVALID_RESPONSE",
-            true,
-            `OUTPUT_SCHEMA_MISMATCH:${issuePaths}`,
-          );
+          const providerError =
+            error instanceof AiProviderError ? error : mapRequestError(error);
+          lastError = providerError;
+          const status = errorStatus(error);
+          const errorName = error instanceof Error ? error.name : "";
+          const recoverable =
+            providerError.code === "INVALID_RESPONSE" ||
+            status === 400 ||
+            status === 404 ||
+            (status !== undefined && status >= 500) ||
+            errorName === "AbortError" ||
+            errorName === "TimeoutError";
+          // The total budget bounds the whole walk. Once it is spent the
+          // request stops rather than starting another attempt that would
+          // outlast the caller waiting for it.
+          const budgetSpent = Date.now() - startedAt >= TOTAL_REQUEST_BUDGET_MS;
+          // A grounding violation means the model produced a well-formed but
+          // unusable answer, so the same model is asked again before the
+          // request falls back to a different one.
+          const groundingViolation =
+            providerError instanceof GroundingViolationError;
+          if (
+            groundingViolation &&
+            attempt < MAX_MODEL_ATTEMPTS &&
+            !budgetSpent
+          ) {
+            console.warn("Gemini request retrying the same model.", {
+              task,
+              attempt,
+              maxAttempts: MAX_MODEL_ATTEMPTS,
+              diagnostic: providerError.diagnosticCode ?? providerError.code,
+            });
+            continue;
+          }
+          // A timeout or a transient server failure says nothing about the
+          // request itself. The same model is asked again first, because a
+          // slow free-tier model that timed out often answers on the next
+          // try, and moving on would spend another model's daily budget
+          // for a failure this model could have recovered from.
+          const transient =
+            providerError.code === "REQUEST_TIMEOUT" ||
+            providerError.code === "SERVICE_UNAVAILABLE";
+          if (transient && attempt < MAX_MODEL_ATTEMPTS && !budgetSpent) {
+            console.warn("Gemini request retrying the same model.", {
+              task,
+              attempt,
+              maxAttempts: MAX_MODEL_ATTEMPTS,
+              model: requestedModel,
+              diagnostic: providerError.diagnosticCode ?? providerError.code,
+            });
+            await sleep(TRANSIENT_RETRY_BACKOFF_MS * attempt);
+            continue;
+          }
+          // A rate limit is never a fault in the request, so the same model
+          // is asked again. A short burst window clears on its own; the daily
+          // free-tier cap does not, so that case moves to a model with its
+          // own budget instead of waiting for hours.
+          if (providerError.code === "RATE_LIMITED") {
+            const dailyQuota =
+              providerError.diagnosticCode === DAILY_QUOTA_DIAGNOSTIC;
+            const upstreamDelayMs =
+              (providerError.retryAfterSeconds ?? 0) * 1_000;
+            const waitMs = upstreamDelayMs || RATE_LIMIT_BACKOFF_MS * attempt;
+            if (!dailyQuota && waitMs <= MAX_RATE_LIMIT_WAIT_MS) {
+              console.warn("Gemini request waiting out a rate limit.", {
+                task,
+                attempt,
+                model: requestedModel,
+                waitMs,
+                diagnostic: providerError.diagnosticCode,
+              });
+              await sleep(waitMs);
+              continue;
+            }
+            if (index < models.length - 1 && !budgetSpent) {
+              console.warn("Gemini request moving to another model.", {
+                task,
+                model: requestedModel,
+                nextModel: models[index + 1],
+                diagnostic: providerError.diagnosticCode ?? providerError.code,
+              });
+              continue modelLoop;
+            }
+            throw providerError;
+          }
+          if (index < models.length - 1 && recoverable && !budgetSpent) {
+            console.warn("Gemini request retrying with fallback model.", {
+              task,
+              diagnostic: providerError.diagnosticCode ?? providerError.code,
+              fallbackModel: models[index + 1],
+            });
+            continue modelLoop;
+          }
+          throw providerError;
         }
-      } catch (error) {
-        const providerError =
-          error instanceof AiProviderError ? error : mapRequestError(error);
-        lastError = providerError;
-        const status = errorStatus(error);
-        const errorName = error instanceof Error ? error.name : "";
-        const recoverable =
-          providerError.code === "INVALID_RESPONSE" ||
-          status === 400 ||
-          status === 404 ||
-          (status !== undefined && status >= 500) ||
-          errorName === "AbortError" ||
-          errorName === "TimeoutError";
-        if (index === 0 && models.length > 1 && recoverable) {
-          console.warn("Gemini request retrying with fallback model.", {
-            task,
-            diagnostic: providerError.diagnosticCode ?? providerError.code,
-            fallbackModel: FALLBACK_MODEL,
-          });
-          continue;
-        }
-        throw providerError;
       }
     }
     throw (
@@ -473,32 +723,34 @@ export function createGeminiProvider(
       input: AchievementSelectionInput,
     ): Promise<AchievementSelectionResult> {
       AchievementSelectionInputSchema.parse(input);
+      const achievementById = new Map(
+        input.achievements.map((achievement) => [achievement.id, achievement]),
+      );
+      const allowedIds = new Set(achievementById.keys());
       const result = await run(
         "selectAchievements",
         input,
         AchievementSelectionResultSchema,
+        undefined,
+        (selection) => {
+          ensureKnownIds(
+            selection.selections.map((item) => item.achievementId),
+            allowedIds,
+          );
+          if (
+            selection.selections.some(
+              (item) =>
+                achievementById.get(item.achievementId)?.section !==
+                item.section,
+            )
+          ) {
+            throw new GroundingViolationError(
+              "Gemini assigned an achievement to the wrong resume section.",
+              "ACHIEVEMENT_SECTION_MISMATCH",
+            );
+          }
+        },
       );
-      const achievementById = new Map(
-        input.achievements.map((achievement) => [achievement.id, achievement]),
-      );
-      ensureKnownIds(
-        result.selections.map((selection) => selection.achievementId),
-        new Set(achievementById.keys()),
-      );
-      if (
-        result.selections.some(
-          (selection) =>
-            achievementById.get(selection.achievementId)?.section !==
-            selection.section,
-        )
-      ) {
-        throw new AiProviderError(
-          "Gemini assigned an achievement to the wrong resume section.",
-          "INVALID_RESPONSE",
-          false,
-          "ACHIEVEMENT_SECTION_MISMATCH",
-        );
-      }
       const selectedIds = new Set(
         result.selections.map((selection) => selection.achievementId),
       );
@@ -530,7 +782,6 @@ export function createGeminiProvider(
     },
     async draftResume(input: ResumeDraftInput): Promise<ResumeDraftResult> {
       ResumeDraftInputSchema.parse(input);
-      let result = await run("draftResume", input, ResumeDraftResultSchema);
       const allowedIds = new Set(
         input.achievements.map((achievement) => achievement.id),
       );
@@ -539,7 +790,13 @@ export function createGeminiProvider(
           draft.achievementText.map((item) => item.achievementId),
           allowedIds,
         );
-      validateIds(result);
+      let result = await run(
+        "draftResume",
+        input,
+        ResumeDraftResultSchema,
+        undefined,
+        validateIds,
+      );
       const missingTargets = (draft: ResumeDraftResult) =>
         supportedTerminologyTargets(input).flatMap((target) => {
           const text = draft.achievementText
@@ -572,14 +829,26 @@ export function createGeminiProvider(
               input,
               ResumeDraftResultSchema,
               refinement,
+              validateIds,
             );
-            validateIds(corrected);
             const missingCount = (items: ReturnType<typeof missingTargets>) =>
               items.reduce((sum, item) => sum + item.terms.length, 0);
             if (missingCount(missingTargets(corrected)) < missingCount(missing))
               result = corrected;
           } catch (error) {
             if (!(error instanceof AiProviderError)) throw error;
+            // The correction request failed, so the draft on hand is still
+            // missing a JD phrase the source supports. The draft is kept
+            // because it is valid and grounded, and the response builder
+            // discloses the omitted phrase in the quality notes. The failure
+            // is logged rather than swallowed, so a correction that never
+            // lands is visible instead of silent.
+            console.warn("Gemini draft correction could not be completed.", {
+              task: "draftResume",
+              missing,
+              diagnostic: error.diagnosticCode ?? error.code,
+              retryable: error.retryable,
+            });
           }
         }
       }
@@ -589,20 +858,20 @@ export function createGeminiProvider(
       input: LatexRepairInput,
     ): Promise<LatexRepairResult> {
       LatexRepairInputSchema.parse(input);
-      const result = await run(
+      const allowedIds = new Set(
+        input.currentContent.achievementText.map((item) => item.achievementId),
+      );
+      return run(
         "repairLatexContent",
         input,
         LatexRepairResultSchema,
-      );
-      ensureKnownIds(
-        result.achievementText.map((item) => item.achievementId),
-        new Set(
-          input.currentContent.achievementText.map(
-            (item) => item.achievementId,
+        undefined,
+        (repair) =>
+          ensureKnownIds(
+            repair.achievementText.map((item) => item.achievementId),
+            allowedIds,
           ),
-        ),
       );
-      return result;
     },
   };
 }
