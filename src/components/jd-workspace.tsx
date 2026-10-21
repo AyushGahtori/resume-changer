@@ -1,7 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Asterisk, ArrowUpRight, LoaderCircle, Sparkles } from "lucide-react";
+import {
+  Asterisk,
+  ArrowUpRight,
+  CircleAlert,
+  LoaderCircle,
+  Sparkles,
+} from "lucide-react";
 import type { JobAnalysisResult } from "@/lib/ai/contracts";
 import RoleDetailField from "@/components/home/role-detail-field";
 import {
@@ -62,6 +68,24 @@ export default function JDWorkspace() {
   const [analysisError, setAnalysisError] = useState("");
   const [analysisCacheSaved, setAnalysisCacheSaved] = useState(false);
   const analysisRequest = useRef<AbortController | null>(null);
+  const [metricsAnnouncement, setMetricsAnnouncement] = useState("");
+  const characterCount = draft.jobDescription.length;
+  const tokenCount = estimateTokenCount(draft.jobDescription);
+  const isOverLimit = characterCount > MAX_JD_CHARACTERS;
+  const descriptionError = isOverLimit
+    ? `Keep the description under ${MAX_JD_CHARACTERS.toLocaleString()} characters.`
+    : errors.jobDescription;
+
+  useEffect(() => {
+    if (!isReady) return;
+    // Wait for a pause in typing instead of announcing every keystroke.
+    const timeoutId = window.setTimeout(() => {
+      setMetricsAnnouncement(
+        `${characterCount.toLocaleString()} of ${MAX_JD_CHARACTERS.toLocaleString()} characters, approximately ${tokenCount.toLocaleString()} tokens${isOverLimit ? ". Character limit exceeded." : "."}`,
+      );
+    }, 1000);
+    return () => window.clearTimeout(timeoutId);
+  }, [characterCount, tokenCount, isOverLimit, isReady]);
 
   useEffect(() => {
     const result = readDraft(window.localStorage);
@@ -279,44 +303,52 @@ export default function JDWorkspace() {
           <label htmlFor="job-description">Job description</label>
           <span className="required-label">REQUIRED</span>
         </div>
+        <p className="description-helper" id="jd-helper">
+          Paste the job description from the company&apos;s career page.
+        </p>
         <textarea
           aria-describedby={
-            errors.jobDescription ? "jd-error jd-count" : "jd-count"
+            descriptionError
+              ? "jd-helper jd-error jd-count"
+              : "jd-helper jd-count"
           }
-          aria-invalid={Boolean(errors.jobDescription)}
+          aria-invalid={Boolean(descriptionError)}
+          disabled={!isReady}
           id="job-description"
           name="jobDescription"
           onChange={(event) =>
             updateField("jobDescription", event.target.value)
           }
           placeholder="Paste the job description"
+          rows={7}
           spellCheck="false"
           value={draft.jobDescription}
         />
-        {errors.jobDescription && (
-          <p className="field-error" id="jd-error" role="alert">
-            {errors.jobDescription}
+        {descriptionError && (
+          <p className="field-error jd-error" id="jd-error" role="alert">
+            <CircleAlert aria-hidden="true" size={14} />
+            <span>{descriptionError}</span>
           </p>
         )}
 
         <div className="form-footer">
           <div className="input-metrics" id="jd-count">
-            <span
-              className={
-                draft.jobDescription.length > MAX_JD_CHARACTERS
-                  ? "metric-over-limit"
-                  : ""
-              }
-            >
-              {draft.jobDescription.length.toLocaleString()} /{" "}
+            <span className={isOverLimit ? "metric-over-limit" : undefined}>
+              {characterCount.toLocaleString()} /{" "}
               {MAX_JD_CHARACTERS.toLocaleString()} characters
             </span>
-            <span aria-hidden="true" className="metric-separator">
-              ·
+            <span className="token-metric">
+              <span aria-hidden="true" className="metric-separator">
+                {"\u00b7"}
+              </span>
+              <span>~{tokenCount.toLocaleString()} tokens</span>
             </span>
-            <span>
-              ~{estimateTokenCount(draft.jobDescription).toLocaleString()}{" "}
-              tokens
+            <span
+              className="metrics-announcement"
+              aria-live="polite"
+              aria-atomic="true"
+            >
+              {metricsAnnouncement}
             </span>
           </div>
           <div className="form-actions">
