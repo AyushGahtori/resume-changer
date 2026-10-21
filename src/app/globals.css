@@ -96,6 +96,9 @@
     color-mix(in srgb, var(--color-text-primary) 8%, transparent);
   --focus-ring: 0 0 0 3px var(--focus);
   --focus-outline: 3px solid var(--focus);
+  /* Role field focus uses a 2px violet ring, per the input reference. */
+  --field-focus-ring: 0 0 0 2px var(--color-violet);
+  --field-error-ring: 0 0 0 2px var(--color-error);
 }
 
 :root[data-theme="dark"] {
@@ -159,6 +162,9 @@
   --shadow: 0 16px 48px rgb(0 0 0 / 18%);
   --shadow-xs: none;
   --shadow-sm: none;
+
+  --field-focus-ring: 0 0 0 2px var(--color-violet-light);
+  --field-error-ring: 0 0 0 2px var(--color-error);
 }
 
 * {
@@ -759,11 +765,39 @@ h1 {
   font-weight: 600;
 }
 
+/*
+ * The leading icon is a decorative adornment: it is positioned over the
+ * control so it never takes grid width away from the input, and the input
+ * reserves matching left padding so entered text still starts at the same
+ * offset in every field.
+ */
+.field-control {
+  position: relative;
+  min-width: 0;
+}
+
+.field-icon {
+  position: absolute;
+  top: 50%;
+  left: 12px;
+  display: grid;
+  place-items: center;
+  color: var(--quiet);
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.field-icon svg {
+  width: 17px;
+  height: 17px;
+  stroke: currentColor;
+}
+
 .field-group input {
   width: 100%;
   min-width: 0;
-  height: 43px;
-  padding: 0 12px;
+  height: 44px;
+  padding: 0 12px 0 38px;
   border: var(--border-control);
   border-radius: var(--radius-control);
   outline: none;
@@ -787,16 +821,71 @@ h1 {
   box-shadow: var(--focus-ring);
 }
 
-.field-group input[aria-invalid="true"],
+.field-group input:focus {
+  box-shadow: var(--field-focus-ring);
+}
+
+/*
+ * Hover keeps the resting border and instead deepens the surface, so the
+ * default treatment in the reference is preserved.
+ */
+.field-group input:hover:not(:disabled) {
+  background: var(--surface-soft);
+}
+
+.field-group input:hover:not(:disabled):not([aria-invalid="true"]) {
+  border-color: var(--color-border-strong);
+}
+
+.field-group input[aria-invalid="true"] {
+  border-color: var(--color-error);
+}
+
+.field-group input[aria-invalid="true"]:focus {
+  border-color: var(--color-error);
+  box-shadow: var(--field-error-ring);
+}
+
 .jd-form textarea[aria-invalid="true"] {
   border-color: var(--danger);
 }
 
-.field-error {
+.field-group input:disabled {
+  border-color: var(--line);
+  background: var(--surface-soft);
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+.field-group input:disabled::placeholder {
+  color: var(--quiet);
+}
+
+.field-error,
+.role-field-error {
   margin: 0;
   color: var(--danger);
   font-size: 11px;
   line-height: 1.5;
+}
+
+/*
+ * Role field errors pair a small icon with the message so the failure is
+ * never communicated by color alone.
+ */
+.role-field-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  overflow-wrap: anywhere;
+}
+
+.role-field-error svg {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 14px;
+  margin-top: 1px;
+  stroke: currentColor;
 }
 
 .form-divider {
@@ -1226,6 +1315,7 @@ a:focus-visible {
 
 .jd-page .storage-notice,
 .jd-page .field-error,
+.jd-page .role-field-error,
 .jd-page .form-save-feedback,
 .jd-page .jd-analysis .analysis-cache-notice,
 .jd-page .jd-analysis-error > span {
@@ -2224,7 +2314,8 @@ a:focus-visible {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .field-url {
+  /* The job link keeps its own full-width row on tablet. */
+  .metadata-fields > .field-group:last-child {
     grid-column: 1 / -1;
   }
 }
@@ -2457,7 +2548,7 @@ a:focus-visible {
     gap: 14px;
   }
 
-  .field-url {
+  .metadata-fields > .field-group:last-child {
     grid-column: auto;
   }
 
