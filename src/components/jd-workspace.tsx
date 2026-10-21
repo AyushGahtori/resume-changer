@@ -2,6 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
+  JobAnalysisPanel,
+  type AnalysisState,
+} from "@/components/home/job-analysis-panel";
+import {
   Asterisk,
   ArrowUpRight,
   CircleAlert,
@@ -32,29 +36,6 @@ import PasteFromUrl from "@/components/home/paste-from-url";
 import { ROLE_FIELDS } from "@/lib/ui/role-fields";
 
 type SaveState = "loading" | "saving" | "saved" | "error" | "idle";
-type AnalysisState = "idle" | "loading" | "success" | "error";
-
-const ANALYSIS_SECTIONS: Array<{
-  key: keyof Pick<
-    JobAnalysisResult,
-    | "requiredQualifications"
-    | "preferredQualifications"
-    | "responsibilities"
-    | "toolsAndPlatforms"
-    | "domainConcepts"
-    | "atsTerms"
-    | "inferredContext"
-  >;
-  title: string;
-}> = [
-  { key: "requiredQualifications", title: "Explicit requirements" },
-  { key: "preferredQualifications", title: "Preferred qualifications" },
-  { key: "responsibilities", title: "Responsibilities" },
-  { key: "toolsAndPlatforms", title: "Tools and platforms" },
-  { key: "domainConcepts", title: "Domain concepts" },
-  { key: "atsTerms", title: "Relevant ATS terms" },
-  { key: "inferredContext", title: "Inferred context, not requirements" },
-];
 
 export default function JDWorkspace({
   pasteFromUrlAvailable = false,
@@ -504,86 +485,13 @@ export default function JDWorkspace({
         )}
       </form>
 
-      {analysisState === "loading" && (
-        <section className="jd-analysis" aria-live="polite" role="status">
-          <p>Analyzing the job description...</p>
-        </section>
-      )}
-      {analysisState === "error" && (
-        <section
-          className="jd-analysis jd-analysis-error"
-          aria-live="polite"
-          role="status"
-        >
-          <p>{analysisError}</p>
-          <span>Your draft is unchanged. You can retry the analysis.</span>
-        </section>
-      )}
-      {analysisState === "success" && analysis && (
-        <section className="jd-analysis" aria-labelledby="analysis-title">
-          <div className="jd-analysis-heading">
-            <div>
-              <h2 id="analysis-title">Job description analysis</h2>
-              <p>Review what the AI extracted before continuing.</p>
-            </div>
-            <button
-              className="clear-button"
-              onClick={handleAnalyze}
-              type="button"
-            >
-              Reanalyze
-            </button>
-          </div>
-          {!analysisCacheSaved && (
-            <p className="analysis-cache-notice" role="status">
-              This analysis could not be saved in this browser. Resume builder
-              recommendations may require analyzing the job again.
-            </p>
-          )}
-          <div className="analysis-role">
-            <div>
-              <span>Target title</span>
-              <strong>{analysis.targetTitle}</strong>
-            </div>
-            <div>
-              <span>Seniority</span>
-              <strong>{analysis.seniority}</strong>
-            </div>
-          </div>
-          <div className="analysis-grid">
-            {ANALYSIS_SECTIONS.map(({ key, title }) => (
-              <section className="analysis-section" key={key}>
-                <h3>{title}</h3>
-                {analysis[key].length > 0 ? (
-                  <ul>
-                    {analysis[key].map((item) => (
-                      <li key={item}>{item}</li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p>None identified</p>
-                )}
-              </section>
-            ))}
-            <section className="analysis-section">
-              <h3>Synonyms and equivalent terms</h3>
-              {analysis.terminology.length > 0 ? (
-                <ul>
-                  {analysis.terminology.map(({ term, alternatives }) => (
-                    <li key={term}>
-                      <strong>{term}</strong>
-                      {alternatives.length > 0 &&
-                        `: ${alternatives.join(", ")}`}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p>None identified</p>
-              )}
-            </section>
-          </div>
-        </section>
-      )}
+      <JobAnalysisPanel
+        state={analysisState}
+        analysis={analysis}
+        error={analysisError}
+        cacheSaved={analysisCacheSaved}
+        onAnalyze={handleAnalyze}
+      />
 
       <div className="workspace-note">
         <span className="note-mark" aria-hidden="true">
