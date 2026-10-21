@@ -9,13 +9,24 @@ import { analyzePdfLayout } from "../../../src/lib/pdf/layout-analysis";
 import { renderStudioGeneration } from "../../../src/lib/generation/studio-generation";
 import { studioApplyInput, studioLibrary } from "../../helpers/studio-fixtures";
 
-const available = !spawnSync(
-  process.env.TECTONIC_BINARY ?? "tectonic",
-  ["--version"],
-  { windowsHide: true, timeout: 5000 },
-).error;
+function isExecutableAvailable(executable: string, args: string[]): boolean {
+  const result = spawnSync(executable, args, {
+    encoding: "utf8",
+    windowsHide: true,
+    timeout: 5000,
+  });
+  return !result.error && result.status === 0;
+}
+
+// These measurements compile real PDFs, so they need Tectonic and pdfinfo alike.
+const available =
+  isExecutableAvailable(process.env.TECTONIC_BINARY ?? "tectonic", [
+    "--version",
+  ]) && isExecutableAvailable(process.env.PDFINFO_BINARY ?? "pdfinfo", ["-v"]);
 if (process.env.PDF_TOOLCHAIN_REQUIRED === "1" && !available)
-  throw new Error("The studio integration tests require Tectonic.");
+  throw new Error(
+    "The studio integration tests require Tectonic and pdfinfo. Install both or set TECTONIC_BINARY and PDFINFO_BINARY.",
+  );
 
 describe.skipIf(!available)("real studio layout validation", () => {
   it("measures the actual LaTeX font and compiles a skills-only transaction", async () => {
