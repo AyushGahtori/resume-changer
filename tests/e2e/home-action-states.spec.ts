@@ -406,7 +406,9 @@ test("shows Saving only while a save is actually pending", async ({ page }) => {
   expect(savingBox!.height).toBeCloseTo(idleBox!.height, 1);
 
   await expect(save).toBeEnabled();
-  await expect(page.locator(".draft-state")).toContainText("Saved locally");
+  await expect(page.locator(".draft-state")).toContainText(
+    "Saved on this device",
+  );
 });
 
 test("keeps a visible focus ring and 44px target in every state", async ({
