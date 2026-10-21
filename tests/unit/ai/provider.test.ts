@@ -484,6 +484,114 @@ describe("Gemini adapter", () => {
     }
   });
 
+  it("retries the same model when a selection duplicates an achievement ID", async () => {
+    const duplicated = {
+      ...selectionResult,
+      selections: [
+        selectionResult.selections[0],
+        selectionResult.selections[0],
+      ],
+    };
+    const request = vi
+      .fn()
+      .mockResolvedValueOnce(JSON.stringify(duplicated))
+      .mockResolvedValueOnce(JSON.stringify(selectionResult));
+    const provider = createGeminiProvider({
+      apiKey: "test-key",
+      model: "gemini-2.5-flash-lite",
+      request,
+    });
+
+    await expect(
+      provider.selectAchievements(selectionInput),
+    ).resolves.toMatchObject({
+      selections: [
+        expect.objectContaining({ achievementId: "achievement-api" }),
+      ],
+    });
+    expect(request).toHaveBeenCalledTimes(2);
+    expect(request.mock.calls[0][0].model).toBe("gemini-2.5-flash-lite");
+    expect(request.mock.calls[1][0].model).toBe("gemini-2.5-flash-lite");
+  });
+
+  it("retries the same model when a selection uses the wrong resume section", async () => {
+    const wrongSection = {
+      ...selectionResult,
+      selections: [{ ...selectionResult.selections[0], section: "projects" }],
+    };
+    const request = vi
+      .fn()
+      .mockResolvedValueOnce(JSON.stringify(wrongSection))
+      .mockResolvedValueOnce(JSON.stringify(selectionResult));
+    const provider = createGeminiProvider({
+      apiKey: "test-key",
+      model: "gemini-2.5-flash-lite",
+      request,
+    });
+
+    await expect(
+      provider.selectAchievements(selectionInput),
+    ).resolves.toMatchObject({
+      selections: [
+        expect.objectContaining({ achievementId: "achievement-api" }),
+      ],
+    });
+    expect(request).toHaveBeenCalledTimes(2);
+  });
+
+  it("bounds retries for a selection that never grounds and then fails", async () => {
+    const duplicated = {
+      ...selectionResult,
+      selections: [
+        selectionResult.selections[0],
+        selectionResult.selections[0],
+      ],
+    };
+    const request = vi.fn().mockResolvedValue(JSON.stringify(duplicated));
+    const provider = createGeminiProvider({
+      apiKey: "test-key",
+      model: "gemini-2.5-flash-lite",
+      request,
+    });
+
+    await expect(
+      provider.selectAchievements(selectionInput),
+    ).rejects.toMatchObject({ code: "INVALID_RESPONSE" });
+    // The fallback model is skipped when it is already the configured model,
+    // so the request is bounded by the per-model attempt limit.
+    expect(request).toHaveBeenCalledTimes(2);
+  });
+
+  it("falls back to the second model when a selection never grounds", async () => {
+    const duplicated = {
+      ...selectionResult,
+      selections: [
+        selectionResult.selections[0],
+        selectionResult.selections[0],
+      ],
+    };
+    const models: string[] = [];
+    const provider = createGeminiProvider({
+      apiKey: "test-key",
+      model: "gemini-3.6-flash",
+      request: async ({ model }) => {
+        models.push(model);
+        return model === "gemini-3.6-flash"
+          ? JSON.stringify(duplicated)
+          : JSON.stringify(selectionResult);
+      },
+    });
+
+    await expect(
+      provider.selectAchievements(selectionInput),
+    ).resolves.toMatchObject({
+      selections: [
+        expect.objectContaining({ achievementId: "achievement-api" }),
+      ],
+    });
+    expect(models).toContain("gemini-2.5-flash-lite");
+  });
+
   it("drops unsupported optional skill suggestions without losing valid points", async () => {
     const provider = createGeminiProvider({
       apiKey: "test-key",

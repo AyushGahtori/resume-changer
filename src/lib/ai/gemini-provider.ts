@@ -34,6 +34,23 @@ import {
 const DEFAULT_MODEL = "gemini-3.6-flash";
 const FALLBACK_MODEL = "gemini-2.5-flash-lite";
 const REQUEST_TIMEOUT_MS = 30_000;
+// The model occasionally returns a duplicated or unknown achievement ID. That
+// is a recoverable generation mistake, so the same model is asked again a
+// bounded number of times before the request moves on to the fallback model.
+const MAX_MODEL_ATTEMPTS = 2;
+
+/**
+ * A response that parsed cleanly but broke the evidence-grounding contract,
+ * for example by selecting an achievement twice or naming an achievement that
+ * was never supplied. These failures are recoverable by regenerating, so they
+ * are retried on the same model before the request falls back.
+ */
+class GroundingViolationError extends AiProviderError {
+  constructor(message: string, diagnosticCode: string) {
+    super(message, "INVALID_RESPONSE", true, diagnosticCode);
+    this.name = "GroundingViolationError";
+  }
+}
 
 type GeminiRequest = (request: {
   model: string;
@@ -281,10 +298,8 @@ function ensureKnownIds(returnedIds: string[], allowedIds: Set<string>): void {
     new Set(returnedIds).size !== returnedIds.length ||
     returnedIds.some((id) => !allowedIds.has(id))
   ) {
-    throw new AiProviderError(
+    throw new GroundingViolationError(
       "Gemini returned achievement IDs that were missing or duplicated in the supplied evidence.",
-      "INVALID_RESPONSE",
-      false,
       "UNKNOWN_OR_DUPLICATE_ACHIEVEMENT_ID",
     );
   }
@@ -336,6 +351,7 @@ export function createGeminiProvider(
     input: Parameters<typeof buildAiPrompt>[1],
     schema: { parse(value: unknown): T },
     refinement?: string,
+    validate?: (result: T) => void,
   ): Promise<T> {
     if (!apiKey && !options.request) {
       throw new AiProviderError(
@@ -360,88 +376,125 @@ export function createGeminiProvider(
     );
     const models = model === FALLBACK_MODEL ? [model] : [model, FALLBACK_MODEL];
     let lastError: AiProviderError | undefined;
-    for (const [index, requestedModel] of models.entries()) {
-      try {
-        const responseText = await request({
-          model: requestedModel,
-          prompt,
-          outputSchema: boundedOutputSchema,
-        });
-        if (!responseText?.trim()) {
-          throw new AiProviderError(
-            "Gemini returned an empty response. Try again.",
-            "INVALID_RESPONSE",
-            true,
-            "EMPTY_RESPONSE",
-          );
-        }
 
-        let decoded: unknown;
+    const parseResponse = (
+      responseText: string | undefined,
+      task: Parameters<typeof buildAiPrompt>[0],
+      input: Parameters<typeof buildAiPrompt>[1],
+    ): T => {
+      if (!responseText?.trim()) {
+        throw new AiProviderError(
+          "Gemini returned an empty response. Try again.",
+          "INVALID_RESPONSE",
+          true,
+          "EMPTY_RESPONSE",
+        );
+      }
+
+      let decoded: unknown;
+      try {
+        decoded = JSON.parse(responseText);
+      } catch {
+        throw new AiProviderError(
+          "Gemini returned invalid JSON. Try again.",
+          "INVALID_RESPONSE",
+          true,
+          "MALFORMED_JSON",
+        );
+      }
+      try {
+        const normalized =
+          task === "selectAchievements"
+            ? normalizeSelectionSupplements(
+                input as AchievementSelectionInput,
+                decoded,
+              )
+            : decoded;
+        return schema.parse(normalized);
+      } catch (error) {
+        const issuePaths =
+          error instanceof z.ZodError
+            ? [
+                ...new Set(
+                  error.issues.slice(0, 8).map((issue) => {
+                    const path = issue.path
+                      .map((part) =>
+                        typeof part === "number" ? "[]" : String(part),
+                      )
+                      .join(".");
+                    return `${path || "$"}:${issue.code}`;
+                  }),
+                ),
+              ].join(",")
+            : "unknown-schema-error";
+        throw new AiProviderError(
+          "Gemini returned an incomplete or inconsistent response. Try again.",
+          "INVALID_RESPONSE",
+          true,
+          `OUTPUT_SCHEMA_MISMATCH:${issuePaths}`,
+        );
+      }
+    };
+
+    modelLoop: for (const [index, requestedModel] of models.entries()) {
+      for (let attempt = 1; attempt <= MAX_MODEL_ATTEMPTS; attempt += 1) {
         try {
-          decoded = JSON.parse(responseText);
-        } catch {
-          throw new AiProviderError(
-            "Gemini returned invalid JSON. Try again.",
-            "INVALID_RESPONSE",
-            true,
-            "MALFORMED_JSON",
-          );
-        }
-        try {
-          const normalized =
-            task === "selectAchievements"
-              ? normalizeSelectionSupplements(
-                  input as AchievementSelectionInput,
-                  decoded,
-                )
-              : decoded;
-          const parsed = schema.parse(normalized);
+          const responseText = await request({
+            model: requestedModel,
+            prompt,
+            outputSchema: boundedOutputSchema,
+          });
+          const parsed = parseResponse(responseText, task, input);
+          // Evidence-grounding checks run after the response parses, and their
+          // failures stay distinguishable from schema mismatches so the loop
+          // can retry them on the same model.
+          try {
+            validate?.(parsed);
+          } catch (error) {
+            if (error instanceof AiProviderError) throw error;
+            throw new GroundingViolationError(
+              "Gemini returned evidence that did not match the supplied sources.",
+              "UNKNOWN_OR_DUPLICATE_ACHIEVEMENT_ID",
+            );
+          }
           return parsed;
         } catch (error) {
-          const issuePaths =
-            error instanceof z.ZodError
-              ? [
-                  ...new Set(
-                    error.issues.slice(0, 8).map((issue) => {
-                      const path = issue.path
-                        .map((part) =>
-                          typeof part === "number" ? "[]" : String(part),
-                        )
-                        .join(".");
-                      return `${path || "$"}:${issue.code}`;
-                    }),
-                  ),
-                ].join(",")
-              : "unknown-schema-error";
-          throw new AiProviderError(
-            "Gemini returned an incomplete or inconsistent response. Try again.",
-            "INVALID_RESPONSE",
-            true,
-            `OUTPUT_SCHEMA_MISMATCH:${issuePaths}`,
-          );
+          const providerError =
+            error instanceof AiProviderError ? error : mapRequestError(error);
+          lastError = providerError;
+          const status = errorStatus(error);
+          const errorName = error instanceof Error ? error.name : "";
+          const recoverable =
+            providerError.code === "INVALID_RESPONSE" ||
+            status === 400 ||
+            status === 404 ||
+            (status !== undefined && status >= 500) ||
+            errorName === "AbortError" ||
+            errorName === "TimeoutError";
+          // A grounding violation means the model produced a well-formed but
+          // unusable answer, so the same model is asked again before the
+          // request falls back to a different one.
+          const groundingViolation =
+            providerError instanceof GroundingViolationError;
+          if (groundingViolation && attempt < MAX_MODEL_ATTEMPTS) {
+            console.warn("Gemini request retrying the same model.", {
+              task,
+              attempt,
+              maxAttempts: MAX_MODEL_ATTEMPTS,
+              diagnostic: providerError.diagnosticCode ?? providerError.code,
+            });
+            continue;
+          }
+          if (index === 0 && models.length > 1 && recoverable) {
+            console.warn("Gemini request retrying with fallback model.", {
+              task,
+              diagnostic: providerError.diagnosticCode ?? providerError.code,
+              fallbackModel: FALLBACK_MODEL,
+            });
+            continue modelLoop;
+          }
+          throw providerError;
         }
-      } catch (error) {
-        const providerError =
-          error instanceof AiProviderError ? error : mapRequestError(error);
-        lastError = providerError;
-        const status = errorStatus(error);
-        const errorName = error instanceof Error ? error.name : "";
-        const recoverable =
-          providerError.code === "INVALID_RESPONSE" ||
-          status === 400 ||
-          status === 404 ||
-          (status !== undefined && status >= 500) ||
-          errorName === "AbortError" ||
-          errorName === "TimeoutError";
-        if (index === 0 && models.length > 1 && recoverable) {
-          console.warn("Gemini request retrying with fallback model.", {
-            task,
-            diagnostic: providerError.diagnosticCode ?? providerError.code,
-            fallbackModel: FALLBACK_MODEL,
-          });
-          continue;
-        }
-        throw providerError;
       }
     }
     throw (
@@ -473,32 +526,34 @@ export function createGeminiProvider(
       input: AchievementSelectionInput,
     ): Promise<AchievementSelectionResult> {
       AchievementSelectionInputSchema.parse(input);
+      const achievementById = new Map(
+        input.achievements.map((achievement) => [achievement.id, achievement]),
+      );
+      const allowedIds = new Set(achievementById.keys());
       const result = await run(
         "selectAchievements",
         input,
         AchievementSelectionResultSchema,
+        undefined,
+        (selection) => {
+          ensureKnownIds(
+            selection.selections.map((item) => item.achievementId),
+            allowedIds,
+          );
+          if (
+            selection.selections.some(
+              (item) =>
+                achievementById.get(item.achievementId)?.section !==
+                item.section,
+            )
+          ) {
+            throw new GroundingViolationError(
+              "Gemini assigned an achievement to the wrong resume section.",
+              "ACHIEVEMENT_SECTION_MISMATCH",
+            );
+          }
+        },
       );
-      const achievementById = new Map(
-        input.achievements.map((achievement) => [achievement.id, achievement]),
-      );
-      ensureKnownIds(
-        result.selections.map((selection) => selection.achievementId),
-        new Set(achievementById.keys()),
-      );
-      if (
-        result.selections.some(
-          (selection) =>
-            achievementById.get(selection.achievementId)?.section !==
-            selection.section,
-        )
-      ) {
-        throw new AiProviderError(
-          "Gemini assigned an achievement to the wrong resume section.",
-          "INVALID_RESPONSE",
-          false,
-          "ACHIEVEMENT_SECTION_MISMATCH",
-        );
-      }
       const selectedIds = new Set(
         result.selections.map((selection) => selection.achievementId),
       );
@@ -530,7 +585,6 @@ export function createGeminiProvider(
     },
     async draftResume(input: ResumeDraftInput): Promise<ResumeDraftResult> {
       ResumeDraftInputSchema.parse(input);
-      let result = await run("draftResume", input, ResumeDraftResultSchema);
       const allowedIds = new Set(
         input.achievements.map((achievement) => achievement.id),
       );
@@ -539,7 +593,13 @@ export function createGeminiProvider(
           draft.achievementText.map((item) => item.achievementId),
           allowedIds,
         );
-      validateIds(result);
+      let result = await run(
+        "draftResume",
+        input,
+        ResumeDraftResultSchema,
+        undefined,
+        validateIds,
+      );
       const missingTargets = (draft: ResumeDraftResult) =>
         supportedTerminologyTargets(input).flatMap((target) => {
           const text = draft.achievementText
@@ -572,8 +632,8 @@ export function createGeminiProvider(
               input,
               ResumeDraftResultSchema,
               refinement,
+              validateIds,
             );
-            validateIds(corrected);
             const missingCount = (items: ReturnType<typeof missingTargets>) =>
               items.reduce((sum, item) => sum + item.terms.length, 0);
             if (missingCount(missingTargets(corrected)) < missingCount(missing))
@@ -589,20 +649,20 @@ export function createGeminiProvider(
       input: LatexRepairInput,
     ): Promise<LatexRepairResult> {
       LatexRepairInputSchema.parse(input);
-      const result = await run(
+      const allowedIds = new Set(
+        input.currentContent.achievementText.map((item) => item.achievementId),
+      );
+      return run(
         "repairLatexContent",
         input,
         LatexRepairResultSchema,
-      );
-      ensureKnownIds(
-        result.achievementText.map((item) => item.achievementId),
-        new Set(
-          input.currentContent.achievementText.map(
-            (item) => item.achievementId,
+        undefined,
+        (repair) =>
+          ensureKnownIds(
+            repair.achievementText.map((item) => item.achievementId),
+            allowedIds,
           ),
-        ),
       );
-      return result;
     },
   };
 }

@@ -65,6 +65,20 @@ npm run test:pdf-live
 
 These commands fail when their required credentials or tools are missing instead of reporting a skipped pass. The Gemini test sends only a synthetic job description. The PDF test compiles the real sample resume, checks page-limit rejection and invalid-LaTeX handling, and first warms Tectonic's package cache because the application compiler only uses cached packages. GitHub Actions reads `GEMINI_API_KEY` from repository secrets; never add it to workflow source or commit `.env.local`.
 
+## Continuous Integration
+
+Two GitHub Actions workflows run on every pull request and on pushes to `main`:
+
+| Workflow                  | Job                               | What it proves                                                                                                        |
+| ------------------------- | --------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `Quality checks`          | `local-quality`                   | Formatting, lint, types, unit and integration tests, the production build, and the Playwright browser suite all pass. |
+| `Live integration checks` | `Gemini live API`                 | The real Gemini API answers with schema-valid analysis, selection, and drafting.                                      |
+| `Live integration checks` | `Real Tectonic and PDF toolchain` | The real Tectonic compiler and `pdfinfo` produce a verified one-page PDF.                                             |
+
+All three jobs are required status checks on `main`, so a pull request cannot be merged until they pass. The live jobs fail when their secret or their tools are missing rather than reporting a skipped pass.
+
+The Gemini job needs `GEMINI_API_KEY` configured as a repository secret. The PDF job installs `poppler-utils` and a pinned Tectonic release on the runner, and caches Tectonic's package bundle between runs.
+
 ## Local Files And Secrets
 
 The app uses a server-side Gemini key when `AI_PROVIDER=gemini`; keep it local. Task 05 created the owner's real resume library locally at `/data/resume-library.json`. The tracked `examples/sample-resume-library.json` remains fictional and is for tests or intentional demo mode only:
