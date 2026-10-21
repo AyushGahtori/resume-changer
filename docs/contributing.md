@@ -78,4 +78,4 @@ git pull --ff-only origin main
 git status --short --branch
 ```
 
-See [What A Good Test Should Check](project-plan.md#4-what-a-good-test-should-check) for the test-quality checklist and [Local Setup](local-setup.md) for environment commands.
+See [What A Good Test Should Check](project-plan.md#4-what-a-good-test-should-check) for the test-quality checklist and [Local Setup](local-setup.md) for environment commands. The [Setup Guide](setup-guide.md) is the complete reference for configuring Gemini, installing the PDF toolchain, and running the app against real data.
