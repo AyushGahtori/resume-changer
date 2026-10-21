@@ -70,20 +70,93 @@ function contrastRatio(foreground: string, background: string) {
   return (lighter + 0.05) / (darker + 0.05);
 }
 
-async function readBackground(page: Page, selector: string): Promise<string> {
+type ContrastPair = {
+  color: string;
+  background: string;
+};
+
+/**
+ * Reads the text colour and the surface it is actually painted on in a single
+ * style resolution, so both values describe the same frame. Translucent
+ * ancestor surfaces are composited instead of being taken at face value.
+ */
+async function readContrastPair(
+  page: Page,
+  selector: string,
+): Promise<ContrastPair | null> {
   return page.evaluate((target) => {
     const element = document.querySelector(target);
-    if (!element) return "";
+    if (!element) return null;
+
+    const color = getComputedStyle(element).color;
+
+    const layers: string[] = [];
     let node: HTMLElement | null = element as HTMLElement;
     while (node) {
-      const background = getComputedStyle(node).backgroundColor;
-      if (background && !/rgba\(0, 0, 0, 0\)|transparent/.test(background)) {
-        return background;
-      }
+      layers.push(getComputedStyle(node).backgroundColor);
       node = node.parentElement;
     }
-    return getComputedStyle(document.body).backgroundColor;
+    layers.push(getComputedStyle(document.body).backgroundColor);
+
+    const parse = (value: string) => {
+      const match = value.match(/rgba?\(([^)]+)\)/);
+      if (!match) return null;
+      const parts = match[1]
+        .split(/[\s,/]+/)
+        .filter(Boolean)
+        .map(Number);
+      return {
+        red: parts[0],
+        green: parts[1],
+        blue: parts[2],
+        alpha: parts.length > 3 ? parts[3] : 1,
+      };
+    };
+
+    // Paint the stack from the root down, so the last layer is the one the
+    // text sits on.
+    let base = { red: 255, green: 255, blue: 255, alpha: 1 };
+    for (const layer of layers.reverse()) {
+      const parsed = parse(layer);
+      if (!parsed || parsed.alpha === 0) continue;
+      const alpha = parsed.alpha + base.alpha * (1 - parsed.alpha);
+      base = {
+        red:
+          (parsed.red * parsed.alpha +
+            base.red * base.alpha * (1 - parsed.alpha)) /
+          alpha,
+        green:
+          (parsed.green * parsed.alpha +
+            base.green * base.alpha * (1 - parsed.alpha)) /
+          alpha,
+        blue:
+          (parsed.blue * parsed.alpha +
+            base.blue * base.alpha * (1 - parsed.alpha)) /
+          alpha,
+        alpha,
+      };
+    }
+
+    return {
+      color,
+      background: `rgb(${base.red}, ${base.green}, ${base.blue})`,
+    };
   }, selector);
+}
+
+/**
+ * The shell animates the body colours for 160ms after a theme change. Wait
+ * until the painted background stops moving so contrast is measured against a
+ * settled theme rather than a frame in the middle of the transition.
+ */
+async function waitForSettledTheme(page: Page) {
+  await page.waitForFunction(() => {
+    const probe = window as unknown as { __backgroundProbe?: string };
+    const current = getComputedStyle(document.body).backgroundColor;
+    const settled = probe.__backgroundProbe === current;
+    probe.__backgroundProbe = current;
+    return settled;
+  });
 }
 
 test.beforeEach(async ({ page }) => {
@@ -285,12 +358,17 @@ test("wraps long headings, values, and achievement text", async ({ page }) => {
 });
 
 test("keeps muted metadata readable in both themes", async ({ page }) => {
+  // Honour the reduced-motion preference so the theme switch does not animate
+  // the page colours while they are being measured.
+  await page.emulateMedia({ reducedMotion: "reduce" });
+
   for (const theme of ["light", "dark"] as const) {
     await page.evaluate((value) => {
       localStorage.setItem("resume-changer.theme.v1", value);
     }, theme);
     await page.reload();
     await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+    await waitForSettledTheme(page);
 
     const samples = [
       ".point-provenance",
@@ -300,17 +378,14 @@ test("keeps muted metadata readable in both themes", async ({ page }) => {
     ];
 
     for (const selector of samples) {
-      const color = await page.evaluate((target) => {
-        const element = document.querySelector(target);
-        return element ? getComputedStyle(element).color : "";
-      }, selector);
-      const background = await readBackground(page, selector);
-      expect(color, `${selector} has no color in ${theme} mode`).not.toBe("");
-      expect(
-        background,
-        `${selector} has no background in ${theme} mode`,
-      ).not.toBe("");
-      const ratio = contrastRatio(color, background);
+      const reading = await readContrastPair(page, selector);
+      expect(reading, `${selector} is missing in ${theme} mode`).not.toBeNull();
+      expect(reading?.color, `${selector} has no color`).not.toBe("");
+      expect(reading?.background, `${selector} has no background`).not.toBe("");
+      const ratio = contrastRatio(
+        reading?.color ?? "",
+        reading?.background ?? "",
+      );
       expect(
         ratio,
         `${selector} contrast in ${theme} mode`,
