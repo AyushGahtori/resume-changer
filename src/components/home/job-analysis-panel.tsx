@@ -26,7 +26,10 @@ export function JobAnalysisPanel({
   error,
   cacheSaved,
   onAnalyze,
-}: AnalysisPanelProps) {
+  embedded = false,
+}: AnalysisPanelProps & { embedded?: boolean }) {
+  const Heading = embedded ? "h3" : "h2";
+  const CategoryHeading = embedded ? "h4" : "h3";
   if (state === "idle") return null;
   return (
     <section
@@ -35,7 +38,7 @@ export function JobAnalysisPanel({
     >
       <div className="jd-analysis-heading">
         <div>
-          <h2 id="analysis-title">Job description analysis</h2>
+          <Heading id="analysis-title">Job description analysis</Heading>
           <p>Review what the AI extracted before continuing.</p>
         </div>
         {state === "success" && (
@@ -105,7 +108,9 @@ export function JobAnalysisPanel({
                 key={key}
                 aria-labelledby={`analysis-${key}`}
               >
-                <h3 id={`analysis-${key}`}>{title}</h3>
+                <CategoryHeading id={`analysis-${key}`}>
+                  {title}
+                </CategoryHeading>
                 {analysis[key].length > 0 ? (
                   <ul>
                     {analysis[key].map((item, index) => (
@@ -121,7 +126,9 @@ export function JobAnalysisPanel({
               className="analysis-section"
               aria-labelledby="analysis-terminology"
             >
-              <h3 id="analysis-terminology">Synonyms and equivalent terms</h3>
+              <CategoryHeading id="analysis-terminology">
+                Synonyms and equivalent terms
+              </CategoryHeading>
               {analysis.terminology.length > 0 ? (
                 <ul>
                   {analysis.terminology.map(({ term, alternatives }, index) => (

@@ -1,10 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import {
-  JobAnalysisPanel,
-  type AnalysisState,
-} from "@/components/home/job-analysis-panel";
+import type { AnalysisState } from "@/components/home/job-analysis-panel";
+import { ATSAnalysisPreview } from "@/components/home/ats-analysis-preview";
 import type { JobAnalysisResult } from "@/lib/ai/contracts";
 import {
   clearJobAnalysisCache,
@@ -263,159 +261,166 @@ export default function JDWorkspace() {
         </p>
       )}
 
-      <form className="jd-form" onSubmit={handleSubmit} noValidate>
-        <div className="form-topline">
-          <div>
-            <h2>Role details</h2>
-            <p>Target position</p>
+      <div className="jd-work-grid">
+        <form className="jd-form" onSubmit={handleSubmit} noValidate>
+          <div className="form-topline">
+            <div>
+              <h2>Role details</h2>
+              <p>Target position</p>
+            </div>
+            <span className="optional-label">LINK OPTIONAL</span>
           </div>
-          <span className="optional-label">LINK OPTIONAL</span>
-        </div>
 
-        <div className="metadata-fields">
-          <div className="field-group">
-            <label htmlFor="company">Company</label>
-            <input
-              autoComplete="organization"
-              id="company"
-              name="company"
-              onChange={(event) => updateField("company", event.target.value)}
-              placeholder="Company name"
-              value={draft.company}
-            />
+          <div className="metadata-fields">
+            <div className="field-group">
+              <label htmlFor="company">Company</label>
+              <input
+                autoComplete="organization"
+                id="company"
+                name="company"
+                onChange={(event) => updateField("company", event.target.value)}
+                placeholder="Company name"
+                value={draft.company}
+              />
+            </div>
+            <div className="field-group">
+              <label htmlFor="role-title">Role title</label>
+              <input
+                autoComplete="organization-title"
+                id="role-title"
+                name="roleTitle"
+                onChange={(event) =>
+                  updateField("roleTitle", event.target.value)
+                }
+                placeholder="e.g. Backend Engineer"
+                value={draft.roleTitle}
+              />
+            </div>
+            <div className="field-group field-url">
+              <label htmlFor="job-url">Job link</label>
+              <input
+                aria-describedby={errors.jobUrl ? "job-url-error" : undefined}
+                aria-invalid={Boolean(errors.jobUrl)}
+                autoComplete="url"
+                id="job-url"
+                inputMode="url"
+                name="jobUrl"
+                onChange={(event) => updateField("jobUrl", event.target.value)}
+                placeholder="https://"
+                value={draft.jobUrl}
+              />
+              {errors.jobUrl && (
+                <span className="field-error" id="job-url-error">
+                  {errors.jobUrl}
+                </span>
+              )}
+            </div>
           </div>
-          <div className="field-group">
-            <label htmlFor="role-title">Role title</label>
-            <input
-              autoComplete="organization-title"
-              id="role-title"
-              name="roleTitle"
-              onChange={(event) => updateField("roleTitle", event.target.value)}
-              placeholder="e.g. Backend Engineer"
-              value={draft.roleTitle}
-            />
+
+          <div className="form-divider" />
+
+          <div className="description-heading">
+            <label htmlFor="job-description">Job description</label>
+            <span className="required-label">REQUIRED</span>
           </div>
-          <div className="field-group field-url">
-            <label htmlFor="job-url">Job link</label>
-            <input
-              aria-describedby={errors.jobUrl ? "job-url-error" : undefined}
-              aria-invalid={Boolean(errors.jobUrl)}
-              autoComplete="url"
-              id="job-url"
-              inputMode="url"
-              name="jobUrl"
-              onChange={(event) => updateField("jobUrl", event.target.value)}
-              placeholder="https://"
-              value={draft.jobUrl}
-            />
-            {errors.jobUrl && (
-              <span className="field-error" id="job-url-error">
-                {errors.jobUrl}
+          <textarea
+            aria-describedby={
+              errors.jobDescription ? "jd-error jd-count" : "jd-count"
+            }
+            aria-invalid={Boolean(errors.jobDescription)}
+            id="job-description"
+            name="jobDescription"
+            onChange={(event) =>
+              updateField("jobDescription", event.target.value)
+            }
+            placeholder="Paste the job description"
+            spellCheck="false"
+            value={draft.jobDescription}
+          />
+          {errors.jobDescription && (
+            <p className="field-error" id="jd-error" role="alert">
+              {errors.jobDescription}
+            </p>
+          )}
+
+          <div className="form-footer">
+            <div className="input-metrics" id="jd-count">
+              <span
+                className={
+                  draft.jobDescription.length > MAX_JD_CHARACTERS
+                    ? "metric-over-limit"
+                    : ""
+                }
+              >
+                {draft.jobDescription.length.toLocaleString()} /{" "}
+                {MAX_JD_CHARACTERS.toLocaleString()} characters
               </span>
-            )}
+              <span aria-hidden="true" className="metric-separator">
+                ·
+              </span>
+              <span>
+                ~{estimateTokenCount(draft.jobDescription).toLocaleString()}{" "}
+                tokens
+              </span>
+            </div>
+            <div className="form-actions">
+              <button
+                className="clear-button"
+                onClick={handleClear}
+                type="button"
+              >
+                Clear draft
+              </button>
+              <button
+                className="clear-button analyze-button"
+                disabled={!isReady || analysisState === "loading"}
+                onClick={handleAnalyze}
+                type="button"
+              >
+                {analysisState === "loading"
+                  ? "Analyzing..."
+                  : analysisState === "error"
+                    ? "Retry analysis"
+                    : "Analyze job description"}
+              </button>
+              <button
+                className="primary-button"
+                disabled={!isReady}
+                type="submit"
+              >
+                Save draft <span aria-hidden="true">↗</span>
+              </button>
+            </div>
           </div>
-        </div>
-
-        <div className="form-divider" />
-
-        <div className="description-heading">
-          <label htmlFor="job-description">Job description</label>
-          <span className="required-label">REQUIRED</span>
-        </div>
-        <textarea
-          aria-describedby={
-            errors.jobDescription ? "jd-error jd-count" : "jd-count"
-          }
-          aria-invalid={Boolean(errors.jobDescription)}
-          id="job-description"
-          name="jobDescription"
-          onChange={(event) =>
-            updateField("jobDescription", event.target.value)
-          }
-          placeholder="Paste the job description"
-          spellCheck="false"
-          value={draft.jobDescription}
-        />
-        {errors.jobDescription && (
-          <p className="field-error" id="jd-error" role="alert">
-            {errors.jobDescription}
-          </p>
-        )}
-
-        <div className="form-footer">
-          <div className="input-metrics" id="jd-count">
-            <span
-              className={
-                draft.jobDescription.length > MAX_JD_CHARACTERS
-                  ? "metric-over-limit"
-                  : ""
-              }
-            >
-              {draft.jobDescription.length.toLocaleString()} /{" "}
-              {MAX_JD_CHARACTERS.toLocaleString()} characters
-            </span>
-            <span aria-hidden="true" className="metric-separator">
-              ·
-            </span>
-            <span>
-              ~{estimateTokenCount(draft.jobDescription).toLocaleString()}{" "}
-              tokens
-            </span>
-          </div>
-          <div className="form-actions">
-            <button
-              className="clear-button"
-              onClick={handleClear}
-              type="button"
-            >
-              Clear draft
-            </button>
-            <button
-              className="clear-button analyze-button"
-              disabled={!isReady || analysisState === "loading"}
-              onClick={handleAnalyze}
-              type="button"
-            >
-              {analysisState === "loading"
-                ? "Analyzing..."
-                : analysisState === "error"
-                  ? "Retry analysis"
-                  : "Analyze job description"}
-            </button>
-            <button
-              className="primary-button"
-              disabled={!isReady}
-              type="submit"
-            >
-              Save draft <span aria-hidden="true">↗</span>
-            </button>
-          </div>
-        </div>
-        <div
-          className={`draft-state is-${saveState}`}
-          role="status"
-          aria-live="polite"
-        >
-          <span className={`draft-dot draft-${saveState}`} aria-hidden="true" />
-          {saveMessage}
-        </div>
-        {saveFeedback && (
-          <p
-            className={`form-save-feedback${saveFeedbackError ? " is-error" : ""}`}
+          <div
+            className={`draft-state is-${saveState}`}
             role="status"
+            aria-live="polite"
           >
-            {saveFeedback}
-          </p>
-        )}
-      </form>
+            <span
+              className={`draft-dot draft-${saveState}`}
+              aria-hidden="true"
+            />
+            {saveMessage}
+          </div>
+          {saveFeedback && (
+            <p
+              className={`form-save-feedback${saveFeedbackError ? " is-error" : ""}`}
+              role="status"
+            >
+              {saveFeedback}
+            </p>
+          )}
+        </form>
 
-      <JobAnalysisPanel
-        state={analysisState}
-        analysis={analysis}
-        error={analysisError}
-        cacheSaved={analysisCacheSaved}
-        onAnalyze={handleAnalyze}
-      />
+        <ATSAnalysisPreview
+          state={analysisState}
+          analysis={analysis}
+          error={analysisError}
+          cacheSaved={analysisCacheSaved}
+          onAnalyze={handleAnalyze}
+        />
+      </div>
 
       <div className="workspace-note">
         <span className="note-mark" aria-hidden="true">
