@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Asterisk, ArrowUpRight, LoaderCircle, Sparkles } from "lucide-react";
+import PasteFromUrl from "@/components/home/paste-from-url";
 import type { JobAnalysisResult } from "@/lib/ai/contracts";
 import {
   clearJobAnalysisCache,
@@ -47,7 +48,11 @@ const ANALYSIS_SECTIONS: Array<{
   { key: "inferredContext", title: "Inferred context, not requirements" },
 ];
 
-export default function JDWorkspace() {
+export default function JDWorkspace({
+  pasteFromUrlAvailable = false,
+}: {
+  pasteFromUrlAvailable?: boolean;
+}) {
   const [draft, setDraft] = useState<JobDescriptionDraft>(EMPTY_DRAFT);
   const [errors, setErrors] = useState<DraftErrors>({});
   const [isReady, setIsReady] = useState(false);
@@ -209,6 +214,10 @@ export default function JDWorkspace() {
     setSaveState(cleared ? "idle" : "error");
   }
 
+  function handleExtractedJobDescription(text: string) {
+    updateField("jobDescription", text);
+  }
+
   const saveMessage =
     saveState === "loading"
       ? "Loading draft"
@@ -330,24 +339,31 @@ export default function JDWorkspace() {
         )}
 
         <div className="form-footer">
-          <div className="input-metrics" id="jd-count">
-            <span
-              className={
-                draft.jobDescription.length > MAX_JD_CHARACTERS
-                  ? "metric-over-limit"
-                  : ""
-              }
-            >
-              {draft.jobDescription.length.toLocaleString()} /{" "}
-              {MAX_JD_CHARACTERS.toLocaleString()} characters
-            </span>
-            <span aria-hidden="true" className="metric-separator">
-              ·
-            </span>
-            <span>
-              ~{estimateTokenCount(draft.jobDescription).toLocaleString()}{" "}
-              tokens
-            </span>
+          <div className="form-metrics-row">
+            <div className="input-metrics" id="jd-count">
+              <span
+                className={
+                  draft.jobDescription.length > MAX_JD_CHARACTERS
+                    ? "metric-over-limit"
+                    : ""
+                }
+              >
+                {draft.jobDescription.length.toLocaleString()} /{" "}
+                {MAX_JD_CHARACTERS.toLocaleString()} characters
+              </span>
+              <span aria-hidden="true" className="metric-separator">
+                ·
+              </span>
+              <span>
+                ~{estimateTokenCount(draft.jobDescription).toLocaleString()}{" "}
+                tokens
+              </span>
+            </div>
+            <PasteFromUrl
+              available={pasteFromUrlAvailable}
+              jobUrl={draft.jobUrl}
+              onExtracted={handleExtractedJobDescription}
+            />
           </div>
           <div className="form-actions">
             <button

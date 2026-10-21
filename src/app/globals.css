@@ -839,10 +839,23 @@ h1 {
 
 .form-footer {
   display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-16);
+  margin-top: var(--space-16);
+}
+
+/*
+ * The metrics row keeps the character/token counts on the left and the
+ * optional "Paste from URL" action on the right, as in the reference. The
+ * action buttons sit on their own row below.
+ */
+.form-metrics-row {
+  display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-16);
-  margin-top: var(--space-16);
+  flex-wrap: wrap;
 }
 
 .input-metrics {
@@ -863,10 +876,193 @@ h1 {
   color: var(--danger);
 }
 
+/*
+ * Task 17 "Paste from URL".
+ *
+ * The control renders only when an approved extraction service exists. The
+ * reference shows it at the end of the metrics row as a text button with a
+ * chain-link icon, violet label, no filled background, a 36-40px minimum hit
+ * height, a visible focus ring, a pale violet hover surface, and a brief
+ * pressed tint.
+ */
+.paste-from-url-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 38px;
+  padding: 0 var(--space-8);
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--color-violet);
+  font-family: inherit;
+  font-size: var(--type-field-label-size);
+  font-weight: 500;
+  line-height: var(--type-field-label-line-height);
+  cursor: pointer;
+  transition:
+    background-color 200ms ease,
+    color 200ms ease;
+}
+
+/*
+ * The violet primary is the right accent on the light surface, but it only
+ * reaches 2.88:1 on the dark form surface, which is below the 4.5:1 the plan
+ * requires for body text. The dark theme therefore uses the lighter violet
+ * the plan defines for "focus/highlight/icon", which reaches 6:1.
+ */
+:root[data-theme="dark"] .paste-from-url-trigger {
+  color: var(--color-violet-light);
+}
+
+.paste-from-url-trigger svg {
+  flex: 0 0 auto;
+}
+
+.paste-from-url-trigger:hover {
+  background: var(--color-violet-subtle);
+}
+
+.paste-from-url-trigger:active {
+  background: color-mix(
+    in srgb,
+    var(--color-violet) 18%,
+    var(--color-violet-subtle)
+  );
+}
+
+.paste-from-url-trigger:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.paste-from-url {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.paste-from-url-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  max-width: 100%;
+}
+
+.paste-from-url-form {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.paste-from-url-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.paste-from-url-input {
+  min-height: 38px;
+  width: 260px;
+  max-width: 100%;
+  padding: 0 var(--space-12);
+  border: var(--border-control);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
+}
+
+.paste-from-url-input::placeholder {
+  color: var(--quiet);
+}
+
+.paste-from-url-input:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.paste-from-url-input[aria-invalid="true"] {
+  border-color: var(--danger);
+}
+
+.paste-from-url-submit,
+.paste-from-url-cancel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 38px;
+  padding: 0 var(--space-12);
+  border: var(--border-control);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: var(--type-field-label-size);
+  font-weight: 500;
+  line-height: var(--type-field-label-line-height);
+  cursor: pointer;
+}
+
+.paste-from-url-submit {
+  border-color: transparent;
+  background: var(--color-violet);
+  color: var(--color-text-inverse);
+}
+
+.paste-from-url-submit svg {
+  flex: 0 0 auto;
+}
+
+.paste-from-url-submit:hover:not(:disabled) {
+  background: var(--color-violet-strong);
+}
+
+.paste-from-url-submit:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.paste-from-url-cancel:hover {
+  background: var(--surface-hover);
+}
+
+.paste-from-url-submit:focus-visible,
+.paste-from-url-cancel:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.paste-from-url-message {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--type-helper-size);
+  line-height: var(--type-helper-line-height);
+}
+
+.paste-from-url-message.is-error {
+  color: var(--danger);
+}
+
 .form-actions {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: var(--space-12);
+  flex-wrap: wrap;
 }
 
 .form-actions button:disabled {
@@ -2235,6 +2431,12 @@ a:focus-visible {
     flex-direction: column;
   }
 
+  .jd-workspace-frame .form-metrics-row {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: var(--space-8);
+  }
+
   .jd-workspace-frame .form-actions {
     width: 100%;
     min-width: 0;
@@ -2468,6 +2670,28 @@ a:focus-visible {
   .form-footer {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .form-metrics-row {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: var(--space-8);
+  }
+
+  .paste-from-url,
+  .paste-from-url-form {
+    width: 100%;
+    align-items: flex-start;
+    justify-content: flex-start;
+  }
+
+  .paste-from-url-panel {
+    width: 100%;
+    align-items: flex-start;
+  }
+
+  .paste-from-url-input {
+    width: 100%;
   }
 
   .form-actions {
