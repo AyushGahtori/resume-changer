@@ -19,7 +19,7 @@ test.beforeEach(async ({ page }) => {
   await page
     .getByRole("textbox", { name: "Job description", exact: true })
     .fill("Build reliable platform services and improve deployment workflows.");
-  await expect(page.getByRole("status")).toContainText("Saved locally");
+  await expect(page.getByRole("status")).toContainText("Saved on this device");
   await page.goto("/generate?source=demo");
 });
 
