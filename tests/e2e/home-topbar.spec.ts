@@ -36,6 +36,11 @@ test("toggles the theme from the keyboard and persists the preference", async ({
     await page.keyboard.press("Tab");
   }
 
+  await expect(
+    page.getByRole("button", { name: "Collapse sidebar" }),
+  ).toBeFocused();
+  await page.keyboard.press("Tab");
+
   await expect(toggle).toBeFocused();
   expect(
     await toggle.evaluate((element) => getComputedStyle(element).outlineStyle),
@@ -58,6 +63,11 @@ test("toggles the theme from the keyboard and persists the preference", async ({
   for (let index = 0; index < 6; index += 1) {
     await page.keyboard.press("Tab");
   }
+
+  await expect(
+    page.getByRole("button", { name: "Collapse sidebar" }),
+  ).toBeFocused();
+  await page.keyboard.press("Tab");
 
   const darkToggle = page.getByRole("button", { name: "Switch to light mode" });
   await expect(darkToggle).toBeFocused();

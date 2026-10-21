@@ -91,6 +91,12 @@ test("provides visible active, hover, and keyboard focus states in both themes",
       await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
     }
 
+    await activeLink.evaluate(async (element) => {
+      await Promise.all(
+        element.getAnimations().map((animation) => animation.finished),
+      );
+    });
+
     const readActiveStyles = () =>
       activeLink.evaluate((element) => {
         const style = getComputedStyle(element);
@@ -175,6 +181,20 @@ test("keeps sidebar rows contained across desktop, zoom-equivalent, and mobile w
   for (const width of [1440, 1152, 1024, 768, 720, 390, 320]) {
     await page.setViewportSize({ width, height: 900 });
 
+    if (width <= 700) {
+      await page.getByRole("button", { name: "Open navigation" }).click();
+      await expect(
+        page.getByRole("dialog", { name: "Navigation menu" }),
+      ).toBeVisible();
+    }
+    await page.locator(".app-frame").evaluate(async (element) => {
+      await Promise.all(
+        element
+          .getAnimations({ subtree: true })
+          .map((animation) => animation.finished),
+      );
+    });
+
     const metrics = await page.evaluate(() => {
       const sidebar = document.querySelector<HTMLElement>(".sidebar")!;
       const navigation =
@@ -186,12 +206,17 @@ test("keeps sidebar rows contained across desktop, zoom-equivalent, and mobile w
         const label = link.lastElementChild as HTMLElement;
         const icon = link.querySelector("svg")!;
         const bounds = link.getBoundingClientRect();
+        const labelBounds = label.getBoundingClientRect();
         return {
           left: bounds.left,
           right: bounds.right,
           height: bounds.height,
+          top: bounds.top,
+          bottom: bounds.bottom,
           gap: getComputedStyle(link).gap,
-          labelRight: label.getBoundingClientRect().right,
+          labelRight: labelBounds.right,
+          labelTop: labelBounds.top,
+          labelBottom: labelBounds.bottom,
           iconWidth: icon.getBoundingClientRect().width,
           iconHeight: icon.getBoundingClientRect().height,
         };
@@ -218,19 +243,26 @@ test("keeps sidebar rows contained across desktop, zoom-equivalent, and mobile w
     expect(metrics.navColumnGap).toBe("8px");
     expect(metrics.activeLeft).toBeGreaterThanOrEqual(0);
     if (width <= 700) {
-      expect(metrics.overflowX).toBe("auto");
+      expect(metrics.overflowX).toBe("visible");
     }
 
     for (const item of metrics.items) {
-      expect(item.height, "row height at viewport " + width + "px").toBe(48);
+      expect(
+        item.height,
+        "row height at viewport " + width + "px",
+      ).toBeGreaterThanOrEqual(48);
       expect(item.gap).toBe("12px");
       expect(item.iconWidth).toBe(20);
       expect(item.iconHeight).toBe(20);
       expect(item.labelRight).toBeLessThanOrEqual(item.right);
-      if (width > 700) {
-        expect(item.left).toBeGreaterThanOrEqual(0);
-        expect(item.right).toBeLessThanOrEqual(metrics.sidebarRight);
-      }
+      expect(item.labelTop).toBeGreaterThanOrEqual(item.top);
+      expect(item.labelBottom).toBeLessThanOrEqual(item.bottom);
+      expect(item.left).toBeGreaterThanOrEqual(0);
+      expect(item.right).toBeLessThanOrEqual(metrics.sidebarRight);
+    }
+    if (width <= 700) {
+      await page.getByRole("button", { name: "Close navigation" }).click();
+      await expect(page.locator("#workspace-sidebar")).toBeHidden();
     }
   }
 });

@@ -58,7 +58,7 @@ export async function openStudio(page: Page, withPdf = true) {
   await page.getByLabel("Company").fill("Example Systems");
   await page.getByLabel("Role title").fill("Platform Engineer");
   await page
-    .getByLabel("Job description")
+    .getByRole("textbox", { name: "Job description", exact: true })
     .fill("Build reliable platform services.");
   await expect(page.getByRole("status")).toContainText("Saved locally");
   await page.goto("/generate?source=demo");

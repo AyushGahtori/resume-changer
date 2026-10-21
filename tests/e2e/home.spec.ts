@@ -48,7 +48,7 @@ test("saves and restores the JD and role details locally", async ({ page }) => {
   await page.getByLabel("Role title").fill("Backend Engineer");
   await page.getByLabel("Job link").fill("https://jobs.example/role");
   await page
-    .getByLabel("Job description")
+    .getByRole("textbox", { name: "Job description", exact: true })
     .fill("Build reliable APIs and improve data services.");
 
   await page.getByRole("button", { name: "Save draft" }).click();
@@ -75,9 +75,9 @@ test("saves and restores the JD and role details locally", async ({ page }) => {
   await expect(page.getByLabel("Job link")).toHaveValue(
     "https://jobs.example/role",
   );
-  await expect(page.getByLabel("Job description")).toHaveValue(
-    "Build reliable APIs and improve data services.",
-  );
+  await expect(
+    page.getByRole("textbox", { name: "Job description", exact: true }),
+  ).toHaveValue("Build reliable APIs and improve data services.");
 });
 
 test("validates empty, oversized, and malformed job descriptions", async ({
@@ -89,13 +89,15 @@ test("validates empty, oversized, and malformed job descriptions", async ({
   );
 
   await page
-    .getByLabel("Job description")
+    .getByRole("textbox", { name: "Job description", exact: true })
     .fill("x".repeat(MAX_JD_CHARACTERS + 1));
   await expect(page.getByText("30,001 / 30,000 characters")).toBeVisible();
   await page.getByRole("button", { name: "Save draft" }).click();
   await expect(page.locator("#jd-error")).toContainText("30,000 characters");
 
-  await page.getByLabel("Job description").fill("Backend engineer");
+  await page
+    .getByRole("textbox", { name: "Job description", exact: true })
+    .fill("Backend engineer");
   await page.getByLabel("Job link").fill("javascript:alert(1)");
   await page.getByRole("button", { name: "Save draft" }).click();
   await expect(page.getByText("Enter an HTTP or HTTPS link.")).toBeVisible();
@@ -103,15 +105,21 @@ test("validates empty, oversized, and malformed job descriptions", async ({
 
 test("clears the saved draft", async ({ page }) => {
   await page.getByLabel("Company").fill("Example Systems");
-  await page.getByLabel("Job description").fill("A short job description.");
+  await page
+    .getByRole("textbox", { name: "Job description", exact: true })
+    .fill("A short job description.");
   await expect(page.getByRole("status")).toContainText("Saved locally");
 
   await page.getByRole("button", { name: "Clear draft" }).click();
   await expect(page.getByLabel("Company")).toHaveValue("");
-  await expect(page.getByLabel("Job description")).toHaveValue("");
+  await expect(
+    page.getByRole("textbox", { name: "Job description", exact: true }),
+  ).toHaveValue("");
   await page.reload({ waitUntil: "domcontentloaded" });
   await expect(page.getByLabel("Company")).toHaveValue("");
-  await expect(page.getByLabel("Job description")).toHaveValue("");
+  await expect(
+    page.getByRole("textbox", { name: "Job description", exact: true }),
+  ).toHaveValue("");
 });
 
 test("persists the selected theme and remains usable on a narrow viewport", async ({
@@ -123,6 +131,8 @@ test("persists the selected theme and remains usable on a narrow viewport", asyn
   await page.setViewportSize({ width: 390, height: 844 });
   await page.reload({ waitUntil: "domcontentloaded" });
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await expect(page.locator("#workspace-sidebar")).toBeHidden();
+  await page.getByRole("button", { name: "Open navigation" }).click();
   await expect(
     page.getByRole("navigation", { name: "Main navigation" }),
   ).toBeVisible();

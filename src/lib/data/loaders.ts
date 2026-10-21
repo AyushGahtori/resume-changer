@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { z } from "zod";
+import { getPersonalDataRoot } from "./root";
 import {
   GenerationHistorySchema,
   ResumeLibrarySchema,
@@ -75,7 +76,7 @@ export function formatDataLoadError(error: {
 }) {
   switch (error.code) {
     case "missing-file":
-      return `${error.dataPath} was not found. Add the personal data file or explicitly choose demo mode.`;
+      return `${error.dataPath} was not found. Add the personal data file, set RESUME_LIBRARY_ROOT to the folder containing data/resume-library.json, or explicitly choose demo mode.`;
     case "unreadable-file":
       return `${error.dataPath} could not be read. Check that the file exists and is accessible.`;
     case "invalid-json":
@@ -136,10 +137,9 @@ export async function loadResumeLibrary({
   rootDir,
 }: ResumeLibraryLoadOptions = {}) {
   const dataRoot =
-    rootDir ??
-    (source === "personal"
-      ? (process.env.RESUME_LIBRARY_ROOT ?? process.cwd())
-      : process.cwd());
+    source === "personal"
+      ? getPersonalDataRoot(rootDir)
+      : (rootDir ?? process.cwd());
   return loadValidatedFile(
     getResumeLibraryPath(source),
     ResumeLibrarySchema,
@@ -172,14 +172,12 @@ export function loadTemplateMetadata({
   );
 }
 
-export async function loadGenerationHistory({
-  rootDir = process.env.RESUME_LIBRARY_ROOT ?? process.cwd(),
-}: RootOptions = {}) {
+export async function loadGenerationHistory({ rootDir }: RootOptions = {}) {
   try {
     return await loadValidatedFile(
       "data/generation-history.json",
       GenerationHistorySchema,
-      rootDir,
+      getPersonalDataRoot(rootDir),
     );
   } catch (error) {
     if (error instanceof DataLoadError && error.code === "missing-file") {

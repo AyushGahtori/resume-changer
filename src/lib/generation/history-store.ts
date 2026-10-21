@@ -2,6 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { mkdir, open, readFile, rename, rm } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { z } from "zod";
+import { getPersonalDataRoot } from "../data/root";
 import {
   GenerationHistoryEntrySchema,
   GenerationHistoryEntryFieldsSchema,
@@ -51,7 +52,7 @@ export class GenerationHistoryError extends Error {
 }
 
 function getRoot(rootDir?: string) {
-  return resolve(rootDir ?? process.env.RESUME_LIBRARY_ROOT ?? process.cwd());
+  return getPersonalDataRoot(rootDir);
 }
 
 function artifactPath(id: string, hash: string, extension: "tex" | "pdf") {

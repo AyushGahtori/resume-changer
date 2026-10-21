@@ -12,6 +12,7 @@ import {
   type ResumeLibrary,
 } from "../schemas/resume-data";
 import { DataLoadError } from "./loaders";
+import { getPersonalDataRoot } from "./root";
 
 const UpdateChangesSchema = z
   .object({
@@ -128,10 +129,9 @@ async function saveLibrary(library: ResumeLibrary, rootDir: string) {
 
 async function commitPointChange(
   change: (library: ResumeLibrary) => ResumeLibrary,
-  {
-    rootDir = process.env.RESUME_LIBRARY_ROOT ?? process.cwd(),
-  }: WriteOptions = {},
+  options: WriteOptions = {},
 ) {
+  const rootDir = getPersonalDataRoot(options.rootDir);
   const lockPath = join(rootDir, "data", "resume-library.json.lock");
   await mkdir(dirname(lockPath), { recursive: true });
   let lock;
