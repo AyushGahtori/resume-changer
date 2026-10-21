@@ -6,6 +6,54 @@ const description =
   "We'll analyze your job description to find key skills, keywords, and requirements that ATS systems look for.";
 
 for (const theme of ["light", "dark"]) {
+  test(`supporting tip and badge remain readable and noninteractive in ${theme}`, async ({
+    page,
+  }) => {
+    await page.goto("/");
+    if (theme === "dark")
+      await page.getByRole("button", { name: "Switch to dark mode" }).click();
+    const preview = page.getByRole("complementary", {
+      name: "ATS analysis preview",
+    });
+    const tip = preview.getByRole("region", { name: "Pro tip" });
+    await expect(tip).toContainText(
+      "Review the extracted requirements before tailoring your resume.",
+    );
+    await expect(tip.locator("button, a, [tabindex]")).toHaveCount(0);
+    await expect(preview.locator(".ats-beta")).toHaveJSProperty(
+      "tagName",
+      "SPAN",
+    );
+    await expect(preview.locator(".ats-beta")).not.toHaveAttribute("tabindex");
+    const colors = await tip.evaluate((el) => {
+      const bg = getComputedStyle(el).backgroundColor;
+      return {
+        bg,
+        title: getComputedStyle(el.querySelector("h3")!).color,
+        body: getComputedStyle(el.querySelector("p")!).color,
+        icon: getComputedStyle(el.querySelector("svg")!).color,
+      };
+    });
+    expect(contrast(colors.title, colors.bg)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(colors.body, colors.bg)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(colors.icon, colors.bg)).toBeGreaterThanOrEqual(3);
+    for (const width of [1440, 390, 320]) {
+      await page.setViewportSize({ width, height: 900 });
+      await preview.screenshot({
+        path: `docs/ui-review/task-25/${theme}-${width}.png`,
+        animations: "disabled",
+        style: "nextjs-portal{display:none}",
+      });
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+      ).toBe(true);
+    }
+  });
+}
+
+for (const theme of ["light", "dark"]) {
   test(`signal rows have truthful textual status, accessible labels and wrapping in ${theme}`, async ({
     page,
   }) => {
