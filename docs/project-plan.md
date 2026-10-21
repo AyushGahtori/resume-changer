@@ -294,6 +294,8 @@ Write the final v1 setup guide for configuring the Gemini API key, running the a
 
 Implementation should document environment variables, local compiler installation, troubleshooting common API errors, missing compiler errors, and how to keep private resume data out of Git. Add a sample `.env.example` without secrets. The task is complete when a user can set up the real app locally and generate a resume from their own data.
 
+The complete v1 setup guide lives in [setup-guide.md](setup-guide.md). It covers the Gemini key, the local PDF toolchain including Tectonic's package-cache warming, the documented environment variables, cost and token behavior, keeping private resume data out of Git, troubleshooting, and the provider interface for adding DeepSeek later. The tracked `.env.example` lists every supported variable with placeholder values only.
+
 Required workflow: update `main`, create `codex/task-25-setup-provider-docs`, add docs and sample env files only, run all quality commands, manually follow the setup guide on a clean checkout if possible, then push or merge only after checks pass.
 
 ## 6. Definition Of Done For V1
@@ -337,6 +339,22 @@ Explore a compact vertical edge rail with a wave-like progress/selection animati
 ### ATS Readiness Review
 
 Add an optional post-generation review that checks the final resume content for practical ATS-readability signals: expected sections and contact details, readable text extraction from the PDF, relevant JD terminology supported by the resume, and common parsing or layout risks. Show a transparent summary with specific items to inspect or improve; let the user decide whether to change the resume. Do not promise ATS passage, ranking, interviews, or hiring outcomes, and do not encourage keyword stuffing or unsupported claims. Test the review against known-good and intentionally problematic LaTeX/PDF fixtures, including cases where a term is absent because the user's evidence does not support it.
+
+### Job Description URL Extraction
+
+Add an optional service that reads a job description from a user-supplied career-page link so the home page can offer the `Paste from URL` action shown in the home page UI plan (`docs/UI_Tasks_home.md`, Task 17). This is the dependency that action is currently gated on: no extraction route exists today, the AI provider is never asked to fetch a URL, and `jobUrl` is stored only as an opaque string in the draft, so the control is not rendered until this feature is implemented and approved.
+
+Do not implement this as a pass-through proxy. The service must fetch the URL itself, on the server, under an explicit network policy, and must treat the fetched page as untrusted input. The design needs to settle, at minimum:
+
+- **Allowed targets.** Restrict requests to `http:` and `https:` URLs. Resolve the host and reject loopback, link-local, private, and other reserved ranges, including the addresses reached through a redirect chain, so the endpoint cannot be used to reach internal services.
+- **Redirects and ports.** Follow redirects only within the validated scheme, re-validating every hop, and decide explicitly whether non-standard ports are allowed.
+- **Limits.** Cap response size, request time, redirect count, and total extraction time, and stop the download as soon as the limit is reached.
+- **Content handling.** Parse the response as text with an explicit content type, never execute it, and treat any instruction-like text in the page as content rather than as instructions for the AI.
+- **Extraction quality.** Decide how the job description is identified in arbitrary career pages, how a failed or empty extraction is reported, and how the result is presented for review before it replaces the user's draft. The current draft must survive a failed or cancelled extraction.
+- **AI grounding.** If the extracted text is passed to Gemini, pass it as untrusted quoted content and keep the existing grounding rules in `docs/project-plan.md` Section 7.
+- **Privacy and local-first fit.** The application is local-first and does not send the user's data to a third party today. Decide and document whether extraction calls an external service, runs locally, or asks the user to paste the text, and keep the answer consistent with the "local-first until the owner explicitly decides to deploy it" rule.
+
+Tests should cover the rejected schemes and hosts, a redirect into a private address, the size and time limits, a non-HTML response, an empty extraction, a cancelled request, and a successful extraction that leaves the draft unchanged until the user accepts it. The client-side URL check in `src/lib/jd-url-extraction.ts` is a fast-feedback convenience only; the server must repeat every validation regardless of what the client checks.
 
 ### GitHub Repository Project Evidence Import
 
