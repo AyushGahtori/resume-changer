@@ -107,7 +107,7 @@ for (const theme of ["light", "dark"]) {
     await page.keyboard.press("Enter");
     await expect(retry).toBeFocused();
     await expect(retry).toHaveAttribute("aria-disabled", "true");
-    await expect(page.locator(".analysis-spinner")).toHaveCSS(
+    await expect(page.locator(".analysis-panel .analysis-spinner")).toHaveCSS(
       "animation-name",
       "none",
     );
