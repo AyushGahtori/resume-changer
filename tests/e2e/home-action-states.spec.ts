@@ -81,10 +81,30 @@ async function readSurface(page: Page, selector: string) {
 
 /**
  * The controls animate their surface and label together, so a colour read
- * taken straight after an interaction can land mid-transition. Wait for the
- * computed style to hold steady before asserting on it.
+ * taken straight after an interaction can land mid-transition. Wait for any
+ * running transition to finish, then confirm the computed style holds
+ * steady before asserting on it.
  */
 async function settleSurface(page: Page, selector: string) {
+  await page.locator(selector).evaluate(async (element) => {
+    const running = () =>
+      element
+        .getAnimations()
+        .filter(
+          (animation) =>
+            animation.constructor.name === "CSSTransition" &&
+            animation.playState === "running",
+        );
+
+    // Give a transition that is about to start a chance to register.
+    await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
+
+    for (let attempt = 0; attempt < 100; attempt += 1) {
+      if (running().length === 0) return;
+      await new Promise((resolve) => setTimeout(resolve, 30));
+    }
+  });
+
   let previous: string | null = null;
 
   for (let attempt = 0; attempt < 40; attempt += 1) {
@@ -168,6 +188,16 @@ test("gives every action a distinct default, hover, and pressed surface", async 
       [save, ".home-action-button--primary"],
     ] as const) {
       await button.hover();
+      // Wait for the hover surface to actually replace the resting one.
+      await expect
+        .poll(
+          () =>
+            page
+              .locator(selector)
+              .evaluate((element) => getComputedStyle(element).backgroundColor),
+          { timeout: 5_000 },
+        )
+        .not.toBe(defaults[selector]);
       const hovered = await settleSurface(page, selector);
       expect(hovered.background).not.toBe(defaults[selector]);
       await assertLabelContrast(page, selector);
@@ -200,6 +230,15 @@ test("shows a visibly pressed surface for each action", async ({ page }) => {
       await page.mouse.down();
 
       // Pressing applies both the pressed surface and the scale feedback.
+      await expect
+        .poll(
+          () =>
+            page
+              .locator(target.selector)
+              .evaluate((element) => getComputedStyle(element).backgroundColor),
+          { timeout: 5_000 },
+        )
+        .not.toBe(resting.background);
       const pressed = await settleSurface(page, target.selector);
       expect(pressed.background).not.toBe(resting.background);
       await expect
