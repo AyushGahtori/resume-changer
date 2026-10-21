@@ -197,10 +197,22 @@ function readRateLimitDetails(message: string): RateLimitDetails {
  * positive number is ignored, so a typo falls back to the default instead
  * of disabling the request budget.
  */
-function parseRequestTimeout(value: string | undefined): number | undefined {
+export function parseRequestTimeout(
+  value: string | undefined,
+): number | undefined {
   if (!value?.trim()) return undefined;
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+}
+
+/**
+ * Keeps a request budget that is a positive number. A caller that passes
+ * something else, such as the result of parsing a typo, falls back to the
+ * default instead of sending a nonsense deadline upstream.
+ */
+function validRequestTimeout(value: number | undefined): number | undefined {
+  if (value === undefined) return undefined;
+  return Number.isFinite(value) && value > 0 ? value : undefined;
 }
 
 function mapRequestError(error: unknown): AiProviderError {
@@ -423,7 +435,7 @@ export function createGeminiProvider(
   const apiKey = options.apiKey ?? process.env.GEMINI_API_KEY;
   const model = options.model ?? process.env.GEMINI_MODEL ?? DEFAULT_MODEL;
   const requestTimeoutMs =
-    options.requestTimeoutMs ??
+    validRequestTimeout(options.requestTimeoutMs) ??
     parseRequestTimeout(process.env.GEMINI_REQUEST_TIMEOUT_MS) ??
     REQUEST_TIMEOUT_MS;
   const sleep =

@@ -7,6 +7,7 @@ import {
   createGeminiProvider,
   DEFAULT_MODEL,
   FALLBACK_MODEL,
+  parseRequestTimeout,
   REQUEST_TIMEOUT_MS,
 } from "../../../src/lib/ai/gemini-provider";
 import { createAiProvider } from "../../../src/lib/ai/provider-factory";
@@ -134,6 +135,20 @@ describe("AI provider contracts and selection", () => {
       }),
     ).not.toThrow();
   });
+
+  it("ignores a request budget that is not a positive number", () => {
+    // A typo in the environment must not reach the upstream deadline, where
+    // it would either disable the budget or cut every request short.
+    for (const value of ["abc", "0", "-1", "  "]) {
+      expect(() =>
+        createAiProvider({
+          AI_PROVIDER: "gemini",
+          GEMINI_API_KEY: "test-key",
+          GEMINI_REQUEST_TIMEOUT_MS: value,
+        }),
+      ).not.toThrow();
+    }
+  });
 });
 
 describe("Gemini adapter", () => {
@@ -144,6 +159,18 @@ describe("Gemini adapter", () => {
     // request before the model can answer. A request that is cut short
     // cannot be retried for the same quota cost.
     expect(REQUEST_TIMEOUT_MS).toBeGreaterThanOrEqual(120_000);
+  });
+
+  it("ignores a request budget that is not a positive number", () => {
+    // A nonsense budget must fall back to the default rather than reach the
+    // upstream deadline, where it would disable the budget or cut every
+    // request short.
+    expect(parseRequestTimeout("300000")).toBe(300_000);
+    expect(parseRequestTimeout("abc")).toBeUndefined();
+    expect(parseRequestTimeout("0")).toBeUndefined();
+    expect(parseRequestTimeout("-1")).toBeUndefined();
+    expect(parseRequestTimeout("")).toBeUndefined();
+    expect(parseRequestTimeout(undefined)).toBeUndefined();
   });
 
   it("sends modular prompt context and validates structured JSON output", async () => {

@@ -1,6 +1,6 @@
 import "server-only";
 import { AiProviderError } from "./provider";
-import { createGeminiProvider } from "./gemini-provider";
+import { createGeminiProvider, parseRequestTimeout } from "./gemini-provider";
 import { mockAiProvider } from "./mock-provider";
 import type { AiProvider } from "./provider";
 
@@ -36,8 +36,8 @@ export function createAiProvider(
   return createGeminiProvider({
     apiKey: environment.GEMINI_API_KEY,
     model: environment.GEMINI_MODEL,
-    requestTimeoutMs: environment.GEMINI_REQUEST_TIMEOUT_MS
-      ? Number(environment.GEMINI_REQUEST_TIMEOUT_MS)
-      : undefined,
+    requestTimeoutMs: parseRequestTimeout(
+      environment.GEMINI_REQUEST_TIMEOUT_MS,
+    ),
   });
 }
