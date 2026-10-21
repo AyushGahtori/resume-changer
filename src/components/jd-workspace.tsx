@@ -1,7 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Asterisk, ArrowUpRight, LoaderCircle, Sparkles } from "lucide-react";
+import {
+  Asterisk,
+  ArrowUpRight,
+  CircleAlert,
+  LoaderCircle,
+  Sparkles,
+} from "lucide-react";
 import type { JobAnalysisResult } from "@/lib/ai/contracts";
 import {
   clearJobAnalysisCache,
@@ -314,17 +320,20 @@ export default function JDWorkspace() {
             errors.jobDescription ? "jd-error jd-count" : "jd-count"
           }
           aria-invalid={Boolean(errors.jobDescription)}
+          disabled={!isReady}
           id="job-description"
           name="jobDescription"
           onChange={(event) =>
             updateField("jobDescription", event.target.value)
           }
           placeholder="Paste the job description"
+          rows={7}
           spellCheck="false"
           value={draft.jobDescription}
         />
         {errors.jobDescription && (
           <p className="field-error" id="jd-error" role="alert">
+            <CircleAlert aria-hidden="true" size={16} />
             {errors.jobDescription}
           </p>
         )}
