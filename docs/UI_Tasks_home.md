@@ -471,7 +471,7 @@ Reference files: docs/ui-images/home/role-details-anatomy-and-field-behavior.png
 
 ![Mandatory role input states and colors](ui-images/home/role-details-input-states-and-tokens.png)
 
-**Files:** `src/components/jd-workspace.tsx` (or extracted form), `src/app/globals.css`, `tests/e2e/home-role-details.spec.ts`.
+**Files:** `src/components/jd-workspace.tsx` (or extracted form), `src/app/globals.css`, `tests/e2e/home-role-detail-inputs.spec.ts`.
 
 - [ ] Align Company, Role title, and Job link in three desktop columns. Keep existing labels/placeholders; add icons only as leading adornments that do not steal input width.
 - [ ] Use stable-height inputs with clear border, surface, text, and placeholder tokens. URL field should communicate HTTP(S) input.
