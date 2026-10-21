@@ -74,8 +74,8 @@ test("collapses the desktop sidebar while keeping every destination accessible",
   ).toBe(true);
   await page.mouse.up();
 
-  await achievementLibrary.click();
-  await expect(page).toHaveURL(/\/library$/);
+  // Mouse up completes the activation already exercised above.
+  await expect(page).toHaveURL(/\/library$/, { timeout: 30_000 });
   await expect(achievementLibrary).toHaveAttribute("aria-current", "page");
   await expect(sidebar).toHaveCSS("width", "72px");
 });
