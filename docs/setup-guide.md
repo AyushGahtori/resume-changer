@@ -102,16 +102,17 @@ GEMINI_API_KEY=replace-with-your-google-ai-studio-api-key
 GEMINI_MODEL=gemini-3.6-flash
 ```
 
-| Variable              | Required         | Default              | Meaning                                                                                                                                                                        |
-| --------------------- | ---------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `AI_PROVIDER`         | no               | `gemini`             | Which AI backend to use. `gemini` calls Google. `mock` returns fixed local responses and never touches the network. Any other value is rejected at startup with a clear error. |
-| `GEMINI_API_KEY`      | yes for `gemini` | none                 | Your Google AI Studio key. When it is empty, the application reports a `MISSING_API_KEY` error instead of failing silently.                                                    |
-| `GEMINI_MODEL`        | no               | `gemini-3.6-flash`   | The model used for every AI operation. Any model that supports structured JSON output works.                                                                                   |
-| `RESUME_LIBRARY_ROOT` | no               | auto-detected        | The folder that contains your `data/` directory. See [section 8](#8-keep-your-private-data-out-of-git).                                                                        |
-| `TECTONIC_BINARY`     | no               | `tectonic` on `PATH` | Full path to the Tectonic executable when it is not on `PATH`.                                                                                                                 |
-| `PDFINFO_BINARY`      | no               | `pdfinfo` on `PATH`  | Full path to `pdfinfo` when it is not on `PATH`.                                                                                                                               |
+| Variable                    | Required         | Default              | Meaning                                                                                                                                                                        |
+| --------------------------- | ---------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `AI_PROVIDER`               | no               | `gemini`             | Which AI backend to use. `gemini` calls Google. `mock` returns fixed local responses and never touches the network. Any other value is rejected at startup with a clear error. |
+| `GEMINI_API_KEY`            | yes for `gemini` | none                 | Your Google AI Studio key. When it is empty, the application reports a `MISSING_API_KEY` error instead of failing silently.                                                    |
+| `GEMINI_MODEL`              | no               | `gemini-3.6-flash`   | The model used for every AI operation. Any model that supports structured JSON output works.                                                                                   |
+| `GEMINI_REQUEST_TIMEOUT_MS` | no               | `240000`             | How long one Gemini request may take, in milliseconds. A value that is not a positive number is ignored and the default is used.                                               |
+| `RESUME_LIBRARY_ROOT`       | no               | auto-detected        | The folder that contains your `data/` directory. See [section 8](#8-keep-your-private-data-out-of-git).                                                                        |
+| `TECTONIC_BINARY`           | no               | `tectonic` on `PATH` | Full path to the Tectonic executable when it is not on `PATH`.                                                                                                                 |
+| `PDFINFO_BINARY`            | no               | `pdfinfo` on `PATH`  | Full path to `pdfinfo` when it is not on `PATH`.                                                                                                                               |
 
-Two optional settings are worth knowing about.
+Three optional settings are worth knowing about.
 
 **`AI_PROVIDER=mock`** runs the entire application with no API key and no
 network access. The mock provider returns a well-formed but empty analysis, so
@@ -122,10 +123,20 @@ everything except the AI is healthy, and to run the test suite without spending
 credits.
 
 **`GEMINI_MODEL`** applies to every operation. If the model you selected is
-unavailable for your account, the application automatically retries once with
-`gemini-2.5-flash-lite` and reports a fallback in the server log. If you set
-`GEMINI_MODEL=gemini-2.5-flash-lite` explicitly, no fallback is attempted
-because that model is already the fallback.
+unavailable for your account, the application moves down a fallback chain
+and reports each fallback in the server log. The chain is
+`gemini-flash-lite-latest` and then `gemini-flash-latest`. Different models
+have separate free-tier daily request caps, so moving to another model
+usually keeps the app working when one model reaches its limit. A model you
+set explicitly is not tried twice if it is already in the chain.
+
+**`GEMINI_REQUEST_TIMEOUT_MS`** sets the deadline for a single Gemini
+request. The default is 240,000 milliseconds (four minutes). The free tier
+serves requests noticeably more slowly than the paid tier, and the same
+request has been measured at both 12 seconds and over two minutes, so the
+budget is deliberately generous. Raise it if a very large evidence set
+genuinely needs longer; a value that is not a positive number is ignored and
+the default applies, so a typo cannot silently remove the request budget.
 
 Restart the development server after changing any environment value. Next.js
 reads `.env.local` at startup only.
@@ -544,7 +555,7 @@ A complete Auto Tailor run makes between one and three model calls:
 
 1. **Analysis.** One call. The job description in, the role signals out.
 2. **Selection and drafting.** Normally one call for selection and one for
-   drafting. The selection call may be retried once with a fallback model.
+   drafting.
 3. **Optional repair.** Only when the rendered content overflows by at most 40
    words. The repair is capped at one attempt, and it is rejected if it changes
    the selected evidence or does not actually shorten the text.
@@ -556,6 +567,14 @@ bounded, and the original draft is kept if the correction does not help.
 In practice, a full Auto Tailor run for one job description costs roughly two
 to four model requests, and a Guided Tailor run that reuses an existing
 analysis costs one or two.
+
+**Retries can multiply that count.** A request that fails in a recoverable way
+may be retried on the same model up to twice before the app moves to the next
+model in the fallback chain, and the chain has three models. A run that hits
+the free-tier daily quota or repeated schema mismatches can therefore issue
+several requests where a healthy run issues one. The daily free-tier request
+cap is counted per model, so switching models is what keeps the app usable
+after one model is exhausted.
 
 ### 9.3 What Determines the Price
 
@@ -591,9 +610,11 @@ it is not a bill.
   and refining one job description before moving to the next is cheaper than
   iterating across many.
 - **Watch the free-tier limits.** Free-tier request and token rates vary by
-  model and by project, and they change. When the limit is hit, the app
-  reports a `RATE_LIMITED` error, and the local fallback keeps your source
-  wording intact so you can continue working.
+  model and by project, and they change. The daily request cap is counted per
+  model, so when one model is exhausted the app moves to the next one in the
+  fallback chain. If every model is exhausted, the app reports a
+  `RATE_LIMITED` error, and the local fallback keeps your source wording
+  intact so you can continue working.
 
 ## 10. Troubleshooting
 
@@ -609,20 +630,25 @@ The key is wrong, revoked, or the Google Cloud project does not have the
 Generative Language API enabled. Open the API key in AI Studio and check that
 it is active, and enable the API for the linked project.
 
-**"Gemini's free-tier request limit was reached." (`RATE_LIMITED`)**
-You have hit the current quota for the model. Wait for the quota window to
-reset, use a different model with `GEMINI_MODEL`, or enable billing on the
-project.
+**"Gemini's free-tier request limit was reached." (`RATE_LIMITED`)
+You have hit a quota for the current model. Gemini reports two different rate
+limits. A short burst window clears in seconds, so the app waits it out and
+retries. The daily free-tier request cap does not clear for hours; in that
+case the app moves to the next model in the fallback chain, because each model
+has its own daily cap. If every model in the chain is exhausted, wait for the
+quota to reset, or enable billing on the project.
 
 **"Gemini did not respond before the request timed out." (`REQUEST_TIMEOUT`)**
-The request took longer than 30 seconds, which usually means a very large
-evidence set. Reduce the number of enabled points and retry.
+The request took longer than the timeout, which is four minutes by default and
+usually means a very large evidence set. Reduce the number of enabled points
+and retry, or raise `GEMINI_REQUEST_TIMEOUT_MS` if the workload genuinely
+needs longer.
 
 **"Gemini returned an incomplete or inconsistent response." (`INVALID_RESPONSE`)**
 The model returned JSON that did not match the expected schema, or the output
-was truncated because it hit the output token limit. The app automatically
-retries once with `gemini-2.5-flash-lite`. If it persists, the evidence set is
-probably too large; disable the points you do not need.
+was truncated because it hit the output token limit. The app retries on a
+fallback model. If it persists, the evidence set is probably too large;
+disable the points you do not need.
 
 **"The selected resume context is too large to send." (`INPUT_TOO_LARGE`)**
 The request exceeded the application's prompt size limit. Reduce the library
@@ -633,8 +659,9 @@ size or the job description length.
 startup.
 
 **The model you selected is not available for your account**
-The app falls back to `gemini-2.5-flash-lite` once and logs the fallback. Set
-`GEMINI_MODEL` to a model your account can use.
+The app moves down its fallback chain (`gemini-flash-lite-latest`, then
+`gemini-flash-latest`) and logs each fallback. Set `GEMINI_MODEL` to a model
+your account can use.
 
 ### PDF Compiler Problems
 

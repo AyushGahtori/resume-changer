@@ -1,6 +1,12 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import {
+  DEFAULT_MODEL,
+  FALLBACK_MODEL,
+  LAST_RESORT_MODEL,
+  REQUEST_TIMEOUT_MS,
+} from "../../../src/lib/ai/gemini-provider";
 import { createAiProvider } from "../../../src/lib/ai/provider-factory";
 
 const repositoryRoot = process.cwd();
@@ -24,6 +30,7 @@ describe("setup guide documentation", () => {
       "AI_PROVIDER",
       "GEMINI_API_KEY",
       "GEMINI_MODEL",
+      "GEMINI_REQUEST_TIMEOUT_MS",
       "RESUME_LIBRARY_ROOT",
       "TECTONIC_BINARY",
       "PDFINFO_BINARY",
@@ -78,6 +85,24 @@ describe("setup guide documentation", () => {
       expect(envExample).toContain(provider);
     }
     expect(guide).not.toMatch(/AI_PROVIDER=deepseek/);
+  });
+
+  it("documents the same models and request timeout the provider uses", async () => {
+    const [guide, envExample] = await Promise.all([
+      read("docs/setup-guide.md"),
+      read(".env.example"),
+    ]);
+
+    for (const model of [DEFAULT_MODEL, FALLBACK_MODEL, LAST_RESORT_MODEL]) {
+      expect(guide, `${model} must be documented in the setup guide`).toContain(
+        model,
+      );
+    }
+
+    // The timeout is documented in milliseconds in both files.
+    const timeout = String(REQUEST_TIMEOUT_MS);
+    expect(guide).toContain(timeout);
+    expect(envExample).toContain(timeout);
   });
 
   it("documents the provider error codes the application can report", async () => {
