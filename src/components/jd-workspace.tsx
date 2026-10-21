@@ -9,6 +9,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import type { JobAnalysisResult } from "@/lib/ai/contracts";
+import RoleDetailField from "@/components/home/role-detail-field";
 import {
   clearJobAnalysisCache,
   writeJobAnalysisCache,
@@ -27,6 +28,7 @@ import type {
   DraftFields,
   JobDescriptionDraft,
 } from "@/lib/jd-draft";
+import { ROLE_FIELDS } from "@/lib/ui/role-fields";
 
 type SaveState = "loading" | "saving" | "saved" | "error" | "idle";
 type AnalysisState = "idle" | "loading" | "success" | "error";
@@ -266,47 +268,15 @@ export default function JDWorkspace() {
         </div>
 
         <div className="metadata-fields">
-          <div className="field-group">
-            <label htmlFor="company">Company</label>
-            <input
-              autoComplete="organization"
-              id="company"
-              name="company"
-              onChange={(event) => updateField("company", event.target.value)}
-              placeholder="Company name"
-              value={draft.company}
+          {ROLE_FIELDS.map((descriptor) => (
+            <RoleDetailField
+              descriptor={descriptor}
+              error={errors[descriptor.field]}
+              key={descriptor.field}
+              onChange={(value) => updateField(descriptor.field, value)}
+              value={draft[descriptor.field]}
             />
-          </div>
-          <div className="field-group">
-            <label htmlFor="role-title">Role title</label>
-            <input
-              autoComplete="organization-title"
-              id="role-title"
-              name="roleTitle"
-              onChange={(event) => updateField("roleTitle", event.target.value)}
-              placeholder="e.g. Backend Engineer"
-              value={draft.roleTitle}
-            />
-          </div>
-          <div className="field-group field-url">
-            <label htmlFor="job-url">Job link</label>
-            <input
-              aria-describedby={errors.jobUrl ? "job-url-error" : undefined}
-              aria-invalid={Boolean(errors.jobUrl)}
-              autoComplete="url"
-              id="job-url"
-              inputMode="url"
-              name="jobUrl"
-              onChange={(event) => updateField("jobUrl", event.target.value)}
-              placeholder="https://"
-              value={draft.jobUrl}
-            />
-            {errors.jobUrl && (
-              <span className="field-error" id="job-url-error">
-                {errors.jobUrl}
-              </span>
-            )}
-          </div>
+          ))}
         </div>
 
         <div className="form-divider" />
