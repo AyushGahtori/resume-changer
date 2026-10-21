@@ -250,8 +250,10 @@ test("shows a visibly pressed surface for each action", async ({ page }) => {
         .not.toBe("none");
       await assertLabelContrast(page, target.selector);
 
-      await page.mouse.up();
+      // Release outside the control so this visual-state check does not
+      // trigger Clear/Analyze and move the following target during measurement.
       await page.mouse.move(2, 2);
+      await page.mouse.up();
     }
   }
 });
