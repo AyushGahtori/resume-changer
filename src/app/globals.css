@@ -1635,6 +1635,7 @@ a:focus-visible {
 }
 .jd-workspace-frame:has(.jd-work-grid) .jd-form textarea {
   min-height: 240px;
+  flex: none;
   resize: vertical;
 }
 @media (min-width: 1280px) {
