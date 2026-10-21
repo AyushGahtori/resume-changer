@@ -339,32 +339,30 @@ export default function JDWorkspace({
         )}
 
         <div className="form-footer">
-          <div className="form-metrics-row">
-            <div className="input-metrics" id="jd-count">
-              <span
-                className={
-                  draft.jobDescription.length > MAX_JD_CHARACTERS
-                    ? "metric-over-limit"
-                    : ""
-                }
-              >
-                {draft.jobDescription.length.toLocaleString()} /{" "}
-                {MAX_JD_CHARACTERS.toLocaleString()} characters
-              </span>
-              <span aria-hidden="true" className="metric-separator">
-                ·
-              </span>
-              <span>
-                ~{estimateTokenCount(draft.jobDescription).toLocaleString()}{" "}
-                tokens
-              </span>
-            </div>
-            <PasteFromUrl
-              available={pasteFromUrlAvailable}
-              jobUrl={draft.jobUrl}
-              onExtracted={handleExtractedJobDescription}
-            />
+          <div className="input-metrics" id="jd-count">
+            <span
+              className={
+                draft.jobDescription.length > MAX_JD_CHARACTERS
+                  ? "metric-over-limit"
+                  : ""
+              }
+            >
+              {draft.jobDescription.length.toLocaleString()} /{" "}
+              {MAX_JD_CHARACTERS.toLocaleString()} characters
+            </span>
+            <span aria-hidden="true" className="metric-separator">
+              ·
+            </span>
+            <span>
+              ~{estimateTokenCount(draft.jobDescription).toLocaleString()}{" "}
+              tokens
+            </span>
           </div>
+          <PasteFromUrl
+            available={pasteFromUrlAvailable}
+            jobUrl={draft.jobUrl}
+            onExtracted={handleExtractedJobDescription}
+          />
           <div className="form-actions">
             <button
               className="home-action-button home-action-button--ghost"

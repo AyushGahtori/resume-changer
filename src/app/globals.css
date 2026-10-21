@@ -839,23 +839,29 @@ h1 {
 
 .form-footer {
   display: flex;
-  flex-direction: column;
-  align-items: stretch;
+  align-items: center;
+  justify-content: space-between;
   gap: var(--space-16);
   margin-top: var(--space-16);
 }
 
 /*
- * The metrics row keeps the character/token counts on the left and the
- * optional "Paste from URL" action on the right, as in the reference. The
- * action buttons sit on their own row below.
+ * Task 17: the optional "Paste from URL" action sits at the end of the
+ * metrics row, so the footer becomes two rows whenever the control is
+ * present: the character/token counts on the left and the URL action on the
+ * right, then the action buttons on the row below with 16px of separation,
+ * as in the reference. Without the control the footer keeps its single
+ * metrics-and-actions row, which is the action bar's own composition.
  */
-.form-metrics-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-16);
-  flex-wrap: wrap;
+@media (min-width: 951px) {
+  .form-footer:has(.paste-from-url) {
+    flex-wrap: wrap;
+  }
+
+  .form-footer:has(.paste-from-url) .form-actions {
+    flex: 1 1 100%;
+    justify-content: flex-end;
+  }
 }
 
 .input-metrics {
@@ -2431,12 +2437,6 @@ a:focus-visible {
     flex-direction: column;
   }
 
-  .jd-workspace-frame .form-metrics-row {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: var(--space-8);
-  }
-
   .jd-workspace-frame .form-actions {
     width: 100%;
     min-width: 0;
@@ -2670,12 +2670,6 @@ a:focus-visible {
   .form-footer {
     align-items: flex-start;
     flex-direction: column;
-  }
-
-  .form-metrics-row {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: var(--space-8);
   }
 
   .paste-from-url,

@@ -172,9 +172,7 @@ for (const theme of ["light", "dark"] as const) {
       const button = document
         .querySelector(".paste-from-url-trigger")!
         .getBoundingClientRect();
-      const row = document
-        .querySelector(".form-metrics-row")!
-        .getBoundingClientRect();
+      const row = document.querySelector(".form-footer")!.getBoundingClientRect();
       return {
         metricsRight: metrics.right,
         buttonLeft: button.left,
@@ -196,6 +194,37 @@ for (const theme of ["light", "dark"] as const) {
     expect(geometry.buttonTop).toBeGreaterThanOrEqual(geometry.metricsTop - 20);
   });
 }
+
+test("keeps the action bar on its own row below the metrics row", async ({
+  page,
+}) => {
+  await page.goto("/");
+
+  const geometry = await page.evaluate(() => {
+    const metrics = document
+      .querySelector(".input-metrics")!
+      .getBoundingClientRect();
+    const actions = document
+      .querySelector(".form-actions")!
+      .getBoundingClientRect();
+    const footer = document
+      .querySelector(".form-footer")!
+      .getBoundingClientRect();
+    return {
+      metricsBottom: metrics.bottom,
+      actionsTop: actions.top,
+      actionsRight: actions.right,
+      footerRight: footer.right,
+    };
+  });
+
+  // The action footer follows the live count row with 16px of separation.
+  expect(geometry.actionsTop).toBeGreaterThanOrEqual(geometry.metricsBottom);
+  expect(geometry.actionsTop - geometry.metricsBottom).toBeGreaterThanOrEqual(
+    15,
+  );
+  expect(geometry.actionsRight).toBeCloseTo(geometry.footerRight, 0);
+});
 
 test("keeps the hit target and focus ring usable", async ({ page }) => {
   await page.goto("/");
