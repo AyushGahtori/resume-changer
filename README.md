@@ -10,7 +10,7 @@ The app includes a local achievement library, job-description workspace, Gemini-
 
 ## Quick Start
 
-Requirements: Node.js `^18.18.0`, `^19.8.0`, or `>=20.0.0` and npm. These versions follow the installed Next.js package's engine requirement.
+Requirements: Node.js `>=22.13.0` (24 recommended) and npm. The Node.js range follows the `engines` field in `package.json` and accommodates the PDF.js dependency used for page-fill measurement.
 
 ```bash
 git clone https://github.com/AyushGahtori/resume-changer.git
@@ -19,7 +19,9 @@ npm ci
 npm run dev
 ```
 
-Open <http://localhost:3000> in a browser. Demo data can be used without a personal resume library. Configure a Gemini API key in `.env.local` to use JD analysis and AI achievement suggestions; setup details are in the [local setup guide](docs/local-setup.md).
+Open <http://localhost:3000> in a browser. Demo data can be used without a personal resume library. Configure a Gemini API key in `.env.local` to use JD analysis and AI achievement suggestions; setup details are in the [setup guide](docs/setup-guide.md) and the shorter [local setup guide](docs/local-setup.md).
+
+PDF output additionally needs a local LaTeX compiler (Tectonic) and Poppler's `pdfinfo`. The [setup guide](docs/setup-guide.md) covers installing them and warming the compiler's package cache.
 
 For a clean checkout, install the Playwright Chromium browser once before running the browser test:
 
@@ -38,9 +40,9 @@ npm run lint         # Run ESLint
 npm run typecheck    # Check TypeScript types
 npm test             # Run Vitest unit tests
 npm run test:e2e     # Run Playwright browser tests
+npm run test:ai-live # Verify the real Gemini API (needs GEMINI_API_KEY)
+npm run test:pdf-live # Verify the real Tectonic and pdfinfo toolchain
 ```
-
-The current unit test is only a test-runner smoke check. The browser test confirms that the initial workspace loads. Feature tasks should replace or extend these with behavior-focused tests.
 
 ## Product Principles
 
@@ -52,4 +54,4 @@ The current unit test is only a test-runner smoke check. The browser test confir
 
 ## Documentation
 
-Start at the [documentation index](docs/index.md) for the architecture, local setup, contributor workflow, and project plan.
+Start at the [documentation index](docs/index.md) for the architecture, setup guide, contributor workflow, and project plan. The [setup guide](docs/setup-guide.md) is the complete reference for configuring Gemini, installing the PDF toolchain, understanding cost and token behavior, and adding another provider such as DeepSeek.
