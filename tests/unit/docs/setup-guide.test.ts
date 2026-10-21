@@ -13,6 +13,22 @@ const repositoryRoot = process.cwd();
 const read = (relativePath: string) =>
   readFile(join(repositoryRoot, relativePath), "utf8");
 
+// Pull the members of a string-literal union type out of a source file, so
+// the documented codes are checked against the source rather than a list
+// copied by hand.
+const readErrorCodes = async (relativePath: string, typeName: string) => {
+  const source = await read(relativePath);
+  const declaration = new RegExp(`export type ${typeName} =([^;]*);`).exec(
+    source,
+  );
+
+  if (!declaration) {
+    throw new Error(`${typeName} was not found in ${relativePath}`);
+  }
+
+  return [...declaration[1].matchAll(/"([A-Z_]+)"/g)].map((match) => match[1]);
+};
+
 /**
  * The setup guide is only useful while it matches the code. These checks fail
  * when an environment variable, provider value, or error code changes without
@@ -108,20 +124,16 @@ describe("setup guide documentation", () => {
   it("documents the provider error codes the application can report", async () => {
     const guide = await read("docs/setup-guide.md");
 
-    for (const code of [
-      "MISSING_API_KEY",
-      "AUTHENTICATION_FAILED",
-      "RATE_LIMITED",
-      "REQUEST_TIMEOUT",
-      "INVALID_RESPONSE",
-      "INPUT_TOO_LARGE",
-      "COMPILER_NOT_FOUND",
-      "PDF_INFO_NOT_FOUND",
-      "LATEX_ERROR",
-      "LATEX_VALIDATION_ERROR",
-      "PAGE_LIMIT_EXCEEDED",
-      "COMPILE_TIMEOUT",
-    ]) {
+    // Every code the provider and the compiler can report, so a code added to
+    // the source later cannot slip into the app undocumented.
+    const codes = await Promise.all([
+      readErrorCodes("src/lib/ai/provider.ts", "AiProviderErrorCode"),
+      readErrorCodes("src/lib/pdf/compile-service.ts", "CompileErrorCode"),
+    ]).then((lists) => lists.flat());
+
+    expect(codes.length).toBeGreaterThan(0);
+
+    for (const code of codes) {
       expect(guide, `${code} must be documented`).toContain(code);
     }
   });

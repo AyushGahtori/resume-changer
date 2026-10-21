@@ -698,6 +698,21 @@ overflow and shortening or pruning lower-ranked content, up to a six-compilation
 limit. When it cannot, reduce the number of selected points or shorten the
 longest bullets yourself.
 
+**"The compiler output is not a valid PDF."** (`INVALID_PDF`)
+The compiler reported success but the file it produced is not a PDF. This
+usually means a corrupted build directory or an antivirus tool interfering
+with the write. Delete the temporary build directory and compile again.
+
+**"The PDF page count could not be verified."** (`INVALID_PDF`)
+Poppler could not read the compiled file, even though the compile itself
+succeeded. Check that `pdfinfo` is the Poppler build and not a different
+tool that happens to share the name, then set `PDFINFO_BINARY` to its full
+path.
+
+**"The resume PDF could not be compiled."** (`COMPILE_FAILED`, HTTP 500)
+A failure the application could not classify. This is the catch-all, so
+check the build output and the compiler log for the underlying cause.
+
 **"LaTeX compilation exceeded the time limit."** (`COMPILE_TIMEOUT`, HTTP 408)
 The compile took longer than 30 seconds. This is usually a first-run cache
 miss. Warm the cache as in [section 5.3](#53-warm-the-tectonic-package-cache),
