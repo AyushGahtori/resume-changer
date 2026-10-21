@@ -59,40 +59,75 @@ export default function JDWorkspace() {
   const [analysisError, setAnalysisError] = useState("");
   const [analysisCacheSaved, setAnalysisCacheSaved] = useState(false);
   const analysisRequest = useRef<AbortController | null>(null);
+  const autosaveTimeout = useRef<number | null>(null);
+  const draftChanged = useRef(false);
+
+  // Storage access itself can throw, before the storage helpers can catch it.
+  function localStorageOrUnavailable(): Storage {
+    try {
+      return window.localStorage;
+    } catch {
+      return {
+        getItem() {
+          throw new Error("Local storage unavailable");
+        },
+        setItem() {
+          throw new Error("Local storage unavailable");
+        },
+        removeItem() {
+          throw new Error("Local storage unavailable");
+        },
+      } as unknown as Storage;
+    }
+  }
 
   useEffect(() => {
-    const result = readDraft(window.localStorage);
+    const result = readDraft(localStorageOrUnavailable());
     setDraft(result.draft);
     setRestoreMessage(
       result.state === "invalid"
         ? "The saved draft could not be restored. A new draft can be saved."
         : result.state === "unavailable"
           ? "Local storage is unavailable in this browser."
-          : "",
+          : result.state === "restored"
+            ? "Your saved draft was restored from this device."
+            : "",
     );
     setIsReady(true);
-    setSaveState(result.state === "restored" ? "saved" : "idle");
+    setSaveState(
+      result.state === "unavailable"
+        ? "error"
+        : result.state === "restored"
+          ? "saved"
+          : "idle",
+    );
   }, []);
 
   useEffect(() => {
-    if (!isReady) return;
+    if (!isReady || !draftChanged.current) return;
 
     setSaveState("saving");
-    const timeoutId = window.setTimeout(() => {
+    autosaveTimeout.current = window.setTimeout(() => {
       const hasDraftContent = Object.values(draft).some(
         (value) => typeof value === "string" && value.trim().length > 0,
       );
       const saved = hasDraftContent
-        ? writeDraft(window.localStorage, draft)
-        : clearDraft(window.localStorage);
+        ? writeDraft(localStorageOrUnavailable(), draft)
+        : clearDraft(localStorageOrUnavailable());
       setSaveState(saved ? (hasDraftContent ? "saved" : "idle") : "error");
+      autosaveTimeout.current = null;
     }, 350);
 
-    return () => window.clearTimeout(timeoutId);
+    return () => {
+      if (autosaveTimeout.current !== null)
+        window.clearTimeout(autosaveTimeout.current);
+    };
   }, [draft, isReady]);
 
   function updateField(field: keyof DraftFields, value: string) {
-    clearJobAnalysisCache(window.localStorage);
+    draftChanged.current = true;
+    setRestoreMessage("");
+    clearJobAnalysisCache(localStorageOrUnavailable());
     setAnalysisCacheSaved(false);
     analysisRequest.current?.abort();
     analysisRequest.current = null;
@@ -151,7 +186,11 @@ export default function JDWorkspace() {
         );
       }
       setAnalysisCacheSaved(
-        writeJobAnalysisCache(window.localStorage, draft, result.analysis),
+        writeJobAnalysisCache(
+          localStorageOrUnavailable(),
+          draft,
+          result.analysis,
+        ),
       );
       setAnalysis(result.analysis);
       setAnalysisState("success");
@@ -182,7 +221,9 @@ export default function JDWorkspace() {
       return;
     }
 
-    const saved = writeDraft(window.localStorage, draft);
+    if (autosaveTimeout.current !== null)
+      window.clearTimeout(autosaveTimeout.current);
+    const saved = writeDraft(localStorageOrUnavailable(), draft);
     setSaveState(saved ? "saved" : "error");
     setSaveFeedbackError(!saved);
     setSaveFeedback(
@@ -193,14 +234,17 @@ export default function JDWorkspace() {
   }
 
   function handleClear() {
-    clearJobAnalysisCache(window.localStorage);
+    if (autosaveTimeout.current !== null)
+      window.clearTimeout(autosaveTimeout.current);
+    draftChanged.current = false;
+    clearJobAnalysisCache(localStorageOrUnavailable());
     setAnalysisCacheSaved(false);
     analysisRequest.current?.abort();
     analysisRequest.current = null;
     setAnalysis(null);
     setAnalysisError("");
     setAnalysisState("idle");
-    const cleared = clearDraft(window.localStorage);
+    const cleared = clearDraft(localStorageOrUnavailable());
     setDraft(EMPTY_DRAFT);
     setErrors({});
     setRestoreMessage("");
@@ -212,9 +256,9 @@ export default function JDWorkspace() {
     saveState === "loading"
       ? "Loading draft"
       : saveState === "saving"
-        ? "Saving locally"
+        ? "Saving..."
         : saveState === "saved"
-          ? "Saved locally"
+          ? "Saved on this device"
           : saveState === "error"
             ? "Could not save locally"
             : "No saved draft";
@@ -229,14 +273,11 @@ export default function JDWorkspace() {
           <h1 id="page-title">Start with the role.</h1>
           <p className="page-intro">Job description</p>
         </div>
-        <div className="draft-state" role="status" aria-live="polite">
-          <span className={`draft-dot draft-${saveState}`} aria-hidden="true" />
-          {saveMessage}
-        </div>
       </div>
 
       {restoreMessage && (
         <p className="storage-notice" role="status">
+          <span aria-hidden="true">ⓘ</span>
           {restoreMessage}
         </p>
       )}
@@ -368,6 +409,14 @@ export default function JDWorkspace() {
               Save draft <span aria-hidden="true">↗</span>
             </button>
           </div>
+        </div>
+        <div
+          className={`draft-state is-${saveState}`}
+          role="status"
+          aria-live="polite"
+        >
+          <span className={`draft-dot draft-${saveState}`} aria-hidden="true" />
+          {saveMessage}
         </div>
         {saveFeedback && (
           <p

@@ -57,7 +57,9 @@ test("saves and restores the JD and role details locally", async ({ page }) => {
       "Draft saved in this browser. You can open Resume builder now.",
     ),
   ).toBeVisible();
-  await expect(page.locator(".draft-state")).toContainText("Saved locally");
+  await expect(page.locator(".draft-state")).toContainText(
+    "Saved on this device",
+  );
   await expect(page.getByText("~12 tokens")).toBeVisible();
 
   await page.getByRole("link", { name: "Resume builder" }).click();
@@ -108,7 +110,7 @@ test("clears the saved draft", async ({ page }) => {
   await page
     .getByRole("textbox", { name: "Job description", exact: true })
     .fill("A short job description.");
-  await expect(page.getByRole("status")).toContainText("Saved locally");
+  await expect(page.getByRole("status")).toContainText("Saved on this device");
 
   await page.getByRole("button", { name: "Clear draft" }).click();
   await expect(page.getByLabel("Company")).toHaveValue("");
