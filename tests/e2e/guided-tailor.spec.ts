@@ -31,7 +31,7 @@ test("Guided Tailor requires approval and renders only the approved rewrite", as
   await page
     .getByRole("textbox", { name: "Job description", exact: true })
     .fill(jobDescription);
-  await expect(page.getByRole("status")).toContainText("Saved locally");
+  await expect(page.getByRole("status")).toContainText("Saved on this device");
 
   await page.route("**/api/ai/analyze-job-description", async (route) => {
     await route.fulfill({
@@ -157,7 +157,7 @@ test("Guided Tailor adds suggested evidence only after explicit user action", as
   await page
     .getByRole("textbox", { name: "Job description", exact: true })
     .fill(jobDescription);
-  await expect(page.getByRole("status")).toContainText("Saved locally");
+  await expect(page.getByRole("status")).toContainText("Saved on this device");
 
   await page.route("**/api/ai/analyze-job-description", async (route) => {
     await route.fulfill({

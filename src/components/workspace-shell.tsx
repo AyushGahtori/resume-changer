@@ -1,6 +1,19 @@
 "use client";
 
 import Link from "next/link";
+import {
+  Asterisk,
+  BookOpen,
+  FileText,
+  History,
+  Settings,
+  Menu,
+  X,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Sun,
+  Moon,
+} from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
@@ -17,47 +30,17 @@ const navigation = [
 
 type SidebarIconName = (typeof navigation)[number]["icon"];
 
+const sidebarIcons = {
+  description: FileText,
+  library: BookOpen,
+  resume: FileText,
+  history: History,
+  settings: Settings,
+};
+
 function SidebarIcon({ name }: { name: SidebarIconName }) {
-  switch (name) {
-    case "description":
-      return (
-        <svg aria-hidden="true" viewBox="0 0 24 24">
-          <path d="M6.5 3.75h7l4 4v12.5h-11z" />
-          <path d="M13.5 3.75v4h4M9 12h6M9 15.5h6" />
-        </svg>
-      );
-    case "library":
-      return (
-        <svg aria-hidden="true" viewBox="0 0 24 24">
-          <path d="M12 8.5c-2.25-1.7-4.75-2.1-8-1.25v10.5c3.25-.85 5.75-.45 8 1.25z" />
-          <path d="M12 8.5c2.25-1.7 4.75-2.1 8-1.25v10.5c-3.25-.85-5.75-.45-8 1.25zM12 8.5v10.5" />
-        </svg>
-      );
-    case "resume":
-      return (
-        <svg aria-hidden="true" viewBox="0 0 24 24">
-          <path d="M6.5 3.75h7l4 4v12.5h-11z" />
-          <path d="M13.5 3.75v4h4M9 12h6M9 15.5h4" />
-        </svg>
-      );
-    case "history":
-      return (
-        <svg aria-hidden="true" viewBox="0 0 24 24">
-          <circle cx="12" cy="12" r="8.25" />
-          <path d="M12 7v5l3.25 2" />
-        </svg>
-      );
-    case "settings":
-      return (
-        <svg aria-hidden="true" viewBox="0 0 24 24">
-          <path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z" />
-          <path
-            d="m19.2 13.9 1.05.8-1.5 2.6-1.25-.5a7.7 7.7 0 0 1-1.5.9l-.2 1.35h-3l-.25-1.35a7.7 7.7 0 0 1-1.5-.9l-1.25.5-1.5-2.6 1.05-.8a7.8 7.8 0 0 1 0-1.75L8.3 11.3l1.5-2.6 1.25.5a7.7 7.7 0 0 1 1.5-.9l.25-1.35h3l.2 1.35a7.7 7.7 0 0 1 1.5.9l1.25-.5 1.5 2.6-1.05.85a7.8 7.8 0 0 1 0 1.75Z"
-            transform="translate(-1.3 0.65) scale(0.94)"
-          />
-        </svg>
-      );
-  }
+  const Icon = sidebarIcons[name];
+  return <Icon aria-hidden="true" size={20} />;
 }
 
 function readTheme(): "light" | "dark" {
@@ -275,7 +258,7 @@ export default function WorkspaceShell({ children }: { children: ReactNode }) {
             }}
           >
             <span aria-hidden="true" className="brand-mark">
-              ✳
+              <Asterisk aria-hidden="true" size={24} />
             </span>
             <span className="brand-name">Resume Changer</span>
           </Link>
@@ -286,9 +269,7 @@ export default function WorkspaceShell({ children }: { children: ReactNode }) {
             ref={mobileCloseButtonRef}
             type="button"
           >
-            <svg aria-hidden="true" viewBox="0 0 24 24">
-              <path d="m6 6 12 12M18 6 6 18" />
-            </svg>
+            <X aria-hidden="true" size={20} />
           </button>
         </div>
 
@@ -344,19 +325,17 @@ export default function WorkspaceShell({ children }: { children: ReactNode }) {
               title={navigationLabel}
               type="button"
             >
-              <svg aria-hidden="true" viewBox="0 0 24 24">
-                {isMobile ? (
-                  isMobileNavigationOpen ? (
-                    <path d="m6 6 12 12M18 6 6 18" />
-                  ) : (
-                    <path d="M4 6h16M4 12h16M4 18h16" />
-                  )
-                ) : isSidebarCollapsed ? (
-                  <path d="m9 18 6-6-6-6" />
+              {isMobile ? (
+                isMobileNavigationOpen ? (
+                  <X aria-hidden="true" />
                 ) : (
-                  <path d="m15 18-6-6 6-6" />
-                )}
-              </svg>
+                  <Menu aria-hidden="true" />
+                )
+              ) : isSidebarCollapsed ? (
+                <PanelLeftOpen aria-hidden="true" />
+              ) : (
+                <PanelLeftClose aria-hidden="true" />
+              )}
             </button>
             <nav aria-label="Breadcrumb" className="breadcrumbs">
               <span>Workspace</span>
@@ -377,21 +356,11 @@ export default function WorkspaceShell({ children }: { children: ReactNode }) {
               title={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
               type="button"
             >
-              <svg
-                aria-hidden="true"
-                className="theme-icon"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                {theme === "light" ? (
-                  <>
-                    <circle cx="12" cy="12" r="3.5" />
-                    <path d="M12 2.75v2M12 19.25v2M21.25 12h-2M4.75 12h-2M18.54 5.46l-1.42 1.42M6.88 17.12l-1.42 1.42M18.54 18.54l-1.42-1.42M6.88 6.88 5.46 5.46" />
-                  </>
-                ) : (
-                  <path d="M20.25 15.1A8.35 8.35 0 0 1 8.9 3.75 8.5 8.5 0 1 0 20.25 15.1Z" />
-                )}
-              </svg>
+              {theme === "light" ? (
+                <Sun aria-hidden="true" className="theme-icon" />
+              ) : (
+                <Moon aria-hidden="true" className="theme-icon" />
+              )}
             </button>
           </div>
         </header>
