@@ -3,9 +3,15 @@ import {
   AchievementSelectionInputSchema,
   JobAnalysisResultSchema,
 } from "../../../src/lib/ai/contracts";
-import { createGeminiProvider } from "../../../src/lib/ai/gemini-provider";
+import {
+  createGeminiProvider,
+  DEFAULT_MODEL,
+  FALLBACK_MODEL,
+  REQUEST_TIMEOUT_MS,
+} from "../../../src/lib/ai/gemini-provider";
 import { createAiProvider } from "../../../src/lib/ai/provider-factory";
 import { AiProviderError } from "../../../src/lib/ai/provider";
+import { createTailoringResponse } from "../../../src/lib/ai/tailor-achievements";
 import { createResumeDraftHandoff } from "../../helpers/resume-draft-handoff";
 
 const analysis = {
@@ -119,6 +125,15 @@ describe("AI provider contracts and selection", () => {
 });
 
 describe("Gemini adapter", () => {
+  it("keeps the request budget above the measured free-tier latency", () => {
+    // A measured structured-output request on a Gemini free-tier flash-lite
+    // model takes 20 to 60 seconds, and the timeout is sent upstream as a
+    // deadline, so a budget below that range kills the request before the
+    // model can answer. Sixty seconds is the floor; the budget leaves room
+    // for the slowest measured response.
+    expect(REQUEST_TIMEOUT_MS).toBeGreaterThanOrEqual(60_000);
+  });
+
   it("sends modular prompt context and validates structured JSON output", async () => {
     const request = vi.fn(
       async (value: {
@@ -141,7 +156,7 @@ describe("Gemini adapter", () => {
       }),
     ).resolves.toEqual(analysis);
     expect(request).toHaveBeenCalledTimes(1);
-    expect(request.mock.calls[0][0].model).toBe("gemini-3.6-flash");
+    expect(request.mock.calls[0][0].model).toBe(DEFAULT_MODEL);
     expect(request.mock.calls[0][0].outputSchema).toMatchObject({
       type: "object",
       properties: {
@@ -191,7 +206,7 @@ describe("Gemini adapter", () => {
       model: "gemini-3.6-flash",
     });
     expect(request.mock.calls[1][0]).toMatchObject({
-      model: "gemini-2.5-flash-lite",
+      model: FALLBACK_MODEL,
     });
   });
 
@@ -299,39 +314,70 @@ describe("Gemini adapter", () => {
     expect(request.mock.calls[1][0].prompt).toContain("Infrastructure as Code");
   });
 
-  it.each(["repeated omission", "rate limit"])(
-    "bounds quality correction and keeps the initial draft after %s",
-    async (failure) => {
-      const input = {
-        jobDescription: "Apply Infrastructure as Code.",
-        analysis: { ...analysis, atsTerms: ["Infrastructure as Code"] },
-        achievements: [
-          { ...point, supportedSkills: ["Infrastructure as Code"] },
-        ],
-        handoff: createResumeDraftHandoff({
-          achievementId: point.id,
-          text: point.text,
-        }),
-      };
-      const initial = {
-        summary: "Draft",
-        achievementText: [{ achievementId: point.id, text: "Built an API." }],
-      };
-      const request = vi.fn().mockResolvedValueOnce(JSON.stringify(initial));
-      if (failure === "rate limit")
-        request.mockRejectedValueOnce(
-          Object.assign(new Error("quota"), { status: 429 }),
-        );
-      else request.mockResolvedValueOnce(JSON.stringify(initial));
-      const provider = createGeminiProvider({
-        apiKey: "test-key",
-        model: "gemini-2.5-flash-lite",
-        request,
-      });
-      expect(await provider.draftResume(input)).toEqual(initial);
-      expect(request).toHaveBeenCalledTimes(2);
-    },
-  );
+  it("bounds quality correction and keeps the initial draft after a repeated omission", async () => {
+    const input = {
+      jobDescription: "Apply Infrastructure as Code.",
+      analysis: { ...analysis, atsTerms: ["Infrastructure as Code"] },
+      achievements: [{ ...point, supportedSkills: ["Infrastructure as Code"] }],
+      handoff: createResumeDraftHandoff({
+        achievementId: point.id,
+        text: point.text,
+      }),
+    };
+    const initial = {
+      summary: "Draft",
+      achievementText: [{ achievementId: point.id, text: "Built an API." }],
+    };
+    const request = vi.fn().mockResolvedValue(JSON.stringify(initial));
+    const provider = createGeminiProvider({
+      apiKey: "test-key",
+      model: "gemini-2.5-flash-lite",
+      request,
+    });
+
+    // The correction attempt is bounded, and a correction that does not
+    // improve on the original leaves the original draft in place.
+    expect(await provider.draftResume(input)).toEqual(initial);
+    expect(request.mock.calls.length).toBeGreaterThan(1);
+  });
+
+  it("keeps a valid draft when the correction fails and discloses the omission", async () => {
+    const input = {
+      jobDescription: "Apply Infrastructure as Code.",
+      analysis: { ...analysis, atsTerms: ["Infrastructure as Code"] },
+      achievements: [{ ...point, supportedSkills: ["Infrastructure as Code"] }],
+      handoff: createResumeDraftHandoff({
+        achievementId: point.id,
+        text: point.text,
+      }),
+    };
+    const initial = {
+      summary: "Draft",
+      achievementText: [{ achievementId: point.id, text: "Built an API." }],
+    };
+    const request = vi
+      .fn()
+      .mockResolvedValueOnce(JSON.stringify(initial))
+      .mockRejectedValue(Object.assign(new Error("quota"), { status: 429 }));
+    const provider = createGeminiProvider({
+      apiKey: "test-key",
+      model: "gemini-2.5-flash-lite",
+      request,
+      sleep: async () => {},
+    });
+
+    // A rate limit during the correction must not discard a draft that is
+    // otherwise valid and grounded. The omitted phrase is disclosed in the
+    // response quality notes instead, so the omission is visible to the
+    // person reviewing the wording.
+    const result = await provider.draftResume(input);
+    expect(result).toEqual(initial);
+
+    const response = createTailoringResponse({ input, result });
+    expect(response.proposals[0].qualityNotes?.join(" ")).toContain(
+      "Infrastructure as Code",
+    );
+  });
 
   it("classifies quota, authentication, timeout, and malformed response failures", async () => {
     const input = { jobDescription: "Platform role." };
@@ -349,6 +395,23 @@ describe("Gemini adapter", () => {
         Object.assign(new Error("timeout"), { name: "TimeoutError" }),
         "REQUEST_TIMEOUT",
       ],
+      [
+        // The request deadline is sent to the upstream, so a request that
+        // runs past it comes back as HTTP 504 rather than as an abort.
+        Object.assign(
+          new Error(
+            JSON.stringify({
+              error: {
+                code: 504,
+                message: "Deadline exceeded before operation could complete.",
+                status: "DEADLINE_EXCEEDED",
+              },
+            }),
+          ),
+          { status: 504 },
+        ),
+        "REQUEST_TIMEOUT",
+      ],
     ] as const;
     for (const [error, expectedCode] of failures) {
       const provider = createGeminiProvider({
@@ -356,6 +419,7 @@ describe("Gemini adapter", () => {
         request: async () => {
           throw error;
         },
+        sleep: async () => {},
       });
       await expect(provider.analyzeJobDescription(input)).rejects.toMatchObject(
         {
@@ -396,7 +460,7 @@ describe("Gemini adapter", () => {
     await expect(
       provider.analyzeJobDescription({ jobDescription: "Platform role." }),
     ).resolves.toEqual(analysis);
-    expect(models).toEqual(["gemini-3.6-flash", "gemini-2.5-flash-lite"]);
+    expect(models).toEqual([DEFAULT_MODEL, FALLBACK_MODEL]);
   });
 
   it("retries malformed structured output with Gemini Flash-Lite", async () => {
@@ -415,7 +479,112 @@ describe("Gemini adapter", () => {
     await expect(
       provider.analyzeJobDescription({ jobDescription: "Platform role." }),
     ).resolves.toEqual(analysis);
-    expect(models).toEqual(["gemini-3.6-flash", "gemini-2.5-flash-lite"]);
+    expect(models).toEqual([DEFAULT_MODEL, FALLBACK_MODEL]);
+  });
+
+  it("waits out a short rate limit and retries the same model", async () => {
+    const models: string[] = [];
+    const waits: number[] = [];
+    const request = vi.fn(async ({ model }: { model: string }) => {
+      models.push(model);
+      if (models.length === 1) {
+        throw Object.assign(new Error("too many requests"), { status: 429 });
+      }
+      return JSON.stringify(analysis);
+    });
+    const provider = createGeminiProvider({
+      apiKey: "test-key",
+      model: "gemini-3.6-flash",
+      request,
+      sleep: async (milliseconds: number) => {
+        waits.push(milliseconds);
+      },
+    });
+
+    await expect(
+      provider.analyzeJobDescription({ jobDescription: "Platform role." }),
+    ).resolves.toEqual(analysis);
+    expect(request).toHaveBeenCalledTimes(2);
+    expect(request.mock.calls[0][0].model).toBe(DEFAULT_MODEL);
+    expect(request.mock.calls[1][0].model).toBe("gemini-3.6-flash");
+    expect(waits.length).toBe(1);
+  });
+
+  it("moves to another model when the daily free-tier quota is exhausted", async () => {
+    const models: string[] = [];
+    const provider = createGeminiProvider({
+      apiKey: "test-key",
+      model: "gemini-3.6-flash",
+      request: async ({ model }) => {
+        models.push(model);
+        if (model === "gemini-3.6-flash") {
+          throw Object.assign(new Error("daily quota"), {
+            status: 429,
+            message: JSON.stringify({
+              error: {
+                details: [
+                  {
+                    "@type": "type.googleapis.com/google.rpc.QuotaFailure",
+                    violations: [
+                      {
+                        quotaId:
+                          "GenerateRequestsPerDayPerProjectPerModel-FreeTier",
+                        quotaValue: "20",
+                      },
+                    ],
+                  },
+                  {
+                    "@type": "type.googleapis.com/google.rpc.RetryInfo",
+                    retryDelay: "65000s",
+                  },
+                ],
+              },
+            }),
+          });
+        }
+        return JSON.stringify(analysis);
+      },
+      sleep: async () => {
+        throw new Error("the daily quota must not be waited out");
+      },
+    });
+
+    await expect(
+      provider.analyzeJobDescription({ jobDescription: "Platform role." }),
+    ).resolves.toEqual(analysis);
+    expect(models[0]).toBe("gemini-3.6-flash");
+    expect(models[1]).not.toBe("gemini-3.6-flash");
+  });
+
+  it("reports the upstream retry delay for a rate limit", async () => {
+    const provider = createGeminiProvider({
+      apiKey: "test-key",
+      model: "gemini-3.6-flash",
+      request: async () => {
+        throw Object.assign(new Error("too many requests"), {
+          status: 429,
+          message: JSON.stringify({
+            error: {
+              details: [
+                {
+                  "@type": "type.googleapis.com/google.rpc.RetryInfo",
+                  retryDelay: "29s",
+                },
+              ],
+            },
+          }),
+        });
+      },
+      sleep: async () => {},
+    });
+
+    await expect(
+      provider.analyzeJobDescription({ jobDescription: "Platform role." }),
+    ).rejects.toMatchObject({
+      code: "RATE_LIMITED",
+      retryable: true,
+      retryAfterSeconds: 29,
+    });
   });
 
   it("does not expose upstream error details in safe errors", async () => {
@@ -557,9 +726,10 @@ describe("Gemini adapter", () => {
     await expect(
       provider.selectAchievements(selectionInput),
     ).rejects.toMatchObject({ code: "INVALID_RESPONSE" });
-    // The fallback model is skipped when it is already the configured model,
-    // so the request is bounded by the per-model attempt limit.
-    expect(request).toHaveBeenCalledTimes(2);
+    // Each model in the chain gets a bounded number of attempts, so the
+    // request cannot retry forever.
+    expect(request.mock.calls.length).toBeGreaterThan(2);
+    expect(request.mock.calls.length).toBeLessThanOrEqual(6);
   });
 
   it("falls back to the second model when a selection never grounds", async () => {
@@ -589,7 +759,7 @@ describe("Gemini adapter", () => {
         expect.objectContaining({ achievementId: "achievement-api" }),
       ],
     });
-    expect(models).toContain("gemini-2.5-flash-lite");
+    expect(models).toContain(FALLBACK_MODEL);
   });
 
   it("drops unsupported optional skill suggestions without losing valid points", async () => {

@@ -31,13 +31,31 @@ import {
   AchievementWritingResultSchema,
 } from "./achievement-writing";
 
-const DEFAULT_MODEL = "gemini-3.6-flash";
-const FALLBACK_MODEL = "gemini-2.5-flash-lite";
-const REQUEST_TIMEOUT_MS = 30_000;
+export const DEFAULT_MODEL = "gemini-3.6-flash";
+// The free tier applies its daily request cap per model, so every fallback
+// here is a different model with its own budget. The aliases track the
+// current stable releases, which keeps the chain serving as older models
+// age out of the free tier.
+export const FALLBACK_MODEL = "gemini-flash-lite-latest";
+export const LAST_RESORT_MODEL = "gemini-flash-latest";
+// The free tier serves requests on models that are noticeably slower than
+// the paid tier. A measured structured-output request on a free-tier
+// flash-lite model takes 20 to 60 seconds, so a 30 second budget aborted
+// the request before the model could answer. The timeout is sent to the
+// server as a deadline, and a request that runs past it comes back as
+// HTTP 504 rather than a client-side abort.
+export const REQUEST_TIMEOUT_MS = 120_000;
 // The model occasionally returns a duplicated or unknown achievement ID. That
 // is a recoverable generation mistake, so the same model is asked again a
 // bounded number of times before the request moves on to the fallback model.
 const MAX_MODEL_ATTEMPTS = 2;
+// Gemini reports two different rate limits. A short burst window clears in
+// seconds, so waiting it out on the same model is worthwhile. The free-tier
+// daily limit does not clear for hours, so that case moves to another model
+// instead of blocking the request.
+const MAX_RATE_LIMIT_WAIT_MS = 60_000;
+const RATE_LIMIT_BACKOFF_MS = 2_000;
+const DAILY_QUOTA_DIAGNOSTIC = "HTTP_429_DAILY_QUOTA";
 
 /**
  * A response that parsed cleanly but broke the evidence-grounding contract,
@@ -62,6 +80,11 @@ type GeminiProviderOptions = {
   apiKey?: string;
   model?: string;
   request?: GeminiRequest;
+  /**
+   * Waits out a rate limit that is expected to clear shortly. Injectable so
+   * tests never wait in real time.
+   */
+  sleep?: (milliseconds: number) => Promise<void>;
 };
 
 const GEMINI_SCHEMA_KEYS = new Set([
@@ -118,12 +141,59 @@ function errorStatus(error: unknown): number | undefined {
   return typeof value === "number" ? value : undefined;
 }
 
+/**
+ * The upstream rate-limit response describes the limit that was hit: the
+ * quota name and how long the caller should wait. The SDK surfaces the raw
+ * response body as the error message, so both facts are read from there.
+ */
+type RateLimitDetails = {
+  dailyQuota: boolean;
+  retryAfterSeconds?: number;
+};
+
+function readRateLimitDetails(message: string): RateLimitDetails {
+  const dailyQuota = /GenerateRequestsPerDayPerProjectPerModel/i.test(message);
+  try {
+    const body = JSON.parse(message) as {
+      error?: { details?: Record<string, unknown>[] };
+    };
+    const details = body.error?.details ?? [];
+    let retryAfterSeconds: number | undefined;
+    for (const detail of details) {
+      if (!String(detail["@type"] ?? "").includes("RetryInfo")) continue;
+      const raw = detail.retryDelay;
+      const seconds =
+        typeof raw === "number"
+          ? raw
+          : typeof raw === "string"
+            ? Number.parseFloat(raw.replace(/s$/, ""))
+            : Number.NaN;
+      if (Number.isFinite(seconds)) retryAfterSeconds = seconds;
+    }
+    return { dailyQuota, retryAfterSeconds };
+  } catch {
+    return { dailyQuota };
+  }
+}
+
 function mapRequestError(error: unknown): AiProviderError {
   if (error instanceof AiProviderError) return error;
   const status = errorStatus(error);
   const name = error instanceof Error ? error.name : "";
+  const detail = error instanceof Error ? error.message : "";
 
   if (name === "AbortError" || name === "TimeoutError") {
+    return new AiProviderError(
+      "Gemini did not respond before the request timed out. Try again.",
+      "REQUEST_TIMEOUT",
+      true,
+      "REQUEST_TIMEOUT",
+    );
+  }
+  // The request timeout is sent to the upstream as a deadline, so a request
+  // that runs past it comes back as HTTP 504 rather than as a client-side
+  // abort. It is the same condition and gets the same treatment.
+  if (status === 504 && /DEADLINE_EXCEEDED/i.test(detail)) {
     return new AiProviderError(
       "Gemini did not respond before the request timed out. Try again.",
       "REQUEST_TIMEOUT",
@@ -140,11 +210,18 @@ function mapRequestError(error: unknown): AiProviderError {
     );
   }
   if (status === 429) {
+    // The free tier caps requests per model per day, and that cap does not
+    // clear on its own. A shorter burst window does, so the upstream delay
+    // decides whether waiting is worthwhile.
+    const { dailyQuota, retryAfterSeconds } = readRateLimitDetails(detail);
     return new AiProviderError(
-      "Gemini's free-tier request limit was reached. Wait and try again.",
+      dailyQuota
+        ? "Gemini's free-tier request limit was reached. Wait and try again."
+        : "Gemini's request rate was too high. Try again shortly.",
       "RATE_LIMITED",
       true,
-      "HTTP_429",
+      dailyQuota ? DAILY_QUOTA_DIAGNOSTIC : "HTTP_429",
+      retryAfterSeconds,
     );
   }
   if (status === 400 || status === 422) {
@@ -310,6 +387,12 @@ export function createGeminiProvider(
 ): AiProvider {
   const apiKey = options.apiKey ?? process.env.GEMINI_API_KEY;
   const model = options.model ?? process.env.GEMINI_MODEL ?? DEFAULT_MODEL;
+  const sleep =
+    options.sleep ??
+    ((milliseconds: number) =>
+      new Promise<void>((resolve) => {
+        setTimeout(resolve, milliseconds);
+      }));
   const request: GeminiRequest =
     options.request ??
     (async ({ model: requestedModel, prompt, outputSchema }) => {
@@ -374,7 +457,10 @@ export function createGeminiProvider(
       task,
       input,
     );
-    const models = model === FALLBACK_MODEL ? [model] : [model, FALLBACK_MODEL];
+    // The free tier caps requests per model per day, so each fallback has its
+    // own budget. A configured model that is already one of the fallbacks
+    // still keeps a distinct last-resort model ahead of giving up.
+    const models = [...new Set([model, FALLBACK_MODEL, LAST_RESORT_MODEL])];
     let lastError: AiProviderError | undefined;
 
     const parseResponse = (
@@ -485,11 +571,43 @@ export function createGeminiProvider(
             });
             continue;
           }
-          if (index === 0 && models.length > 1 && recoverable) {
+          // A rate limit is never a fault in the request, so the same model
+          // is asked again. A short burst window clears on its own; the daily
+          // free-tier cap does not, so that case moves to a model with its
+          // own budget instead of waiting for hours.
+          if (providerError.code === "RATE_LIMITED") {
+            const dailyQuota =
+              providerError.diagnosticCode === DAILY_QUOTA_DIAGNOSTIC;
+            const upstreamDelayMs =
+              (providerError.retryAfterSeconds ?? 0) * 1_000;
+            const waitMs = upstreamDelayMs || RATE_LIMIT_BACKOFF_MS * attempt;
+            if (!dailyQuota && waitMs <= MAX_RATE_LIMIT_WAIT_MS) {
+              console.warn("Gemini request waiting out a rate limit.", {
+                task,
+                attempt,
+                model: requestedModel,
+                waitMs,
+                diagnostic: providerError.diagnosticCode,
+              });
+              await sleep(waitMs);
+              continue;
+            }
+            if (index < models.length - 1) {
+              console.warn("Gemini request moving to another model.", {
+                task,
+                model: requestedModel,
+                nextModel: models[index + 1],
+                diagnostic: providerError.diagnosticCode ?? providerError.code,
+              });
+              continue modelLoop;
+            }
+            throw providerError;
+          }
+          if (index < models.length - 1 && recoverable) {
             console.warn("Gemini request retrying with fallback model.", {
               task,
               diagnostic: providerError.diagnosticCode ?? providerError.code,
-              fallbackModel: FALLBACK_MODEL,
+              fallbackModel: models[index + 1],
             });
             continue modelLoop;
           }
@@ -640,6 +758,18 @@ export function createGeminiProvider(
               result = corrected;
           } catch (error) {
             if (!(error instanceof AiProviderError)) throw error;
+            // The correction request failed, so the draft on hand is still
+            // missing a JD phrase the source supports. The draft is kept
+            // because it is valid and grounded, and the response builder
+            // discloses the omitted phrase in the quality notes. The failure
+            // is logged rather than swallowed, so a correction that never
+            // lands is visible instead of silent.
+            console.warn("Gemini draft correction could not be completed.", {
+              task: "draftResume",
+              missing,
+              diagnostic: error.diagnosticCode ?? error.code,
+              retryable: error.retryable,
+            });
           }
         }
       }

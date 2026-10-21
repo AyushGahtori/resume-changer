@@ -67,6 +67,13 @@ describe("live integration workflow", () => {
     expect(liveIntegrations).toContain("npm run test:ai-live");
   });
 
+  it("leaves the live Gemini model unset so the provider can use its fallback chain", () => {
+    // The free tier caps requests per model per day. Pinning one model in the
+    // workflow would spend that model's whole daily budget on a single run
+    // and leave the check with no way to recover.
+    expect(liveIntegrations).not.toContain("GEMINI_LIVE_MODEL");
+  });
+
   it("fails instead of skipping when the Gemini secret is missing", () => {
     expect(liveIntegrations).toContain("GEMINI_API_KEY is not configured");
     expect(liveIntegrations).toContain("exit 1");

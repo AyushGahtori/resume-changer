@@ -17,10 +17,16 @@ jobs:
   gemini-live:
     name: Gemini live API
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # A free-tier request can take up to two minutes, and a run walks the
+    # provider's model chain when one model has no daily quota left. The
+    # budget covers a full chain walk for the three live tests.
+    timeout-minutes: 30
     env:
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-      GEMINI_LIVE_MODEL: gemini-2.5-flash-lite
+      # The free tier caps requests per model per day, so the live check
+      # leaves the model unset and lets the provider walk its model chain.
+      # Pinning a single model here would collapse that chain and spend the
+      # whole daily budget of one model on a single run.
     steps:
       - uses: actions/checkout@v4
 
