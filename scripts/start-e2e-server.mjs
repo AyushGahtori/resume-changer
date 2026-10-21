@@ -32,13 +32,54 @@ const nextCli = join(
   "next",
 );
 const port = process.env.PLAYWRIGHT_PORT ?? "3010";
-const server = spawn(process.execPath, [nextCli, "dev", "--port", port], {
+const distDir = process.env.NEXT_DIST_DIR ?? ".next-test";
+const tsconfig = process.env.NEXT_TSCONFIG ?? "tsconfig.e2e.json";
+
+/**
+ * The browser suite runs against a production build.
+ *
+ * The development server recompiles each route on demand, so a page that is
+ * requested for the first time in a run can take several seconds to answer.
+ * Several assertions here have short timeouts, and a cold compile regularly
+ * pushed them over the limit, which made the suite fail for reasons that had
+ * nothing to do with the behaviour under test. A production build answers the
+ * same requests in milliseconds and keeps the timings meaningful.
+ */
+const build = spawnSync(process.execPath, [nextCli, "build"], {
+  cwd: projectRoot,
+  env: {
+    ...process.env,
+    NEXT_DIST_DIR: distDir,
+    NEXT_TSCONFIG: tsconfig,
+    NEXT_TELEMETRY_DISABLED: "1",
+  },
+  stdio: "inherit",
+  shell: false,
+  windowsHide: true,
+});
+if (build.status !== 0) {
+  await rm(fixtureRoot, { recursive: true, force: true });
+  process.exit(build.status ?? 1);
+}
+
+const server = spawn(process.execPath, [nextCli, "start", "--port", port], {
   cwd: projectRoot,
   env: {
     ...process.env,
     RESUME_LIBRARY_ROOT: fixtureRoot,
-    NEXT_DIST_DIR: ".next-test",
-    NEXT_TSCONFIG: "tsconfig.e2e.json",
+    NEXT_DIST_DIR: distDir,
+    NEXT_TSCONFIG: tsconfig,
+    NEXT_TELEMETRY_DISABLED: "1",
+    /**
+     * The browser suite must never reach a real model. Every AI route in
+     * the tests is answered by a network mock, and the mock provider
+     * covers anything that is not. A placeholder key is set as well, so a
+     * code path that ignored AI_PROVIDER would fail authentication
+     * instead of spending API credits.
+     */
+    AI_PROVIDER: "mock",
+    GEMINI_API_KEY: "e2e-placeholder-key-not-a-real-credential",
+    GEMINI_MODEL: "",
   },
   stdio: "inherit",
   detached: process.platform !== "win32",
@@ -71,7 +112,7 @@ process.on("SIGTERM", () => stop("SIGTERM"));
 
 server.on("exit", async (code, signal) => {
   await rm(fixtureRoot, { recursive: true, force: true });
-  process.exit(shuttingDown ? 0 : code ?? (signal ? 1 : 0));
+  process.exit(shuttingDown ? 0 : (code ?? (signal ? 1 : 0)));
 });
 
 server.on("error", async () => {
