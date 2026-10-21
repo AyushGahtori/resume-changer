@@ -37,6 +37,33 @@
   --color-info-strong: #1d4ed8;
   --color-focus-ring: #7c3aed;
 
+  /*
+   * Home action-bar state tokens. Each variant carries an explicit
+   * default/hover/pressed/disabled surface plus a matching label color so
+   * every state keeps a text contrast of at least 4.5:1 in both themes.
+   */
+  --action-ghost-surface: #ffffff;
+  --action-ghost-surface-hover: #f1f5f9;
+  --action-ghost-surface-pressed: #e2e8f0;
+  --action-ghost-surface-disabled: #f8fafc;
+  --action-ghost-label: #0f172a;
+  --action-ghost-label-disabled: #64748b;
+  --action-violet-surface: #ede9fe;
+  --action-violet-surface-hover: #ddd0fb;
+  --action-violet-surface-pressed: #7c3aed;
+  --action-violet-surface-disabled: #ddd6fe;
+  --action-violet-label: #6d28d9;
+  --action-violet-label-pressed: #ffffff;
+  --action-violet-label-disabled: #6d28d9;
+  --action-orange-surface: #f97316;
+  --action-orange-surface-hover: #c2410c;
+  --action-orange-surface-pressed: #9a3412;
+  --action-orange-surface-disabled: #fdba74;
+  --action-orange-label: #0f172a;
+  --action-orange-label-hover: #ffffff;
+  --action-orange-label-pressed: #ffffff;
+  --action-orange-label-disabled: #0f172a;
+
   /* Compatibility aliases keep existing app and studio styles theme-aware. */
   --canvas: var(--color-canvas);
   --sidebar: var(--color-sidebar);
@@ -133,6 +160,32 @@
   --color-info: #60a5fa;
   --color-info-strong: #60a5fa;
   --color-focus-ring: #a78bfa;
+
+  /*
+   * Dark action-bar states. Dark surfaces rely on a visible border and a
+   * surface step rather than a light-mode shadow.
+   */
+  --action-ghost-surface: #211d2e;
+  --action-ghost-surface-hover: #2a2538;
+  --action-ghost-surface-pressed: #342f43;
+  --action-ghost-surface-disabled: #1a1626;
+  --action-ghost-label: #f8fafc;
+  --action-ghost-label-disabled: #a49fb4;
+  --action-violet-surface: #7c3aed;
+  --action-violet-surface-hover: #6d28d9;
+  --action-violet-surface-pressed: #5b21b6;
+  --action-violet-surface-disabled: #2a2140;
+  --action-violet-label: #ffffff;
+  --action-violet-label-pressed: #ffffff;
+  --action-violet-label-disabled: #a49fb4;
+  --action-orange-surface: #f97316;
+  --action-orange-surface-hover: #fdba74;
+  --action-orange-surface-pressed: #c2410c;
+  --action-orange-surface-disabled: #4a2a19;
+  --action-orange-label: #171421;
+  --action-orange-label-hover: #171421;
+  --action-orange-label-pressed: #ffffff;
+  --action-orange-label-disabled: #e0a578;
 
   --canvas: var(--color-canvas);
   --sidebar: var(--color-sidebar);
@@ -953,6 +1006,26 @@ h1 {
   flex: 0 0 auto;
 }
 
+/*
+ * The icon slot keeps its footprint in every state so swapping a glyph for
+ * the loading spinner never resizes the control.
+ */
+.home-action-icon {
+  display: inline-flex;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  align-items: center;
+  justify-content: center;
+}
+
+/* The loading spinner is 16px so it reads as a progress indicator. */
+.home-action-spinner {
+  width: 16px;
+  height: 16px;
+  animation: home-action-spin 900ms linear infinite;
+}
+
 .home-action-button:focus-visible {
   outline: 3px solid var(--color-focus-ring);
   outline-offset: 3px;
@@ -965,76 +1038,119 @@ h1 {
 
 .home-action-button:disabled {
   cursor: not-allowed;
-  opacity: 0.58;
+  opacity: 1;
 }
 
+/*
+ * Clear draft - ghost/tertiary. A neutral outlined control that keeps the
+ * lowest visual emphasis of the three actions.
+ */
 .home-action-button--ghost {
   min-width: 132px;
   border-color: var(--color-border);
-  background: var(--color-surface);
-  color: var(--color-text-primary);
+  background: var(--action-ghost-surface);
+  color: var(--action-ghost-label);
 }
 
 .home-action-button--ghost:hover:not(:disabled) {
   border-color: var(--color-border-strong);
-  background: var(--color-surface-alt);
+  background: var(--action-ghost-surface-hover);
+  color: var(--action-ghost-label);
 }
 
 .home-action-button--ghost:active:not(:disabled) {
-  background: var(--color-surface-hover);
+  border-color: var(--color-border-strong);
+  background: var(--action-ghost-surface-pressed);
+  color: var(--action-ghost-label);
 }
 
+.home-action-button--ghost:disabled {
+  border-color: var(--color-border);
+  background: var(--action-ghost-surface-disabled);
+  color: var(--action-ghost-label-disabled);
+}
+
+/*
+ * Analyze job description - secondary AI action. Soft violet in light mode
+ * and a stronger violet in dark mode, as the reference action bar shows.
+ */
 .home-action-button--secondary {
   min-width: 228px;
   border-color: color-mix(
     in srgb,
     var(--color-violet) 20%,
-    var(--color-violet-subtle)
+    var(--action-violet-surface)
   );
-  background: var(--color-violet-subtle);
-  color: var(--color-violet-strong);
+  background: var(--action-violet-surface);
+  color: var(--action-violet-label);
 }
 
 .home-action-button--secondary:hover:not(:disabled) {
   border-color: var(--color-violet);
-  background: var(--color-violet-light);
-  color: var(--color-text-primary);
+  background: var(--action-violet-surface-hover);
+  color: var(--action-violet-label);
 }
 
 .home-action-button--secondary:active:not(:disabled) {
-  border-color: var(--color-violet);
-  background: var(--color-violet);
-  color: var(--color-text-inverse);
+  border-color: var(--action-violet-surface-pressed);
+  background: var(--action-violet-surface-pressed);
+  color: var(--action-violet-label-pressed);
 }
 
+.home-action-button--secondary:disabled {
+  border-color: color-mix(
+    in srgb,
+    var(--color-violet) 20%,
+    var(--action-violet-surface-disabled)
+  );
+  background: var(--action-violet-surface-disabled);
+  color: var(--action-violet-label-disabled);
+}
+
+/*
+ * A busy action is still the live control, so it keeps the default surface
+ * and label rather than the muted disabled treatment. The spinner and the
+ * changed label carry the state, so colour is never the only signal.
+ */
+.home-action-button[aria-busy="true"]:disabled {
+  border-color: var(--color-violet);
+  background: var(--action-violet-surface);
+  color: var(--action-violet-label);
+}
+
+/*
+ * Save draft - primary CTA. Orange by default, deepening on hover and
+ * press, and fading to a pale orange when it cannot run.
+ */
 .home-action-button--primary {
   min-width: 136px;
-  border-color: var(--color-orange);
-  background: var(--color-orange);
-  color: var(--color-text-on-orange);
+  border-color: var(--action-orange-surface);
+  background: var(--action-orange-surface);
+  color: var(--action-orange-label);
 }
 
 .home-action-button--primary:hover:not(:disabled) {
-  border-color: var(--color-orange-strong);
-  background: var(--color-orange-strong);
-  color: var(--color-text-on-orange-hover);
+  border-color: var(--action-orange-surface-hover);
+  background: var(--action-orange-surface-hover);
+  color: var(--action-orange-label-hover);
 }
 
 .home-action-button--primary:active:not(:disabled) {
-  border-color: var(--color-orange-strong);
-  background: var(--color-orange-strong);
-  color: var(--color-text-on-orange-hover);
+  border-color: var(--action-orange-surface-pressed);
+  background: var(--action-orange-surface-pressed);
+  color: var(--action-orange-label-pressed);
 }
 
 .home-action-button--primary:disabled {
-  border-color: var(--color-orange-light);
-  background: var(--color-orange-light);
-  color: var(--color-text-on-orange);
-  opacity: 1;
+  border-color: var(--action-orange-surface-disabled);
+  background: var(--action-orange-surface-disabled);
+  color: var(--action-orange-label-disabled);
 }
 
-.home-action-spinner {
-  animation: home-action-spin 900ms linear infinite;
+.home-action-button--primary[aria-busy="true"]:disabled {
+  border-color: var(--action-orange-surface);
+  background: var(--action-orange-surface);
+  color: var(--action-orange-label);
 }
 
 @keyframes home-action-spin {
