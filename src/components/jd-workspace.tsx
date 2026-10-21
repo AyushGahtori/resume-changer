@@ -1,7 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Asterisk, ArrowUpRight, LoaderCircle, Sparkles } from "lucide-react";
+import {
+  Asterisk,
+  ArrowUpRight,
+  CircleAlert,
+  LoaderCircle,
+  Sparkles,
+} from "lucide-react";
 import type { JobAnalysisResult } from "@/lib/ai/contracts";
 import RoleDetailField from "@/components/home/role-detail-field";
 import {
@@ -279,9 +285,14 @@ export default function JDWorkspace() {
           <label htmlFor="job-description">Job description</label>
           <span className="required-label">REQUIRED</span>
         </div>
+        <p className="description-helper" id="jd-helper">
+          Paste the job description from the company&apos;s career page.
+        </p>
         <textarea
           aria-describedby={
-            errors.jobDescription ? "jd-error jd-count" : "jd-count"
+            errors.jobDescription
+              ? "jd-helper jd-error jd-count"
+              : "jd-helper jd-count"
           }
           aria-invalid={Boolean(errors.jobDescription)}
           id="job-description"
@@ -294,8 +305,9 @@ export default function JDWorkspace() {
           value={draft.jobDescription}
         />
         {errors.jobDescription && (
-          <p className="field-error" id="jd-error" role="alert">
-            {errors.jobDescription}
+          <p className="field-error jd-error" id="jd-error" role="alert">
+            <CircleAlert aria-hidden="true" size={14} />
+            <span>{errors.jobDescription}</span>
           </p>
         )}
 
