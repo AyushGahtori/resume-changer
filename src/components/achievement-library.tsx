@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Lock } from "lucide-react";
 import { useMemo, useState } from "react";
 import AchievementPointEditor from "@/components/achievement-point-editor";
 import AchievementImagination from "@/components/achievement-imagination";
@@ -215,19 +216,30 @@ export default function AchievementLibrary({ library, source }: Props) {
             Browse the resume information saved in this workspace.
           </p>
         </div>
-        <div className="library-source-switch" aria-label="Library data source">
-          <Link
-            aria-current={source === "personal" ? "page" : undefined}
-            href="/library"
+        <div className="library-source-controls">
+          <nav
+            className="library-source-switch"
+            aria-label="Library data source"
           >
-            My data
-          </Link>
-          <Link
-            aria-current={source === "demo" ? "page" : undefined}
-            href="/library?source=demo"
-          >
-            Demo data
-          </Link>
+            <Link
+              aria-current={source === "personal" ? "page" : undefined}
+              href="/library"
+            >
+              My data
+            </Link>
+            <Link
+              aria-current={source === "demo" ? "page" : undefined}
+              href="/library?source=demo"
+            >
+              Demo data
+            </Link>
+          </nav>
+          {source === "demo" && (
+            <span className="library-source-note">
+              <Lock aria-hidden="true" className="library-source-note-icon" />
+              Read-only
+            </span>
+          )}
         </div>
       </div>
 
