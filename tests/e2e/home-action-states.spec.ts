@@ -221,12 +221,11 @@ test("shows a visibly pressed surface for each action", async ({ page }) => {
 
     for (const target of targets) {
       const button = page.getByRole("button", { name: target.name });
-      const box = await button.boundingBox();
-      expect(box).not.toBeNull();
+      await expect(button).toBeVisible();
 
       const resting = await settleSurface(page, target.selector);
 
-      await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
+      await button.hover();
       await page.mouse.down();
 
       // Pressing applies both the pressed surface and the scale feedback.
@@ -406,7 +405,9 @@ test("shows Saving only while a save is actually pending", async ({ page }) => {
   expect(savingBox!.height).toBeCloseTo(idleBox!.height, 1);
 
   await expect(save).toBeEnabled();
-  await expect(page.locator(".draft-state")).toContainText("Saved locally");
+  await expect(page.locator(".draft-state")).toContainText(
+    "Saved on this device",
+  );
 });
 
 test("keeps a visible focus ring and 44px target in every state", async ({
