@@ -91,7 +91,13 @@ test("provides visible active, hover, and keyboard focus states in both themes",
       await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
     }
 
-    // Wait for the theme transition to finish before sampling contrast.
+    await activeLink.evaluate(async (element) => {
+      await Promise.all(
+        element.getAnimations().map((animation) => animation.finished),
+      );
+    });
+
+    // Keep explicit theme-color checks as well as waiting for transitions.
     await expect(activeLink).toHaveCSS(
       "color",
       theme === "dark" ? "rgb(167, 139, 250)" : "rgb(194, 65, 12)",
@@ -187,13 +193,17 @@ test("keeps sidebar rows contained across desktop, zoom-equivalent, and mobile w
 
     if (width <= 700) {
       await page.getByRole("button", { name: "Open navigation" }).click();
+      await expect(
+        page.getByRole("dialog", { name: "Navigation menu" }),
+      ).toBeVisible();
     }
-    const sidebar = page.locator(".sidebar");
-    await expect(sidebar).toBeVisible();
-    await expect(sidebar).toHaveCSS(
-      "transform",
-      width <= 700 ? "matrix(1, 0, 0, 1, 0, 0)" : "none",
-    );
+    await page.locator(".app-frame").evaluate(async (element) => {
+      await Promise.all(
+        element
+          .getAnimations({ subtree: true })
+          .map((animation) => animation.finished),
+      );
+    });
 
     const metrics = await page.evaluate(() => {
       const sidebar = document.querySelector<HTMLElement>(".sidebar")!;
@@ -206,12 +216,17 @@ test("keeps sidebar rows contained across desktop, zoom-equivalent, and mobile w
         const label = link.lastElementChild as HTMLElement;
         const icon = link.querySelector("svg")!;
         const bounds = link.getBoundingClientRect();
+        const labelBounds = label.getBoundingClientRect();
         return {
           left: bounds.left,
           right: bounds.right,
           height: bounds.height,
+          top: bounds.top,
+          bottom: bounds.bottom,
           gap: getComputedStyle(link).gap,
-          labelRight: label.getBoundingClientRect().right,
+          labelRight: labelBounds.right,
+          labelTop: labelBounds.top,
+          labelBottom: labelBounds.bottom,
           iconWidth: icon.getBoundingClientRect().width,
           iconHeight: icon.getBoundingClientRect().height,
         };
@@ -250,14 +265,14 @@ test("keeps sidebar rows contained across desktop, zoom-equivalent, and mobile w
       expect(item.iconWidth).toBe(20);
       expect(item.iconHeight).toBe(20);
       expect(item.labelRight).toBeLessThanOrEqual(item.right);
+      expect(item.labelTop).toBeGreaterThanOrEqual(item.top);
+      expect(item.labelBottom).toBeLessThanOrEqual(item.bottom);
       expect(item.left).toBeGreaterThanOrEqual(0);
       expect(item.right).toBeLessThanOrEqual(metrics.sidebarRight);
     }
     if (width <= 700) {
-      await page
-        .getByRole("button", { name: "Close navigation", exact: true })
-        .click();
-      await expect(sidebar).toBeHidden();
+      await page.getByRole("button", { name: "Close navigation" }).click();
+      await expect(page.locator("#workspace-sidebar")).toBeHidden();
     }
   }
 });

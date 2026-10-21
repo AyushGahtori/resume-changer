@@ -40,6 +40,7 @@ test("toggles the theme from the keyboard and persists the preference", async ({
     page.getByRole("button", { name: "Collapse sidebar" }),
   ).toBeFocused();
   await page.keyboard.press("Tab");
+
   await expect(toggle).toBeFocused();
   expect(
     await toggle.evaluate((element) => getComputedStyle(element).outlineStyle),

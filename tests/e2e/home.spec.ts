@@ -131,6 +131,7 @@ test("persists the selected theme and remains usable on a narrow viewport", asyn
   await page.setViewportSize({ width: 390, height: 844 });
   await page.reload({ waitUntil: "domcontentloaded" });
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await expect(page.locator("#workspace-sidebar")).toBeHidden();
   await page.getByRole("button", { name: "Open navigation" }).click();
   await expect(
     page.getByRole("navigation", { name: "Main navigation" }),
