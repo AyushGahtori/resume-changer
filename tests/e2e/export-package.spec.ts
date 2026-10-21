@@ -180,7 +180,7 @@ test("downloads the LaTeX and PDF files under the expected names", async ({
   await page.getByRole("tab", { name: "LaTeX" }).click();
   const latexDownload = page.waitForEvent(
     "download",
-    (item) => item.suggestedFilename() === `${fileBase}.zip`,
+    (item) => item.suggestedFilename() === `${fileBase}.tex`,
   );
   await page.getByRole("button", { name: "Download LaTeX file" }).click();
   expect((await latexDownload).suggestedFilename()).toBe(`${fileBase}.tex`);
@@ -188,7 +188,7 @@ test("downloads the LaTeX and PDF files under the expected names", async ({
   await page.getByRole("tab", { name: "PDF" }).click();
   const pdfDownload = page.waitForEvent(
     "download",
-    (item) => item.suggestedFilename() === `${fileBase}.zip`,
+    (item) => item.suggestedFilename() === `${fileBase}.pdf`,
   );
   await page.getByRole("button", { name: "Download PDF" }).click();
   expect((await pdfDownload).suggestedFilename()).toBe(`${fileBase}.pdf`);
