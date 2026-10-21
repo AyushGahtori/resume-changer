@@ -28,6 +28,7 @@ import type {
   DraftFields,
   JobDescriptionDraft,
 } from "@/lib/jd-draft";
+import PasteFromUrl from "@/components/home/paste-from-url";
 import { ROLE_FIELDS } from "@/lib/ui/role-fields";
 
 type SaveState = "loading" | "saving" | "saved" | "error" | "idle";
@@ -55,7 +56,11 @@ const ANALYSIS_SECTIONS: Array<{
   { key: "inferredContext", title: "Inferred context, not requirements" },
 ];
 
-export default function JDWorkspace() {
+export default function JDWorkspace({
+  pasteFromUrlAvailable = false,
+}: {
+  pasteFromUrlAvailable?: boolean;
+}) {
   const [draft, setDraft] = useState<JobDescriptionDraft>(EMPTY_DRAFT);
   const [errors, setErrors] = useState<DraftErrors>({});
   const [isReady, setIsReady] = useState(false);
@@ -235,6 +240,10 @@ export default function JDWorkspace() {
     setSaveState(cleared ? "idle" : "error");
   }
 
+  function handleExtractedJobDescription(text: string) {
+    updateField("jobDescription", text);
+  }
+
   const saveMessage =
     saveState === "loading"
       ? "Loading draft"
@@ -351,6 +360,11 @@ export default function JDWorkspace() {
               {metricsAnnouncement}
             </span>
           </div>
+          <PasteFromUrl
+            available={pasteFromUrlAvailable}
+            jobUrl={draft.jobUrl}
+            onExtracted={handleExtractedJobDescription}
+          />
           <div className="form-actions">
             <button
               className="home-action-button home-action-button--ghost"
