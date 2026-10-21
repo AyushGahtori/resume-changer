@@ -4001,8 +4001,8 @@ a:focus-visible {
   }
 }
 
-/* UI task 27: preserve readable controls and reading order at narrow widths. */
-@media (min-width: 701px) and (max-width: 1023px) {
+/* Keep the established tablet inset when the home desktop frame becomes fluid. */
+@media (min-width: 701px) and (max-width: 1100px) {
   .jd-workspace-frame .page-content {
     padding: 24px;
   }
