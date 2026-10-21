@@ -29,17 +29,22 @@ for (const theme of ["light", "dark"] as const) {
     }, testInfo) => {
       await page.setViewportSize(viewport);
       await page.goto("/");
-      // Use the actual theme control so this test does not depend on its storage contract.
+      const editor = page.getByRole("textbox", {
+        name: "Job description",
+        exact: true,
+      });
+      // Wait for client restoration and theme initialization before toggling.
+      await expect(editor).toBeEnabled();
+      await expect(page.locator("html")).toHaveAttribute(
+        "data-theme",
+        /^(light|dark)$/,
+      );
       if ((await page.locator("html").getAttribute("data-theme")) !== theme) {
         await page
           .getByRole("button", { name: `Switch to ${theme} mode` })
           .click();
       }
-      const editor = page.getByRole("textbox", {
-        name: "Job description",
-        exact: true,
-      });
-      await expect(editor).toBeEnabled();
+      await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
       await expect(editor).toHaveValue("");
       await editor.screenshot({ path: testInfo.outputPath("default.png") });
       await editor.fill(description);
