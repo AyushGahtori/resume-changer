@@ -207,54 +207,58 @@ export default function AchievementLibrary({ library, source }: Props) {
 
   return (
     <div className="library-page">
-      <div className="library-heading page-heading-row">
-        <div>
+      <header className="library-heading">
+        <div className="library-heading-copy">
           <p className="eyebrow">YOUR EXPERIENCE</p>
           <h1>Achievement library</h1>
           <p className="page-intro">
             Browse the resume information saved in this workspace.
           </p>
         </div>
-        <div className="library-source-switch" aria-label="Library data source">
-          <Link
-            aria-current={source === "personal" ? "page" : undefined}
-            href="/library"
+        <div className="library-header-controls">
+          <div
+            className="library-source-switch"
+            aria-label="Library data source"
           >
-            My data
-          </Link>
-          <Link
-            aria-current={source === "demo" ? "page" : undefined}
-            href="/library?source=demo"
-          >
-            Demo data
-          </Link>
+            <Link
+              aria-current={source === "personal" ? "page" : undefined}
+              href="/library"
+            >
+              My data
+            </Link>
+            <Link
+              aria-current={source === "demo" ? "page" : undefined}
+              href="/library?source=demo"
+            >
+              Demo data
+            </Link>
+          </div>
+          {canEdit && (
+            <div className="library-edit-toolbar">
+              {saveMessage ? <span>{saveMessage}</span> : null}
+              <button
+                type="button"
+                onClick={() => {
+                  setSaveMessage("");
+                  setEditor({ mode: "create" });
+                }}
+              >
+                Detailed entry
+              </button>
+              <button
+                className="primary-button"
+                onClick={() => {
+                  setSaveMessage("");
+                  setCreating(true);
+                }}
+                type="button"
+              >
+                Add achievement
+              </button>
+            </div>
+          )}
         </div>
-      </div>
-
-      {canEdit && (
-        <div className="library-edit-toolbar">
-          <span>{saveMessage}</span>
-          <button
-            type="button"
-            onClick={() => {
-              setSaveMessage("");
-              setEditor({ mode: "create" });
-            }}
-          >
-            Detailed entry
-          </button>
-          <button
-            className="primary-button"
-            onClick={() => {
-              setSaveMessage("");
-              setCreating(true);
-            }}
-            type="button"
-          >
-            Add achievement
-          </button>
-        </div>
-      )}
+      </header>
 
       <section className="library-overview" aria-label="Library summary">
         <div className="library-owner">

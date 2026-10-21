@@ -1791,12 +1791,52 @@ a:focus-visible {
   background: var(--danger-soft);
 }
 
+/* The library header is a compact page context block: an eyebrow, one
+   serif title, and a supporting line on the left, with the source and
+   creation controls grouped on the right. */
 .library-heading {
-  margin-bottom: 24px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-24);
+  margin-bottom: var(--space-24);
+}
+
+.library-heading-copy {
+  min-width: 0;
+}
+
+.library-heading .eyebrow {
+  margin: 0 0 var(--space-8);
+  color: var(--color-orange-strong);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line-height);
+  font-weight: 600;
 }
 
 .library-heading h1 {
-  font-size: 38px;
+  max-width: 100%;
+  font-size: var(--type-page-title-size);
+  line-height: var(--type-page-title-line-height);
+  font-weight: 700;
+  text-wrap: balance;
+}
+
+.library-heading .page-intro {
+  max-width: 680px;
+  margin: var(--space-12) 0 0;
+  color: var(--color-text-secondary);
+  font-size: 16px;
+  line-height: 24px;
+  text-wrap: balance;
+}
+
+.library-header-controls {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-12);
 }
 
 .library-source-switch {
@@ -2148,6 +2188,13 @@ a:focus-visible {
   margin: 30px auto;
   padding: 24px 0;
 }
+.library-error .eyebrow {
+  margin: 0 0 var(--space-8);
+  color: var(--color-orange-strong);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line-height);
+  font-weight: 600;
+}
 .library-error h1 {
   font-size: 32px;
 }
@@ -2167,10 +2214,11 @@ a:focus-visible {
 .library-edit-toolbar {
   display: flex;
   min-height: 42px;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
   gap: 14px;
-  margin: -10px 0 14px;
+  margin: 0;
 }
 
 .library-edit-toolbar > span {
@@ -2441,6 +2489,21 @@ a:focus-visible {
   }
 }
 
+/* Below the desktop width the library header keeps its reading order but
+   stacks the source and creation controls under the heading, so the title
+   never has to share a row with the controls. */
+@media (max-width: 950px) {
+  .library-heading {
+    flex-direction: column;
+    gap: var(--space-16);
+  }
+
+  .library-header-controls {
+    width: 100%;
+    align-items: flex-start;
+  }
+}
+
 @media (max-width: 700px) {
   .jd-page {
     --type-page-title-size: 32px;
@@ -2693,7 +2756,8 @@ a:focus-visible {
   }
 
   .library-heading {
-    gap: 16px;
+    flex-direction: column;
+    gap: var(--space-16);
   }
   .history-heading {
     align-items: flex-start;
@@ -2710,7 +2774,8 @@ a:focus-visible {
     height: 60vh;
   }
   .library-heading h1 {
-    font-size: 34px;
+    font-size: 32px;
+    line-height: 40px;
   }
   .library-overview {
     align-items: flex-start;
