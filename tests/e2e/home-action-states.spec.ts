@@ -364,7 +364,7 @@ test("keeps the analyzing button the same size with a live spinner", async ({
     ".home-action-button--secondary",
   );
   expect(busySurface.opacity).toBe("1");
-  expect(busySurface.background).toBe("rgb(237, 233, 254)");
+  expect(busySurface.background).toBe("rgb(239, 235, 255)");
   await assertLabelContrast(page, ".home-action-button--secondary");
 
   releaseResponse();

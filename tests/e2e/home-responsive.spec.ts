@@ -121,7 +121,7 @@ test("keeps the mobile drawer available in dark mode and honors reduced motion",
       transitionDuration: style.transitionDuration,
     };
   });
-  expect(drawerStyles.background).toBe("rgb(20, 17, 31)");
+  expect(drawerStyles.background).toBe("rgb(15, 18, 32)");
   expect(Number.parseFloat(drawerStyles.transitionDuration)).toBeLessThan(
     0.001,
   );

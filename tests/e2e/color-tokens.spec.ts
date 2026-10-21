@@ -97,20 +97,29 @@ test("applies shared color tokens in light and dark themes", async ({
         sidebar: token("--color-sidebar"),
         surface: token("--color-surface"),
         surfaceAlt: token("--color-surface-alt"),
+        surfaceHover: token("--color-surface-hover"),
         textPrimary: token("--color-text-primary"),
         textSecondary: token("--color-text-secondary"),
+        textMuted: token("--color-text-muted"),
         border: token("--color-border"),
+        borderStrong: token("--color-border-strong"),
         violet: token("--color-violet"),
         violetLight: token("--color-violet-light"),
         violetSubtle: token("--color-violet-subtle"),
         orange: token("--color-orange"),
         orangeLight: token("--color-orange-light"),
         orangeSubtle: token("--color-orange-subtle"),
+        orangeStrong: token("--color-orange-strong"),
         success: token("--color-success"),
         warning: token("--color-warning"),
         error: token("--color-error"),
         info: token("--color-info"),
         focus: token("--color-focus-ring"),
+        categoryJob: token("--color-category-job"),
+        categoryProject: token("--color-category-project"),
+        categoryPoints: token("--color-category-points"),
+        categorySkills: token("--color-category-skills"),
+        categoryCredentials: token("--color-category-credentials"),
       };
     });
 
@@ -126,45 +135,63 @@ test("applies shared color tokens in light and dark themes", async ({
 
   expect(await normalized()).toMatchObject({
     canvas: "#f8fafc",
-    sidebar: "#ffffff",
+    sidebar: "#fafbfd",
     surface: "#ffffff",
     surfaceAlt: "#f1f5f9",
+    surfaceHover: "#e8eef5",
     textPrimary: "#0f172a",
-    textSecondary: "#475569",
-    border: "#e2e8f0",
+    textSecondary: "#334155",
+    textMuted: "#64748b",
+    border: "#cbd5e1",
+    borderStrong: "#94a3b8",
     violet: "#7c3aed",
     violetLight: "#a78bfa",
-    violetSubtle: "#ede9fe",
-    orange: "#f97316",
+    violetSubtle: "#efebff",
+    orange: "#ff7a45",
     orangeLight: "#fdba74",
-    orangeSubtle: "#fff7ed",
+    orangeSubtle: "#ffe9e0",
+    orangeStrong: "#b23c0c",
     success: "#10b981",
     warning: "#f59e0b",
     error: "#ef4444",
     info: "#3b82f6",
     focus: "#7c3aed",
+    categoryJob: "#ff7a45",
+    categoryProject: "#7c3aed",
+    categoryPoints: "#f59e0b",
+    categorySkills: "#10b981",
+    categoryCredentials: "#4f46e5",
   });
 
   await page.getByRole("button", { name: "Switch to dark mode" }).click();
   expect(await normalized()).toMatchObject({
-    canvas: "#171421",
-    sidebar: "#14111f",
-    surface: "#211d2e",
-    surfaceAlt: "#2a2538",
+    canvas: "#151522",
+    sidebar: "#0f1220",
+    surface: "#17192d",
+    surfaceAlt: "#202238",
+    surfaceHover: "#2a2c46",
     textPrimary: "#f8fafc",
-    textSecondary: "#b7b3c7",
-    border: "#3a3548",
+    textSecondary: "#c4c8d8",
+    textMuted: "#9ba2b8",
+    border: "#34374f",
+    borderStrong: "#464a6b",
     violet: "#7c3aed",
     violetLight: "#a78bfa",
-    violetSubtle: "#322548",
-    orange: "#f97316",
+    violetSubtle: "#302342",
+    orange: "#ff7a45",
     orangeLight: "#fdba74",
-    orangeSubtle: "#442719",
+    orangeSubtle: "#40251f",
+    orangeStrong: "#fdba74",
     success: "#34d399",
     warning: "#fbbf24",
     error: "#f87171",
     info: "#60a5fa",
     focus: "#a78bfa",
+    categoryJob: "#ff7a45",
+    categoryProject: "#a78bfa",
+    categoryPoints: "#fbbf24",
+    categorySkills: "#34d399",
+    categoryCredentials: "#818cf8",
   });
 });
 
@@ -222,19 +249,19 @@ test("keeps the orange save action legible and the focus ring contrasted", async
   await page.keyboard.press("Tab");
 
   await expect(saveButton).toBeFocused();
-  await expect(saveButton).toHaveCSS("background-color", "rgb(249, 115, 22)");
+  await expect(saveButton).toHaveCSS("background-color", "rgb(255, 122, 69)");
   const lightColors = await saveButton.evaluate((button) => {
     const style = getComputedStyle(button);
     return { backgroundColor: style.backgroundColor, color: style.color };
   });
   expect(lightColors).toEqual({
-    backgroundColor: "rgb(249, 115, 22)",
+    backgroundColor: "rgb(255, 122, 69)",
     color: "rgb(15, 23, 42)",
   });
   await focusAppearance();
 
   await saveButton.hover();
-  await expect(saveButton).toHaveCSS("background-color", "rgb(194, 65, 12)");
+  await expect(saveButton).toHaveCSS("background-color", "rgb(178, 60, 12)");
   await expect(saveButton).toHaveCSS("color", "rgb(255, 255, 255)");
 
   await saveButton.click();
@@ -249,15 +276,140 @@ test("keeps the orange save action legible and the focus ring contrasted", async
   await page.keyboard.press("Tab");
 
   await expect(saveButton).toBeFocused();
-  await expect(saveButton).toHaveCSS("color", "rgb(23, 20, 33)");
-  await expect(saveButton).toHaveCSS("background-color", "rgb(249, 115, 22)");
+  await expect(saveButton).toHaveCSS("color", "rgb(21, 21, 34)");
+  await expect(saveButton).toHaveCSS("background-color", "rgb(255, 122, 69)");
   const darkColors = await saveButton.evaluate((button) => {
     const style = getComputedStyle(button);
     return { backgroundColor: style.backgroundColor, color: style.color };
   });
   expect(darkColors).toEqual({
-    backgroundColor: "rgb(249, 115, 22)",
-    color: "rgb(23, 20, 33)",
+    backgroundColor: "rgb(255, 122, 69)",
+    color: "rgb(21, 21, 34)",
   });
   await focusAppearance();
+});
+
+test("the achievement library renders from the same shared tokens", async ({
+  page,
+}) => {
+  await page.goto("/library?source=demo");
+  await expect(
+    page.getByRole("heading", { name: "Jordan Example" }),
+  ).toBeVisible();
+
+  const libraryColors = async () =>
+    page.evaluate(() => {
+      const rootStyle = getComputedStyle(document.documentElement);
+      const token = (name: string) => rootStyle.getPropertyValue(name).trim();
+      const read = (selector: string) => {
+        const node = document.querySelector(selector);
+        if (!node) return null;
+        const style = getComputedStyle(node);
+        return {
+          color: style.color,
+          backgroundColor: style.backgroundColor,
+          borderTopColor: style.borderTopColor,
+        };
+      };
+
+      return {
+        tokens: {
+          canvas: token("--color-canvas"),
+          surface: token("--color-surface"),
+          border: token("--color-border"),
+          textPrimary: token("--color-text-primary"),
+          textSecondary: token("--color-text-secondary"),
+          orange: token("--color-orange"),
+          orangeStrong: token("--color-orange-strong"),
+        },
+        pageBackground: getComputedStyle(document.body).backgroundColor,
+        overview: read(".library-overview"),
+        sourceSwitch: read(".library-source-switch"),
+        selectedSource: read('.library-source-switch a[aria-current="page"]'),
+        eyebrow: read(".library-heading .eyebrow"),
+      };
+    });
+
+  // The theme switch animates the surfaces, so a color is only comparable to
+  // its token once the transition has settled on the final value.
+  const expectColorToSettle = async (
+    read: () => Promise<string | null>,
+    token: string,
+  ) => {
+    await expect
+      .poll(async () => {
+        const value = await read();
+        return value === null ? null : normalizeCssColor(value);
+      })
+      .toBe(normalizeCssColor(token));
+  };
+
+  const light = await libraryColors();
+
+  // Every library surface resolves to the shared token, not a local palette.
+  expect(normalizeCssColor(light.pageBackground)).toBe(
+    normalizeCssColor(light.tokens.canvas),
+  );
+  expect(normalizeCssColor(light.overview!.backgroundColor)).toBe(
+    normalizeCssColor(light.tokens.surface),
+  );
+  expect(normalizeCssColor(light.overview!.borderTopColor)).toBe(
+    normalizeCssColor(light.tokens.border),
+  );
+  expect(normalizeCssColor(light.sourceSwitch!.backgroundColor)).toBe(
+    normalizeCssColor(light.tokens.surface),
+  );
+  expect(normalizeCssColor(light.selectedSource!.color)).toBe(
+    normalizeCssColor(light.tokens.textPrimary),
+  );
+  expect(normalizeCssColor(light.eyebrow!.color)).toBe(
+    normalizeCssColor(light.tokens.orangeStrong),
+  );
+
+  // The library eyebrow is a small orange label, so it must stay readable.
+  expect(
+    contrastRatio(
+      parseCssColor(light.eyebrow!.color).channels,
+      parseCssColor(light.pageBackground).channels,
+    ),
+  ).toBeGreaterThanOrEqual(4.5);
+
+  await page.getByRole("button", { name: "Switch to dark mode" }).click();
+
+  const darkTokens = (await libraryColors()).tokens;
+
+  await expectColorToSettle(
+    async () => (await libraryColors()).pageBackground,
+    darkTokens.canvas,
+  );
+  await expectColorToSettle(
+    async () => (await libraryColors()).overview?.backgroundColor ?? null,
+    darkTokens.surface,
+  );
+  await expectColorToSettle(
+    async () => (await libraryColors()).overview?.borderTopColor ?? null,
+    darkTokens.border,
+  );
+  await expectColorToSettle(
+    async () => (await libraryColors()).eyebrow?.color ?? null,
+    darkTokens.orangeStrong,
+  );
+
+  const dark = await libraryColors();
+
+  expect(normalizeCssColor(dark.overview!.backgroundColor)).toBe(
+    normalizeCssColor(dark.tokens.surface),
+  );
+  expect(normalizeCssColor(dark.overview!.borderTopColor)).toBe(
+    normalizeCssColor(dark.tokens.border),
+  );
+  expect(normalizeCssColor(dark.eyebrow!.color)).toBe(
+    normalizeCssColor(dark.tokens.orangeStrong),
+  );
+  expect(
+    contrastRatio(
+      parseCssColor(dark.eyebrow!.color).channels,
+      parseCssColor(dark.pageBackground).channels,
+    ),
+  ).toBeGreaterThanOrEqual(4.5);
 });
