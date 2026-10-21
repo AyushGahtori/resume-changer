@@ -294,6 +294,8 @@ Write the final v1 setup guide for configuring the Gemini API key, running the a
 
 Implementation should document environment variables, local compiler installation, troubleshooting common API errors, missing compiler errors, and how to keep private resume data out of Git. Add a sample `.env.example` without secrets. The task is complete when a user can set up the real app locally and generate a resume from their own data.
 
+The complete v1 setup guide lives in [setup-guide.md](setup-guide.md). It covers the Gemini key, the local PDF toolchain including Tectonic's package-cache warming, the documented environment variables, cost and token behavior, keeping private resume data out of Git, troubleshooting, and the provider interface for adding DeepSeek later. The tracked `.env.example` lists every supported variable with placeholder values only.
+
 Required workflow: update `main`, create `codex/task-25-setup-provider-docs`, add docs and sample env files only, run all quality commands, manually follow the setup guide on a clean checkout if possible, then push or merge only after checks pass.
 
 ## 6. Definition Of Done For V1

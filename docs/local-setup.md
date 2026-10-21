@@ -2,6 +2,8 @@
 
 This guide runs the application locally, including Gemini-powered JD analysis and achievement suggestions, plus the local LaTeX-to-PDF service.
 
+For the complete v1 setup reference - obtaining a Gemini key, installing the PDF toolchain on each operating system, warming Tectonic's package cache, cost and token behavior, troubleshooting, and adding another provider such as DeepSeek - see the [setup guide](setup-guide.md). This page stays the short developer summary of the same commands.
+
 ## Requirements
 
 - Git
@@ -33,6 +35,8 @@ Visit <http://localhost:3000>. Stop the development server with `Ctrl+C` in its 
 
 Tectonic and `pdfinfo` must be available on `PATH`. If either executable has a nonstandard location, set `TECTONIC_BINARY` or `PDFINFO_BINARY` in `.env.local` to its full path and restart the app. The compiler runs with Tectonic's untrusted-input mode and uses locally cached package resources only; it does not enable shell escape or accept compiler options from the request. A missing compiler, unavailable cached package, invalid LaTeX, or page overflow is reported as a compile error.
 
+Because the compiler is restricted to cached packages, the Tectonic cache must be warmed once on a new machine before the first compile succeeds. Run `npm run test:pdf-live`, which warms the cache and verifies the toolchain in one step, or follow the manual warming steps in the [setup guide](setup-guide.md#53-warm-the-tectonic-package-cache).
+
 ## Gemini Provider Setup
 
 Copy `.env.example` to `.env.local`, then set `GEMINI_API_KEY` to a Google AI Studio key. JD analysis and achievement suggestions use this server-side provider. The default model is `gemini-3.6-flash`; use `GEMINI_MODEL` to override it. Select `AI_PROVIDER=mock` to use deterministic local responses without an API key or network request. Restart the dev server after changing environment values. The key is server-only and `.env.local` is ignored by Git.
@@ -47,7 +51,6 @@ The service is available at `POST /api/compile` with a JSON body containing a `l
 
 ```bash
 npm run format:check
-npx prettier --check README.md docs/index.md docs/architecture.md docs/local-setup.md docs/contributing.md
 npm run lint
 npm run typecheck
 npm test
@@ -92,7 +95,7 @@ The app uses a server-side Gemini key when `AI_PROVIDER=gemini`; keep it local. 
 - Commit only a sanitized `.env.example` when configuration documentation is added; it must contain placeholders, never real credentials.
 - Review `git status` before staging so private files are not included accidentally.
 
-The project plan's Task 25 can expand setup instructions after the remaining AI workflow tasks exist.
+The [setup guide](setup-guide.md) expands these instructions into a complete reference for real Gemini usage, PDF toolchain installation, cost and token behavior, and adding another provider such as DeepSeek.
 
 ### Personal data in Git worktrees
 
