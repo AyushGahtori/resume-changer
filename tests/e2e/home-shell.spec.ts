@@ -14,7 +14,9 @@ test("preserves landmarks, breadcrumbs, and navigation on each route", async ({
     await page.goto(href);
     await expect(page.getByRole("main")).toHaveCount(1);
     await expect(page.getByRole("banner")).toHaveCount(1);
-    await expect(page.getByRole("complementary")).toHaveCount(1);
+    await expect(page.getByRole("complementary")).toHaveCount(
+      href === "/" ? 2 : 1,
+    );
     await expect(
       page
         .getByRole("navigation", { name: "Breadcrumb" })
@@ -80,7 +82,9 @@ test("keeps sidebar branding and workspace status readable in both themes", asyn
 }) => {
   await page.goto("/");
   await page.setViewportSize({ width: 1440, height: 900 });
-  const sidebar = page.getByRole("complementary");
+  const sidebar = page
+    .getByRole("complementary")
+    .filter({ has: page.getByRole("navigation", { name: "Main navigation" }) });
   await expect(sidebar).toHaveCSS("padding-left", "24px");
   await expect(
     sidebar.getByRole("link", { name: "Resume Changer home" }),
