@@ -39,6 +39,8 @@ Copy `.env.example` to `.env.local`, then set `GEMINI_API_KEY` to a Google AI St
 
 Google's free tier has limited model access and may use submitted content to improve Google products. Check the current [Gemini API pricing and data-use terms](https://ai.google.dev/gemini-api/docs/pricing) before sending personal resume information. Usage limits can change; the app does not promise unlimited free requests.
 
+The free tier also caps requests **per model per day**, and its models are slower than the paid tier. A request on a free-tier model can take 20 to 60 seconds, so the provider allows up to two minutes for a single request. When one model has no daily budget left, the request moves to the next model in the chain instead of failing. `GEMINI_MODEL` overrides only the first model in that chain.
+
 The service is available at `POST /api/compile` with a JSON body containing a `latex` string. A successful response is a one-page PDF. It is returned as the response body and is not persisted; temporary compilation files are removed after each request.
 
 ## Run Checks
