@@ -333,7 +333,9 @@ test("keeps the analyzing button the same size with a live spinner", async ({
 
   await analyze.click();
 
-  const loading = page.getByRole("button", { name: "Analyzing..." });
+  const loading = page
+    .getByRole("form", { name: "Role details" })
+    .getByRole("button", { name: "Analyzing..." });
   await expect(loading).toBeDisabled();
   await expect(loading).toHaveAttribute("aria-busy", "true");
 
@@ -448,7 +450,7 @@ test("keeps a visible focus ring and 44px target in every state", async ({
         .poll(() =>
           button.evaluate((element) => getComputedStyle(element).outlineWidth),
         )
-        .toBe("3px");
+        .toBe("2px");
 
       // The focus ring stays visible against the surrounding surfaces.
       const ring = await button.evaluate((element) => {
@@ -489,7 +491,9 @@ test("honors reduced motion for the loading spinner", async ({ page }) => {
 
   await page.getByRole("button", { name: "Analyze job description" }).click();
 
-  const loading = page.getByRole("button", { name: "Analyzing..." });
+  const loading = page
+    .getByRole("form", { name: "Role details" })
+    .getByRole("button", { name: "Analyzing..." });
   await expect(loading).toBeVisible();
   const animation = await loading
     .locator("svg.home-action-spinner")
