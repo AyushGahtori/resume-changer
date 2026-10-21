@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\" \"tests/**/*.{ts,tsx}\" \"*.{json,mjs,ts}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\" \"tests/**/*.{ts,tsx}\" \"scripts/**/*.mjs\" \"docs/**/*.md\" \".github/**/*.yml\" \"*.{json,mjs,ts,md}\"",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:ai-live": "node scripts/test-gemini-live.mjs",
