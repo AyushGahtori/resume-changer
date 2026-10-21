@@ -367,6 +367,7 @@ export default function JDWorkspace({
             }
             aria-invalid={Boolean(descriptionError)}
             disabled={!isReady}
+            required
             id="job-description"
             name="jobDescription"
             onChange={(event) =>
