@@ -54,6 +54,21 @@ function relativeLuminance([red, green, blue]: Rgb) {
   );
 }
 
+/**
+ * Returns the color as a canonical six-digit hex string.
+ *
+ * The token value is compared as a resolved color rather than as source
+ * text, because a production build may rewrite `#ffffff` as `#fff`. The
+ * applied color is the behavior under test; its spelling is not.
+ */
+function normalizeCssColor(color: string): string {
+  const { channels } = parseCssColor(color);
+  return (
+    "#" +
+    channels.map((channel) => channel.toString(16).padStart(2, "0")).join("")
+  );
+}
+
 function contrastRatio(first: Rgb, second: Rgb) {
   const firstLuminance = relativeLuminance(first);
   const secondLuminance = relativeLuminance(second);
@@ -99,7 +114,17 @@ test("applies shared color tokens in light and dark themes", async ({
       };
     });
 
-  expect(await palette()).toMatchObject({
+  const normalized = async () => {
+    const tokens = await palette();
+    return Object.fromEntries(
+      Object.entries(tokens).map(([name, value]) => [
+        name,
+        normalizeCssColor(value),
+      ]),
+    );
+  };
+
+  expect(await normalized()).toMatchObject({
     canvas: "#f8fafc",
     sidebar: "#ffffff",
     surface: "#ffffff",
@@ -121,7 +146,7 @@ test("applies shared color tokens in light and dark themes", async ({
   });
 
   await page.getByRole("button", { name: "Switch to dark mode" }).click();
-  expect(await palette()).toMatchObject({
+  expect(await normalized()).toMatchObject({
     canvas: "#171421",
     sidebar: "#14111f",
     surface: "#211d2e",
@@ -197,6 +222,7 @@ test("keeps the orange save action legible and the focus ring contrasted", async
   await page.keyboard.press("Tab");
 
   await expect(saveButton).toBeFocused();
+  await expect(saveButton).toHaveCSS("background-color", "rgb(249, 115, 22)");
   const lightColors = await saveButton.evaluate((button) => {
     const style = getComputedStyle(button);
     return { backgroundColor: style.backgroundColor, color: style.color };
@@ -224,6 +250,7 @@ test("keeps the orange save action legible and the focus ring contrasted", async
 
   await expect(saveButton).toBeFocused();
   await expect(saveButton).toHaveCSS("color", "rgb(23, 20, 33)");
+  await expect(saveButton).toHaveCSS("background-color", "rgb(249, 115, 22)");
   const darkColors = await saveButton.evaluate((button) => {
     const style = getComputedStyle(button);
     return { backgroundColor: style.backgroundColor, color: style.color };
