@@ -181,7 +181,10 @@ describe("POST /api/ai/tailor-achievements", () => {
     });
 
     const consented = await post(
-      JSON.stringify({ ...(await createRequest()), allowOriginalsFallback: true }),
+      JSON.stringify({
+        ...(await createRequest()),
+        allowOriginalsFallback: true,
+      }),
     );
     expect(consented.status).toBe(200);
     await expect(consented.json()).resolves.toMatchObject({

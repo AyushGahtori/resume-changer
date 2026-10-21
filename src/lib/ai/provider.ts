@@ -40,6 +40,11 @@ export class AiProviderError extends Error {
     readonly code: AiProviderErrorCode,
     readonly retryable = false,
     readonly diagnosticCode?: string,
+    /**
+     * How long the upstream asked the caller to wait, in seconds. A provider
+     * that reports a delay can be retried once that delay has passed.
+     */
+    readonly retryAfterSeconds?: number,
   ) {
     super(message);
     this.name = "AiProviderError";
