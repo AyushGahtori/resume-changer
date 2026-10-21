@@ -255,6 +255,17 @@ export default function JDWorkspace({
             ? "Could not save locally"
             : "No saved draft";
 
+  /*
+   * A local write is pending only while the debounced save is queued. The
+   * explicit Save action writes synchronously, so it never shows a spinner
+   * for work that has already finished.
+   */
+  const hasDraftContent = Object.values(draft).some(
+    (value) => typeof value === "string" && value.trim().length > 0,
+  );
+  const isSaving = saveState === "saving" && hasDraftContent;
+  const isAnalyzing = analysisState === "loading";
+
   return (
     <section className="jd-page" aria-labelledby="page-title">
       <div className="page-heading-row">
@@ -368,30 +379,35 @@ export default function JDWorkspace({
           <div className="form-actions">
             <button
               className="home-action-button home-action-button--ghost"
+              disabled={!isReady}
               onClick={handleClear}
               type="button"
             >
               Clear draft
             </button>
             <button
-              aria-busy={analysisState === "loading"}
+              aria-busy={isAnalyzing}
               className="home-action-button home-action-button--secondary analyze-button"
-              disabled={!isReady || analysisState === "loading"}
+              disabled={!isReady || isAnalyzing}
               onClick={handleAnalyze}
               type="button"
             >
-              {analysisState === "loading" ? (
+              {isAnalyzing ? (
                 <>
-                  <LoaderCircle
-                    aria-hidden="true"
-                    className="home-action-spinner"
-                    size={18}
-                  />
+                  <span className="home-action-icon">
+                    <LoaderCircle
+                      aria-hidden="true"
+                      className="home-action-spinner"
+                      size={16}
+                    />
+                  </span>
                   <span>Analyzing...</span>
                 </>
               ) : (
                 <>
-                  <Sparkles aria-hidden="true" size={18} />
+                  <span className="home-action-icon">
+                    <Sparkles aria-hidden="true" size={18} />
+                  </span>
                   <span>
                     {analysisState === "error"
                       ? "Retry analysis"
@@ -401,12 +417,30 @@ export default function JDWorkspace({
               )}
             </button>
             <button
+              aria-busy={isSaving}
               className="home-action-button home-action-button--primary"
               disabled={!isReady}
               type="submit"
             >
-              <span>Save draft</span>
-              <ArrowUpRight aria-hidden="true" size={18} />
+              {isSaving ? (
+                <>
+                  <span className="home-action-icon">
+                    <LoaderCircle
+                      aria-hidden="true"
+                      className="home-action-spinner"
+                      size={16}
+                    />
+                  </span>
+                  <span>Saving...</span>
+                </>
+              ) : (
+                <>
+                  <span>Save draft</span>
+                  <span className="home-action-icon">
+                    <ArrowUpRight aria-hidden="true" size={18} />
+                  </span>
+                </>
+              )}
             </button>
           </div>
         </div>
