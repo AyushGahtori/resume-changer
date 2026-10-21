@@ -295,12 +295,14 @@ export default function JDWorkspace() {
               : "jd-helper jd-count"
           }
           aria-invalid={Boolean(errors.jobDescription)}
+          disabled={!isReady}
           id="job-description"
           name="jobDescription"
           onChange={(event) =>
             updateField("jobDescription", event.target.value)
           }
           placeholder="Paste the job description"
+          rows={7}
           spellCheck="false"
           value={draft.jobDescription}
         />
