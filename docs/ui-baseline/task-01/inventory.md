@@ -26,13 +26,13 @@ The reference uses two columns with an analysis preview; the current page has on
 
 ## Captures and geometry
 
-| Viewport | Theme | Sidebar | Topbar | Form | Actions top | Horizontal overflow |
-| --- | --- | ---: | ---: | ---: | ---: | --- |
-| 1440×900 | light | 260px | 60px | 1030px | 781.5px | No |
-| 1440×900 | dark | 260px | 60px | 1030px | 781.5px | No |
-| 1024×768 | light | 220px | 60px | 756px | 847.8px | No |
-| 1024×768 | dark | 220px | 60px | 756px | 847.8px | No |
-| 390×844 | light | 390px | 56px | 358px | 1033px | No |
-| 390×844 | dark | 390px | 56px | 358px | 1033px | No |
+| Viewport | Theme | Sidebar | Topbar |   Form | Actions top | Horizontal overflow |
+| -------- | ----- | ------: | -----: | -----: | ----------: | ------------------- |
+| 1440×900 | light |   260px |   60px | 1030px |     781.5px | No                  |
+| 1440×900 | dark  |   260px |   60px | 1030px |     781.5px | No                  |
+| 1024×768 | light |   220px |   60px |  756px |     847.8px | No                  |
+| 1024×768 | dark  |   220px |   60px |  756px |     847.8px | No                  |
+| 390×844  | light |   390px |   56px |  358px |      1033px | No                  |
+| 390×844  | dark  |   390px |   56px |  358px |      1033px | No                  |
 
 Screenshots: screenshots/home-1440x900-light.png, screenshots/home-1440x900-dark.png, screenshots/home-1024x768-light.png, screenshots/home-1024x768-dark.png, screenshots/home-390x844-light.png, screenshots/home-390x844-dark.png. Zoom-equivalent CSS layouts were checked at 1152×720 (125%) and 1800×1125 (80%) in both themes. Pointer hover/press, Tab focus/Enter validation, geometry and browser errors are in measurements.json; the interaction captures are screenshots/home-save-pointer-pressed.png and screenshots/home-keyboard-save-validation.png.

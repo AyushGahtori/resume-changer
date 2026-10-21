@@ -1,4 +1,3 @@
-import { spawnSync } from "node:child_process";
 import { describe, expect, it } from "vitest";
 import {
   measureAchievementLines,
@@ -8,25 +7,16 @@ import { compileLatexToPdf } from "../../../src/lib/pdf/compile-service";
 import { analyzePdfLayout } from "../../../src/lib/pdf/layout-analysis";
 import { renderStudioGeneration } from "../../../src/lib/generation/studio-generation";
 import { studioApplyInput, studioLibrary } from "../../helpers/studio-fixtures";
+import {
+  describeMissingToolchain,
+  detectPdfToolchain,
+  requirePdfToolchain,
+} from "../../helpers/pdf-toolchain";
 
-function isExecutableAvailable(executable: string, args: string[]): boolean {
-  const result = spawnSync(executable, args, {
-    encoding: "utf8",
-    windowsHide: true,
-    timeout: 5000,
-  });
-  return !result.error && result.status === 0;
-}
-
-// These measurements compile real PDFs, so they need Tectonic and pdfinfo alike.
-const available =
-  isExecutableAvailable(process.env.TECTONIC_BINARY ?? "tectonic", [
-    "--version",
-  ]) && isExecutableAvailable(process.env.PDFINFO_BINARY ?? "pdfinfo", ["-v"]);
-if (process.env.PDF_TOOLCHAIN_REQUIRED === "1" && !available)
-  throw new Error(
-    "The studio integration tests require Tectonic and pdfinfo. Install both or set TECTONIC_BINARY and PDFINFO_BINARY.",
-  );
+const toolchain = detectPdfToolchain();
+const available = toolchain.available;
+if (process.env.PDF_TOOLCHAIN_REQUIRED === "1") requirePdfToolchain(toolchain);
+else if (!available) console.log(describeMissingToolchain(toolchain));
 
 describe.skipIf(!available)("real studio layout validation", () => {
   it("measures the actual LaTeX font and compiles a skills-only transaction", async () => {
