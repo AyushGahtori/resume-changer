@@ -235,25 +235,24 @@ test("shows a violet focus ring on the field and keeps the text readable", async
   const company = page.getByLabel("Company", { exact: true });
   await company.focus();
 
-  // The border and ring transition, so wait for the settled values.
-  await expect
-    .poll(() =>
-      company.evaluate((element) => getComputedStyle(element).borderTopColor),
-    )
-    .toBe("rgb(124, 58, 237)");
+  await expect(company).toHaveCSS("outline-color", "rgb(124, 58, 237)");
+  await expect(company).toHaveCSS("outline-style", "solid");
+  await expect(company).toHaveCSS("outline-width", "2px");
+  await expect(company).toHaveCSS("outline-offset", "2px");
 
   const focusStyles = await company.evaluate((element) => {
     const style = getComputedStyle(element);
     return {
-      boxShadow: style.boxShadow,
+      outlineColor: style.outlineColor,
+      outlineWidth: style.outlineWidth,
       backgroundColor: style.backgroundColor,
       color: style.color,
     };
   });
 
   // A 2px violet ring sits outside the control, not over the entered text.
-  expect(focusStyles.boxShadow).toContain("rgb(124, 58, 237)");
-  expect(focusStyles.boxShadow).toMatch(/0px 0px 0px 2px/);
+  expect(focusStyles.outlineColor).toBe("rgb(124, 58, 237)");
+  expect(focusStyles.outlineWidth).toBe("2px");
   expect(
     contrastRatio(focusStyles.color, focusStyles.backgroundColor),
   ).toBeGreaterThanOrEqual(4.5);
