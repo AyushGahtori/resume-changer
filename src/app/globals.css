@@ -2256,36 +2256,129 @@ a:focus-visible {
 .library-experiences {
   margin-top: 24px;
 }
+
+/*
+ * Task 20 - the group header, its count, its date range and its
+ * disclosure.
+ *
+ * The header is a real button, so it is reachable and operable from the
+ * keyboard and it can announce whether the group is open. The icon tile
+ * marks the group type, the count and the date range are secondary
+ * information, and the chevron is the same icon in both states, rotated
+ * rather than swapped.
+ *
+ * Stack rule: the header keeps the tile, the title, the count, the date
+ * range and the chevron on one row while they fit. Below 560px the count
+ * and the date range move to a second row so the count stays readable and
+ * is never squeezed behind the chevron.
+ */
 .experience-group {
-  padding: 19px 2px 9px;
+  padding: 19px 0 9px;
   border-bottom: 1px solid var(--line);
 }
 .experience-heading {
+  margin: 0;
+  font-size: inherit;
+  font-weight: inherit;
+}
+.experience-toggle {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto auto auto;
+  grid-template-areas: "icon heading count dates chevron";
+  align-items: center;
+  column-gap: 12px;
+  row-gap: 4px;
+  width: 100%;
+  min-height: 56px;
+  padding: 8px 8px 8px 4px;
+  border: 0;
+  border-radius: var(--radius-card);
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+.experience-toggle:hover {
+  background: var(--color-surface-alt);
+}
+.experience-icon-tile {
+  grid-area: icon;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-control);
+  background: var(--color-orange-subtle);
+  color: var(--color-orange-strong);
+}
+.experience-icon-tile.is-project {
+  background: var(--color-violet-subtle);
+  color: var(--color-violet-strong);
+}
+.experience-heading-text {
+  grid-area: heading;
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 20px;
-  margin-bottom: 5px;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
 }
 .experience-kind {
-  margin: 0 0 4px;
   color: var(--accent);
-  font-size: 9px;
+  font-size: var(--type-micro-label-size);
   font-weight: 700;
+  letter-spacing: 0.06em;
 }
-.experience-heading h3 {
-  margin: 0;
-  font-size: 16px;
+.experience-title {
+  font-size: var(--type-card-heading-size);
   font-weight: 650;
+  line-height: var(--type-card-heading-line-height);
+  overflow-wrap: anywhere;
 }
-.experience-subtitle,
-.experience-dates {
-  margin: 4px 0 0;
+.experience-subtitle {
   color: var(--muted);
-  font-size: 11px;
+  font-size: var(--type-helper-size);
+  line-height: var(--type-helper-line-height);
+  overflow-wrap: anywhere;
+}
+.experience-count {
+  grid-area: count;
+  color: var(--quiet);
+  font-size: var(--type-helper-size);
+  line-height: var(--type-helper-line-height);
+  white-space: nowrap;
 }
 .experience-dates {
-  flex: 0 0 auto;
+  grid-area: dates;
+  color: var(--quiet);
+  font-size: var(--type-helper-size);
+  line-height: var(--type-helper-line-height);
+  white-space: nowrap;
+}
+.experience-chevron {
+  grid-area: chevron;
+  color: var(--quiet);
+  transition: transform 160ms ease;
+}
+.experience-toggle[aria-expanded="true"] .experience-chevron {
+  transform: rotate(180deg);
+}
+.experience-panel {
+  display: flex;
+  flex-direction: column;
+}
+.experience-panel[hidden] {
+  display: none;
+}
+
+@media (max-width: 560px) {
+  .experience-toggle {
+    grid-template-columns: 32px minmax(0, 1fr) auto;
+    grid-template-areas:
+      "icon heading chevron"
+      "icon count  dates";
+  }
 }
 
 .library-point {

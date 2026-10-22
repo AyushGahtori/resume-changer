@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Briefcase, ChevronDown, FolderKanban } from "lucide-react";
 import { useMemo, useState } from "react";
 import AchievementPointEditor from "@/components/achievement-point-editor";
 import AchievementImagination from "@/components/achievement-imagination";
@@ -11,6 +12,10 @@ import {
   getLibraryFilterOptions,
   type LibraryFilters,
 } from "@/lib/data/achievement-search";
+import {
+  formatExperienceRange,
+  type ExperienceRange,
+} from "@/lib/data/experience-dates";
 import type {
   AchievementPoint,
   Job,
@@ -22,14 +27,48 @@ import type { ResumeDataSource } from "@/lib/data/loaders";
 type Props = { library: ResumeLibrary; source: ResumeDataSource };
 type EditorState =
   { mode: "create" } | { mode: "edit"; point: AchievementPoint } | null;
+type GroupKind = "job" | "project";
 
-function dateRange(start?: string, end?: string | null) {
-  if (!start) return "";
-  const format = (value: string) => {
-    const [year, month] = value.split("-");
-    return `${month}/${year}`;
-  };
-  return `${format(start)} – ${end ? format(end) : "Present"}`;
+/**
+ * The key a collapsed group is remembered under. The kind is part of the
+ * key because a job and a project may share an identifier.
+ */
+function groupKey(kind: GroupKind, id: string) {
+  return `${kind}-${id}`;
+}
+
+/**
+ * Renders the stored date range.
+ *
+ * The range only says "Present" when the stored end date is null. An
+ * absent or malformed end date is an unknown end, so the range stops at
+ * the start month instead of claiming the role is still running.
+ */
+function RangeText({ range }: { range: ExperienceRange }) {
+  if (range.start && range.end) {
+    return (
+      <>
+        <time dateTime={range.start.value}>{range.start.label}</time>
+        {" – "}
+        <time dateTime={range.end.value}>{range.end.label}</time>
+      </>
+    );
+  }
+  if (range.start && range.present) {
+    return (
+      <>
+        <time dateTime={range.start.value}>{range.start.label}</time>
+        {" – Present"}
+      </>
+    );
+  }
+  if (range.start) {
+    return <time dateTime={range.start.value}>{range.start.label}</time>;
+  }
+  if (range.end) {
+    return <time dateTime={range.end.value}>{range.end.label}</time>;
+  }
+  return <>Present</>;
 }
 
 function PointRow({
@@ -118,52 +157,98 @@ function ExperienceGroup({
   item,
   kind,
   library,
+  collapsed,
   onTag,
   onSkill,
   onEdit,
+  onToggle,
 }: {
   item: (Job | Project) & { points: AchievementPoint[] };
-  kind: "job" | "project";
+  kind: GroupKind;
   library: ResumeLibrary;
+  collapsed: boolean;
   onTag: (tag: string) => void;
   onSkill: (skillId: string) => void;
   onEdit?: (point: AchievementPoint) => void;
+  onToggle: (key: string) => void;
 }) {
   const isJob = kind === "job";
   const job = isJob ? (item as Job) : null;
   const project = isJob ? null : (item as Project);
   const title = job?.title ?? project?.name ?? "";
   const organization = job?.company ?? project?.role;
+  const range = formatExperienceRange(
+    job ? job.startDate : project?.startDate,
+    job ? job.endDate : project?.endDate,
+  );
+  const key = groupKey(kind, item.id);
+  const panelId = `library-group-panel-${key}`;
+  const titleId = `library-group-title-${key}`;
+  const count = item.points.length;
+  const expanded = !collapsed;
+  const GroupIcon = isJob ? Briefcase : FolderKanban;
 
   return (
     <section
       className="experience-group"
       aria-label={`${isJob ? "Job" : "Project"}: ${title}`}
     >
-      <div className="experience-heading">
-        <div>
-          <p className="experience-kind">{isJob ? "JOB" : "PROJECT"}</p>
-          <h3>{title}</h3>
-          {organization && (
-            <p className="experience-subtitle">{organization}</p>
+      {/*
+       * The heading carries the toggle, so the group is reachable and
+       * operable from the keyboard and the expanded state is announced.
+       * The heading names itself with the title alone, which keeps the
+       * heading outline readable.
+       */}
+      <h3 aria-labelledby={titleId} className="experience-heading">
+        <button
+          aria-controls={panelId}
+          aria-expanded={expanded}
+          className="experience-toggle"
+          onClick={() => onToggle(key)}
+          type="button"
+        >
+          <span
+            aria-hidden="true"
+            className={`experience-icon-tile is-${kind}`}
+          >
+            <GroupIcon size={18} />
+          </span>
+          <span className="experience-heading-text">
+            <span className="experience-kind">{isJob ? "JOB" : "PROJECT"}</span>
+            <span className="experience-title" id={titleId}>
+              {title}
+            </span>
+            {organization && (
+              <span className="experience-subtitle">{organization}</span>
+            )}
+          </span>
+          <span className="experience-count">
+            {count} achievement{count === 1 ? "" : "s"}
+          </span>
+          {range && (
+            <span className="experience-dates">
+              <RangeText range={range} />
+            </span>
           )}
-        </div>
-        <span className="experience-dates">
-          {job
-            ? dateRange(job.startDate, job.endDate)
-            : dateRange(project?.startDate, project?.endDate)}
-        </span>
+          <ChevronDown
+            aria-hidden="true"
+            className="experience-chevron"
+            size={16}
+          />
+        </button>
+      </h3>
+      <div className="experience-panel" hidden={!expanded} id={panelId}>
+        {item.points.map((point) => (
+          <PointRow
+            key={point.id}
+            library={library}
+            onSkill={onSkill}
+            onTag={onTag}
+            onEdit={onEdit ? () => onEdit(point) : undefined}
+            point={point}
+          />
+        ))}
       </div>
-      {item.points.map((point) => (
-        <PointRow
-          key={point.id}
-          library={library}
-          onSkill={onSkill}
-          onTag={onTag}
-          onEdit={onEdit ? () => onEdit(point) : undefined}
-          point={point}
-        />
-      ))}
     </section>
   );
 }
@@ -174,6 +259,14 @@ export default function AchievementLibrary({ library, source }: Props) {
   const [editor, setEditor] = useState<EditorState>(null);
   const [creating, setCreating] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
+  /*
+   * The collapsed groups are remembered here rather than inside each group,
+   * so a group that a filter hides and shows again keeps the state the
+   * reader gave it, and a query change never collapses anything by itself.
+   */
+  const [collapsedGroups, setCollapsedGroups] = useState<ReadonlySet<string>>(
+    () => new Set<string>(),
+  );
   const result = useMemo(
     () => filterAchievementLibrary(library, filters),
     [filters, library],
@@ -203,6 +296,18 @@ export default function AchievementLibrary({ library, source }: Props) {
     value: LibraryFilters[Key],
   ) {
     setFilters((current) => ({ ...current, [key]: value }));
+  }
+
+  function toggleGroup(key: string) {
+    setCollapsedGroups((current) => {
+      const next = new Set(current);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
   }
 
   return (
@@ -443,12 +548,14 @@ export default function AchievementLibrary({ library, source }: Props) {
         <div className="library-experiences">
           {result.jobs.map((job) => (
             <ExperienceGroup
+              collapsed={collapsedGroups.has(groupKey("job", job.id))}
               item={job}
               key={job.id}
               kind="job"
               library={library}
               onSkill={(id) => updateFilter("skillId", id)}
               onTag={(tag) => updateFilter("tag", tag)}
+              onToggle={toggleGroup}
               onEdit={
                 canEdit
                   ? (point) => setEditor({ mode: "edit", point })
@@ -458,12 +565,14 @@ export default function AchievementLibrary({ library, source }: Props) {
           ))}
           {result.projects.map((project) => (
             <ExperienceGroup
+              collapsed={collapsedGroups.has(groupKey("project", project.id))}
               item={project}
               key={project.id}
               kind="project"
               library={library}
               onSkill={(id) => updateFilter("skillId", id)}
               onTag={(tag) => updateFilter("tag", tag)}
+              onToggle={toggleGroup}
               onEdit={
                 canEdit
                   ? (point) => setEditor({ mode: "edit", point })
