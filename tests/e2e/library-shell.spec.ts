@@ -1,4 +1,3 @@
-[error] No parser could be inferred for file "C:\Users\Ayush\.codex\worktrees\achievement-pr-audit\re_changer\test-results\remote-format-pr80-1.txt".
 import { expect, test } from "@playwright/test";
 import { waitForAnimationsToSettle } from "../helpers/animations";
 
@@ -84,13 +83,13 @@ test.beforeEach(async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
 });
 
-test("marks the library destination as the current route", async ({
-  page,
-}) => {
+test("marks the library destination as the current route", async ({ page }) => {
   await page.goto(`${libraryRoute}?source=demo`);
 
   const navigation = page.getByRole("navigation", { name: "Main navigation" });
-  const libraryLink = navigation.getByRole("link", { name: "Achievement library" });
+  const libraryLink = navigation.getByRole("link", {
+    name: "Achievement library",
+  });
 
   await expect(libraryLink).toHaveAttribute("aria-current", "page");
   await expect(navigation.locator('[aria-current="page"]')).toHaveCount(1);
@@ -121,7 +120,9 @@ test("shows the library active row with the board's orange treatment", async ({
   await page.goto(`${libraryRoute}?source=demo`);
 
   const navigation = page.getByRole("navigation", { name: "Main navigation" });
-  const libraryLink = navigation.getByRole("link", { name: "Achievement library" });
+  const libraryLink = navigation.getByRole("link", {
+    name: "Achievement library",
+  });
 
   await waitForAnimationsToSettle(libraryLink);
 
@@ -179,7 +180,9 @@ test("keeps the library row focusable and visibly focused", async ({
   await page.goto(`${libraryRoute}?source=demo`);
 
   const navigation = page.getByRole("navigation", { name: "Main navigation" });
-  const libraryLink = navigation.getByRole("link", { name: "Achievement library" });
+  const libraryLink = navigation.getByRole("link", {
+    name: "Achievement library",
+  });
 
   await libraryLink.focus();
   await expect(libraryLink).toBeFocused();
@@ -209,13 +212,18 @@ test("keeps the library destination reachable in the collapsed rail", async ({
   await page.goto(`${libraryRoute}?source=demo`);
 
   const navigation = page.getByRole("navigation", { name: "Main navigation" });
-  const libraryLink = navigation.getByRole("link", { name: "Achievement library" });
+  const libraryLink = navigation.getByRole("link", {
+    name: "Achievement library",
+  });
 
   await page.getByRole("button", { name: "Collapse sidebar" }).click();
   await expect(page.locator("#workspace-sidebar")).toHaveCSS("width", "72px");
 
   await expect(libraryLink).toHaveAttribute("aria-current", "page");
-  await expect(libraryLink).toHaveAttribute("aria-label", "Achievement library");
+  await expect(libraryLink).toHaveAttribute(
+    "aria-label",
+    "Achievement library",
+  );
   await expect(libraryLink).toHaveAttribute("title", "Achievement library");
   await expect(libraryLink.locator(".nav-link-label")).toHaveText(
     "Achievement library",
@@ -247,4 +255,3 @@ test("keeps the library destination in the mobile navigation drawer", async ({
   expect(drawerStyles.backgroundColor).toBe(libraryActiveRow.light.background);
   expect(drawerStyles.color).toBe(libraryActiveRow.light.color);
 });
-
