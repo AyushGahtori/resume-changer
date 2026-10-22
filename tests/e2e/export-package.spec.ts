@@ -23,6 +23,7 @@ async function readZipEntries(
   const decoder = new TextDecoder();
   const entries = new Map<string, Uint8Array>();
   let offset = 0;
+  expect(view.getUint32(0, true)).toBe(0x04034b50);
   while (view.getUint32(offset, true) === 0x04034b50) {
     const size = view.getUint32(offset + 22, true);
     const nameLength = view.getUint16(offset + 26, true);
@@ -71,7 +72,10 @@ test("exports the LaTeX and metadata when no verified PDF exists", async ({
 }) => {
   await generateFor(page, false);
 
-  const downloadPromise = page.waitForEvent("download");
+  const downloadPromise = page.waitForEvent(
+    "download",
+    (item) => item.suggestedFilename() === `${fileBase}.zip`,
+  );
   await page.getByRole("button", { name: "Download export package" }).click();
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toBe(`${fileBase}.zip`);
@@ -112,7 +116,10 @@ test("exports the verified PDF alongside the LaTeX and metadata", async ({
 }) => {
   await generateFor(page, true);
 
-  const downloadPromise = page.waitForEvent("download");
+  const downloadPromise = page.waitForEvent(
+    "download",
+    (item) => item.suggestedFilename() === `${fileBase}.zip`,
+  );
   await page.getByRole("button", { name: "Download export package" }).click();
   const download = await downloadPromise;
   await expect(
@@ -145,7 +152,10 @@ test("keeps the private job text out of the exported metadata", async ({
 }) => {
   await generateFor(page, true);
 
-  const downloadPromise = page.waitForEvent("download");
+  const downloadPromise = page.waitForEvent(
+    "download",
+    (item) => item.suggestedFilename() === `${fileBase}.zip`,
+  );
   await page.getByRole("button", { name: "Download export package" }).click();
   const entries = await readZipEntries(await downloadPromise);
 
@@ -168,12 +178,18 @@ test("downloads the LaTeX and PDF files under the expected names", async ({
   // The output panel shows one view at a time, and compiling switches it to
   // the PDF. The LaTeX download lives on the LaTeX view.
   await page.getByRole("tab", { name: "LaTeX" }).click();
-  const latexDownload = page.waitForEvent("download");
+  const latexDownload = page.waitForEvent(
+    "download",
+    (item) => item.suggestedFilename() === `${fileBase}.tex`,
+  );
   await page.getByRole("button", { name: "Download LaTeX file" }).click();
   expect((await latexDownload).suggestedFilename()).toBe(`${fileBase}.tex`);
 
   await page.getByRole("tab", { name: "PDF" }).click();
-  const pdfDownload = page.waitForEvent("download");
+  const pdfDownload = page.waitForEvent(
+    "download",
+    (item) => item.suggestedFilename() === `${fileBase}.pdf`,
+  );
   await page.getByRole("button", { name: "Download PDF" }).click();
   expect((await pdfDownload).suggestedFilename()).toBe(`${fileBase}.pdf`);
 });

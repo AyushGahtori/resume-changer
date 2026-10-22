@@ -54,7 +54,7 @@ test("Auto Tailor selects, drafts, generates, and verifies a one-page PDF", asyn
   await page
     .getByRole("textbox", { name: "Job description", exact: true })
     .fill(jobDescription);
-  await expect(page.getByRole("status")).toContainText("Saved locally");
+  await expect(page.getByRole("status")).toContainText("Saved on this device");
 
   await page.route("**/api/ai/analyze-job-description", async (route) => {
     await route.fulfill({
@@ -196,7 +196,7 @@ test("local matching is offered only after explaining the AI failure and request
   await page
     .getByRole("textbox", { name: "Job description", exact: true })
     .fill(jobDescription);
-  await expect(page.getByRole("status")).toContainText("Saved locally");
+  await expect(page.getByRole("status")).toContainText("Saved on this device");
   await page.route("**/api/ai/analyze-job-description", (route) =>
     route.fulfill({
       status: 200,
@@ -273,7 +273,7 @@ test("Auto Tailor reports wording repair and exposes summary, partial coverage a
   await page
     .getByRole("textbox", { name: "Job description", exact: true })
     .fill(jobDescription);
-  await expect(page.getByRole("status")).toContainText("Saved locally");
+  await expect(page.getByRole("status")).toContainText("Saved on this device");
   await page.route("**/api/ai/analyze-job-description", (route) =>
     route.fulfill({
       status: 200,

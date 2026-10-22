@@ -222,6 +222,7 @@ test("keeps the orange save action legible and the focus ring contrasted", async
   await page.keyboard.press("Tab");
 
   await expect(saveButton).toBeFocused();
+  await expect(saveButton).toHaveCSS("background-color", "rgb(249, 115, 22)");
   const lightColors = await saveButton.evaluate((button) => {
     const style = getComputedStyle(button);
     return { backgroundColor: style.backgroundColor, color: style.color };
@@ -249,6 +250,7 @@ test("keeps the orange save action legible and the focus ring contrasted", async
 
   await expect(saveButton).toBeFocused();
   await expect(saveButton).toHaveCSS("color", "rgb(23, 20, 33)");
+  await expect(saveButton).toHaveCSS("background-color", "rgb(249, 115, 22)");
   const darkColors = await saveButton.evaluate((button) => {
     const style = getComputedStyle(button);
     return { backgroundColor: style.backgroundColor, color: style.color };

@@ -109,11 +109,13 @@ test("shows the home context and heading hierarchy in both themes and at varied 
         const headingRow = document
           .querySelector(".page-heading-row")!
           .getBoundingClientRect();
-        const headingCopy = document
-          .querySelector(".page-heading-copy")!
+        const draftElement = document.querySelector(".draft-state")!;
+        const draft = draftElement.getBoundingClientRect();
+        const actions = document
+          .querySelector(".form-actions")!
           .getBoundingClientRect();
-        const draft = document
-          .querySelector(".draft-state")!
+        const form = document
+          .querySelector(".jd-form")!
           .getBoundingClientRect();
 
         return {
@@ -128,10 +130,12 @@ test("shows the home context and heading hierarchy in both themes and at varied 
           title: read(".jd-page h1"),
           intro: read(".page-intro"),
           headingBottom: headingRow.bottom,
-          headingCopyRight: headingCopy.right,
-          draftLeft: draft.left,
+          draftTop: draft.top,
           draftBottom: draft.bottom,
-          isMobile: window.innerWidth <= 700,
+          draftRight: draft.right,
+          actionsBottom: actions.bottom,
+          formBottom: form.bottom,
+          draftInsideForm: Boolean(draftElement.closest(".jd-form")),
         };
       });
 
@@ -153,15 +157,10 @@ test("shows the home context and heading hierarchy in both themes and at varied 
       expect(layout.context.bottom).toBeLessThanOrEqual(layout.title.top);
       expect(layout.title.bottom).toBeLessThanOrEqual(layout.intro.top);
 
-      if (layout.isMobile) {
-        expect(layout.draftBottom).toBeGreaterThanOrEqual(layout.intro.bottom);
-        expect(layout.draftBottom).toBeLessThanOrEqual(layout.headingBottom);
-      } else {
-        expect(layout.headingCopyRight).toBeLessThanOrEqual(layout.draftLeft);
-        expect(
-          Math.abs(layout.draftBottom - layout.intro.bottom),
-        ).toBeLessThanOrEqual(1);
-      }
+      expect(layout.draftInsideForm).toBe(true);
+      expect(layout.draftTop).toBeGreaterThanOrEqual(layout.actionsBottom);
+      expect(layout.draftBottom).toBeLessThanOrEqual(layout.formBottom);
+      expect(layout.draftRight).toBeLessThanOrEqual(width);
 
       expect(parseCssColor(layout.context.color)).toEqual(
         parseCssColor(layout.orange),
@@ -241,6 +240,8 @@ test("keeps restore notices adjacent and announces draft saves", async ({
   await expect(page.locator(".form-save-feedback")).toContainText(
     "Draft saved in this browser. You can open Resume builder now.",
   );
-  await expect(page.locator(".draft-state")).toContainText("Saved locally");
-  await expect(notice).toBeVisible();
+  await expect(page.locator(".draft-state")).toContainText(
+    "Saved on this device",
+  );
+  await expect(notice).toHaveCount(0);
 });
