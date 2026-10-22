@@ -75,7 +75,7 @@ test("toggles the theme from the keyboard and persists the preference", async ({
     await darkToggle.evaluate(
       (element) => getComputedStyle(element).outlineWidth,
     ),
-  ).toBe("3px");
+  ).toBe("2px");
 });
 
 test("shows hover and pressed feedback for the theme control", async ({

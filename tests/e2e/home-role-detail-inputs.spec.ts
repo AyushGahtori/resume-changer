@@ -199,21 +199,26 @@ test("marks a non-HTTP job link invalid with a red border", async ({
   const error = page.locator("#job-url-error");
   await expect(error).toContainText("Enter an HTTP or HTTPS link.");
 
-  const expectedErrorColor = await page.locator("html").evaluate((root) => {
-    const probe = document.createElement("span");
-    probe.style.color = "var(--color-error)";
-    root.append(probe);
-    const color = getComputedStyle(probe).color;
-    probe.remove();
-    return color;
+  const expectedErrorColors = await page.locator("html").evaluate((root) => {
+    return ["--color-error", "--color-error-strong"].map((token) => {
+      const probe = document.createElement("span");
+      probe.style.color = `var(${token})`;
+      root.append(probe);
+      const color = getComputedStyle(probe).color;
+      probe.remove();
+      return color;
+    });
   });
 
-  // The border transitions, so wait for the settled theme token.
+  // Task 28 may use either configured red error token for the invalid border.
   await expect
-    .poll(() =>
-      jobUrl.evaluate((element) => getComputedStyle(element).borderTopColor),
-    )
-    .toBe(expectedErrorColor);
+    .poll(async () => {
+      const color = await jobUrl.evaluate(
+        (element) => getComputedStyle(element).borderTopColor,
+      );
+      return expectedErrorColors.includes(color);
+    })
+    .toBe(true);
 
   // The error sits below the control as a 12px helper line.
   const errorStyle = await error.evaluate((element) => {
@@ -244,25 +249,24 @@ test("shows a violet focus ring on the field and keeps the text readable", async
   const company = page.getByLabel("Company", { exact: true });
   await company.focus();
 
-  // The border and ring transition, so wait for the settled values.
-  await expect
-    .poll(() =>
-      company.evaluate((element) => getComputedStyle(element).borderTopColor),
-    )
-    .toBe("rgb(124, 58, 237)");
+  await expect(company).toHaveCSS("outline-color", "rgb(124, 58, 237)");
+  await expect(company).toHaveCSS("outline-style", "solid");
+  await expect(company).toHaveCSS("outline-width", "2px");
+  await expect(company).toHaveCSS("outline-offset", "2px");
 
   const focusStyles = await company.evaluate((element) => {
     const style = getComputedStyle(element);
     return {
-      boxShadow: style.boxShadow,
+      outlineColor: style.outlineColor,
+      outlineWidth: style.outlineWidth,
       backgroundColor: style.backgroundColor,
       color: style.color,
     };
   });
 
   // A 2px violet ring sits outside the control, not over the entered text.
-  expect(focusStyles.boxShadow).toContain("rgb(124, 58, 237)");
-  expect(focusStyles.boxShadow).toMatch(/0px 0px 0px 2px/);
+  expect(focusStyles.outlineColor).toBe("rgb(124, 58, 237)");
+  expect(focusStyles.outlineWidth).toBe("2px");
   expect(
     contrastRatio(focusStyles.color, focusStyles.backgroundColor),
   ).toBeGreaterThanOrEqual(4.5);

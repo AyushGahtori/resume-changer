@@ -2979,16 +2979,13 @@ a:focus-visible {
     border-bottom: 0;
     box-shadow: none;
     transform: translateX(calc(-100% - 12px));
-    transition:
-      transform 180ms ease,
-      visibility 0s linear 180ms;
+    transition: transform 180ms ease;
     visibility: hidden;
   }
 
   .app-frame.is-mobile-nav-open .sidebar {
     box-shadow: 0 16px 40px rgb(15 23 42 / 18%);
     transform: translateX(0);
-    transition-delay: 0s, 0s;
     visibility: visible;
   }
 
@@ -4577,6 +4574,116 @@ a:focus-visible {
   }
 }
 
+/* UI task 28: perceptible boundaries, keyboard focus and accessible controls. */
+.jd-workspace-frame {
+  --control-boundary: #64748b;
+  --focus-outline: 2px solid var(--focus);
+}
+:root[data-theme="dark"] .jd-workspace-frame {
+  --control-boundary: #827990;
+}
+.jd-workspace-frame .jd-form :is(input, textarea) {
+  border-color: var(--control-boundary);
+}
+.jd-workspace-frame .jd-form :is(input, textarea)[aria-invalid="true"] {
+  border-color: var(--danger);
+}
+.jd-workspace-frame .jd-form :is(input, textarea):focus {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  box-shadow: none;
+}
+.jd-workspace-frame :is(button, a):focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.jd-workspace-frame :is(.clear-button, .theme-toggle, .sidebar-toggle) {
+  border-color: var(--control-boundary);
+}
+.jd-workspace-frame
+  :is(
+    .clear-button,
+    .primary-button,
+    .theme-toggle,
+    .sidebar-toggle,
+    .sidebar-close,
+    .brand
+  ) {
+  min-height: 44px;
+  min-width: 44px;
+}
+.jd-workspace-frame :is(.theme-toggle, .sidebar-toggle) {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+}
+.jd-workspace-frame .primary-button {
+  border-color: var(--color-orange-strong);
+}
+.jd-page :is(.eyebrow, .required-label) {
+  color: var(--color-orange-strong);
+}
+.jd-helper {
+  margin: -4px 0 12px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 16px;
+}
+.jd-page .field-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 8px 0 0;
+}
+.field-error svg {
+  flex: 0 0 auto;
+}
+.analysis-panel-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+.analysis-panel .analysis-retry {
+  min-width: 118px;
+}
+.analysis-panel .analysis-retry[aria-disabled="true"] {
+  cursor: wait;
+  color: var(--muted);
+}
+.analysis-error-notice {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+}
+.analysis-error-notice .analysis-retry {
+  grid-column: 2;
+  justify-self: start;
+}
+.workspace-skip-link {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 1100;
+  padding: 12px 16px;
+  transform: translateY(-150%);
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink);
+}
+.workspace-skip-link:focus {
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .jd-workspace-frame .sidebar {
+    transition: none !important;
+  }
+  .jd-workspace-frame *,
+  .jd-workspace-frame *::before,
+  .jd-workspace-frame *::after {
+    animation: none !important;
+    scroll-behavior: auto !important;
+  }
+}
 /* Analysis content must follow the form instead of shrinking it over its actions. */
 @media (min-width: 701px) {
   .jd-workspace-frame .jd-page:has(> .jd-analysis) > .jd-form {

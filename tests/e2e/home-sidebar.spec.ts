@@ -152,6 +152,10 @@ test("provides visible active, hover, and keyboard focus states in both themes",
     });
     await page.keyboard.press("Tab");
     await expect(
+      page.getByRole("link", { name: "Skip to main content" }),
+    ).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(
       page.getByRole("link", { name: "Resume Changer home" }),
     ).toBeFocused();
 
@@ -173,7 +177,7 @@ test("provides visible active, hover, and keyboard focus states in both themes",
           };
         });
         expect(focusStyles.outlineStyle).toBe("solid");
-        expect(focusStyles.outlineWidth).toBeGreaterThanOrEqual(3);
+        expect(focusStyles.outlineWidth).toBe(2);
         expect(
           contrastRatio(focusStyles.outlineColor, focusStyles.backgroundColor),
         ).toBeGreaterThanOrEqual(3);

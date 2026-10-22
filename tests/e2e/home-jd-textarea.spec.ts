@@ -128,9 +128,8 @@ for (const theme of ["light", "dark"] as const) {
       await editor.screenshot({ path: testInfo.outputPath("textarea.png") });
       await editor.focus();
       await expect(editor).toBeFocused();
-      await expect
-        .poll(() => editor.evaluate((el) => getComputedStyle(el).boxShadow))
-        .toContain("2px");
+      await expect(editor).toHaveCSS("outline-width", "2px");
+      await expect(editor).toHaveCSS("outline-style", "solid");
       await page.screenshot({
         path: testInfo.outputPath("focus.png"),
         fullPage: true,
