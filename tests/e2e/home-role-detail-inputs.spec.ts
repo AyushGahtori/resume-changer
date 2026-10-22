@@ -199,21 +199,26 @@ test("marks a non-HTTP job link invalid with a red border", async ({
   const error = page.locator("#job-url-error");
   await expect(error).toContainText("Enter an HTTP or HTTPS link.");
 
-  const expectedErrorColor = await page.locator("html").evaluate((root) => {
-    const probe = document.createElement("span");
-    probe.style.color = "var(--color-error)";
-    root.append(probe);
-    const color = getComputedStyle(probe).color;
-    probe.remove();
-    return color;
+  const expectedErrorColors = await page.locator("html").evaluate((root) => {
+    return ["--color-error", "--color-error-strong"].map((token) => {
+      const probe = document.createElement("span");
+      probe.style.color = `var(${token})`;
+      root.append(probe);
+      const color = getComputedStyle(probe).color;
+      probe.remove();
+      return color;
+    });
   });
 
-  // The border transitions, so wait for the settled theme token.
+  // Task 28 may use either configured red error token for the invalid border.
   await expect
-    .poll(() =>
-      jobUrl.evaluate((element) => getComputedStyle(element).borderTopColor),
-    )
-    .toBe(expectedErrorColor);
+    .poll(async () => {
+      const color = await jobUrl.evaluate(
+        (element) => getComputedStyle(element).borderTopColor,
+      );
+      return expectedErrorColors.includes(color);
+    })
+    .toBe(true);
 
   // The error sits below the control as a 12px helper line.
   const errorStyle = await error.evaluate((element) => {
