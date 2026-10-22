@@ -4144,7 +4144,7 @@ a:focus-visible {
 
 .generation-groups {
   display: grid;
-  gap: 14px;
+  gap: 12px;
   max-height: min(58vh, 620px);
   overflow: auto;
   padding-right: 4px;
@@ -4189,23 +4189,26 @@ a:focus-visible {
   align-items: baseline;
   flex-wrap: wrap;
   gap: 4px 8px;
-  padding: 0 0 7px;
+  padding: 0 0 6px;
 }
 
 .generation-group legend span {
   color: var(--accent);
-  font-size: 8px;
+  font-size: 9px;
   font-weight: 700;
 }
 
 .generation-group legend strong {
   color: var(--ink);
-  font-size: 11px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 18px;
 }
 
 .generation-group legend small {
   color: var(--muted);
-  font-size: 10px;
+  font-size: 11px;
+  line-height: 16px;
 }
 
 .generation-points {
@@ -4221,18 +4224,19 @@ a:focus-visible {
   border-bottom: 1px solid var(--line);
   color: var(--ink);
   cursor: pointer;
-  font-size: 11px;
-  line-height: 1.5;
+  font-size: 13px;
+  line-height: 20px;
 }
 
 .generation-point input {
   width: 14px;
   height: 14px;
-  margin: 1px 0 0;
+  margin: 3px 0 0;
   accent-color: var(--teal);
 }
 
 .generation-point span {
+  min-width: 0;
   overflow-wrap: anywhere;
 }
 
@@ -4240,8 +4244,8 @@ a:focus-visible {
   display: block;
   margin-top: 4px;
   color: var(--muted);
-  font-size: 9px;
-  line-height: 1.4;
+  font-size: 11px;
+  line-height: 16px;
 }
 
 .generation-preview {

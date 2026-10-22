@@ -2193,7 +2193,7 @@ export default function ResumeGenerator({ library, source }: Props) {
                         {group.points.map((point) => (
                           <label className="generation-point" key={point.id}>
                             <input
-                              aria-label={`Select achievement ${point.id}`}
+                              aria-label={`Select achievement ${point.id}: ${point.text}`}
                               checked={selectedIds.includes(point.id)}
                               disabled={
                                 isRecommending || isTailoring || isAutoTailoring
