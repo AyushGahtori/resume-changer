@@ -611,7 +611,9 @@ test("maps the review inclusion controls to real draft values", async ({
   // The draft is persisted, so a refresh restores the same inclusion state.
   await page.reload();
   await page.getByRole("button", { name: "Restore editing session" }).click();
-  await page.getByRole("button", { name: "Restore draft", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Restore draft", exact: true })
+    .click();
   await page
     .getByRole("button", { name: "Education & credentials", exact: true })
     .click();
@@ -620,7 +622,9 @@ test("maps the review inclusion controls to real draft values", async ({
     page.getByRole("group", { name: "Sections to include" }),
   ).toContainText("3 of 4 sections included");
   await page.getByRole("button", { name: "Skills", exact: true }).click();
-  await expect(page.getByRole("checkbox", { name: "Python", exact: true })).toBeChecked();
+  await expect(
+    page.getByRole("checkbox", { name: "Python", exact: true }),
+  ).toBeChecked();
 
   // Applying sends the real draft values, not a display-only state.
   const requestPromise = page.waitForRequest((request) =>

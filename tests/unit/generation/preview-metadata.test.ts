@@ -41,9 +41,9 @@ describe("compiled PDF status", () => {
   });
 
   it("adds the page fill only when the layout analysis provided it", () => {
-    expect(
-      describeCompiledPdf({ pageCount: 1, utilization: 0.94 }),
-    ).toBe("PDF ready · 1 page · 94% page fill.");
+    expect(describeCompiledPdf({ pageCount: 1, utilization: 0.94 })).toBe(
+      "PDF ready · 1 page · 94% page fill.",
+    );
     expect(describeCompiledPdf({ pageCount: 1 })).toBe("PDF ready · 1 page.");
   });
 

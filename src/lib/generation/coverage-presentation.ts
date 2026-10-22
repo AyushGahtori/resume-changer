@@ -131,11 +131,7 @@ export function describeCoverageSource(context: {
 }
 
 export type JobAnalysisState =
-  | "absent"
-  | "loading"
-  | "ready"
-  | "error"
-  | "empty";
+  "absent" | "loading" | "ready" | "error" | "empty";
 
 /**
  * The single source of truth for what the builder knows about the job

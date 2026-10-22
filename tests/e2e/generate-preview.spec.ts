@@ -40,7 +40,9 @@ test("shows the real LaTeX and the compiled PDF, and states the page count", asy
   const latex = page.getByLabel("Generated LaTeX");
   await expect(latex).toContainText("Jordan Example");
   await expect(latex).toContainText("Redesigned service boundaries");
-  await expect(page.getByRole("heading", { name: "LaTeX preview" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "LaTeX preview" }),
+  ).toBeVisible();
 
   await page.getByRole("button", { name: "Create PDF" }).click();
   await expect(
@@ -107,13 +109,11 @@ test("bounds the LaTeX document in its own scrollable pane", async ({
   page,
 }) => {
   await generateResume(page);
-  const metrics = await page
-    .locator(".latex-preview")
-    .evaluate((node) => ({
-      scrollHeight: node.scrollHeight,
-      clientHeight: node.clientHeight,
-      overflowY: getComputedStyle(node).overflowY,
-    }));
+  const metrics = await page.locator(".latex-preview").evaluate((node) => ({
+    scrollHeight: node.scrollHeight,
+    clientHeight: node.clientHeight,
+    overflowY: getComputedStyle(node).overflowY,
+  }));
   expect(metrics.scrollHeight).toBeGreaterThan(metrics.clientHeight);
   expect(metrics.overflowY).toBe("auto");
 });
@@ -173,9 +173,13 @@ test("renders the preview in both themes", async ({ page }) => {
   await page.getByRole("button", { name: "Create PDF" }).click();
   await expect(page.getByTitle("Generated resume PDF")).toBeVisible();
   const viewport = page.locator(".pdf-preview-viewport");
-  const light = await viewport.evaluate((node) => getComputedStyle(node).borderTopColor);
+  const light = await viewport.evaluate(
+    (node) => getComputedStyle(node).borderTopColor,
+  );
   await page.getByRole("button", { name: "Switch to dark mode" }).click();
   await expect(page.getByTitle("Generated resume PDF")).toBeVisible();
-  const dark = await viewport.evaluate((node) => getComputedStyle(node).borderTopColor);
+  const dark = await viewport.evaluate(
+    (node) => getComputedStyle(node).borderTopColor,
+  );
   expect(dark).not.toBe(light);
 });

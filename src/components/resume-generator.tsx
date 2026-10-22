@@ -1586,10 +1586,7 @@ export default function ResumeGenerator({ library, source }: Props) {
                           {coverageSummary.breakdowns.length > 0 && (
                             <p className="selection-coverage-breakdown">
                               {coverageSummary.breakdowns
-                                .map(
-                                  (tally) =>
-                                    `${tally.count} ${tally.label}`,
-                                )
+                                .map((tally) => `${tally.count} ${tally.label}`)
                                 .join(" · ")}
                             </p>
                           )}
@@ -1604,7 +1601,9 @@ export default function ResumeGenerator({ library, source }: Props) {
                                 {coverageItems
                                   .filter((item) => item.category === category)
                                   .map((item) => {
-                                    const tone = coverageStatusTone(item.status);
+                                    const tone = coverageStatusTone(
+                                      item.status,
+                                    );
                                     const status = coverageStatusLabel(
                                       item.status,
                                     );

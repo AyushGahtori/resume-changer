@@ -87,7 +87,10 @@ async function analyzeJob(page: Page, analysis: unknown) {
 
 async function openBuilder(page: Page) {
   await page.getByRole("link", { name: "Resume builder" }).click();
-  const demoDataLink = page.getByRole("link", { name: "Demo data", exact: true });
+  const demoDataLink = page.getByRole("link", {
+    name: "Demo data",
+    exact: true,
+  });
   await Promise.all([
     page.waitForURL("**/generate?source=demo"),
     demoDataLink.click(),
@@ -158,9 +161,9 @@ test("reports a stale job analysis instead of an outdated one", async ({
   await analyzeJob(page, baseAnalysis);
   // The job description changes after the analysis, so the saved analysis no
   // longer describes the current draft.
-  await page.getByRole("textbox", { name: "Job description", exact: true }).fill(
-    "Build reliable Kubernetes platform services.",
-  );
+  await page
+    .getByRole("textbox", { name: "Job description", exact: true })
+    .fill("Build reliable Kubernetes platform services.");
   await expect(page.locator(".draft-state")).toContainText(
     "Saved on this device",
   );

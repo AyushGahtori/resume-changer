@@ -97,9 +97,9 @@ describe("skill inclusion states", () => {
         unsupported: false,
       }),
     ).toBe("does-not-fit");
-    expect(
-      skillReviewStateDescription("not-measured"),
-    ).toBe("Could not be measured with the resume font.");
+    expect(skillReviewStateDescription("not-measured")).toBe(
+      "Could not be measured with the resume font.",
+    );
     expect(skillReviewStateDescription("does-not-fit")).toBe(
       "Does not fit in the two skill lines.",
     );
@@ -109,8 +109,8 @@ describe("skill inclusion states", () => {
     expect(skillReviewStateDescription("available", true)).toBe(
       "Recommended for this job.",
     );
-    expect(
-      skillReviewStateDescription("added-to-draft", true),
-    ).toBe("Added in this draft. Recommended for this job.");
+    expect(skillReviewStateDescription("added-to-draft", true)).toBe(
+      "Added in this draft. Recommended for this job.",
+    );
   });
 });

@@ -97,9 +97,9 @@ describe("requirement coverage presentation", () => {
   });
 
   it("falls back to the saved draft when the analysis has no target title", () => {
-    expect(
-      describeCoverageSource({ roleTitle: "Platform Engineer" }),
-    ).toBe("Compared against the saved job description for Platform Engineer.");
+    expect(describeCoverageSource({ roleTitle: "Platform Engineer" })).toBe(
+      "Compared against the saved job description for Platform Engineer.",
+    );
   });
 
   it("describes an unknown job context without inventing one", () => {
