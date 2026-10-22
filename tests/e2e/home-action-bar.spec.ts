@@ -135,14 +135,14 @@ test("keeps Save text and keyboard focus contrasted in both themes", async ({
         .click();
     }
 
-    const ink = theme === "light" ? "rgb(15, 23, 42)" : "rgb(23, 20, 33)";
+    const ink = theme === "light" ? "rgb(15, 23, 42)" : "rgb(21, 21, 34)";
     const hoverBackground =
-      theme === "light" ? "rgb(194, 65, 12)" : "rgb(253, 186, 116)";
+      theme === "light" ? "rgb(178, 60, 12)" : "rgb(253, 186, 116)";
     const hoverText =
-      theme === "light" ? "rgb(255, 255, 255)" : "rgb(23, 20, 33)";
+      theme === "light" ? "rgb(255, 255, 255)" : "rgb(21, 21, 34)";
 
     await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
-    await expect(save).toHaveCSS("background-color", "rgb(249, 115, 22)");
+    await expect(save).toHaveCSS("background-color", "rgb(255, 122, 69)");
     await expect(save).toHaveCSS("color", ink);
     await assertSaveTextContrast();
 
@@ -175,7 +175,7 @@ test("shows distinct labeled action variants and keyboard focus", async ({
   await expect(clear).toBeVisible();
   await expect(analyze).toBeEnabled();
   await expect(save).toBeEnabled();
-  await expect(save).toHaveCSS("background-color", "rgb(249, 115, 22)");
+  await expect(save).toHaveCSS("background-color", "rgb(255, 122, 69)");
   await expect(analyze.locator("svg")).toHaveCount(1);
   await expect(save.locator("svg")).toHaveCount(1);
   await expect(clear.locator("svg")).toHaveCount(0);
@@ -300,7 +300,7 @@ test("keeps action buttons within tablet and narrow dark viewports", async ({
   ).toHaveCSS("background-color", "rgb(124, 58, 237)");
   await expect(page.getByRole("button", { name: "Save draft" })).toHaveCSS(
     "background-color",
-    "rgb(249, 115, 22)",
+    "rgb(255, 122, 69)",
   );
 
   for (const width of [950, 900, 768, 720, 390, 320]) {
