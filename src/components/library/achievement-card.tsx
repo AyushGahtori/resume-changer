@@ -6,6 +6,10 @@ import {
   getVisiblePointChips,
   MAX_VISIBLE_POINT_CHIPS,
 } from "@/lib/ui/point-chips";
+import {
+  buildProvenanceSegments,
+  PROVENANCE_SEPARATOR,
+} from "@/lib/ui/point-provenance";
 import type { AchievementPoint, Skill } from "@/lib/schemas/resume-data";
 
 type Props = {
@@ -38,6 +42,22 @@ const CATEGORY_ICON = {
   job: Briefcase,
   project: Folder,
 } as const;
+
+function PointProvenance({ source }: { source: AchievementPoint["source"] }) {
+  const [type, ...details] = buildProvenanceSegments(source);
+
+  return (
+    <p className="point-provenance">
+      <span className="point-provenance-prefix">Source:</span>{" "}
+      <strong className="point-provenance-type">{type.text}</strong>
+      {details.map((segment) => (
+        <span className="point-provenance-detail" key={segment.kind}>
+          {` ${PROVENANCE_SEPARATOR} ${segment.text}`}
+        </span>
+      ))}
+    </p>
+  );
+}
 
 /**
  * One achievement, as a single card.
@@ -161,11 +181,7 @@ export default function AchievementCard({
         </div>
       ) : null}
 
-      <p className="point-provenance">
-        Source: <strong>{point.source.type}</strong>
-        {point.source.label ? ` · ${point.source.label}` : ""}
-        {point.source.reference ? ` · ${point.source.reference}` : ""}
-      </p>
+      <PointProvenance source={point.source} />
     </article>
   );
 }

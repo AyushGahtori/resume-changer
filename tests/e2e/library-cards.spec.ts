@@ -1,8 +1,11 @@
 import { expect, test, type Page } from "@playwright/test";
-import { copyFile, mkdir, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { ResumeLibrary } from "../../src/lib/schemas/resume-data";
+import type {
+  AchievementPoint,
+  ResumeLibrary,
+} from "../../src/lib/schemas/resume-data";
 import { createPersonalLibraryGuard } from "./support/personal-library";
 
 /**
@@ -13,7 +16,43 @@ const libraryRoot =
   process.env.RESUME_LIBRARY_ROOT ??
   join(tmpdir(), "resume-changer-playwright-data-3010");
 const personalLibraryPath = join(libraryRoot, "data", "resume-library.json");
+const sampleLibraryPath = join(
+  process.cwd(),
+  "examples",
+  "sample-resume-library.json",
+);
 const libraryGuard = createPersonalLibraryGuard();
+
+const LONG_REFERENCE =
+  "Section 4.2 of the platform reliability review, covering the migration " +
+  "from the legacy scheduler to the queue-backed orchestrator, with the " +
+  "incident timeline and the post-incident actions";
+const PUNCTUATED_LABEL = "Quarterly plan, 2nd edition (rev. 3)";
+const PUNCTUATED_REFERENCE = "Page 1, Bullet 1 — “quoted” & annotated";
+const PROVENANCE_SOURCES: Record<string, AchievementPoint["source"]> = {
+  "achievement-service-capacity-design": {
+    type: "resume",
+    label: "Ayush resume PDF",
+    reference: "Page 1, Bullet 1",
+  },
+  "achievement-cloud-deployment-platform": { type: "linkedin" },
+  "achievement-ci-cd-pipeline": { type: "user-notes", label: "Weekly notes" },
+  "achievement-service-observability": {
+    type: "project-document",
+    reference: "Section 3",
+  },
+  "achievement-orders-api": { type: "direct-user" },
+  "achievement-accessible-admin-ui": {
+    type: "resume",
+    label: "Ayush resume PDF",
+    reference: LONG_REFERENCE,
+  },
+  "achievement-release-check-automation": {
+    type: "resume",
+    label: PUNCTUATED_LABEL,
+    reference: PUNCTUATED_REFERENCE,
+  },
+};
 
 type SyntheticPoint = {
   id: string;
@@ -204,6 +243,21 @@ async function writePersonalLibrary(library: ResumeLibrary) {
 }
 
 const cards = (page: Page) => page.locator("article.library-point");
+const pointCard = (page: Page, pointId: string) =>
+  cards(page).filter({ hasText: pointId });
+
+async function writeLibraryWithSources() {
+  const library = JSON.parse(
+    await readFile(sampleLibraryPath, "utf8"),
+  ) as ResumeLibrary;
+  for (const job of library.jobs) {
+    for (const point of job.points) {
+      const source = PROVENANCE_SOURCES[point.id];
+      if (source) point.source = source;
+    }
+  }
+  await writePersonalLibrary(library);
+}
 
 function relativeLuminance(color: string) {
   const [red, green, blue] = color
@@ -1060,4 +1114,259 @@ test("keeps chip text readable in both themes", async ({ page }) => {
     contrastRatio(dark.skillText, dark.skillBackground),
   ).toBeGreaterThanOrEqual(4.5);
   expect(dark.tagBackground).not.toBe(dark.skillBackground);
+});
+
+test.describe("achievement point provenance", () => {
+  test.beforeEach(async ({ page }) => {
+    await writeLibraryWithSources();
+    await page.goto("/library");
+  });
+
+  test("shows each source type and only the available details", async ({
+    page,
+  }) => {
+    const expected = [
+      [
+        "achievement-service-capacity-design",
+        "Source: resume · Ayush resume PDF · Page 1, Bullet 1",
+      ],
+      ["achievement-cloud-deployment-platform", "Source: linkedin"],
+      ["achievement-ci-cd-pipeline", "Source: user-notes · Weekly notes"],
+      [
+        "achievement-service-observability",
+        "Source: project-document · Section 3",
+      ],
+      ["achievement-orders-api", "Source: direct-user"],
+    ] as const;
+
+    for (const [pointId, text] of expected) {
+      await expect(
+        pointCard(page, pointId).locator(".point-provenance"),
+      ).toHaveText(text);
+    }
+  });
+
+  test("omits missing optional fields without dangling punctuation", async ({
+    page,
+  }) => {
+    const typeOnly = await pointCard(page, "achievement-orders-api")
+      .locator(".point-provenance")
+      .innerText();
+    expect(typeOnly).toBe("Source: direct-user");
+    expect(typeOnly).not.toContain("·");
+    expect(typeOnly).not.toMatch(/page|bullet|line|section/i);
+
+    const labelOnly = await pointCard(page, "achievement-ci-cd-pipeline")
+      .locator(".point-provenance")
+      .innerText();
+    expect(labelOnly).toBe("Source: user-notes · Weekly notes");
+    expect(labelOnly.split("·")).toHaveLength(2);
+    expect(labelOnly.trim().endsWith("·")).toBe(false);
+
+    const referenceOnly = await pointCard(
+      page,
+      "achievement-service-observability",
+    )
+      .locator(".point-provenance")
+      .innerText();
+    expect(referenceOnly).toBe("Source: project-document · Section 3");
+    expect(referenceOnly.split("·")).toHaveLength(2);
+  });
+
+  test("keeps provenance visible without hover or disclosure", async ({
+    page,
+  }) => {
+    const provenance = pointCard(page, "achievement-orders-api").locator(
+      ".point-provenance",
+    );
+    await expect(provenance).toBeVisible();
+
+    const state = await provenance.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return {
+        opacity: style.opacity,
+        visibility: style.visibility,
+        textOverflow: style.textOverflow,
+        whiteSpace: style.whiteSpace,
+        insideDetails: Boolean(element.closest("details")),
+        ariaExpanded: element.getAttribute("aria-expanded"),
+      };
+    });
+    expect(state.opacity).toBe("1");
+    expect(state.visibility).toBe("visible");
+    expect(state.textOverflow).not.toBe("ellipsis");
+    expect(state.whiteSpace).not.toBe("nowrap");
+    expect(state.insideDetails).toBe(false);
+    expect(state.ariaExpanded).toBeNull();
+  });
+
+  test("places provenance after metrics and chips", async ({ page }) => {
+    const card = pointCard(page, "achievement-service-capacity-design");
+    const order = await card.evaluate((element) => {
+      const provenance = element.querySelector(".point-provenance")!;
+      const metrics = element.querySelector(".point-metrics");
+      const facets = element.querySelector(".point-facets");
+      const follows = (previous: Element | null) =>
+        previous
+          ? Boolean(
+              previous.compareDocumentPosition(provenance) &
+              Node.DOCUMENT_POSITION_FOLLOWING,
+            )
+          : true;
+      return {
+        afterMetrics: follows(metrics),
+        afterFacets: follows(facets),
+      };
+    });
+    expect(order.afterMetrics).toBe(true);
+    expect(order.afterFacets).toBe(true);
+
+    const boxes = await card.evaluate((element) => {
+      const provenance = element
+        .querySelector(".point-provenance")!
+        .getBoundingClientRect();
+      const facets = element
+        .querySelector(".point-facets")!
+        .getBoundingClientRect();
+      return { provenanceTop: provenance.top, facetsBottom: facets.bottom };
+    });
+    expect(boxes.provenanceTop).toBeGreaterThanOrEqual(boxes.facetsBottom);
+  });
+
+  test("gives the source type more weight than its prefix", async ({
+    page,
+  }) => {
+    const weights = await pointCard(page, "achievement-service-capacity-design")
+      .locator(".point-provenance")
+      .evaluate((element) => {
+        const prefix = element.querySelector(".point-provenance-prefix")!;
+        const type = element.querySelector(".point-provenance-type")!;
+        return {
+          prefix: Number(getComputedStyle(prefix).fontWeight),
+          type: Number(getComputedStyle(type).fontWeight),
+          prefixText: prefix.textContent,
+          typeText: type.textContent,
+        };
+      });
+
+    expect(weights.prefixText).toBe("Source:");
+    expect(weights.typeText).toBe("resume");
+    expect(weights.type).toBeGreaterThan(weights.prefix);
+  });
+
+  test("keeps provenance readable in light and dark themes", async ({
+    page,
+  }) => {
+    const provenance = pointCard(
+      page,
+      "achievement-service-capacity-design",
+    ).locator(".point-provenance");
+    const readColors = () =>
+      provenance.evaluate((element) => {
+        const prefix = element.querySelector(".point-provenance-prefix")!;
+        const type = element.querySelector(".point-provenance-type")!;
+        const background = (node: Element): string => {
+          let current: Element | null = node;
+          while (current) {
+            const color = getComputedStyle(current).backgroundColor;
+            const alpha = color.match(/rgba?\([^)]*,\s*([\d.]+)\)/);
+            const opaque =
+              color !== "transparent" &&
+              color !== "rgba(0, 0, 0, 0)" &&
+              (!alpha || Number(alpha[1]) > 0);
+            if (opaque) return color;
+            current = current.parentElement;
+          }
+          return getComputedStyle(document.body).backgroundColor;
+        };
+        return {
+          prefix: getComputedStyle(prefix).color,
+          type: getComputedStyle(type).color,
+          background: background(element),
+          fontSize: parseFloat(getComputedStyle(element).fontSize),
+          lineHeight: parseFloat(getComputedStyle(element).lineHeight),
+        };
+      });
+
+    const light = await readColors();
+    expect(
+      contrastRatio(light.prefix, light.background),
+    ).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(light.type, light.background)).toBeGreaterThanOrEqual(
+      4.5,
+    );
+    expect(light.fontSize).toBeGreaterThanOrEqual(11);
+    expect(light.fontSize).toBeLessThanOrEqual(12);
+    expect(light.lineHeight).toBeGreaterThanOrEqual(16);
+
+    await page.getByRole("button", { name: "Switch to dark mode" }).click();
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+    await expect
+      .poll(async () => {
+        const dark = await readColors();
+        return Math.min(
+          contrastRatio(dark.prefix, dark.background),
+          contrastRatio(dark.type, dark.background),
+        );
+      })
+      .toBeGreaterThanOrEqual(4.5);
+  });
+
+  test("wraps long references at 320px without clipping or overflow", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 320, height: 740 });
+    await page.reload();
+
+    const provenance = pointCard(
+      page,
+      "achievement-accessible-admin-ui",
+    ).locator(".point-provenance");
+    await expect(provenance).toContainText(LONG_REFERENCE);
+
+    const metrics = await provenance.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return {
+        height: element.getBoundingClientRect().height,
+        lineHeight: parseFloat(style.lineHeight),
+        textOverflow: style.textOverflow,
+        overflowWrap: style.overflowWrap,
+      };
+    });
+    expect(metrics.height).toBeGreaterThan(metrics.lineHeight);
+    expect(metrics.textOverflow).not.toBe("ellipsis");
+    expect(metrics.overflowWrap).toBe("anywhere");
+
+    const widths = await page.evaluate(() => ({
+      documentWidth: document.documentElement.scrollWidth,
+      viewportWidth: document.documentElement.clientWidth,
+    }));
+    expect(widths.documentWidth).toBeLessThanOrEqual(widths.viewportWidth);
+  });
+
+  test("preserves punctuation in the source label and reference", async ({
+    page,
+  }) => {
+    const provenance = pointCard(
+      page,
+      "achievement-release-check-automation",
+    ).locator(".point-provenance");
+    await expect(provenance).toHaveText(
+      `Source: resume · ${PUNCTUATED_LABEL} · ${PUNCTUATED_REFERENCE}`,
+    );
+    await expect(provenance).toContainText(PUNCTUATED_LABEL);
+    await expect(provenance).toContainText(PUNCTUATED_REFERENCE);
+  });
+
+  test("never exposes a personal file path in provenance", async ({ page }) => {
+    const texts = await page.locator(".point-provenance").allTextContents();
+    expect(texts.length).toBeGreaterThan(0);
+
+    for (const text of texts) {
+      expect(text).not.toContain(libraryRoot);
+      expect(text).not.toMatch(/[A-Za-z]:[\\/]/);
+      expect(text).not.toMatch(/(^|\s)(\/|~)\//);
+      expect(text).not.toContain("resume-library.json");
+    }
+  });
 });

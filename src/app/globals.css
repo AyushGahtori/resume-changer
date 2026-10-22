@@ -3423,7 +3423,11 @@ a:focus-visible {
   line-height: var(--type-metadata-line-height);
   overflow-wrap: anywhere;
 }
-.point-provenance strong {
+.point-provenance-prefix,
+.point-provenance-detail {
+  color: var(--muted);
+}
+.point-provenance-type {
   color: var(--ink);
   font-weight: 600;
 }
