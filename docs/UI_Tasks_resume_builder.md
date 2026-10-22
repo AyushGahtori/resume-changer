@@ -6,16 +6,16 @@ This document is the frontend companion to project-plan.md and the Resume Builde
 
 All eight images were reviewed individually in slide order. Slide 1 shows the product overview and page breakdown; slides 2-7 detail job context, selection, tailoring, generated-content review, preview, and workflow architecture; slide 8 is the component kit. Cropped, unaltered pixel regions are stored under docs/ui-images/resume-builder/. Every task embeds its own required references. The product UI inside the boards is the visual target; poster art, slide labels, explanatory diagrams, and sample personal data are not production content.
 
-| Slide | Source image |
-| --- | --- |
-| 1 | ChatGPT Image Oct 22, 2026, 10_27_38 AM-1.png |
-| 2 | ChatGPT Image Oct 22, 2026, 10_27_39 AM-2.png |
-| 3 | ChatGPT Image Oct 22, 2026, 10_27_40 AM-3.png |
-| 4 | ChatGPT Image Oct 22, 2026, 10_27_41 AM-4.png |
-| 5 | ChatGPT Image Oct 22, 2026, 10_27_43 AM-5.png |
-| 6 | ChatGPT Image Oct 22, 2026, 10_27_44 AM-6.png |
-| 7 | ChatGPT Image Oct 22, 2026, 10_27_45 AM-7.png |
-| 8 | ChatGPT Image Oct 22, 2026, 10_27_46 AM-8.png |
+| Slide | Source image                                  |
+| ----- | --------------------------------------------- |
+| 1     | ChatGPT Image Oct 22, 2026, 10_27_38 AM-1.png |
+| 2     | ChatGPT Image Oct 22, 2026, 10_27_39 AM-2.png |
+| 3     | ChatGPT Image Oct 22, 2026, 10_27_40 AM-3.png |
+| 4     | ChatGPT Image Oct 22, 2026, 10_27_41 AM-4.png |
+| 5     | ChatGPT Image Oct 22, 2026, 10_27_43 AM-5.png |
+| 6     | ChatGPT Image Oct 22, 2026, 10_27_44 AM-6.png |
+| 7     | ChatGPT Image Oct 22, 2026, 10_27_45 AM-7.png |
+| 8     | ChatGPT Image Oct 22, 2026, 10_27_46 AM-8.png |
 
 This is an implementation plan only. It does not authorize changes to resume schemas, model prompts, data loading, AI provider behavior, PDF/LaTeX contracts, consent, storage, or history semantics. Preserve the existing behavior and APIs. Any visual example that has no working, truthful counterpart in the current product must be omitted or adapted; never ship a dead control, invented score, or fabricated resume data to imitate the board.
 
@@ -230,19 +230,19 @@ Before implementing any Reference Interpretation item, open and inspect the exac
 
 The board prints the light values below. Dark colors are visual estimates only; derive them from the current shared dark theme and verify contrast. Do not add a second set of component-specific variables under the builder.
 
-| Token | Printed light value | Use |
-| --- | --- | --- |
-| Primary orange | #FF7A18 | Generate LaTeX and primary action emphasis |
-| Secondary violet | #7C3AED | AI actions, selected states, and focus |
-| Accent violet | #A78BFA | Secondary violet accent |
-| Background | #FFF7F1 | Light app canvas reference |
-| Surface | #F8FAFC | Cards, controls, and preview chrome |
-| Text primary | #0F172A | Titles and main content |
-| Text secondary | #64748B | Supporting text and metadata |
-| Border | #E2E8F0 | Inputs, separators, and card outlines |
-| Success | #16A34A | Confirmed/generated-success state only |
-| Warning | #F59E0B | Actual caution/validation state only |
-| Error | #EF4444 | Actual failure or invalid-input state |
+| Token            | Printed light value | Use                                        |
+| ---------------- | ------------------- | ------------------------------------------ |
+| Primary orange   | #FF7A18             | Generate LaTeX and primary action emphasis |
+| Secondary violet | #7C3AED             | AI actions, selected states, and focus     |
+| Accent violet    | #A78BFA             | Secondary violet accent                    |
+| Background       | #FFF7F1             | Light app canvas reference                 |
+| Surface          | #F8FAFC             | Cards, controls, and preview chrome        |
+| Text primary     | #0F172A             | Titles and main content                    |
+| Text secondary   | #64748B             | Supporting text and metadata               |
+| Border           | #E2E8F0             | Inputs, separators, and card outlines      |
+| Success          | #16A34A             | Confirmed/generated-success state only     |
+| Warning          | #F59E0B             | Actual caution/validation state only       |
+| Error            | #EF4444             | Actual failure or invalid-input state      |
 
 The type board prints H1 40/48, H2 32/40, H3 24/32, H4 20/28, Body 16/24, standard UI 14/20, and Small/Caption 12/16. Preserve existing Georgia/Times and Arial/Helvetica. The spacing board shows 4/8/16/24/32/48/64px; use the existing application tokens and compact control/card radius conventions.
 
@@ -258,7 +258,7 @@ The type board prints H1 40/48, H2 32/40, H3 24/32, H4 20/28, Body 16/24, standa
 - src/lib/ai/contracts.ts, src/lib/ai/evidence.ts, src/lib/ai/requirement-coverage.ts, src/lib/ai/achievement-selection.ts, and src/lib/ai/tailor-achievements.ts define the current analysis and AI contracts. Visual tasks must not change these contracts or model policy.
 - src/lib/generation/manual-generation.ts, studio-generation.ts, studio-document.ts, studio-history.ts, studio-session.ts, review-draft.ts, skill-layout.ts, export-package.ts, and resume-filename.ts own generation, document state, review, measured skills, and export behavior.
 - src/lib/latex/ owns resume rendering and validation; current PDF/LaTeX viewer, download, and compile behavior must remain backed by these real outputs and routes.
-- Existing focused coverage includes tests/e2e/resume-studio.spec.ts, tests/e2e/resume-journey.spec.ts, tests/e2e/achievement-selection.spec.ts, tests/e2e/studio-overrides.spec.ts, tests/e2e/generation-history.spec.ts, tests/unit/generation/*, tests/unit/latex/*, and tests/unit/pdf/studio-integration.test.ts. Read the relevant test before editing its component.
+- Existing focused coverage includes tests/e2e/resume-studio.spec.ts, tests/e2e/resume-journey.spec.ts, tests/e2e/achievement-selection.spec.ts, tests/e2e/studio-overrides.spec.ts, tests/e2e/generation-history.spec.ts, tests/unit/generation/_, tests/unit/latex/_, and tests/unit/pdf/studio-integration.test.ts. Read the relevant test before editing its component.
 
 ## Required Workflow And Test Rules
 
