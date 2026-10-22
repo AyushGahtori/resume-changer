@@ -1,17 +1,12 @@
 import { expect, test, type Page } from "@playwright/test";
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-
-const libraryRoot =
-  process.env.RESUME_LIBRARY_ROOT ??
-  join(tmpdir(), "resume-changer-playwright-data-3010");
-const personalLibraryPath = join(libraryRoot, "data", "resume-library.json");
-const exampleLibraryPath = join(
-  process.cwd(),
-  "examples",
-  "sample-resume-library.json",
-);
+import {
+  createPersonalLibraryGuard,
+  exampleLibraryPath,
+  libraryRoot,
+  personalLibraryPath,
+} from "./support/personal-library";
 
 type LibraryFixture = {
   fullName?: string;
@@ -21,6 +16,16 @@ type LibraryFixture = {
   /** Removes every achievement, so the library renders its empty state. */
   empty?: boolean;
 };
+
+const personalLibrary = createPersonalLibraryGuard();
+
+test.beforeAll(async () => {
+  await personalLibrary.capture();
+});
+
+test.afterAll(async () => {
+  await personalLibrary.restore();
+});
 
 /**
  * Writes an isolated personal library so the card can be checked against
@@ -90,10 +95,6 @@ async function writePersonalLibrary(fixture: LibraryFixture) {
     "utf8",
   );
 }
-
-test.afterEach(async () => {
-  await rm(personalLibraryPath, { force: true });
-});
 
 function parseColor(value: string): [number, number, number] {
   const match = value.match(/rgba?\(([^)]+)\)/);
