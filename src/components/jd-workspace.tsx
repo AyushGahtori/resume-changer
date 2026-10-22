@@ -1,10 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import {
-  JobAnalysisPanel,
-  type AnalysisState,
-} from "@/components/home/job-analysis-panel";
+import type { AnalysisState } from "@/components/home/job-analysis-panel";
+import { ATSAnalysisPreview } from "@/components/home/ats-analysis-preview";
 import {
   Asterisk,
   ArrowUpRight,
@@ -56,6 +54,15 @@ export default function JDWorkspace({
   const analysisRequest = useRef<AbortController | null>(null);
   const autosaveTimeout = useRef<number | null>(null);
   const draftChanged = useRef(false);
+
+  function focusField(field: "jobDescription" | "jobUrl") {
+    const input = document.getElementById(
+      field === "jobDescription" ? "job-description" : "job-url",
+    );
+    window.requestAnimationFrame(() => {
+      if (input?.isConnected) input.focus();
+    });
+  }
 
   // Storage access itself can throw, before the storage helpers can catch it.
   function localStorageOrUnavailable(): Storage {
@@ -164,6 +171,7 @@ export default function JDWorkspace({
       }));
       setAnalysisError("Check the job description and try again.");
       setAnalysisState("error");
+      focusField("jobDescription");
       return;
     }
 
@@ -232,6 +240,7 @@ export default function JDWorkspace({
     if (Object.keys(nextErrors).length > 0) {
       setSaveFeedbackError(true);
       setSaveFeedback("Fix the highlighted fields before saving.");
+      focusField(nextErrors.jobDescription ? "jobDescription" : "jobUrl");
       return;
     }
 
@@ -314,184 +323,190 @@ export default function JDWorkspace({
         </p>
       )}
 
-      <form
-        aria-labelledby="role-details-title"
-        className="jd-form"
-        onSubmit={handleSubmit}
-        noValidate
-      >
-        <div className="form-topline">
-          <div>
-            <h2 id="role-details-title">Role details</h2>
-            <p>Target position</p>
-          </div>
-          <span className="optional-label">LINK OPTIONAL</span>
-        </div>
-
-        <div className="metadata-fields">
-          {ROLE_FIELDS.map((descriptor) => (
-            <RoleDetailField
-              descriptor={descriptor}
-              error={errors[descriptor.field]}
-              key={descriptor.field}
-              onChange={(value) => updateField(descriptor.field, value)}
-              value={draft[descriptor.field]}
-            />
-          ))}
-        </div>
-
-        <div className="form-divider" />
-
-        <div className="description-heading">
-          <label htmlFor="job-description">Job description</label>
-          <span className="required-label">REQUIRED</span>
-        </div>
-        <p className="description-helper" id="jd-helper">
-          Paste the job description from the company&apos;s career page.
-        </p>
-        <textarea
-          aria-describedby={
-            descriptionError
-              ? "jd-helper jd-error jd-count"
-              : "jd-helper jd-count"
-          }
-          aria-invalid={Boolean(descriptionError)}
-          disabled={!isReady}
-          id="job-description"
-          name="jobDescription"
-          onChange={(event) =>
-            updateField("jobDescription", event.target.value)
-          }
-          placeholder="Paste the job description"
-          rows={7}
-          spellCheck="false"
-          value={draft.jobDescription}
-        />
-        {descriptionError && (
-          <p className="field-error jd-error" id="jd-error" role="alert">
-            <CircleAlert aria-hidden="true" size={14} />
-            <span>{descriptionError}</span>
-          </p>
-        )}
-
-        <div className="form-footer">
-          <div className="input-metrics" id="jd-count">
-            <span className={isOverLimit ? "metric-over-limit" : undefined}>
-              {characterCount.toLocaleString()} /{" "}
-              {MAX_JD_CHARACTERS.toLocaleString()} characters
-            </span>
-            <span className="token-metric">
-              <span aria-hidden="true" className="metric-separator">
-                {"\u00b7"}
-              </span>
-              <span>~{tokenCount.toLocaleString()} tokens</span>
-            </span>
-            <span
-              className="metrics-announcement"
-              aria-live="polite"
-              aria-atomic="true"
-            >
-              {metricsAnnouncement}
-            </span>
-          </div>
-          <PasteFromUrl
-            available={pasteFromUrlAvailable}
-            jobUrl={draft.jobUrl}
-            onExtracted={handleExtractedJobDescription}
-          />
-          <div className="form-actions">
-            <button
-              className="home-action-button home-action-button--ghost"
-              disabled={!isReady}
-              onClick={handleClear}
-              type="button"
-            >
-              Clear draft
-            </button>
-            <button
-              aria-busy={isAnalyzing}
-              className="home-action-button home-action-button--secondary analyze-button"
-              disabled={!isReady || isAnalyzing}
-              onClick={handleAnalyze}
-              type="button"
-            >
-              {isAnalyzing ? (
-                <>
-                  <span className="home-action-icon">
-                    <LoaderCircle
-                      aria-hidden="true"
-                      className="home-action-spinner"
-                      size={16}
-                    />
-                  </span>
-                  <span>Analyzing...</span>
-                </>
-              ) : (
-                <>
-                  <span className="home-action-icon">
-                    <Sparkles aria-hidden="true" size={18} />
-                  </span>
-                  <span>
-                    {analysisState === "error"
-                      ? "Retry analysis"
-                      : "Analyze job description"}
-                  </span>
-                </>
-              )}
-            </button>
-            <button
-              aria-busy={isSaving}
-              className="home-action-button home-action-button--primary"
-              disabled={!isReady}
-              type="submit"
-            >
-              {isSaving ? (
-                <>
-                  <span className="home-action-icon">
-                    <LoaderCircle
-                      aria-hidden="true"
-                      className="home-action-spinner"
-                      size={16}
-                    />
-                  </span>
-                  <span>Saving...</span>
-                </>
-              ) : (
-                <>
-                  <span>Save draft</span>
-                  <span className="home-action-icon">
-                    <ArrowUpRight aria-hidden="true" size={18} />
-                  </span>
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-        <div
-          className={`draft-state is-${saveState}`}
-          role="status"
-          aria-live="polite"
+      <div className="jd-work-grid">
+        <form
+          aria-labelledby="role-details-title"
+          className="jd-form"
+          onSubmit={handleSubmit}
+          noValidate
         >
-          <span className={`draft-dot draft-${saveState}`} aria-hidden="true" />
-          {saveMessage}
-        </div>
-        {saveFeedback && (
-          <p
-            className={`form-save-feedback${saveFeedbackError ? " is-error" : ""}`}
-            role="status"
-          >
-            {saveFeedback}
-          </p>
-        )}
-      </form>
+          <div className="form-topline">
+            <div>
+              <h2 id="role-details-title">Role details</h2>
+              <p>Target position</p>
+            </div>
+            <span className="optional-label">LINK OPTIONAL</span>
+          </div>
 
-      <JobAnalysisPanel
-        state={analysisState}
-        analysis={analysis}
-        error={analysisError}
-        cacheSaved={analysisCacheSaved}
-        onAnalyze={handleAnalyze}
-      />
+          <div className="metadata-fields">
+            {ROLE_FIELDS.map((descriptor) => (
+              <RoleDetailField
+                descriptor={descriptor}
+                error={errors[descriptor.field]}
+                key={descriptor.field}
+                onChange={(value) => updateField(descriptor.field, value)}
+                value={draft[descriptor.field]}
+              />
+            ))}
+          </div>
+
+          <div className="form-divider" />
+
+          <div className="description-heading">
+            <label htmlFor="job-description">Job description</label>
+            <span className="required-label">REQUIRED</span>
+          </div>
+          <p className="description-helper" id="jd-helper">
+            Paste the job description from the company&apos;s career page.
+          </p>
+          <textarea
+            aria-describedby={
+              descriptionError
+                ? "jd-helper jd-error jd-count"
+                : "jd-helper jd-count"
+            }
+            aria-invalid={Boolean(descriptionError)}
+            disabled={!isReady}
+            required
+            id="job-description"
+            name="jobDescription"
+            onChange={(event) =>
+              updateField("jobDescription", event.target.value)
+            }
+            placeholder="Paste the job description"
+            rows={7}
+            spellCheck="false"
+            value={draft.jobDescription}
+          />
+          {descriptionError && (
+            <p className="field-error jd-error" id="jd-error" role="alert">
+              <CircleAlert aria-hidden="true" size={14} />
+              <span>{descriptionError}</span>
+            </p>
+          )}
+
+          <div className="form-footer">
+            <div className="input-metrics" id="jd-count">
+              <span className={isOverLimit ? "metric-over-limit" : undefined}>
+                {characterCount.toLocaleString()} /{" "}
+                {MAX_JD_CHARACTERS.toLocaleString()} characters
+              </span>
+              <span className="token-metric">
+                <span aria-hidden="true" className="metric-separator">
+                  {"\u00b7"}
+                </span>
+                <span>~{tokenCount.toLocaleString()} tokens</span>
+              </span>
+              <span
+                className="metrics-announcement"
+                aria-live="polite"
+                aria-atomic="true"
+              >
+                {metricsAnnouncement}
+              </span>
+            </div>
+            <PasteFromUrl
+              available={pasteFromUrlAvailable}
+              jobUrl={draft.jobUrl}
+              onExtracted={handleExtractedJobDescription}
+            />
+            <div className="form-actions">
+              <button
+                className="home-action-button home-action-button--ghost"
+                disabled={!isReady}
+                onClick={handleClear}
+                type="button"
+              >
+                Clear draft
+              </button>
+              <button
+                aria-busy={isAnalyzing}
+                className="home-action-button home-action-button--secondary analyze-button"
+                disabled={!isReady || isAnalyzing}
+                onClick={handleAnalyze}
+                type="button"
+              >
+                {isAnalyzing ? (
+                  <>
+                    <span className="home-action-icon">
+                      <LoaderCircle
+                        aria-hidden="true"
+                        className="home-action-spinner"
+                        size={16}
+                      />
+                    </span>
+                    <span>Analyzing...</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="home-action-icon">
+                      <Sparkles aria-hidden="true" size={16} />
+                    </span>
+                    <span>
+                      {analysisState === "error"
+                        ? "Retry analysis"
+                        : "Analyze job description"}
+                    </span>
+                  </>
+                )}
+              </button>
+              <button
+                aria-busy={isSaving}
+                className="home-action-button home-action-button--primary"
+                disabled={!isReady}
+                type="submit"
+              >
+                {isSaving ? (
+                  <>
+                    <span className="home-action-icon">
+                      <LoaderCircle
+                        aria-hidden="true"
+                        className="home-action-spinner"
+                        size={16}
+                      />
+                    </span>
+                    <span>Saving...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Save draft</span>
+                    <span className="home-action-icon">
+                      <ArrowUpRight aria-hidden="true" size={18} />
+                    </span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+          <div
+            className={`draft-state is-${saveState}`}
+            role="status"
+            aria-live="polite"
+          >
+            <span
+              className={`draft-dot draft-${saveState}`}
+              aria-hidden="true"
+            />
+            {saveMessage}
+          </div>
+          {saveFeedback && (
+            <p
+              className={`form-save-feedback${saveFeedbackError ? " is-error" : ""}`}
+              role="status"
+            >
+              {saveFeedback}
+            </p>
+          )}
+        </form>
+
+        <ATSAnalysisPreview
+          state={analysisState}
+          analysis={analysis}
+          error={analysisError}
+          cacheSaved={analysisCacheSaved}
+          onAnalyze={handleAnalyze}
+        />
+      </div>
 
       <div className="workspace-note">
         <span className="note-mark" aria-hidden="true">
