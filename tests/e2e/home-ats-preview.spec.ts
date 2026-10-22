@@ -1,8 +1,99 @@
 import { expect, test } from "@playwright/test";
-import { homeAnalysis } from "../helpers/home-analysis";
+import { homeAnalysis, emptyHomeAnalysis } from "../helpers/home-analysis";
+import { JobAnalysisResultSchema } from "../../src/lib/ai/contracts";
 
 const description =
   "We'll analyze your job description to find key skills, keywords, and requirements that ATS systems look for.";
+
+test("score contract contains no supported match-score field", () => {
+  expect(JobAnalysisResultSchema.safeParse(homeAnalysis).success).toBe(true);
+  expect(
+    JobAnalysisResultSchema.safeParse({ ...homeAnalysis, atsMatch: 78 })
+      .success,
+  ).toBe(false);
+  expect(
+    JobAnalysisResultSchema.safeParse({ ...homeAnalysis, score: 78 }).success,
+  ).toBe(false);
+});
+
+for (const theme of ["light", "dark"]) {
+  test(`score contract stays unscored for idle, valid, empty and unsupported responses in ${theme}`, async ({
+    page,
+  }) => {
+    await page.goto("/");
+    if (theme === "dark")
+      await page.getByRole("button", { name: "Switch to dark mode" }).click();
+    const preview = page.getByRole("complementary", {
+      name: "ATS analysis preview",
+    });
+    const assertUnscored = async () => {
+      await expect(preview.getByRole("note")).toContainText("Not scored.");
+      await expect(
+        preview.locator(
+          "[role=progressbar], progress, meter, [aria-valuenow], .ats-score-ring",
+        ),
+      ).toHaveCount(0);
+      await expect(preview).not.toContainText(
+        /78%|Estimated ATS match|ATS score:\s*\d/i,
+      );
+    };
+    await assertUnscored();
+    await preview.screenshot({
+      path: `docs/ui-review/task-23/${theme}-empty.png`,
+      animations: "disabled",
+      style: "nextjs-portal {display:none}",
+    });
+    let payload: unknown = homeAnalysis;
+    await page.route("**/api/ai/analyze-job-description", (route) =>
+      route.fulfill({ json: { analysis: payload } }),
+    );
+    await page
+      .getByRole("textbox", { name: "Job description", exact: true })
+      .fill("Build accessible and reliable services.");
+    for (const result of [
+      homeAnalysis,
+      emptyHomeAnalysis,
+      { ...homeAnalysis, score: 78, atsMatch: 78, estimatedAtsMatch: 78 },
+    ]) {
+      payload = result;
+      await page
+        .getByRole("button", { name: "Analyze job description", exact: true })
+        .click();
+      await expect(preview.locator(".analysis-role")).toContainText(
+        result.targetTitle,
+      );
+      await assertUnscored();
+    }
+    await preview.screenshot({
+      path: `docs/ui-review/task-23/${theme}-unsupported.png`,
+      animations: "disabled",
+      style: "nextjs-portal {display:none}",
+    });
+    payload = homeAnalysis;
+    await page
+      .getByRole("button", { name: "Analyze job description", exact: true })
+      .click();
+    await expect(preview.locator(".analysis-role")).toContainText(
+      homeAnalysis.targetTitle,
+    );
+    await expect(preview.locator(".analysis-cache-notice")).toHaveCount(0);
+    for (const width of [1440, 390, 320]) {
+      await page.setViewportSize({ width, height: 900 });
+      if (width < 700)
+        await expect(page.locator("#workspace-sidebar")).toBeHidden();
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+      ).toBe(true);
+      await preview.screenshot({
+        path: `docs/ui-review/task-23/${theme}-result-${width}.png`,
+        animations: "disabled",
+        style: "nextjs-portal {display:none}",
+      });
+    }
+  });
+}
 
 function contrast(foreground: string, background: string) {
   const luminance = (color: string) => {

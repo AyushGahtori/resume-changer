@@ -4,6 +4,8 @@ import {
 } from "./job-analysis-panel";
 
 export function ATSAnalysisPreview(props: AnalysisPanelProps) {
+  // JobAnalysisResult only describes JD extraction. A score must never be
+  // inferred here; a future match feature needs its own validated contract.
   return (
     <aside className="ats-preview" aria-labelledby="ats-preview-title">
       <div className="ats-preview-heading">
@@ -26,6 +28,10 @@ export function ATSAnalysisPreview(props: AnalysisPanelProps) {
       <p className="ats-preview-description">
         We&apos;ll analyze your job description to find key skills, keywords,
         and requirements that ATS systems look for.
+      </p>
+      <p className="ats-score-notice" role="note">
+        <strong>Not scored.</strong> This preview extracts job requirements. A
+        resume match has not been evaluated.
       </p>
       {props.state === "idle" ? (
         <p className="ats-preview-empty">
