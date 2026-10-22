@@ -61,8 +61,9 @@ library pull requests already use those exact paths:
 | `tests/e2e/library-summary.spec.ts`    | PRs #72, #75, #76, #79, #86 |
 | `tests/e2e/library-filters.spec.ts`    | PR #80                      |
 | `tests/e2e/library-groups.spec.ts`     | PRs #79, #81, #85           |
-| `tests/e2e/library-cards.spec.ts`      | PRs #75, #79, #84           |
-| `tests/e2e/library-responsive.spec.ts` | PR #87                      |
+| `tests/e2e/library-cards.spec.ts`      | PRs #75, #79, #84, #88      |
+| `tests/e2e/library-responsive.spec.ts` | PRs #87, #89                |
+| `tests/e2e/library-search.spec.ts`     | PR #89                      |
 
 Two branches that each add a different file at the same path cannot both be
 merged; the merge stops on an add/add conflict and a person has to reconcile
@@ -202,7 +203,7 @@ work that is not in this branch.
 | The styled add and detailed-entry actions                                   | Task 10         | #77               |
 | The profile summary surface and the honest identity navigation              | Tasks 11 and 12 | #76 and #72       |
 | The dynamic metric tiles                                                    | Task 13         | #86               |
-| The sticky search and filter workbench                                      | Task 14         | —                 |
+| The sticky search and filter workbench                                      | Task 14         | #89               |
 | The search input states                                                     | Task 15         | —                 |
 | The presented advanced filter facets                                        | Task 16         | —                 |
 | The counted category navigation                                             | Task 17         | —                 |
@@ -211,7 +212,7 @@ work that is not in this branch.
 | The section headers, the visible counts, the date ranges and the disclosure | Task 20         | #85               |
 | The achievement card surface and its reading order                          | Task 21         | #84               |
 | The narrative, the role context and the summary text                        | Task 22         | #75               |
-| The metric presentation with evidence and context                           | Task 23         | —                 |
+| The metric presentation with evidence and context                           | Task 23         | #88               |
 | The tag, linked-skill and overflow chips                                    | Task 24         | —                 |
 | The source and provenance presentation                                      | Task 25         | —                 |
 | The enabled state and the card actions                                      | Task 26         | —                 |
