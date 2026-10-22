@@ -3320,44 +3320,95 @@ a:focus-visible {
   }
 }
 .library-point {
-  padding: var(--space-12) 0;
-  border-bottom: var(--border-default);
+  display: grid;
+  gap: var(--space-12);
+  margin-bottom: var(--space-12);
+  padding: var(--space-16);
+  border: var(--border-default);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  box-shadow: var(--shadow-xs);
 }
 .library-point:last-child {
-  border-bottom: 0;
+  margin-bottom: 0;
 }
-.library-point-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+.library-point-header {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) auto;
+  align-items: start;
   gap: var(--space-12);
 }
-.library-point-heading code {
+.library-point-icon {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border-radius: var(--radius-card);
+  background: color-mix(in srgb, var(--color-category-job) 14%, var(--surface));
+  color: var(--color-category-job-text);
+}
+.library-point-icon[data-kind="project"] {
+  background: color-mix(
+    in srgb,
+    var(--color-category-project) 14%,
+    var(--surface)
+  );
+  color: var(--color-category-project-text);
+}
+.library-point-intro {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+}
+.library-point-context {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--type-metadata-size);
+  line-height: var(--type-metadata-line-height);
+}
+.library-point-id {
+  color: var(--muted);
+  font-size: var(--type-metadata-size);
+  line-height: var(--type-metadata-line-height);
   overflow-wrap: anywhere;
-  color: var(--quiet);
-  font-size: 10px;
 }
 .point-status {
+  display: inline-flex;
   flex: 0 0 auto;
-  font-size: 10px;
+  align-items: center;
+  gap: var(--space-4);
+  padding: 3px 9px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-full);
+  font-size: var(--type-label-size);
   font-weight: 650;
+  white-space: nowrap;
 }
 .point-status.is-enabled {
   color: var(--teal);
+  border-color: color-mix(in srgb, var(--color-success) 35%, transparent);
+  background: color-mix(in srgb, var(--color-success) 10%, var(--surface));
 }
 .point-status.is-disabled {
   color: var(--danger);
+  border-color: color-mix(in srgb, var(--color-error) 35%, transparent);
+  background: color-mix(in srgb, var(--color-error) 10%, var(--surface));
 }
 .library-point-text {
-  margin: var(--space-8) 0;
+  margin: 0;
   color: var(--ink);
-  font-size: 12px;
-  line-height: 1.55;
+  font-size: var(--type-body-size);
+  font-weight: 600;
+  line-height: var(--type-body-line-height);
+  overflow-wrap: anywhere;
 }
 .point-provenance {
   margin: 0;
+  padding-top: var(--space-12);
+  border-top: var(--border-default);
   color: var(--muted);
-  font-size: 10px;
+  font-size: var(--type-metadata-size);
+  line-height: var(--type-metadata-line-height);
   overflow-wrap: anywhere;
 }
 .point-provenance strong {
@@ -3365,36 +3416,55 @@ a:focus-visible {
   font-weight: 600;
 }
 .point-metrics {
-  display: grid;
-  gap: var(--space-8);
-  margin: var(--space-8) 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0;
   padding: 0;
+  border-top: var(--border-default);
   list-style: none;
 }
 .point-metrics li {
   display: grid;
-  gap: var(--space-4);
-  padding-left: var(--space-8);
-  border-left: 2px solid var(--teal);
-  font-size: 10px;
+  gap: 2px;
+  min-width: 0;
+  margin-right: var(--space-16);
+  padding: var(--space-12) var(--space-16) 0 0;
+  border-right: var(--border-default);
 }
-.point-metrics strong {
-  color: var(--ink);
-  font-weight: 600;
+.point-metrics li:last-child {
+  margin-right: 0;
+  padding-right: 0;
+  border-right: 0;
 }
-.point-metrics span {
+.point-metric-label {
   color: var(--muted);
-  line-height: 1.4;
+  font-size: var(--type-metadata-size);
+}
+.point-metric-value {
+  color: var(--ink);
+  font-size: var(--type-body-size);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.point-metric-note {
+  color: var(--quiet);
+  font-size: var(--type-metadata-size);
+  line-height: var(--type-metadata-line-height);
 }
 .point-facets {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-8) var(--space-12);
-  margin-top: var(--space-8);
+  gap: var(--space-8);
+  margin: 0;
 }
 .facet-chip {
+  padding: 3px 9px;
+  border: var(--border-default);
+  border-radius: var(--radius-full);
+  background: var(--surface-soft);
   color: var(--accent-hover);
-  font-size: 10px;
+  cursor: pointer;
+  font-size: var(--type-label-size);
 }
 .facet-chip.is-skill {
   color: var(--teal);
@@ -3630,6 +3700,22 @@ a:focus-visible {
   display: flex;
   align-items: center;
   gap: var(--space-12);
+}
+
+@media (max-width: 700px) {
+  .library-point-header {
+    grid-template-columns: 36px minmax(0, 1fr);
+  }
+
+  .point-row-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+
+  .point-metrics li {
+    margin-right: var(--space-12);
+    padding-right: var(--space-12);
+  }
 }
 
 .point-editor {
@@ -5961,7 +6047,7 @@ a:focus-visible {
   line-height: var(--type-metadata-line-height);
 }
 
-.library-page .library-point-heading code {
+.library-page .library-point-id {
   color: var(--muted);
   font-size: var(--type-metadata-size);
   line-height: var(--type-metadata-line-height);
@@ -5989,12 +6075,13 @@ a:focus-visible {
   line-height: var(--type-metadata-line-height);
 }
 
-.library-page .point-metrics strong {
+.library-page .point-metric-value {
   font-size: var(--type-body-size);
   line-height: var(--type-body-line-height);
 }
 
-.library-page .point-metrics span {
+.library-page .point-metric-label,
+.library-page .point-metric-note {
   font-size: var(--type-metadata-size);
   line-height: var(--type-metadata-line-height);
 }
