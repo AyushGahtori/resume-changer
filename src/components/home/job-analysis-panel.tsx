@@ -30,6 +30,13 @@ export function JobAnalysisPanel({
 }: AnalysisPanelProps & { embedded?: boolean }) {
   const Heading = embedded ? "h3" : "h2";
   const CategoryHeading = embedded ? "h4" : "h3";
+  const populatedSections = analysis
+    ? sections.filter(([key]) => analysis[key].length > 0)
+    : [];
+  const hasTerminology = Boolean(analysis?.terminology.length);
+  const emptySectionCount = analysis
+    ? sections.length - populatedSections.length + Number(!hasTerminology)
+    : 0;
   if (state === "idle") return null;
   return (
     <section
@@ -52,7 +59,9 @@ export function JobAnalysisPanel({
           ? "Analyzing job description..."
           : state === "error"
             ? "Analysis could not be completed."
-            : "Job description analysis ready."}
+            : emptySectionCount === sections.length + 1
+              ? "Analysis complete. No supported job details were identified."
+              : "Job description analysis ready."}
       </p>
       {state === "loading" && (
         <div className="analysis-loading" aria-hidden="true">
@@ -102,7 +111,7 @@ export function JobAnalysisPanel({
             </div>
           </dl>
           <div className="analysis-grid">
-            {sections.map(([key, title]) => (
+            {populatedSections.map(([key, title]) => (
               <section
                 className={`analysis-section${key === "inferredContext" ? " analysis-inferred" : ""}`}
                 key={key}
@@ -111,38 +120,41 @@ export function JobAnalysisPanel({
                 <CategoryHeading id={`analysis-${key}`}>
                   {title}
                 </CategoryHeading>
-                {analysis[key].length > 0 ? (
-                  <ul>
-                    {analysis[key].map((item, index) => (
-                      <li key={`${index}-${item}`}>{item}</li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="analysis-empty-category">None identified</p>
-                )}
-              </section>
-            ))}
-            <section
-              className="analysis-section"
-              aria-labelledby="analysis-terminology"
-            >
-              <CategoryHeading id="analysis-terminology">
-                Synonyms and equivalent terms
-              </CategoryHeading>
-              {analysis.terminology.length > 0 ? (
                 <ul>
-                  {analysis.terminology.map(({ term, alternatives }, index) => (
-                    <li key={`${index}-${term}`}>
-                      <strong>{term}</strong>
-                      {alternatives.length > 0 &&
-                        `: ${alternatives.join(", ")}`}
-                    </li>
+                  {analysis![key].map((item, index) => (
+                    <li key={`${index}-${item}`}>{item}</li>
                   ))}
                 </ul>
-              ) : (
-                <p className="analysis-empty-category">None identified</p>
-              )}
-            </section>
+              </section>
+            ))}
+            {hasTerminology && (
+              <section
+                className="analysis-section"
+                aria-labelledby="analysis-terminology"
+              >
+                <CategoryHeading id="analysis-terminology">
+                  Synonyms and equivalent terms
+                </CategoryHeading>
+                <ul>
+                  {analysis!.terminology.map(
+                    ({ term, alternatives }, index) => (
+                      <li key={`${index}-${term}`}>
+                        <strong>{term}</strong>
+                        {alternatives.length > 0 &&
+                          `: ${alternatives.join(", ")}`}
+                      </li>
+                    ),
+                  )}
+                </ul>
+              </section>
+            )}
+            {emptySectionCount > 0 && (
+              <p className="analysis-empty-summary" role="note">
+                {populatedSections.length === 0 && !hasTerminology
+                  ? "No supported requirements or related signals were identified. Include the full job description for a more useful analysis."
+                  : "No additional supported details were identified in the remaining categories."}
+              </p>
+            )}
           </div>
         </>
       )}

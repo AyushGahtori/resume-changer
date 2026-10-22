@@ -31,12 +31,15 @@ describe("JD extraction signals", () => {
       },
     ]);
   });
-  it("never turns missing categories into a pass or warning", () => {
+  it("summarizes a fully empty response without implying a pass or warning", () => {
     const signals = buildAnalysisSignals(emptyHomeAnalysis);
-    expect(signals.every((signal) => signal.status === "info")).toBe(true);
-    expect(
-      signals.every((signal) => signal.label.startsWith("None identified:")),
-    ).toBe(true);
+    expect(signals).toEqual([
+      {
+        key: "requirements",
+        status: "info",
+        label: "No supported requirements or related signals were identified.",
+      },
+    ]);
   });
   it("uses plural labels and singular tool labels from actual response counts", () => {
     const signals = buildAnalysisSignals({

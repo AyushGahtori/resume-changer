@@ -14,6 +14,26 @@ export function buildAnalysisSignals(
   const tools = analysis.toolsAndPlatforms.length;
   const terms = analysis.atsTerms.length;
   const context = analysis.inferredContext.length;
+  const hasAnyExtractedDetails =
+    [
+      ...analysis.requiredQualifications,
+      ...analysis.preferredQualifications,
+      ...analysis.responsibilities,
+      ...analysis.toolsAndPlatforms,
+      ...analysis.domainConcepts,
+      ...analysis.atsTerms,
+      ...analysis.inferredContext,
+      ...analysis.terminology,
+    ].length > 0;
+  if (!hasAnyExtractedDetails) {
+    return [
+      {
+        key: "requirements",
+        status: "info",
+        label: "No supported requirements or related signals were identified.",
+      },
+    ];
+  }
   return [
     {
       key: "requirements",
