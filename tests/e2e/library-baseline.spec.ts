@@ -112,8 +112,12 @@ test.describe("achievement library baseline", () => {
     page,
   }) => {
     const details = page.locator(".library-detail");
-    await expect(details.nth(0).locator(".library-section-count")).toHaveText("14");
-    await expect(details.nth(1).locator(".library-section-count")).toHaveText("2");
+    await expect(details.nth(0).locator(".library-section-count")).toHaveText(
+      "14",
+    );
+    await expect(details.nth(1).locator(".library-section-count")).toHaveText(
+      "2",
+    );
 
     await details.nth(0).locator("summary").click();
     await expect(page.locator(".skill-list li")).toHaveCount(14);
