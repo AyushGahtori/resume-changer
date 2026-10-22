@@ -2187,7 +2187,11 @@ a:focus-visible {
 }
 
 .library-page {
-  width: min(100%, 1120px);
+  display: flex;
+  width: 100%;
+  max-width: 1240px;
+  min-width: 0;
+  flex-direction: column;
   margin: 0 auto;
 }
 
@@ -2468,7 +2472,7 @@ a:focus-visible {
 }
 
 .library-heading {
-  margin-bottom: var(--space-24);
+  margin-bottom: var(--space-16);
 }
 
 .library-heading h1 {
@@ -2555,7 +2559,12 @@ a:focus-visible {
   font-weight: 650;
 }
 
-.library-controls {
+.library-workbench {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: grid;
+  gap: var(--space-12);
   margin-top: var(--space-24);
   padding: var(--space-16);
   border: var(--border-default);
@@ -2575,6 +2584,22 @@ a:focus-visible {
   color: var(--muted);
   font-size: 10px;
   font-weight: 650;
+}
+
+/*
+ * The workbench labels stay available to assistive technology while the
+ * controls themselves carry the field copy.
+ */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
 }
 
 .library-search input,
@@ -2602,15 +2627,57 @@ a:focus-visible {
   margin-top: var(--space-12);
 }
 
+.library-workbench-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-12) var(--space-16);
+  padding-top: var(--space-12);
+  border-top: var(--border-default);
+}
+
+.library-category-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-8);
+  min-width: 0;
+}
+
+.library-category-link {
+  display: inline-flex;
+  min-height: 32px;
+  align-items: center;
+  padding: 0 var(--space-12);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-full);
+  color: var(--muted);
+  font-size: 12px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.library-category-link:hover {
+  border-color: var(--line-strong);
+  background: var(--surface-hover);
+  color: var(--ink);
+}
+
+.library-category-link:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
 .library-filter-summary {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: var(--space-12);
-  min-height: 32px;
-  margin-top: var(--space-8);
+  min-height: 30px;
+  margin: 0;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .text-action,
@@ -2635,13 +2702,52 @@ a:focus-visible {
  */
 .text-action:focus-visible,
 .facet-chip:focus-visible {
-  outline: 2px solid var(--color-focus-ring);
+  outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
 
-.library-experiences {
+.library-content {
+  display: grid;
+  gap: var(--space-32);
   margin-top: var(--space-24);
+  scroll-margin-top: 200px;
 }
+
+/*
+ * The category sections are siblings, not nested cards. The header row keeps
+ * the section title and its current count on one line.
+ */
+.library-section {
+  min-width: 0;
+  scroll-margin-top: 200px;
+}
+
+.library-section-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-12);
+  padding-bottom: var(--space-8);
+  border-bottom: 1px solid var(--line);
+}
+
+.library-section-heading {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 650;
+  line-height: 28px;
+}
+
+.library-section-count {
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.library-section-body {
+  min-width: 0;
+}
+
 .experience-group {
   padding: var(--space-16) 0 var(--space-8);
   border-bottom: var(--border-default);
@@ -2761,7 +2867,7 @@ a:focus-visible {
   font-size: 12px;
 }
 .library-empty {
-  margin: var(--space-24) 0;
+  margin: 0 0 var(--space-16);
   padding: var(--space-16) 0;
   border-bottom: var(--border-default);
 }
@@ -2776,18 +2882,47 @@ a:focus-visible {
   border-top: var(--border-default);
 }
 .library-detail summary {
-  display: flex;
+  display: inline-flex;
+  min-height: 34px;
   align-items: center;
   justify-content: space-between;
-  padding: var(--space-12) 0;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 650;
-}
-.library-detail summary span {
+  gap: var(--space-8);
+  margin-top: var(--space-12);
+  padding: 0 var(--space-12);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-full);
   color: var(--muted);
-  font-size: 11px;
-  font-weight: 500;
+  cursor: pointer;
+  font-size: 12px;
+  list-style: none;
+}
+.library-detail summary::-webkit-details-marker {
+  display: none;
+}
+.library-detail summary:hover {
+  border-color: var(--line-strong);
+  background: var(--surface-hover);
+  color: var(--ink);
+}
+.library-detail summary:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.library-detail-label.is-open {
+  display: none;
+}
+.library-detail[open] .library-detail-label.is-closed {
+  display: none;
+}
+.library-detail[open] .library-detail-label.is-open {
+  display: inline;
+}
+.library-detail-chevron {
+  flex: 0 0 auto;
+  transition: transform 160ms ease;
+}
+.library-detail[open] .library-detail-chevron {
+  transform: rotate(180deg);
 }
 .skill-list,
 .credential-list {
@@ -2851,6 +2986,10 @@ a:focus-visible {
   margin-top: var(--space-12);
   color: var(--teal);
   font-size: 13px;
+}
+
+.library-page-header {
+  margin-bottom: var(--space-24);
 }
 
 .library-edit-toolbar {
@@ -3101,6 +3240,22 @@ a:focus-visible {
   /* The job link keeps its own full-width row on tablet. */
   .metadata-fields > .field-group:last-child {
     grid-column: 1 / -1;
+  }
+
+  /*
+   * The workbench only sticks while the desktop column is wide enough to hold
+   * the filter row and the section navigation on one line each.
+   */
+  .library-workbench {
+    position: static;
+  }
+
+  .library-section {
+    scroll-margin-top: var(--space-24);
+  }
+
+  .library-content {
+    scroll-margin-top: var(--space-24);
   }
 }
 
@@ -3406,6 +3561,13 @@ a:focus-visible {
     grid-template-columns: minmax(0, 1fr);
     gap: var(--space-16);
   }
+  .library-workbench-footer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .library-filter-summary {
+    justify-content: flex-start;
+  }
   .library-source-switch a {
     padding: var(--space-8);
   }
@@ -3447,7 +3609,7 @@ a:focus-visible {
   .library-filter-grid {
     grid-template-columns: minmax(0, 1fr);
   }
-  .library-controls {
+  .library-workbench {
     padding-right: var(--space-12);
     padding-left: var(--space-12);
   }
