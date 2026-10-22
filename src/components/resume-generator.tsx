@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { CSSProperties, FormEvent } from "react";
+import type { CSSProperties, FormEvent, KeyboardEvent } from "react";
+import { Maximize2, Minimize2, Minus, Plus } from "lucide-react";
 import {
   EMPTY_DRAFT,
   readDraft,
@@ -223,6 +224,8 @@ export default function ResumeGenerator({ library, source }: Props) {
   const selectionAbortRef = useRef<AbortController | null>(null);
   const tailoringAbortRef = useRef<AbortController | null>(null);
   const pdfViewportRef = useRef<HTMLDivElement>(null);
+  const latexTabRef = useRef<HTMLButtonElement>(null);
+  const pdfTabRef = useRef<HTMLButtonElement>(null);
   const groups = useMemo(() => getPointGroups(library), [library]);
   const enabledIds = useMemo(
     () => groups.flatMap((group) => group.points.map((point) => point.id)),
@@ -1025,6 +1028,38 @@ export default function ResumeGenerator({ library, source }: Props) {
         error: "Full-screen preview is unavailable in this browser.",
       });
     }
+  }
+
+  /**
+   * The LaTeX and PDF tabs follow the ARIA tabs pattern: arrow keys move
+   * between the available formats, Home and End jump to the first and last
+   * one, and the tab list keeps a single tab stop. Formats that are not
+   * ready, such as a PDF that has not been compiled yet, are skipped.
+   */
+  function handleOutputTabKeyDown(event: KeyboardEvent<HTMLButtonElement>) {
+    const available: ("latex" | "pdf")[] = pdfUrl
+      ? ["latex", "pdf"]
+      : ["latex"];
+    const current = available.indexOf(outputView);
+    if (current === -1) return;
+
+    let next = current;
+    if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+      next = (current + 1) % available.length;
+    } else if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+      next = (current - 1 + available.length) % available.length;
+    } else if (event.key === "Home") {
+      next = 0;
+    } else if (event.key === "End") {
+      next = available.length - 1;
+    } else {
+      return;
+    }
+
+    event.preventDefault();
+    const target = available[next];
+    setOutputView(target);
+    (target === "pdf" ? pdfTabRef.current : latexTabRef.current)?.focus();
   }
 
   function downloadPdf() {
@@ -2201,21 +2236,27 @@ export default function ResumeGenerator({ library, source }: Props) {
                   >
                     <button
                       id="resume-output-tab-latex"
+                      ref={latexTabRef}
                       aria-selected={outputView === "latex"}
                       aria-controls="resume-output-panel"
                       onClick={() => setOutputView("latex")}
+                      onKeyDown={handleOutputTabKeyDown}
                       role="tab"
+                      tabIndex={outputView === "latex" ? 0 : -1}
                       type="button"
                     >
                       LaTeX
                     </button>
                     <button
                       id="resume-output-tab-pdf"
+                      ref={pdfTabRef}
                       aria-selected={outputView === "pdf"}
                       aria-controls="resume-output-panel"
                       disabled={!pdfUrl}
                       onClick={() => setOutputView("pdf")}
+                      onKeyDown={handleOutputTabKeyDown}
                       role="tab"
+                      tabIndex={outputView === "pdf" ? 0 : -1}
                       type="button"
                     >
                       PDF
@@ -2344,12 +2385,18 @@ export default function ResumeGenerator({ library, source }: Props) {
                 {outputView === "pdf" && pdfUrl ? (
                   <div className="pdf-preview-workspace">
                     <div className="pdf-preview-viewport" ref={pdfViewportRef}>
-                      <div className="pdf-preview-toolbar">
+                      <div
+                        className="pdf-preview-toolbar"
+                        role="group"
+                        aria-label="PDF viewer controls"
+                      >
                         <div
                           className="pdf-zoom-control"
+                          role="group"
                           aria-label="PDF zoom controls"
                         >
                           <button
+                            className="pdf-toolbar-icon"
                             aria-label="Zoom out"
                             disabled={pdfZoom <= 50}
                             onClick={() => {
@@ -2359,9 +2406,9 @@ export default function ResumeGenerator({ library, source }: Props) {
                             title="Zoom out"
                             type="button"
                           >
-                            −
+                            <Minus aria-hidden="true" size={14} strokeWidth={2} />
                           </button>
-                          <span aria-live="polite">
+                          <span className="pdf-zoom-value" aria-live="polite">
                             {pdfFit
                               ? pdfFit === "width"
                                 ? "Fit width"
@@ -2369,6 +2416,7 @@ export default function ResumeGenerator({ library, source }: Props) {
                               : `${pdfZoom}%`}
                           </span>
                           <button
+                            className="pdf-toolbar-icon"
                             aria-label="Zoom in"
                             disabled={pdfZoom >= 200}
                             onClick={() => {
@@ -2378,13 +2426,18 @@ export default function ResumeGenerator({ library, source }: Props) {
                             title="Zoom in"
                             type="button"
                           >
-                            +
+                            <Plus aria-hidden="true" size={14} strokeWidth={2} />
                           </button>
+                          <span
+                            className="pdf-toolbar-divider"
+                            aria-hidden="true"
+                          />
                           <button
                             type="button"
                             className="pdf-fit-button"
                             aria-pressed={pdfFit === "width"}
                             onClick={() => setPdfFit("width")}
+                            title="Fit the full page width to the preview"
                           >
                             Fit width
                           </button>
@@ -2393,16 +2446,13 @@ export default function ResumeGenerator({ library, source }: Props) {
                             className="pdf-fit-button"
                             aria-pressed={pdfFit === "page"}
                             onClick={() => setPdfFit("page")}
+                            title="Fit the whole page inside the preview"
                           >
                             Fit page
                           </button>
                         </div>
                         <button
-                          aria-label={
-                            isPdfFullscreen
-                              ? "Exit full screen"
-                              : "Open full screen"
-                          }
+                          className="pdf-toolbar-action"
                           onClick={togglePdfFullscreen}
                           title={
                             isPdfFullscreen
@@ -2411,7 +2461,24 @@ export default function ResumeGenerator({ library, source }: Props) {
                           }
                           type="button"
                         >
-                          {isPdfFullscreen ? "Exit full screen" : "Full screen"}
+                          {isPdfFullscreen ? (
+                            <Minimize2
+                              aria-hidden="true"
+                              size={14}
+                              strokeWidth={2}
+                            />
+                          ) : (
+                            <Maximize2
+                              aria-hidden="true"
+                              size={14}
+                              strokeWidth={2}
+                            />
+                          )}
+                          <span>
+                            {isPdfFullscreen
+                              ? "Exit full screen"
+                              : "Open full screen"}
+                          </span>
                         </button>
                       </div>
                       <iframe

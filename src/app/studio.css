@@ -1041,20 +1041,9 @@
 .is-studio-layout .generation-output-actions {
   justify-content: flex-start;
 }
-.pdf-zoom-control .pdf-fit-button {
-  width: auto;
-  padding: 0 8px;
-  font-size: 9px;
-}
 .pdf-fit-button[aria-pressed="true"] {
   border-color: var(--accent);
   color: var(--accent);
-}
-.pdf-preview-toolbar {
-  flex-wrap: wrap;
-}
-.pdf-zoom-control {
-  flex-wrap: wrap;
 }
 @keyframes imagination-breathe {
   from {
