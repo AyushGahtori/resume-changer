@@ -152,6 +152,16 @@
   --type-caption-line-height: 16px;
   --type-micro-label-size: 11px;
   --type-micro-label-line-height: 14px;
+  --type-profile-name-size: 30px;
+  --type-profile-name-line-height: 38px;
+  --type-experience-title-size: 18px;
+  --type-experience-title-line-height: 24px;
+  --type-label-size: 12px;
+  --type-label-line-height: 16px;
+  --type-metadata-size: 12px;
+  --type-metadata-line-height: 16px;
+  --type-metric-value-size: 26px;
+  --type-metric-value-line-height: 32px;
   --space-4: 4px;
   --space-8: 8px;
   --space-12: 12px;
@@ -3395,10 +3405,12 @@ a:focus-visible {
   background: color-mix(in srgb, var(--color-error) 10%, var(--surface));
 }
 .library-point-text {
-  margin: 0;
+  margin: 10px 0 var(--space-8);
+  padding-left: var(--space-12);
+  border-left: 2px solid var(--quiet);
   color: var(--ink);
   font-size: var(--type-body-size);
-  font-weight: 600;
+  font-weight: 400;
   line-height: var(--type-body-line-height);
   overflow-wrap: anywhere;
 }
@@ -3993,6 +4005,13 @@ a:focus-visible {
   .jd-page {
     --type-page-title-size: 32px;
     --type-page-title-line-height: 40px;
+  }
+
+  .library-page {
+    --type-page-title-size: 32px;
+    --type-page-title-line-height: 40px;
+    --type-profile-name-size: 28px;
+    --type-profile-name-line-height: 36px;
   }
 
   .app-frame {

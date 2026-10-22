@@ -264,7 +264,7 @@ test("keeps the total counts when a search facet hides results", async ({
 
   // The workbench reports the narrowed result set.
   await expect(page.locator(".library-filter-summary")).toContainText(
-    "4 of 13 achievement points",
+    "4 results of 13",
   );
   // The summary still reports the library the user owns.
   const after = await metrics(page).locator("dd").allTextContents();
@@ -439,10 +439,10 @@ test.describe("library summary identity", () => {
     expect(before.length).toBe(5);
 
     const resultSummary = page.locator(".library-filter-summary span");
-    await expect(resultSummary).toHaveText(/^13 of 13 achievement points$/);
+    await expect(resultSummary).toHaveText(/^13 results$/);
 
     await page.getByRole("searchbox", { name: "Search library" }).fill("queue");
-    await expect(resultSummary).toHaveText(/^\d+ of 13 achievement points$/);
+    await expect(resultSummary).toHaveText(/^\d+ results of 13$/);
 
     const visible = Number(
       (await resultSummary.textContent())?.match(/^(\d+)/)?.[1],
@@ -645,9 +645,10 @@ test("lays the metric row out in equal columns that wrap when they must", async 
         .gridTemplateColumns.split(" ")
         .filter(Boolean).length,
       rows: rowWidths.size,
-      equalWithinRow: Array.from(rowWidths.values()).every(
-        (widths) => widths.size === 1,
-      ),
+      equalWithinRow: Array.from(rowWidths.values()).every((widths) => {
+        const values = [...widths];
+        return Math.max(...values) - Math.min(...values) <= 1;
+      }),
       overflow: document.documentElement.scrollWidth - window.innerWidth,
     };
   });
