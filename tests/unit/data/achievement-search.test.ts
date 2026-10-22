@@ -1,3 +1,4 @@
+[error] No parser could be inferred for file "C:\Users\Ayush\.codex\worktrees\achievement-pr-audit\re_changer\test-results\remote-format-pr80-2.txt".
 import { describe, expect, it } from "vitest";
 import demoLibrary from "../../../examples/sample-resume-library.json";
 import {
@@ -358,3 +359,4 @@ describe("achievement library result count", () => {
     expect(formatLibraryResultCount(1, 13)).toBe("1 result of 13");
   });
 });
+
