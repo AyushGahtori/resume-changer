@@ -191,7 +191,7 @@ test("shows distinct labeled action variants and keyboard focus", async ({
   );
   await analyze.hover();
   // The AI action deepens to a stronger violet on hover.
-  await expect(analyze).toHaveCSS("background-color", "rgb(221, 208, 251)");
+  await expect(analyze).toHaveCSS("background-color", "rgb(221, 214, 254)");
   expect(
     await analyze.evaluate(
       (element) => getComputedStyle(element).backgroundColor,

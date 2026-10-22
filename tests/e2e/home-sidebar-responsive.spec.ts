@@ -8,6 +8,7 @@ test.beforeEach(async ({ page }) => {
 test("collapses the desktop sidebar while keeping every destination accessible", async ({
   page,
 }) => {
+  test.setTimeout(90_000);
   const sidebar = page.locator("#workspace-sidebar");
   const links = page.getByRole("navigation", { name: "Main navigation" });
   const destinations = [

@@ -235,11 +235,11 @@ test("keeps sidebar rows contained across desktop, zoom-equivalent, and mobile w
         collapsed: document
           .querySelector(".app-frame")!
           .classList.contains("is-sidebar-collapsed"),
-        navigationWidth: navigation.clientWidth,
-        navigationScrollWidth: navigation.scrollWidth,
         overflowX: getComputedStyle(navigation).overflowX,
         navRowGap: getComputedStyle(navigation).rowGap,
         navColumnGap: getComputedStyle(navigation).columnGap,
+        navigationWidth: navigation.clientWidth,
+        navigationScrollWidth: navigation.scrollWidth,
         activeLeft: document
           .querySelector(".nav-link.is-active")!
           .getBoundingClientRect().left,
@@ -254,7 +254,7 @@ test("keeps sidebar rows contained across desktop, zoom-equivalent, and mobile w
     expect(metrics.navColumnGap).toBe("8px");
     expect(metrics.activeLeft).toBeGreaterThanOrEqual(0);
     if (metrics.collapsed) {
-      // Collapsed-rail tooltips intentionally extend beyond the rail.
+      // Flyout tooltips intentionally extend beyond the narrow rail.
       expect(metrics.overflowX).toBe("visible");
     } else {
       expect(metrics.navigationScrollWidth).toBeLessThanOrEqual(

@@ -440,7 +440,7 @@ export default function JDWorkspace({
                 ) : (
                   <>
                     <span className="home-action-icon">
-                      <Sparkles aria-hidden="true" size={18} />
+                      <Sparkles aria-hidden="true" size={16} />
                     </span>
                     <span>
                       {analysisState === "error"
