@@ -78,7 +78,7 @@ that clears the pinned band, measured at 179px of workbench height against a
 - `npm run typecheck` — passed.
 - `npm test` — 553 passed, 10 skipped, 0 failed. While the browser suite was
   building in parallel, `tests/unit/ai/mock-provider.test.ts > is selected by
-  the provider factory` intermittently hit its 5s timeout; it also fails that
+the provider factory` intermittently hit its 5s timeout; it also fails that
   way on the untouched base commit `2afe609` in this environment and passes
   when the file is run alone. It is a load-sensitive timing issue unrelated to
   this task, and it was not changed here.
@@ -91,3 +91,4 @@ shared token set was reused; no `.library-page` palette override was added.
 Environment note: the browser suite needs a fontconfig configuration and the
 matching libraries to run here. They were provided outside the repository, and
 no project file was changed for them.
+
