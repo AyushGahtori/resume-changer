@@ -3504,12 +3504,74 @@ a:focus-visible {
   font-size: 11px;
 }
 
-.generation-draft > div {
+.generation-draft-details {
   display: flex;
   min-width: 0;
   align-items: baseline;
   flex-wrap: wrap;
   gap: 6px 14px;
+}
+
+.generation-draft-source {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 14px;
+}
+
+/*
+ * The builder's source choice is a two-option segmented control. The loaded
+ * source is the one that carries the current-page marker, and it also gets
+ * the tinted segment, so the current value is never carried by color alone.
+ */
+.builder-source-switch {
+  display: inline-flex;
+  flex: 0 0 auto;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.builder-source-switch a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 72px;
+  padding: 5px 12px;
+  border-radius: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 550;
+  line-height: 1.5;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.builder-source-switch a:hover {
+  background: var(--surface-soft);
+  color: var(--ink);
+}
+
+.builder-source-switch a[aria-current="page"] {
+  background: var(--surface-hover);
+  color: var(--ink);
+  font-weight: 650;
+}
+
+/*
+ * The pressed state is one step further than the hover state, so a pointer
+ * press is readable on both segments.
+ */
+.builder-source-switch a:not([aria-current="page"]):active {
+  background: var(--surface-hover);
+  color: var(--ink);
+}
+
+.builder-source-switch a[aria-current="page"]:active {
+  background: var(--line);
+  color: var(--ink);
 }
 
 .generation-draft p {
@@ -3521,7 +3583,12 @@ a:focus-visible {
   font-size: 12px;
 }
 
-.generation-draft a,
+/*
+ * The job context links keep the accent color. The source choice is a
+ * control rather than a link in a sentence, so it is left out on purpose.
+ */
+.generation-draft-details a,
+.generation-draft-source > a,
 .generation-error a {
   color: var(--teal);
 }
@@ -4457,6 +4524,11 @@ a:focus-visible {
   .generation-draft {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .generation-draft-source {
+    width: 100%;
+    flex-wrap: wrap;
   }
 
   .generation-selection,
