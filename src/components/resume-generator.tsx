@@ -2,8 +2,19 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { CSSProperties, FormEvent, KeyboardEvent } from "react";
-import { Maximize2, Minimize2, Minus, Plus } from "lucide-react";
+import type { CSSProperties, FormEvent, KeyboardEvent, ReactNode } from "react";
+import {
+  CircleAlert,
+  CircleCheck,
+  FileText,
+  Info,
+  LoaderCircle,
+  Maximize2,
+  Minimize2,
+  Minus,
+  Plus,
+  TriangleAlert,
+} from "lucide-react";
 import {
   EMPTY_DRAFT,
   readDraft,
@@ -57,6 +68,52 @@ type CompileErrorResponse = {
   code?: string;
   diagnostics?: string;
 };
+
+type StatusTone = "info" | "success" | "caution" | "error";
+
+const STATUS_ICONS = {
+  info: Info,
+  success: CircleCheck,
+  caution: TriangleAlert,
+  error: CircleAlert,
+} as const;
+
+/**
+ * A status banner carries an icon, a message, and a semantic tone. The tone
+ * is only a second signal: every banner repeats its meaning in words, so the
+ * message stays readable without the color.
+ */
+function StatusBanner({
+  tone,
+  role,
+  className = "",
+  children,
+}: {
+  tone: StatusTone;
+  role: "status" | "alert";
+  className?: string;
+  children: ReactNode;
+}) {
+  const Icon = STATUS_ICONS[tone];
+
+  return (
+    <div
+      className={`status-banner status-banner--${tone}${
+        className ? ` ${className}` : ""
+      }`}
+      role={role}
+    >
+      <Icon
+        aria-hidden="true"
+        className="status-banner-icon"
+        size={14}
+        strokeWidth={2}
+      />
+      <div className="status-banner-body">{children}</div>
+    </div>
+  );
+}
+
 function getPointGroups(library: ResumeLibrary): PointGroup[] {
   return [
     ...library.jobs.map((job) => ({
@@ -213,6 +270,7 @@ export default function ResumeGenerator({ library, source }: Props) {
     null,
   );
   const [compileStatus, setCompileStatus] = useState("");
+  const [viewerNotice, setViewerNotice] = useState("");
   const [historyNotice, setHistoryNotice] = useState("");
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [outputView, setOutputView] = useState<"latex" | "pdf">("latex");
@@ -942,6 +1000,7 @@ export default function ResumeGenerator({ library, source }: Props) {
     setIsCompiling(true);
     setCompileError(null);
     setCompileStatus("");
+    setViewerNotice("");
 
     try {
       const requestBody = { latex: target.latex };
@@ -1024,9 +1083,7 @@ export default function ResumeGenerator({ library, source }: Props) {
         await viewport.requestFullscreen();
       }
     } catch {
-      setCompileError({
-        error: "Full-screen preview is unavailable in this browser.",
-      });
+      setViewerNotice("Full-screen preview is unavailable in this browser.");
     }
   }
 
@@ -1231,6 +1288,12 @@ export default function ResumeGenerator({ library, source }: Props) {
     result?.metadata.generatedBullets?.length ??
     result?.metadata.selectedAchievementIds.length ??
     0;
+  const omittedSkillCount = result
+    ? Math.max(
+        0,
+        requestedSkillCount - result.metadata.renderedSkillIds.length,
+      )
+    : 0;
   const hasRecommendationEdits =
     JSON.stringify([...selectedIds].sort()) !==
       JSON.stringify([...recommendedIds].sort()) ||
@@ -2080,6 +2143,7 @@ export default function ResumeGenerator({ library, source }: Props) {
                 source={source}
                 generation={result}
                 hasPdf={Boolean(pdfUrl)}
+                isCompiling={isCompiling}
                 analysis={analysis}
                 recommendedSkillIds={recommendedSkillIds}
                 qualityNotes={tailoring?.qualityNotes}
@@ -2322,18 +2386,17 @@ export default function ResumeGenerator({ library, source }: Props) {
               )}
             </div>
 
-            {requestError && (
-              <p className="generation-error-message" role="alert">
-                {requestError}
-              </p>
-            )}
             {copyMessage && (
               <p className="generation-notice" role="status">
                 {copyMessage}
               </p>
             )}
-            {compileError && (
-              <div className="generation-error-message" role="alert">
+            {requestError ? (
+              <StatusBanner tone="error" role="alert" className="preview-status">
+                <p>{requestError}</p>
+              </StatusBanner>
+            ) : compileError ? (
+              <StatusBanner tone="error" role="alert" className="preview-status">
                 <p>{compileError.error}</p>
                 {compileError.diagnostics && (
                   <details>
@@ -2341,12 +2404,30 @@ export default function ResumeGenerator({ library, source }: Props) {
                     <pre>{compileError.diagnostics}</pre>
                   </details>
                 )}
-              </div>
-            )}
-            {compileStatus && (
-              <p className="generation-notice" role="status">
-                {compileStatus}
-              </p>
+              </StatusBanner>
+            ) : isCompiling ? (
+              <StatusBanner tone="info" role="status" className="preview-status">
+                <p>Compiling the PDF…</p>
+                <p className="preview-status-detail">
+                  The document is being prepared from your generated LaTeX. This
+                  may take a few seconds.
+                </p>
+              </StatusBanner>
+            ) : result ? (
+              <StatusBanner
+                tone="success"
+                role="status"
+                className="preview-status"
+              >
+                {outputView === "pdf" && pdfUrl
+                  ? compileStatus || "PDF ready."
+                  : "LaTeX ready."}
+              </StatusBanner>
+            ) : null}
+            {viewerNotice && (
+              <StatusBanner tone="caution" role="status" className="preview-status">
+                {viewerNotice}
+              </StatusBanner>
             )}
             {result ? (
               <div
@@ -2355,33 +2436,51 @@ export default function ResumeGenerator({ library, source }: Props) {
                 id="resume-output-panel"
                 aria-labelledby={`resume-output-tab-${outputView}`}
               >
-                <p
-                  className="generation-origin"
+                <div
+                  className="status-banner status-banner--info generation-origin"
                   role="status"
                   aria-label="Generation method"
                 >
-                  {getGenerationOriginNotice(
-                    result.metadata.tailoringMode,
-                    tailoring?.mode,
-                  )}
-                </p>
-                <p className="generation-metadata" role="status">
-                  Generated{" "}
-                  {new Date(result.metadata.generatedAt).toLocaleString()} ·{" "}
-                  {renderedAchievementCount} achievement
-                  {renderedAchievementCount === 1 ? "" : "s"}
-                  {" · "}
-                  {result.metadata.renderedSkillIds.length} skills shown
-                  {requestedSkillCount >
-                    result.metadata.renderedSkillIds.length && (
-                    <>
+                  <Info
+                    aria-hidden="true"
+                    className="status-banner-icon"
+                    size={14}
+                    strokeWidth={2}
+                  />
+                  <div className="status-banner-body">
+                    {getGenerationOriginNotice(
+                      result.metadata.tailoringMode,
+                      tailoring?.mode,
+                    )}
+                  </div>
+                </div>
+                {omittedSkillCount > 0 ? (
+                  <StatusBanner
+                    tone="caution"
+                    role="status"
+                    className="generation-metadata-notice"
+                  >
+                    <p className="generation-metadata">
+                      Generated{" "}
+                      {new Date(result.metadata.generatedAt).toLocaleString()} ·{" "}
+                      {renderedAchievementCount} achievement
+                      {renderedAchievementCount === 1 ? "" : "s"}
                       {" · "}
-                      {requestedSkillCount -
-                        result.metadata.renderedSkillIds.length}{" "}
-                      omitted to keep two rows
-                    </>
-                  )}
-                </p>
+                      {result.metadata.renderedSkillIds.length} skills shown
+                      {" · "}
+                      {omittedSkillCount} omitted to keep two rows
+                    </p>
+                  </StatusBanner>
+                ) : (
+                  <p className="generation-metadata">
+                    Generated{" "}
+                    {new Date(result.metadata.generatedAt).toLocaleString()} ·{" "}
+                    {renderedAchievementCount} achievement
+                    {renderedAchievementCount === 1 ? "" : "s"}
+                    {" · "}
+                    {result.metadata.renderedSkillIds.length} skills shown
+                  </p>
+                )}
                 {outputView === "pdf" && pdfUrl ? (
                   <div className="pdf-preview-workspace">
                     <div className="pdf-preview-viewport" ref={pdfViewportRef}>
@@ -2499,8 +2598,34 @@ export default function ResumeGenerator({ library, source }: Props) {
                 )}
               </div>
             ) : (
-              <div className="generation-preview-empty" role="status">
-                <p>Your generated LaTeX will appear here.</p>
+              <div
+                className="generation-preview-empty"
+                role={isGenerating ? "status" : undefined}
+              >
+                {isGenerating ? (
+                  <>
+                    <LoaderCircle
+                      aria-hidden="true"
+                      className="generation-preview-empty-icon is-spinning"
+                      size={20}
+                      strokeWidth={2}
+                    />
+                    <p>Generating your resume…</p>
+                    <p className="preview-status-detail">
+                      Your LaTeX will appear here as soon as it is ready.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <FileText
+                      aria-hidden="true"
+                      className="generation-preview-empty-icon"
+                      size={20}
+                      strokeWidth={1.75}
+                    />
+                    <p>Your generated LaTeX will appear here.</p>
+                  </>
+                )}
               </div>
             )}
           </section>

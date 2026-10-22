@@ -116,6 +116,10 @@
   color: var(--accent);
   background: var(--accent-soft);
 }
+.studio-badge.is-compiling {
+  color: var(--color-info-strong);
+  background: color-mix(in srgb, var(--color-info) 12%, var(--surface));
+}
 .studio-body {
   display: grid;
   grid-template-columns: 142px minmax(0, 1fr);
@@ -1033,7 +1037,6 @@
 .is-studio-layout .generation-origin {
   padding: 8px 10px;
   font-size: 10px;
-  border-left-color: var(--imagination);
 }
 .is-studio-layout .generation-section-heading {
   flex-direction: column;

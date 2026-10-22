@@ -42,6 +42,7 @@ type Props = {
   source: ResumeDataSource;
   generation: ManualGenerationResult;
   hasPdf: boolean;
+  isCompiling?: boolean;
   analysis: JobAnalysisResult | null;
   recommendedSkillIds: string[];
   qualityNotes?: string[];
@@ -68,6 +69,7 @@ export default function ResumeStudio({
   source,
   generation,
   hasPdf,
+  isCompiling = false,
   analysis,
   recommendedSkillIds,
   qualityNotes = [],
@@ -408,12 +410,19 @@ export default function ResumeStudio({
           <h2>Make it yours.</h2>
           <p>Refine your story. Keep every change reversible.</p>
         </div>
-        <span className={`studio-badge${changes ? " is-pending" : ""}`}>
-          {changes
-            ? `Draft · ${changes} changes`
-            : hasPdf
-              ? "PDF ready"
-              : "LaTeX ready"}
+        <span
+          className={`studio-badge${changes ? " is-pending" : ""}${
+            isCompiling ? " is-compiling" : ""
+          }`}
+          aria-busy={isCompiling}
+        >
+          {isCompiling
+            ? "Compiling…"
+            : changes
+              ? `Draft · ${changes} changes`
+              : hasPdf
+                ? "PDF ready"
+                : "LaTeX ready"}
         </span>
       </header>
       {restore && (
