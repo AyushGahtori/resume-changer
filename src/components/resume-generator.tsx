@@ -1239,18 +1239,26 @@ export default function ResumeGenerator({ library, source }: Props) {
         <div>
           <p className="generation-label">JOB DESCRIPTION</p>
           {!draftReady ? (
-            <p>Loading saved job details…</p>
+            <p className="generation-draft-note">Loading saved job details…</p>
           ) : hasJobDescription ? (
-            <>
-              <strong>{draft.roleTitle || "Target role not specified"}</strong>
-              {draft.company && <span>{draft.company}</span>}
-              <span>
-                {draft.jobDescription.length.toLocaleString()} description
-                characters
-              </span>
-            </>
+            <div className="generation-draft-context">
+              {draft.roleTitle ? (
+                <p className="generation-draft-role">{draft.roleTitle}</p>
+              ) : (
+                <p className="generation-draft-role is-empty">
+                  Role not specified
+                </p>
+              )}
+              <p className="generation-draft-meta">
+                {draft.company && <span>{draft.company}</span>}
+                <span>
+                  {draft.jobDescription.length.toLocaleString()} description
+                  characters
+                </span>
+              </p>
+            </div>
           ) : (
-            <p>
+            <p className="generation-draft-note">
               No saved job description. <Link href="/">Add job details</Link>
             </p>
           )}
