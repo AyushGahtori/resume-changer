@@ -2215,24 +2215,22 @@ a:focus-visible {
   position: static;
 }
 
-.library-search,
 .library-filter-grid label {
   display: grid;
   min-width: 0;
   gap: 6px;
 }
 
-.library-search > span,
 .library-filter-grid label > span {
   color: var(--muted);
   font-size: 10px;
   font-weight: 650;
 }
 
-.library-search input,
 .library-filter-grid select {
   width: 100%;
   min-width: 0;
+  height: 40px;
   padding: 0 10px;
   border: 1px solid var(--line-strong);
   border-radius: 5px;
@@ -2242,18 +2240,112 @@ a:focus-visible {
   font-size: 12px;
 }
 
-/* The search control keeps the shared 40-44px visual height. */
-.library-search input {
-  height: 44px;
-}
-
-.library-filter-grid select {
-  height: 40px;
-}
-
-.library-search input:focus,
 .library-filter-grid select:focus {
   border-color: var(--focus);
+}
+
+/*
+ * The global search field.
+ *
+ * The reference prints one field with a leading magnifier and a trailing
+ * clear action, so the border belongs to the field as a whole rather than
+ * to the text input inside it. The field uses the shared 2px violet focus
+ * ring, and a filled field that is not focused keeps the neutral border.
+ */
+.library-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-control);
+  background: var(--surface-soft);
+}
+
+.library-search:focus-within {
+  border-color: var(--focus);
+  box-shadow: var(--field-focus-ring);
+}
+
+.library-search-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+}
+
+/* The field keeps its accessible name; the visible text is the placeholder. */
+.library-search-field > span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.library-search-icon {
+  flex: 0 0 auto;
+  color: var(--muted);
+}
+
+.library-search input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  outline: none;
+  background: transparent;
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.library-search input::placeholder {
+  color: var(--quiet);
+}
+
+/* The field supplies its own clear action, so the browser's is hidden. */
+.library-search input::-webkit-search-cancel-button,
+.library-search input::-webkit-search-decoration {
+  appearance: none;
+  display: none;
+}
+
+.library-search-clear {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.library-search-clear:hover {
+  background: var(--surface-hover);
+  color: var(--ink);
+}
+
+.library-search-clear:focus-visible {
+  outline: var(--focus-outline);
+  outline-offset: 1px;
 }
 .library-filter-grid {
   display: grid;

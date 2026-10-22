@@ -1,5 +1,6 @@
 "use client";
 
+import { Search, X } from "lucide-react";
 import { useEffect, useRef } from "react";
 import type {
   FilteredLibrary,
@@ -105,15 +106,32 @@ export default function SearchWorkbench({
       className="library-controls library-workbench"
       ref={workbenchRef}
     >
-      <label className="library-search">
-        <span>Search library</span>
-        <input
-          onChange={(event) => onChange({ query: event.target.value })}
-          placeholder="Points, skills, tags, jobs, projects, credentials"
-          type="search"
-          value={filters.query}
-        />
-      </label>
+      <div className="library-search">
+        <label className="library-search-field">
+          <span>Search library</span>
+          <Search
+            aria-hidden="true"
+            className="library-search-icon"
+            size={16}
+          />
+          <input
+            onChange={(event) => onChange({ query: event.target.value })}
+            placeholder="Search achievements... (points, skills, tags, jobs, projects, credentials)"
+            type="search"
+            value={filters.query}
+          />
+        </label>
+        {filters.query.length > 0 && (
+          <button
+            aria-label="Clear search"
+            className="library-search-clear"
+            onClick={() => onChange({ query: "" })}
+            type="button"
+          >
+            <X aria-hidden="true" size={14} />
+          </button>
+        )}
+      </div>
 
       <div className="library-filter-grid">
         <label>
