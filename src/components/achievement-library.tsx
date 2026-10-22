@@ -21,6 +21,10 @@ import ProfileSummary from "@/components/library/profile-summary";
 import LibrarySectionHeader from "@/components/library/library-section-header";
 import SearchWorkbench from "@/components/library/search-workbench";
 import {
+  LibraryEmptyState,
+  LibraryReadOnlyNotice,
+} from "@/components/library/library-states";
+import {
   LIBRARY_CONTENT_ID,
   LIBRARY_SECTION_IDS,
 } from "@/components/library/category-navigation";
@@ -229,6 +233,8 @@ export default function AchievementLibrary({ library, source }: Props) {
     key === "status" ? value !== "all" : value !== "",
   );
   const canEdit = source === "personal";
+  const hasNoData = result.totalPointCount === 0;
+  const hasNoMatches = !hasNoData && result.visiblePointCount === 0;
   const parentOptions = [
     ...library.jobs.map((job) => ({
       id: job.id,
@@ -390,6 +396,7 @@ export default function AchievementLibrary({ library, source }: Props) {
           </div>
         </div>
       </header>
+      {!canEdit ? <LibraryReadOnlyNotice /> : null}
       <ProfileSummary library={library} source={source} />
 
       {editor?.mode === "create" && (
@@ -429,11 +436,27 @@ export default function AchievementLibrary({ library, source }: Props) {
       />
 
       <div className="library-content" id={LIBRARY_CONTENT_ID}>
-        {result.visiblePointCount === 0 && (
-          <p className="library-empty" role="status">
-            No achievement points match these filters.
-          </p>
-        )}
+        {hasNoData ? (
+          <LibraryEmptyState
+            onAdd={
+              canEdit
+                ? () =>
+                    openEditor(
+                      { mode: "create" },
+                      detailedEntryRef.current ?? document.body,
+                    )
+                : undefined
+            }
+            totalPointCount={result.totalPointCount}
+            variant="no-data"
+          />
+        ) : hasNoMatches ? (
+          <LibraryEmptyState
+            onReset={() => setFilters(EMPTY_LIBRARY_FILTERS)}
+            totalPointCount={result.totalPointCount}
+            variant="no-matches"
+          />
+        ) : null}
 
         <div className="library-sections">
           {result.jobs.length > 0 && (
@@ -560,7 +583,11 @@ export default function AchievementLibrary({ library, source }: Props) {
                   ))}
                 </ul>
               ) : (
-                <p className="secondary-empty">No skills match this search.</p>
+                <p className="secondary-empty">
+                  {library.skills.length === 0
+                    ? "No skills saved in this library."
+                    : "No skills match this search."}
+                </p>
               )}
             </details>
 
@@ -591,7 +618,9 @@ export default function AchievementLibrary({ library, source }: Props) {
                 </ul>
               ) : (
                 <p className="secondary-empty">
-                  No credentials match this search.
+                  {library.credentials.length === 0
+                    ? "No credentials saved in this library."
+                    : "No credentials match this search."}
                 </p>
               )}
             </details>

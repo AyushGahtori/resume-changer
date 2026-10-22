@@ -52,6 +52,11 @@ const CATEGORY_ICON = {
   project: Folder,
 } as const;
 
+const CATEGORY_NAME = {
+  job: "Job achievement",
+  project: "Project achievement",
+} as const;
+
 function PointProvenance({ source }: { source: AchievementPoint["source"] }) {
   const [type, ...details] = buildProvenanceSegments(source);
 
@@ -113,11 +118,12 @@ export default function AchievementCard({
     <article className="library-point" aria-labelledby={headingId}>
       <header className="library-point-header">
         <span
+          aria-label={CATEGORY_NAME[kind]}
           className="library-point-icon"
           data-kind={kind}
-          aria-hidden="true"
+          role="img"
         >
-          <Icon size={18} strokeWidth={2} />
+          <Icon aria-hidden="true" size={18} strokeWidth={2} />
         </span>
         <div className="library-point-intro">
           {context ? <p className="library-point-context">{context}</p> : null}

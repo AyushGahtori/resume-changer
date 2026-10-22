@@ -194,13 +194,11 @@ export function getLibraryFilterOptions(library: ResumeLibrary) {
 }
 
 /**
- * The copy for the matching-point count. The count always names the points
- * that are on screen, and it only mentions the total when the filters hide
- * some of them, so it never implies that a record is gone.
+ * Announces both the visible and total point counts, so narrowing filters
+ * never sounds as though library data was removed.
  */
 export function formatLibraryResultCount(visible: number, total: number) {
-  const results = `${visible} ${visible === 1 ? "result" : "results"}`;
-  return visible === total ? results : `${results} of ${total}`;
+  return `${visible} of ${total} achievement ${total === 1 ? "point" : "points"}`;
 }
 
 function monthIndex(value: string) {

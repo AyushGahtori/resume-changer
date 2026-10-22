@@ -1,6 +1,10 @@
 @import "tailwindcss";
 @import "./studio.css";
 
+html {
+  scroll-padding-top: calc(var(--library-sticky-space, 0px) + 12px);
+}
+
 /*
  * Shared design tokens.
  *
@@ -2876,6 +2880,12 @@ a:focus-visible {
   }
 }
 
+@media (min-width: 1440px) {
+  .library-metrics {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
 @media (min-width: 1024px) {
   .library-overview {
     grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
@@ -3006,6 +3016,19 @@ a:focus-visible {
 .library-filter-grid select:focus {
   border-color: var(--focus);
 }
+
+.library-search input:focus-visible,
+.library-filter-grid select:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+@media (max-width: 1024px) {
+  .library-filter-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
 .library-filter-row {
   display: flex;
   align-items: flex-end;
@@ -3615,6 +3638,65 @@ a:focus-visible {
   padding: var(--space-16) 0;
   border-bottom: var(--border-default);
 }
+.library-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-8);
+  margin: 0 0 var(--space-16);
+  padding: var(--space-12);
+  border: 1px solid color-mix(in srgb, var(--color-violet) 28%, var(--line));
+  border-radius: var(--radius-control);
+  background: color-mix(in srgb, var(--color-violet) 7%, var(--surface));
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.library-notice svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+  color: var(--color-violet-strong);
+}
+
+.library-notice strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.library-state {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-8);
+  margin: var(--space-24) 0;
+  padding: var(--space-24);
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-card);
+  background: var(--surface-soft);
+}
+
+.library-state-icon {
+  color: var(--muted);
+}
+
+.library-state h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 650;
+  line-height: 1.4;
+}
+
+.library-state-message {
+  max-width: 62ch;
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.library-state-action {
+  margin-top: var(--space-4);
+}
+
 .library-secondary {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -4444,6 +4526,16 @@ a:focus-visible {
   .library-source-switch a {
     padding: 0 var(--space-8);
   }
+  .library-state {
+    padding: var(--space-16);
+  }
+
+  .facet-chip,
+  .point-row-actions .point-edit-action,
+  .library-filter-summary .text-action,
+  .library-state-action {
+    min-height: 44px;
+  }
 
   .point-editor {
     padding: var(--space-16);
@@ -4465,6 +4557,15 @@ a:focus-visible {
     row-gap: 8px;
     padding-top: 8px;
     padding-bottom: 8px;
+  }
+}
+
+@media (pointer: coarse) {
+  .facet-chip,
+  .point-row-actions .point-edit-action,
+  .library-filter-summary .text-action,
+  .library-state-action {
+    min-height: 44px;
   }
 }
 

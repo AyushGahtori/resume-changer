@@ -340,20 +340,19 @@ describe("achievement library sort", () => {
 });
 
 describe("achievement library result count", () => {
-  it("uses the singular for a single result", () => {
-    expect(formatLibraryResultCount(1, 1)).toBe("1 result");
+  it("uses the singular when the library has one point", () => {
+    expect(formatLibraryResultCount(1, 1)).toBe("1 of 1 achievement point");
   });
 
-  it("uses the plural for several results", () => {
-    expect(formatLibraryResultCount(13, 13)).toBe("13 results");
+  it("always announces the visible and total point counts", () => {
+    expect(formatLibraryResultCount(13, 13)).toBe(
+      "13 of 13 achievement points",
+    );
+    expect(formatLibraryResultCount(3, 13)).toBe("3 of 13 achievement points");
+    expect(formatLibraryResultCount(0, 13)).toBe("0 of 13 achievement points");
   });
 
-  it("names the total when the filters hide some points", () => {
-    expect(formatLibraryResultCount(3, 13)).toBe("3 results of 13");
-    expect(formatLibraryResultCount(0, 13)).toBe("0 results of 13");
-  });
-
-  it("keeps the singular when a single point is left of a larger library", () => {
-    expect(formatLibraryResultCount(1, 13)).toBe("1 result of 13");
+  it("uses a plural total even when one point remains", () => {
+    expect(formatLibraryResultCount(1, 13)).toBe("1 of 13 achievement points");
   });
 });
