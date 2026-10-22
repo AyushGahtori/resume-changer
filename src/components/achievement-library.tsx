@@ -2,9 +2,8 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Lock } from "lucide-react";
-import { useMemo, useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Lock } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import AchievementPointEditor from "@/components/achievement-point-editor";
 import AchievementImagination from "@/components/achievement-imagination";
 import ProfileSummary from "@/components/library/profile-summary";
@@ -199,6 +198,11 @@ export default function AchievementLibrary({ library, source }: Props) {
   const detailedEntryAction = LIBRARY_ACTIONS["detailed-entry"];
   const AddIcon = addAction.icon;
   const DetailedEntryIcon = detailedEntryAction.icon;
+  const editorTriggerRef = useRef<HTMLElement | null>(null);
+  const pendingEditorFocusRef = useRef<HTMLElement | null>(null);
+  const canvasTriggerRef = useRef<HTMLElement | null>(null);
+  const detailedEntryRef = useRef<HTMLButtonElement>(null);
+  const addAchievementRef = useRef<HTMLButtonElement>(null);
   const result = useMemo(
     () => filterAchievementLibrary(library, filters),
     [filters, library],
@@ -238,9 +242,40 @@ export default function AchievementLibrary({ library, source }: Props) {
     setFilters((current) => ({ ...current, [key]: value }));
   }
 
-  function openEditor(point?: AchievementPoint) {
+  /*
+   * Capture the action that opened each flow so keyboard focus can return to
+   * the same control once the form or canvas has closed.
+   */
+  function openEditor(next: EditorState, trigger: HTMLElement | null) {
     setSaveMessage("");
-    setEditor(point ? { mode: "edit", point } : { mode: "create" });
+    editorTriggerRef.current = trigger;
+    setEditor(next);
+  }
+
+  function openCanvas(trigger: HTMLElement | null) {
+    setSaveMessage("");
+    canvasTriggerRef.current = trigger;
+    setCreating(true);
+  }
+
+  useEffect(() => {
+    if (creating) return;
+    const trigger = canvasTriggerRef.current;
+    canvasTriggerRef.current = null;
+    trigger?.focus();
+  }, [creating]);
+
+  useEffect(() => {
+    if (editor) return;
+    const trigger = pendingEditorFocusRef.current;
+    pendingEditorFocusRef.current = null;
+    trigger?.focus();
+  }, [editor]);
+
+  function closeEditor() {
+    setEditor(null);
+    pendingEditorFocusRef.current = editorTriggerRef.current;
+    editorTriggerRef.current = null;
   }
 
   return (
@@ -282,34 +317,41 @@ export default function AchievementLibrary({ library, source }: Props) {
             </div>
             {canEdit && (
               <div className="library-edit-toolbar">
-                {saveMessage ? <span role="status">{saveMessage}</span> : null}
-                <button
-                  className="ui-button ui-button--secondary"
-                  onClick={() => openEditor()}
-                  type="button"
-                >
-                  <DetailedEntryIcon
-                    aria-hidden="true"
-                    size={detailedEntryAction.iconSize}
-                    strokeWidth={2}
-                  />
-                  {detailedEntryAction.label}
-                </button>
-                <button
-                  className="ui-button ui-button--primary"
-                  onClick={() => {
-                    setSaveMessage("");
-                    setCreating(true);
-                  }}
-                  type="button"
-                >
-                  <AddIcon
-                    aria-hidden="true"
-                    size={addAction.iconSize}
-                    strokeWidth={2}
-                  />
-                  {addAction.label}
-                </button>
+                <span className="library-edit-status" role="status">
+                  {saveMessage}
+                </span>
+                <div className="library-edit-actions">
+                  <button
+                    className="ui-button ui-button--secondary library-action library-action--secondary"
+                    disabled={editor !== null}
+                    onClick={() =>
+                      openEditor({ mode: "create" }, detailedEntryRef.current)
+                    }
+                    ref={detailedEntryRef}
+                    type="button"
+                  >
+                    <DetailedEntryIcon
+                      aria-hidden="true"
+                      size={detailedEntryAction.iconSize}
+                      strokeWidth={2}
+                    />
+                    {detailedEntryAction.label}
+                  </button>
+                  <button
+                    className="ui-button ui-button--primary library-action library-action--primary"
+                    disabled={creating}
+                    onClick={() => openCanvas(addAchievementRef.current)}
+                    ref={addAchievementRef}
+                    type="button"
+                  >
+                    <AddIcon
+                      aria-hidden="true"
+                      size={addAction.iconSize}
+                      strokeWidth={2}
+                    />
+                    {addAction.label}
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -320,10 +362,11 @@ export default function AchievementLibrary({ library, source }: Props) {
       {editor && (
         <AchievementPointEditor
           key={editor.mode === "edit" ? editor.point.id : "new-achievement"}
+          focusFirstField={editor.mode === "create"}
           initialPoint={editor.mode === "edit" ? editor.point : undefined}
-          onCancel={() => setEditor(null)}
+          onCancel={closeEditor}
           onSaved={() => {
-            setEditor(null);
+            closeEditor();
             setSaveMessage("Saved to your local library.");
             router.refresh();
           }}
@@ -388,7 +431,15 @@ export default function AchievementLibrary({ library, source }: Props) {
                   library={library}
                   onSkill={(id) => updateFilter("skillId", id)}
                   onTag={(tag) => updateFilter("tag", tag)}
-                  onEdit={canEdit ? (point) => openEditor(point) : undefined}
+                  onEdit={
+                    canEdit
+                      ? (point) =>
+                          openEditor(
+                            { mode: "edit", point },
+                            document.activeElement as HTMLElement | null,
+                          )
+                      : undefined
+                  }
                 />
               ))
             ) : (
@@ -423,7 +474,15 @@ export default function AchievementLibrary({ library, source }: Props) {
                   library={library}
                   onSkill={(id) => updateFilter("skillId", id)}
                   onTag={(tag) => updateFilter("tag", tag)}
-                  onEdit={canEdit ? (point) => openEditor(point) : undefined}
+                  onEdit={
+                    canEdit
+                      ? (point) =>
+                          openEditor(
+                            { mode: "edit", point },
+                            document.activeElement as HTMLElement | null,
+                          )
+                      : undefined
+                  }
                 />
               ))
             ) : (
