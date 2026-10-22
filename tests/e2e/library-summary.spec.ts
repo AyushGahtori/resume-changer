@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
+import { join } from "node:path";
 import {
   createPersonalLibraryGuard,
   exampleLibraryPath,
@@ -573,17 +574,20 @@ test("sets the metric label and value in the agreed type scale", async ({
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/library?source=demo");
 
-  const scale = await page.locator(".library-metric").first().evaluate((tile) => {
-    const label = getComputedStyle(tile.querySelector("dt")!);
-    const value = getComputedStyle(tile.querySelector("dd")!);
-    return {
-      labelSize: label.fontSize,
-      labelLineHeight: label.lineHeight,
-      valueSize: value.fontSize,
-      valueLineHeight: value.lineHeight,
-      valueWeight: value.fontWeight,
-    };
-  });
+  const scale = await page
+    .locator(".library-metric")
+    .first()
+    .evaluate((tile) => {
+      const label = getComputedStyle(tile.querySelector("dt")!);
+      const value = getComputedStyle(tile.querySelector("dd")!);
+      return {
+        labelSize: label.fontSize,
+        labelLineHeight: label.lineHeight,
+        valueSize: value.fontSize,
+        valueLineHeight: value.lineHeight,
+        valueWeight: value.fontWeight,
+      };
+    });
 
   expect(scale.labelSize).toBe("12px");
   expect(scale.labelLineHeight).toBe("16px");
@@ -604,11 +608,15 @@ test("lays the metric row out in equal columns that wrap when they must", async 
       document.querySelectorAll(".library-metric"),
     ) as HTMLElement[];
     return {
-      columns: getComputedStyle(grid).gridTemplateColumns.split(" ")
+      columns: getComputedStyle(grid)
+        .gridTemplateColumns.split(" ")
         .filter(Boolean).length,
-      rows: new Set(tiles.map((tile) => Math.round(tile.getBoundingClientRect().top)))
-        .size,
-      widths: tiles.map((tile) => Math.round(tile.getBoundingClientRect().width)),
+      rows: new Set(
+        tiles.map((tile) => Math.round(tile.getBoundingClientRect().top)),
+      ).size,
+      widths: tiles.map((tile) =>
+        Math.round(tile.getBoundingClientRect().width),
+      ),
     };
   });
 
@@ -633,7 +641,8 @@ test("lays the metric row out in equal columns that wrap when they must", async 
       rowWidths.set(row, widths);
     }
     return {
-      columns: getComputedStyle(grid).gridTemplateColumns.split(" ")
+      columns: getComputedStyle(grid)
+        .gridTemplateColumns.split(" ")
         .filter(Boolean).length,
       rows: rowWidths.size,
       equalWithinRow: Array.from(rowWidths.values()).every(
@@ -663,9 +672,11 @@ test("uses two columns and a full width final tile on a phone", async ({
     const second = tiles[1].getBoundingClientRect();
     const last = tiles[tiles.length - 1].getBoundingClientRect();
     return {
-      columns: getComputedStyle(grid).gridTemplateColumns.split(" ")
+      columns: getComputedStyle(grid)
+        .gridTemplateColumns.split(" ")
         .filter(Boolean).length,
-      lastSpansRow: Math.abs(last.width - (second.left - first.left + second.width)) < 2,
+      lastSpansRow:
+        Math.abs(last.width - (second.left - first.left + second.width)) < 2,
       overflow: document.documentElement.scrollWidth - window.innerWidth,
     };
   });

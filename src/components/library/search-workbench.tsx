@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import CategoryNavigation from "@/components/library/category-navigation";
 import type {
   FilteredLibrary,
@@ -21,9 +21,12 @@ type Props = {
   onReset: () => void;
 };
 
+const STICKY_BREAKPOINT = "(min-width: 1024px)";
+
 /**
- * The workbench is the sticky control band of the library page: the global
- * search, the existing facets, the section navigation, and the result count.
+ * The workbench keeps global search, facets, section navigation, and the
+ * result count together. Its measured height drives focus and anchor offsets
+ * when it is pinned on wide screens.
  */
 export default function SearchWorkbench({
   library,
@@ -34,6 +37,7 @@ export default function SearchWorkbench({
   onFilterChange,
   onReset,
 }: Props) {
+  const workbenchRef = useRef<HTMLElement | null>(null);
   const sourceTypes = useMemo(
     () =>
       Array.from(
@@ -46,10 +50,49 @@ export default function SearchWorkbench({
     [library.jobs, library.projects],
   );
 
+  useEffect(() => {
+    const workbenchRefValue = workbenchRef.current;
+    if (!workbenchRefValue) return;
+    const workbench: HTMLElement = workbenchRefValue;
+
+    const root = document.documentElement;
+    const topbar = document.querySelector<HTMLElement>(".topbar");
+    const desktop = window.matchMedia(STICKY_BREAKPOINT);
+
+    function measure() {
+      root.style.setProperty(
+        "--library-workbench-height",
+        `${workbench.offsetHeight}px`,
+      );
+      const topbarIsPinned =
+        desktop.matches &&
+        topbar !== null &&
+        getComputedStyle(topbar).position === "sticky";
+      root.style.setProperty(
+        "--library-topbar-height",
+        topbarIsPinned ? `${topbar.offsetHeight}px` : "0px",
+      );
+    }
+
+    const observer = new ResizeObserver(measure);
+    observer.observe(workbench);
+    if (topbar) observer.observe(topbar);
+    desktop.addEventListener("change", measure);
+    measure();
+
+    return () => {
+      observer.disconnect();
+      desktop.removeEventListener("change", measure);
+      root.style.removeProperty("--library-workbench-height");
+      root.style.removeProperty("--library-topbar-height");
+    };
+  }, []);
+
   return (
     <section
-      className="library-workbench"
       aria-label="Search and filter library"
+      className="library-controls library-workbench"
+      ref={workbenchRef}
     >
       <label className="library-search">
         <span className="visually-hidden">Search library</span>
@@ -152,7 +195,7 @@ export default function SearchWorkbench({
       <div className="library-workbench-footer">
         <CategoryNavigation />
         <div className="library-filter-summary" aria-live="polite">
-          <span>
+          <span className="library-result-count">
             {result.visiblePointCount} of {result.totalPointCount} achievement
             points
           </span>
