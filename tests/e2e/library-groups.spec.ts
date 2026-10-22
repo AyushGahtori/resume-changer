@@ -90,8 +90,7 @@ const OPEN_ENDED_LIBRARY = {
     },
     {
       id: "project-long-name-fixture",
-      name:
-        "Enterprise Platform Modernisation And Reliability Engineering Programme",
+      name: "Enterprise Platform Modernisation And Reliability Engineering Programme",
       role: "Principal Engineer, Cross Team Reliability Working Group",
       startDate: "2021-06",
       endDate: "2023-11",
