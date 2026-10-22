@@ -286,11 +286,11 @@ Reference files: docs/ui-images/resume-builder/builder-overview-light-dark.png, 
 
 **Files:** Inspect src/app/generate/page.tsx, src/components/resume-generator.tsx, src/components/resume-studio.tsx, src/components/workspace-shell.tsx, src/app/studio.css, src/app/globals.css, and relevant generation/selection/preview tests. Add no visual component here.
 
-- [ ] Record the current job-context route, source value, draft restore, selection, AI consent/fallback, generation, review, history, compile, download, and error behavior.
-- [ ] Capture current light/dark screenshots at 1440x900, 1024x768, 768x1024, 390x844, and 320x740 using synthetic data only.
-- [ ] Map every board control to its current handler, derived data, or unsupported status; identify controls that must be omitted rather than faked.
-- [ ] Record current section order, viewer states, empty states, API calls, keyboard behavior, and any product data omitted by the board.
-- [ ] Run existing focused builder tests before visual work and keep their assertions as regression coverage.
+- [x] Record the current job-context route, source value, draft restore, selection, AI consent/fallback, generation, review, history, compile, download, and error behavior.
+- [x] Capture current light/dark screenshots at 1440x900, 1024x768, 768x1024, 390x844, and 320x740 using synthetic data only.
+- [x] Map every board control to its current handler, derived data, or unsupported status; identify controls that must be omitted rather than faked.
+- [x] Record current section order, viewer states, empty states, API calls, keyboard behavior, and any product data omitted by the board.
+- [x] Run existing focused builder tests before visual work and keep their assertions as regression coverage.
 
 **Acceptance:** A concise inventory and before screenshots exist; no production behavior, data contract, or app styling changes are made.
 
