@@ -83,10 +83,7 @@ for (const theme of ["light", "dark"]) {
         "background-color",
         theme === "light" ? "rgb(239, 235, 255)" : "rgb(124, 58, 237)",
       );
-      await expect(save).toHaveCSS(
-        "background-color",
-        theme === "light" ? "rgb(249, 115, 22)" : "rgb(255, 122, 69)",
-      );
+      await expect(save).toHaveCSS("background-color", "rgb(255, 122, 69)");
       await capture(page, `${theme}-${width}-idle`);
       await save.click();
       await expect(jd).toBeFocused();
