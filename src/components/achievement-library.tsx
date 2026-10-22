@@ -2,11 +2,18 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronDown, Lock } from "lucide-react";
+import {
+  Award,
+  Box,
+  BriefcaseBusiness,
+  ChartNoAxesColumn,
+  Lock,
+} from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import AchievementPointEditor from "@/components/achievement-point-editor";
 import AchievementImagination from "@/components/achievement-imagination";
 import ProfileSummary from "@/components/library/profile-summary";
+import LibrarySectionHeader from "@/components/library/library-section-header";
 import SearchWorkbench from "@/components/library/search-workbench";
 import {
   LIBRARY_CONTENT_ID,
@@ -22,7 +29,6 @@ import {
   type LibraryFilters,
 } from "@/lib/data/achievement-search";
 import { LIBRARY_ACTIONS } from "@/lib/ui/library-actions";
-import { countLabel } from "@/lib/ui/library-labels";
 import type {
   AchievementPoint,
   Job,
@@ -232,15 +238,6 @@ export default function AchievementLibrary({ library, source }: Props) {
       type: "project" as const,
     })),
   ];
-  const jobPointCount = result.jobs.reduce(
-    (count, job) => count + job.points.length,
-    0,
-  );
-  const projectPointCount = result.projects.reduce(
-    (count, project) => count + project.points.length,
-    0,
-  );
-
   function updateFilter<Key extends keyof LibraryFilters>(
     key: Key,
     value: LibraryFilters[Key],
@@ -416,127 +413,101 @@ export default function AchievementLibrary({ library, source }: Props) {
           </p>
         )}
 
-        <section
-          aria-labelledby={`${LIBRARY_SECTION_IDS.jobs}-heading`}
-          className="library-section"
-          id={LIBRARY_SECTION_IDS.jobs}
-        >
-          <div className="library-section-header">
-            <h2
-              className="library-section-heading"
-              id={`${LIBRARY_SECTION_IDS.jobs}-heading`}
+        <div className="library-sections">
+          {result.jobs.length > 0 && (
+            <section
+              aria-labelledby="library-section-jobs"
+              className="library-section"
+              id={LIBRARY_SECTION_IDS.jobs}
             >
-              Jobs
-            </h2>
-            <span className="library-section-count">
-              {countLabel(jobPointCount, "achievement", "achievements")}
-            </span>
-          </div>
-          <div className="library-section-body">
-            {result.jobs.length ? (
-              result.jobs.map((job) => (
-                <ExperienceGroup
-                  item={job}
-                  key={job.id}
-                  kind="job"
-                  library={library}
-                  onSkill={(id) => updateFilter("skillId", id)}
-                  onTag={(tag) => updateFilter("tag", tag)}
-                  onEdit={
-                    canEdit
-                      ? (point) =>
-                          openEditor(
-                            { mode: "edit", point },
-                            document.activeElement as HTMLElement | null,
-                          )
-                      : undefined
-                  }
+              <div className="library-section-header">
+                <LibrarySectionHeader
+                  count={result.jobs.length}
+                  icon={<BriefcaseBusiness size={18} />}
+                  title="Jobs"
+                  titleId="library-section-jobs"
+                  tone="jobs"
                 />
-              ))
-            ) : (
-              <p className="secondary-empty">No jobs match this search.</p>
-            )}
-          </div>
-        </section>
-
-        <section
-          aria-labelledby={`${LIBRARY_SECTION_IDS.projects}-heading`}
-          className="library-section"
-          id={LIBRARY_SECTION_IDS.projects}
-        >
-          <div className="library-section-header">
-            <h2
-              className="library-section-heading"
-              id={`${LIBRARY_SECTION_IDS.projects}-heading`}
-            >
-              Projects
-            </h2>
-            <span className="library-section-count">
-              {countLabel(projectPointCount, "achievement", "achievements")}
-            </span>
-          </div>
-          <div className="library-section-body">
-            {result.projects.length ? (
-              result.projects.map((project) => (
-                <ExperienceGroup
-                  item={project}
-                  key={project.id}
-                  kind="project"
-                  library={library}
-                  onSkill={(id) => updateFilter("skillId", id)}
-                  onTag={(tag) => updateFilter("tag", tag)}
-                  onEdit={
-                    canEdit
-                      ? (point) =>
-                          openEditor(
-                            { mode: "edit", point },
-                            document.activeElement as HTMLElement | null,
-                          )
-                      : undefined
-                  }
-                />
-              ))
-            ) : (
-              <p className="secondary-empty">No projects match this search.</p>
-            )}
-          </div>
-        </section>
-
-        <section
-          aria-labelledby={`${LIBRARY_SECTION_IDS.skills}-heading`}
-          className="library-section"
-          id={LIBRARY_SECTION_IDS.skills}
-        >
-          <div className="library-section-header">
-            <h2
-              className="library-section-heading"
-              id={`${LIBRARY_SECTION_IDS.skills}-heading`}
-            >
-              Skills
-            </h2>
-            <span className="library-section-count">
-              {countLabel(result.skills.length, "skill", "skills")}
-            </span>
-          </div>
-          <div className="library-section-body">
-            {result.skills.length ? (
-              <details
-                className="library-detail"
-                open={Boolean(filters.query || filters.skillId)}
-              >
-                <summary>
-                  <span className="library-detail-label is-closed">
-                    Show {countLabel(result.skills.length, "skill", "skills")}
-                  </span>
-                  <span className="library-detail-label is-open">
-                    Hide {countLabel(result.skills.length, "skill", "skills")}
-                  </span>
-                  <ChevronDown
-                    aria-hidden="true"
-                    className="library-detail-chevron"
-                    size={16}
+              </div>
+              <div className="library-section-body">
+                {result.jobs.map((job) => (
+                  <ExperienceGroup
+                    item={job}
+                    key={job.id}
+                    kind="job"
+                    library={library}
+                    onSkill={(id) => updateFilter("skillId", id)}
+                    onTag={(tag) => updateFilter("tag", tag)}
+                    onEdit={
+                      canEdit
+                        ? (point) =>
+                            openEditor(
+                              { mode: "edit", point },
+                              document.activeElement as HTMLElement | null,
+                            )
+                        : undefined
+                    }
                   />
-                </summary>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {result.projects.length > 0 && (
+            <section
+              aria-labelledby="library-section-projects"
+              className="library-section"
+              id={LIBRARY_SECTION_IDS.projects}
+            >
+              <div className="library-section-header">
+                <LibrarySectionHeader
+                  count={result.projects.length}
+                  icon={<Box size={18} />}
+                  title="Projects"
+                  titleId="library-section-projects"
+                  tone="projects"
+                />
+              </div>
+              <div className="library-section-body">
+                {result.projects.map((project) => (
+                  <ExperienceGroup
+                    item={project}
+                    key={project.id}
+                    kind="project"
+                    library={library}
+                    onSkill={(id) => updateFilter("skillId", id)}
+                    onTag={(tag) => updateFilter("tag", tag)}
+                    onEdit={
+                      canEdit
+                        ? (point) =>
+                            openEditor(
+                              { mode: "edit", point },
+                              document.activeElement as HTMLElement | null,
+                            )
+                        : undefined
+                    }
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+
+          <div className="library-secondary">
+            <details
+              className="library-detail library-section"
+              id={LIBRARY_SECTION_IDS.skills}
+              open={Boolean(filters.query || filters.skillId)}
+            >
+              <summary className="library-section-header">
+                <LibrarySectionHeader
+                  count={result.skills.length}
+                  icon={<ChartNoAxesColumn size={18} />}
+                  title="Skills"
+                  titleId="library-section-skills"
+                  tone="skills"
+                />
+              </summary>
+              {result.skills.length ? (
                 <ul className="skill-list">
                   {result.skills.map((skill) => (
                     <li key={skill.id}>
@@ -558,59 +529,26 @@ export default function AchievementLibrary({ library, source }: Props) {
                     </li>
                   ))}
                 </ul>
-              </details>
-            ) : (
-              <p className="secondary-empty">No skills match this search.</p>
-            )}
-          </div>
-        </section>
-
-        <section
-          aria-labelledby={`${LIBRARY_SECTION_IDS.credentials}-heading`}
-          className="library-section"
-          id={LIBRARY_SECTION_IDS.credentials}
-        >
-          <div className="library-section-header">
-            <h2
-              className="library-section-heading"
-              id={`${LIBRARY_SECTION_IDS.credentials}-heading`}
-            >
-              Credentials
-            </h2>
-            <span className="library-section-count">
-              {countLabel(
-                result.credentials.length,
-                "credential",
-                "credentials",
+              ) : (
+                <p className="secondary-empty">No skills match this search.</p>
               )}
-            </span>
-          </div>
-          <div className="library-section-body">
-            {result.credentials.length ? (
-              <details className="library-detail" open={Boolean(filters.query)}>
-                <summary>
-                  <span className="library-detail-label is-closed">
-                    Show{" "}
-                    {countLabel(
-                      result.credentials.length,
-                      "credential",
-                      "credentials",
-                    )}
-                  </span>
-                  <span className="library-detail-label is-open">
-                    Hide{" "}
-                    {countLabel(
-                      result.credentials.length,
-                      "credential",
-                      "credentials",
-                    )}
-                  </span>
-                  <ChevronDown
-                    aria-hidden="true"
-                    className="library-detail-chevron"
-                    size={16}
-                  />
-                </summary>
+            </details>
+
+            <details
+              className="library-detail library-section"
+              id={LIBRARY_SECTION_IDS.credentials}
+              open={Boolean(filters.query)}
+            >
+              <summary className="library-section-header">
+                <LibrarySectionHeader
+                  count={result.credentials.length}
+                  icon={<Award size={18} />}
+                  title="Credentials"
+                  titleId="library-section-credentials"
+                  tone="credentials"
+                />
+              </summary>
+              {result.credentials.length ? (
                 <ul className="credential-list">
                   {result.credentials.map((credential) => (
                     <li key={credential.id}>
@@ -621,14 +559,14 @@ export default function AchievementLibrary({ library, source }: Props) {
                     </li>
                   ))}
                 </ul>
-              </details>
-            ) : (
-              <p className="secondary-empty">
-                No credentials match this search.
-              </p>
-            )}
+              ) : (
+                <p className="secondary-empty">
+                  No credentials match this search.
+                </p>
+              )}
+            </details>
           </div>
-        </section>
+        </div>
       </div>
     </div>
   );

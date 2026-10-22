@@ -3094,6 +3094,12 @@ a:focus-visible {
   scroll-margin-top: var(--library-sticky-space, 0px);
 }
 
+.library-sections {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-32);
+}
+
 /*
  * The category sections are siblings, not nested cards. The header row keeps
  * the section title and its current count on one line.
@@ -3105,10 +3111,9 @@ a:focus-visible {
 
 .library-section-header {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
+  align-items: center;
   gap: var(--space-12);
-  padding-bottom: var(--space-8);
+  padding-bottom: var(--space-12);
   border-bottom: 1px solid var(--line);
 }
 
@@ -3120,13 +3125,67 @@ a:focus-visible {
 }
 
 .library-section-count {
-  color: var(--muted);
-  font-size: 12px;
+  display: inline-flex;
+  min-height: 22px;
+  align-items: center;
+  padding: 0 var(--space-8);
+  border-radius: var(--radius-full);
+  background: var(--color-surface-alt);
+  color: var(--color-text-secondary);
+  font-size: var(--type-caption-size);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: var(--type-caption-line-height);
   white-space: nowrap;
 }
 
 .library-section-body {
+  display: flex;
+  flex-direction: column;
   min-width: 0;
+}
+
+.library-section-icon {
+  display: inline-flex;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-card);
+}
+
+.library-section-icon--jobs {
+  background: var(--color-orange-subtle);
+  color: var(--color-orange-strong);
+}
+
+.library-section-icon--projects {
+  background: var(--color-violet-subtle);
+  color: var(--color-violet-strong);
+}
+
+/* The info scale has no subtle tone of its own, so the tile mixes the base
+   colour into the surface instead. */
+.library-section-icon--skills {
+  background: color-mix(in srgb, var(--color-info) 16%, var(--color-surface));
+  color: var(--color-info-strong);
+}
+
+.library-section-icon--credentials {
+  background: var(--color-success-subtle);
+  color: var(--color-success-strong);
+}
+
+.library-section-title {
+  margin: 0;
+  font-size: var(--type-section-heading-size);
+  font-weight: 700;
+  line-height: var(--type-section-heading-line-height);
+}
+
+.library-section-body .experience-group:last-child {
+  border-bottom: 0;
 }
 
 .experience-group {
@@ -3254,56 +3313,22 @@ a:focus-visible {
 }
 .library-secondary {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-24);
-  margin-top: var(--space-24);
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-16);
 }
 .library-detail {
   min-width: 0;
-  border-top: var(--border-default);
 }
 .library-detail summary {
-  display: inline-flex;
-  min-height: 34px;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-8);
-  margin-top: var(--space-12);
-  padding: 0 var(--space-12);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-full);
-  color: var(--muted);
   cursor: pointer;
-  font-size: 12px;
   list-style: none;
 }
 .library-detail summary::-webkit-details-marker {
   display: none;
 }
-.library-detail summary:hover {
-  border-color: var(--line-strong);
-  background: var(--surface-hover);
-  color: var(--ink);
-}
 .library-detail summary:focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 2px;
-}
-.library-detail-label.is-open {
-  display: none;
-}
-.library-detail[open] .library-detail-label.is-closed {
-  display: none;
-}
-.library-detail[open] .library-detail-label.is-open {
-  display: inline;
-}
-.library-detail-chevron {
-  flex: 0 0 auto;
-  transition: transform 160ms ease;
-}
-.library-detail[open] .library-detail-chevron {
-  transform: rotate(180deg);
 }
 .skill-list,
 .credential-list {
