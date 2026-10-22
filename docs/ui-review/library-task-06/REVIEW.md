@@ -91,4 +91,3 @@ shared token set was reused; no `.library-page` palette override was added.
 Environment note: the browser suite needs a fontconfig configuration and the
 matching libraries to run here. They were provided outside the repository, and
 no project file was changed for them.
-
