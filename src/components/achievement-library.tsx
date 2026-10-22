@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import AchievementPointEditor from "@/components/achievement-point-editor";
+import type { ParentOption } from "@/components/achievement-point-editor";
 import AchievementImagination from "@/components/achievement-imagination";
 import AchievementCard from "@/components/library/achievement-card";
 import ProfileSummary from "@/components/library/profile-summary";
@@ -48,6 +49,12 @@ import type { ResumeDataSource } from "@/lib/data/loaders";
 type Props = { library: ResumeLibrary; source: ResumeDataSource };
 type EditorState =
   { mode: "create" } | { mode: "edit"; point: AchievementPoint } | null;
+type EditorHandlers = { onCancel: () => void; onSaved: () => void };
+type InlineEditorState = {
+  pointId: string;
+  parents: ParentOption[];
+  handlers: EditorHandlers;
+};
 
 type GroupKind = "job" | "project";
 
@@ -92,6 +99,8 @@ function ExperienceGroup({
   onToggle,
   activeTag,
   activeSkillId,
+  editor,
+  parents,
 }: {
   item: (Job | Project) & { points: AchievementPoint[] };
   kind: GroupKind;
@@ -99,10 +108,12 @@ function ExperienceGroup({
   collapsed: boolean;
   onTag: (tag: string) => void;
   onSkill: (skillId: string) => void;
-  onEdit?: (point: AchievementPoint) => void;
+  onEdit?: (point: AchievementPoint, trigger: HTMLButtonElement) => void;
   onToggle: (key: string) => void;
   activeTag: string;
   activeSkillId: string;
+  editor?: InlineEditorState;
+  parents: ParentOption[];
 }) {
   const isJob = kind === "job";
   const job = isJob ? (item as Job) : null;
@@ -169,8 +180,13 @@ function ExperienceGroup({
             key={point.id}
             activeSkillId={activeSkillId}
             activeTag={activeTag}
+            editor={
+              editor?.pointId === point.id
+                ? { ...editor.handlers, parents }
+                : undefined
+            }
             kind={kind}
-            onEdit={onEdit ? () => onEdit(point) : undefined}
+            onEdit={onEdit ? (trigger) => onEdit(point, trigger) : undefined}
             onSkill={onSkill}
             onTag={onTag}
             point={point}
@@ -277,6 +293,21 @@ export default function AchievementLibrary({ library, source }: Props) {
     editorTriggerRef.current = null;
   }
 
+  function saveEditor() {
+    closeEditor();
+    setSaveMessage("Saved to your local library.");
+    router.refresh();
+  }
+
+  const inlineEditor: InlineEditorState | undefined =
+    editor?.mode === "edit"
+      ? {
+          pointId: editor.point.id,
+          parents: parentOptions,
+          handlers: { onCancel: closeEditor, onSaved: saveEditor },
+        }
+      : undefined;
+
   return (
     <div className="library-page">
       <header className="library-page-header">
@@ -361,17 +392,12 @@ export default function AchievementLibrary({ library, source }: Props) {
       </header>
       <ProfileSummary library={library} source={source} />
 
-      {editor && (
+      {editor?.mode === "create" && (
         <AchievementPointEditor
-          key={editor.mode === "edit" ? editor.point.id : "new-achievement"}
-          focusFirstField={editor.mode === "create"}
-          initialPoint={editor.mode === "edit" ? editor.point : undefined}
+          key="new-achievement"
+          focusFirstField
           onCancel={closeEditor}
-          onSaved={() => {
-            closeEditor();
-            setSaveMessage("Saved to your local library.");
-            router.refresh();
-          }}
+          onSaved={saveEditor}
           parents={parentOptions}
           skills={library.skills}
         />
@@ -431,20 +457,19 @@ export default function AchievementLibrary({ library, source }: Props) {
                     activeSkillId={filters.skillId}
                     activeTag={filters.tag}
                     collapsed={collapsedGroups.has(groupKey("job", job.id))}
+                    editor={inlineEditor}
                     item={job}
                     key={job.id}
                     kind="job"
                     library={library}
+                    parents={parentOptions}
                     onSkill={(id) => updateFilter("skillId", id)}
                     onTag={(tag) => updateFilter("tag", tag)}
                     onToggle={toggleGroup}
                     onEdit={
                       canEdit
-                        ? (point) =>
-                            openEditor(
-                              { mode: "edit", point },
-                              document.activeElement as HTMLElement | null,
-                            )
+                        ? (point, trigger) =>
+                            openEditor({ mode: "edit", point }, trigger)
                         : undefined
                     }
                   />
@@ -476,20 +501,19 @@ export default function AchievementLibrary({ library, source }: Props) {
                     collapsed={collapsedGroups.has(
                       groupKey("project", project.id),
                     )}
+                    editor={inlineEditor}
                     item={project}
                     key={project.id}
                     kind="project"
                     library={library}
+                    parents={parentOptions}
                     onSkill={(id) => updateFilter("skillId", id)}
                     onTag={(tag) => updateFilter("tag", tag)}
                     onToggle={toggleGroup}
                     onEdit={
                       canEdit
-                        ? (point) =>
-                            openEditor(
-                              { mode: "edit", point },
-                              document.activeElement as HTMLElement | null,
-                            )
+                        ? (point, trigger) =>
+                            openEditor({ mode: "edit", point }, trigger)
                         : undefined
                     }
                   />

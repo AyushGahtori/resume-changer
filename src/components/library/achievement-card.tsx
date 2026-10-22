@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Briefcase, Check, CircleSlash, Folder, Pencil } from "lucide-react";
+import AchievementPointEditor from "@/components/achievement-point-editor";
 import PointMetrics from "@/components/library/point-metrics";
 import {
   buildPointChips,
@@ -10,7 +11,14 @@ import {
   buildProvenanceSegments,
   PROVENANCE_SEPARATOR,
 } from "@/lib/ui/point-provenance";
+import type { ParentOption } from "@/components/achievement-point-editor";
 import type { AchievementPoint, Skill } from "@/lib/schemas/resume-data";
+
+type InlineEditor = {
+  parents: ParentOption[];
+  onCancel: () => void;
+  onSaved: () => void;
+};
 
 type Props = {
   point: AchievementPoint;
@@ -35,7 +43,8 @@ type Props = {
   onSkill?: (skillId: string) => void;
   activeTag: string;
   activeSkillId: string;
-  onEdit?: () => void;
+  onEdit?: (trigger: HTMLButtonElement) => void;
+  editor?: InlineEditor;
 };
 
 const CATEGORY_ICON = {
@@ -78,6 +87,7 @@ export default function AchievementCard({
   activeTag,
   activeSkillId,
   onEdit,
+  editor,
 }: Props) {
   const Icon = CATEGORY_ICON[kind];
   const StatusIcon = point.enabled ? Check : CircleSlash;
@@ -126,7 +136,7 @@ export default function AchievementCard({
           {onEdit ? (
             <button
               className="point-edit-action"
-              onClick={onEdit}
+              onClick={(event) => onEdit?.(event.currentTarget)}
               type="button"
             >
               <Pencil aria-hidden="true" size={14} strokeWidth={2} />
@@ -187,6 +197,17 @@ export default function AchievementCard({
       ) : null}
 
       <PointProvenance source={point.source} />
+      {editor ? (
+        <AchievementPointEditor
+          key={point.id}
+          initialPoint={point}
+          inline
+          onCancel={editor.onCancel}
+          onSaved={editor.onSaved}
+          parents={editor.parents}
+          skills={skills}
+        />
+      ) : null}
     </article>
   );
 }

@@ -9,9 +9,15 @@ import type {
   Skill,
 } from "@/lib/schemas/resume-data";
 
-type ParentOption = { id: string; label: string; type: "job" | "project" };
+export type ParentOption = {
+  id: string;
+  label: string;
+  type: "job" | "project";
+};
 type Props = {
   initialPoint?: AchievementPoint;
+  /** Render the editor within its achievement card instead of as a new card. */
+  inline?: boolean;
   parents: ParentOption[];
   skills: Skill[];
   onCancel: () => void;
@@ -41,6 +47,7 @@ function optional(value: string) {
 
 export default function AchievementPointEditor({
   initialPoint,
+  inline = false,
   parents,
   skills,
   onCancel,
@@ -48,7 +55,8 @@ export default function AchievementPointEditor({
   focusFirstField = false,
 }: Props) {
   const isEditing = Boolean(initialPoint);
-  const firstFieldRef = useRef<HTMLInputElement>(null);
+  const idFieldRef = useRef<HTMLInputElement>(null);
+  const textFieldRef = useRef<HTMLTextAreaElement>(null);
   const [pointId, setPointId] = useState(initialPoint?.id ?? "");
   const [parentKey, setParentKey] = useState(
     parents[0] ? `${parents[0].type}:${parents[0].id}` : "",
@@ -79,8 +87,13 @@ export default function AchievementPointEditor({
   const RemoveMetricIcon = removeMetricAction.icon;
 
   useEffect(() => {
-    if (focusFirstField) firstFieldRef.current?.focus();
-  }, [focusFirstField]);
+    const field = isEditing
+      ? textFieldRef.current
+      : focusFirstField
+        ? idFieldRef.current
+        : null;
+    field?.focus();
+  }, [focusFirstField, isEditing]);
 
   function toggleSkill(id: string) {
     setSkillIds((current) =>
@@ -162,7 +175,10 @@ export default function AchievementPointEditor({
   }
 
   return (
-    <form className="point-editor" onSubmit={submit}>
+    <form
+      className={inline ? "point-editor is-inline" : "point-editor"}
+      onSubmit={submit}
+    >
       <div className="point-editor-heading">
         <div>
           <p className="eyebrow">
@@ -193,7 +209,7 @@ export default function AchievementPointEditor({
               autoComplete="off"
               onChange={(event) => setPointId(event.target.value)}
               placeholder="achievement-example"
-              ref={firstFieldRef}
+              ref={idFieldRef}
               required
               value={pointId}
             />
@@ -222,6 +238,7 @@ export default function AchievementPointEditor({
         <span>Achievement text</span>
         <textarea
           onChange={(event) => setText(event.target.value)}
+          ref={textFieldRef}
           required
           rows={4}
           value={text}

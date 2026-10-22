@@ -1,7 +1,12 @@
 import { expect, test, type Page } from "@playwright/test";
 import { copyFile, mkdir, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
+import {
+  createPersonalLibraryGuard,
+  exampleLibraryPath,
+  libraryRoot as personalLibraryRoot,
+  personalLibraryPath,
+} from "./support/personal-library";
 
 /**
  * Task 20 coverage for the group headers, their counts, their date ranges
@@ -115,15 +120,18 @@ const OPEN_ENDED_LIBRARY = {
   },
 };
 
-function libraryRoot() {
-  return (
-    process.env.RESUME_LIBRARY_ROOT ??
-    join(tmpdir(), "resume-changer-playwright-data-3010")
-  );
-}
+const libraryGuard = createPersonalLibraryGuard();
+
+test.beforeAll(async () => {
+  await libraryGuard.capture();
+});
+
+test.afterAll(async () => {
+  await libraryGuard.restore();
+});
 
 async function writeFixtureLibrary() {
-  const dataFolder = join(libraryRoot(), "data");
+  const dataFolder = join(personalLibraryRoot, "data");
   await mkdir(dataFolder, { recursive: true });
   await writeFile(
     join(dataFolder, "resume-library.json"),
@@ -140,12 +148,9 @@ async function writeFixtureLibrary() {
  * library is the one the server seeded the folder with.
  */
 async function restoreSampleLibrary() {
-  const dataFolder = join(libraryRoot(), "data");
+  const dataFolder = join(personalLibraryRoot, "data");
   await mkdir(dataFolder, { recursive: true });
-  await copyFile(
-    join(process.cwd(), "examples", "sample-resume-library.json"),
-    join(dataFolder, "resume-library.json"),
-  );
+  await copyFile(exampleLibraryPath, join(dataFolder, "resume-library.json"));
 }
 
 test.describe("achievement library group headers", () => {
@@ -482,5 +487,133 @@ test.describe("achievement library group headers without a known end", () => {
     expect(titleBox!.width).toBeLessThanOrEqual(chevronBox!.x + 1);
     expect(titleBox!.height).toBeGreaterThan(24);
     expect(subtitleBox!.y).toBeGreaterThan(titleBox!.y);
+  });
+});
+
+test.describe("integrated card details and editor", () => {
+  test.beforeEach(async ({ page }) => {
+    await copyFile(exampleLibraryPath, personalLibraryPath);
+    await page.goto("/library");
+  });
+
+  test("keeps the full achievement detail set visible in its card", async ({
+    page,
+  }) => {
+    const point = page
+      .locator(".library-point")
+      .filter({ hasText: "achievement-service-capacity-design" });
+
+    await expect(point.locator(".library-point-id")).toHaveText(
+      "achievement-service-capacity-design",
+    );
+    await expect(point.locator(".point-status")).toHaveText("Enabled");
+    await expect(point.locator(".point-metric-label")).toHaveText(
+      "Throughput improvement",
+    );
+    await expect(point.locator(".point-metric-number")).toHaveText("28");
+    await expect(point.locator(".point-metric-unit")).toHaveText("%");
+    await expect(point.locator(".point-metric-evidence")).toContainText(
+      "fictional demo benchmark",
+    );
+    await expect(point.locator(".point-metric-context")).toContainText(
+      "Synthetic benchmark scenario",
+    );
+    await expect(point.locator(".point-provenance")).toContainText(
+      "Source: project-document · Synthetic demo scenario",
+    );
+    for (const name of [
+      "Filter by #system-design",
+      "Filter by #scalability",
+      "Filter by skill System Design",
+      "Filter by skill Amazon Web Services",
+    ]) {
+      await expect(point.getByRole("button", { name })).toBeVisible();
+    }
+  });
+
+  test("opens the editor in the achievement card it belongs to", async ({
+    page,
+  }) => {
+    const point = page
+      .locator(".library-point")
+      .filter({ hasText: "achievement-service-capacity-design" });
+    await point.getByRole("button", { name: "Edit", exact: true }).click();
+
+    const editor = point.locator(".point-editor");
+    await expect(editor).toBeVisible();
+    await expect(
+      editor.getByRole("heading", { name: "Edit achievement" }),
+    ).toBeVisible();
+    await expect(page.locator(".library-point .point-editor")).toHaveCount(1);
+    await expect(editor.getByLabel("Achievement ID")).toHaveCount(0);
+    await expect(editor.getByLabel("Achievement text")).toHaveValue(
+      "Redesigned service boundaries and capacity planning for a multi-tenant processing platform.",
+    );
+    await expect(editor.getByLabel("Achievement text")).toBeFocused();
+  });
+
+  test("keeps an inline editor on the existing card surface", async ({
+    page,
+  }) => {
+    const point = page
+      .locator(".library-point")
+      .filter({ hasText: "achievement-service-capacity-design" });
+    await point.getByRole("button", { name: "Edit", exact: true }).click();
+
+    const styles = await point.locator(".point-editor").evaluate((element) => {
+      const editor = getComputedStyle(element);
+      const card = getComputedStyle(element.closest(".library-point")!);
+      return {
+        inline: element.classList.contains("is-inline"),
+        editorBackground: editor.backgroundColor,
+        editorShadow: editor.boxShadow,
+        editorBorderTop: editor.borderTopWidth,
+        cardBackground: card.backgroundColor,
+      };
+    });
+    expect(styles.inline).toBe(true);
+    expect(styles.editorBackground).toBe("rgba(0, 0, 0, 0)");
+    expect(styles.editorShadow).toBe("none");
+    expect(styles.editorBorderTop).toBe("1px");
+    expect(styles.cardBackground).not.toBe("rgba(0, 0, 0, 0)");
+  });
+
+  test("opens the inline editor by keyboard and returns focus on cancel", async ({
+    page,
+  }) => {
+    const point = page
+      .locator(".library-point")
+      .filter({ hasText: "achievement-ci-cd-pipeline" });
+    const edit = point.getByRole("button", { name: "Edit", exact: true });
+
+    await edit.focus();
+    await page.keyboard.press("Enter");
+    await expect(page.getByLabel("Achievement text")).toBeFocused();
+    await page.getByRole("button", { name: "Cancel", exact: true }).click();
+
+    await expect(point.locator(".point-editor")).toHaveCount(0);
+    await expect(edit).toBeFocused();
+  });
+
+  test("keeps demo achievements detailed and read-only", async ({ page }) => {
+    await page.goto("/library?source=demo");
+
+    await expect(page.locator(".source-indicator")).toHaveText(
+      "Fictional demo data",
+    );
+    await expect(
+      page.getByRole("button", { name: "Edit", exact: true }),
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: "Add achievement", exact: true }),
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: "Detailed entry" }),
+    ).toHaveCount(0);
+    await expect(page.locator(".point-editor")).toHaveCount(0);
+    await expect(page.locator(".library-point")).toHaveCount(13);
+    await expect(page.locator(".point-provenance").first()).toContainText(
+      "Source: project-document",
+    );
   });
 });

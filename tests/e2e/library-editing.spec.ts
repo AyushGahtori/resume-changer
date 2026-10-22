@@ -194,6 +194,89 @@ test("keeps demo data read-only", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Edit" })).toHaveCount(0);
 });
 
+test("keeps the entered values and the open editor when a save fails", async ({
+  page,
+}) => {
+  await page.getByRole("button", { name: "Detailed entry" }).click();
+  await page.getByLabel("Achievement ID").fill("achievement-ci-cd-pipeline");
+  await page
+    .getByLabel("Achievement text")
+    .fill("Duplicate synthetic ID should be rejected.");
+  await page.getByLabel("Tags, separated by commas").fill("release, blocked");
+  await page.getByRole("button", { name: "Save achievement" }).click();
+
+  await expect(page.locator(".editor-error")).toContainText(
+    "conflicts with the library data",
+  );
+  // The editor stays open with everything the user typed.
+  await expect(page.locator(".point-editor")).toBeVisible();
+  await expect(page.getByLabel("Achievement ID")).toHaveValue(
+    "achievement-ci-cd-pipeline",
+  );
+  await expect(page.getByLabel("Achievement text")).toHaveValue(
+    "Duplicate synthetic ID should be rejected.",
+  );
+  await expect(page.getByLabel("Tags, separated by commas")).toHaveValue(
+    "release, blocked",
+  );
+  await expect(page.locator(".editor-error")).toHaveAttribute("role", "alert");
+});
+
+test("returns focus to the edit control after a successful save", async ({
+  page,
+}) => {
+  const point = page
+    .locator(".library-point")
+    .filter({ hasText: "achievement-orders-api" });
+  const edit = point.getByRole("button", { name: "Edit" });
+
+  await edit.click();
+  await page
+    .getByLabel("Achievement text")
+    .fill("Updated synthetic orders achievement.");
+  await page.getByRole("button", { name: "Save achievement" }).click();
+
+  await expect(page.getByText("Saved to your local library.")).toBeVisible();
+  await expect(page.locator(".point-editor")).toHaveCount(0);
+  await expect(edit).toBeFocused();
+});
+
+test("returns focus to the add control when the Imagination Canvas closes", async ({
+  page,
+}) => {
+  const add = page.getByRole("button", {
+    name: "Add achievement",
+    exact: true,
+  });
+  await add.click();
+  await expect(
+    page.getByRole("heading", { name: "Imagination Canvas" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Close editor" }).click();
+
+  await expect(
+    page.getByRole("heading", { name: "Imagination Canvas" }),
+  ).toHaveCount(0);
+  await expect(add).toBeFocused();
+});
+
+test("keeps the detailed editor within a narrow viewport", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 740 });
+  await page.getByRole("button", { name: "Detailed entry" }).click();
+
+  const dimensions = await page.evaluate(() => ({
+    documentWidth: document.documentElement.scrollWidth,
+    viewportWidth: document.documentElement.clientWidth,
+  }));
+  expect(dimensions.documentWidth).toBeLessThanOrEqual(
+    dimensions.viewportWidth,
+  );
+  await expect(page.getByLabel("Achievement text")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Save achievement" }),
+  ).toBeVisible();
+});
+
 test("keeps the point editor within a narrow viewport", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole("button", { name: "Add achievement" }).click();
