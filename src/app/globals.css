@@ -4840,3 +4840,271 @@ a:focus-visible {
 .jd-workspace-frame:has(.paste-from-url-panel) .jd-form {
   flex: 0 0 auto;
 }
+
+/* ---------------------------------------------------------------------------
+   Achievement Library type scale.
+
+   The library consumes the shared type tokens above instead of a second
+   palette or a second font stack. Georgia/Times stays on the page title and
+   the profile name; Arial/Helvetica stays on every operational label, control,
+   and piece of metadata. Sizes follow the library board's hierarchy - page
+   title 40/48 (32/40 on mobile), section 24/32, profile name 30/38,
+   experience title 18/24, body 14/20, label and metadata 12/16, micro-label
+   11/14 - with no viewport-scaled sizes and no letter-spacing tricks.
+   --------------------------------------------------------------------------- */
+.library-page {
+  letter-spacing: 0;
+}
+
+.library-page .library-heading h1 {
+  max-width: 100%;
+  font-size: var(--type-page-title-size);
+  line-height: var(--type-page-title-line-height);
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+
+.library-page .eyebrow {
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line-height);
+  font-weight: 600;
+}
+
+.library-page .page-intro {
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
+}
+
+.library-page .library-source-switch a {
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+}
+
+.library-page .source-indicator {
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+  font-weight: 600;
+}
+
+.library-page .library-owner h2 {
+  font-size: var(--type-profile-name-size);
+  line-height: var(--type-profile-name-line-height);
+  overflow-wrap: anywhere;
+}
+
+.library-page .library-owner p {
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
+}
+
+.library-page .library-counts dt {
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+  font-weight: 600;
+}
+
+.library-page .library-counts dd {
+  font-size: var(--type-metric-value-size);
+  line-height: var(--type-metric-value-line-height);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.library-page .library-search > span,
+.library-page .library-filter-grid label > span {
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+  font-weight: 600;
+}
+
+.library-page .library-search input,
+.library-page .library-filter-grid select {
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
+}
+
+.library-page .library-filter-summary {
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
+  font-variant-numeric: tabular-nums;
+}
+
+.library-page .text-action {
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+  font-weight: 600;
+}
+
+.library-page .experience-kind {
+  font-size: var(--type-micro-label-size);
+  line-height: var(--type-micro-label-line-height);
+  font-weight: 700;
+}
+
+.library-page .experience-heading h3 {
+  font-size: var(--type-experience-title-size);
+  line-height: var(--type-experience-title-line-height);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.library-page .experience-subtitle,
+.library-page .experience-dates {
+  font-size: var(--type-metadata-size);
+  line-height: var(--type-metadata-line-height);
+}
+
+.library-page .library-point-heading code {
+  color: var(--muted);
+  font-size: var(--type-metadata-size);
+  line-height: var(--type-metadata-line-height);
+}
+
+.library-page .point-status {
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+  font-weight: 600;
+}
+
+.library-page .library-point-text {
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
+  overflow-wrap: anywhere;
+}
+
+.library-page .point-provenance {
+  font-size: var(--type-metadata-size);
+  line-height: var(--type-metadata-line-height);
+}
+
+.library-page .point-metrics li {
+  font-size: var(--type-metadata-size);
+  line-height: var(--type-metadata-line-height);
+}
+
+.library-page .point-metrics strong {
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
+}
+
+.library-page .point-metrics span {
+  font-size: var(--type-metadata-size);
+  line-height: var(--type-metadata-line-height);
+}
+
+.library-page .facet-chip {
+  max-width: 100%;
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+  overflow-wrap: anywhere;
+}
+
+.library-page .library-detail summary {
+  font-size: var(--type-section-heading-size);
+  line-height: var(--type-section-heading-line-height);
+  overflow-wrap: anywhere;
+}
+
+.library-page .library-detail summary span {
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+  font-variant-numeric: tabular-nums;
+}
+
+.library-page .skill-list li,
+.library-page .credential-list li {
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
+}
+
+.library-page .skill-list li > div span,
+.library-page .credential-list li > span {
+  font-size: var(--type-metadata-size);
+  line-height: var(--type-metadata-line-height);
+}
+
+.library-page .skill-listed,
+.library-page .skill-unlisted {
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+}
+
+.library-page .library-empty,
+.library-page .secondary-empty {
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
+}
+
+/* The detailed-entry editor shares the library page, so it uses the same
+   type roles as the rest of the workspace. */
+.library-page .point-editor-heading h2 {
+  font-size: var(--type-experience-title-size);
+  line-height: var(--type-experience-title-line-height);
+}
+
+.library-page .point-editor-heading .eyebrow {
+  font-size: var(--type-micro-label-size);
+  line-height: var(--type-micro-label-line-height);
+}
+
+.library-page .editor-field > span {
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+}
+
+.library-page .editor-field input,
+.library-page .editor-field select,
+.library-page .editor-field textarea {
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
+}
+
+.library-page .metric-editor-heading h3 {
+  font-size: var(--type-card-heading-size);
+  line-height: var(--type-card-heading-line-height);
+}
+
+.library-page .metric-fields legend {
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+}
+
+.library-page .editor-enabled {
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
+}
+
+.library-page .editor-error {
+  font-size: var(--type-helper-size);
+  line-height: var(--type-helper-line-height);
+}
+
+.library-page .library-edit-toolbar > span {
+  font-size: var(--type-helper-size);
+  line-height: var(--type-helper-line-height);
+}
+
+/* The load-failure state is the library route's own page, so it carries the
+   same title and body type as the library screen. */
+.library-error h1 {
+  font-size: var(--type-page-title-size);
+  line-height: var(--type-page-title-line-height);
+  overflow-wrap: anywhere;
+}
+
+.library-error .eyebrow {
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line-height);
+  font-weight: 600;
+}
+
+.library-error > p:not(.eyebrow) {
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
+}
+
+.library-switch-link {
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
+}
