@@ -211,8 +211,6 @@ export default function AchievementLibrary({ library, source }: Props) {
   const hasFilters = Object.entries(filters).some(([key, value]) =>
     key === "status" ? value !== "all" : value !== "",
   );
-  const sourceLabel =
-    source === "demo" ? "Fictional demo data" : "My resume data";
   const canEdit = source === "personal";
   const parentOptions = [
     ...library.jobs.map((job) => ({
@@ -357,7 +355,7 @@ export default function AchievementLibrary({ library, source }: Props) {
           </div>
         </div>
       </header>
-      <ProfileSummary library={library} sourceLabel={sourceLabel} />
+      <ProfileSummary library={library} source={source} totalPointCount={result.totalPointCount} />
 
       {editor && (
         <AchievementPointEditor

@@ -92,6 +92,18 @@
   --color-category-skills: #10b981;
   --color-category-credentials: #4f46e5;
 
+  /*
+   * Category label colors. The identifier hue above is a fill and an icon
+   * color; on a light surface it is too light to carry text. These darker
+   * steps of the same hues carry a category label and still clear 4.5:1 on
+   * the surface and on the tinted metric tile.
+   */
+  --color-category-job-text: #b23c0c;
+  --color-category-project-text: #6d28d9;
+  --color-category-points-text: #8f5206;
+  --color-category-skills-text: #076b4d;
+  --color-category-credentials-text: #4f46e5;
+
   /* Compatibility aliases keep existing app and studio styles theme-aware. */
   --canvas: var(--color-canvas);
   --sidebar: var(--color-sidebar);
@@ -237,6 +249,17 @@
   --color-category-points: #fbbf24;
   --color-category-skills: #34d399;
   --color-category-credentials: #818cf8;
+
+  /*
+   * Dark category label colors. The dark identifier hues are already light
+   * enough to carry text, so these match them and stay distinct from the
+   * light-theme steps above.
+   */
+  --color-category-job-text: #fdba74;
+  --color-category-project-text: #a78bfa;
+  --color-category-points-text: #fbbf24;
+  --color-category-skills-text: #34d399;
+  --color-category-credentials-text: #818cf8;
 
   --canvas: var(--color-canvas);
   --sidebar: var(--color-sidebar);
@@ -2638,19 +2661,10 @@ a:focus-visible {
   color: var(--color-text-secondary);
 }
 
-.library-overview {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-24);
-  padding: var(--space-24);
-  border: var(--border-default);
-  border-radius: var(--radius-card);
-  background: var(--surface);
-  /* The summary is the one major light surface that earns a faint lift. */
-  box-shadow: var(--shadow-xs);
-}
-
+/*
+ * The saved-output label in generation history remains separate from the
+ * library summary's own source label.
+ */
 .source-indicator {
   display: inline-block;
   margin-bottom: var(--space-4);
@@ -2659,39 +2673,146 @@ a:focus-visible {
   font-weight: 700;
 }
 
-.library-owner h2 {
+/*
+ * The library summary is one bordered surface: the identity on the left and
+ * five compact metric tiles on the right. The identity is plain text and a
+ * metric is a tinted tile, so the panel never nests a second card around
+ * either one.
+ */
+.library-overview {
+  display: grid;
+  gap: var(--space-20);
+  padding: var(--space-24);
+  border: var(--border-default);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-xs);
+}
+
+.library-source-label {
+  margin: 0 0 6px;
+  color: var(--color-violet-strong);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.library-identity h2 {
   margin: 0;
   font-family: Georgia, "Times New Roman", serif;
-  font-size: 23px;
+  font-size: 24px;
   font-weight: 400;
+  line-height: 1.2;
 }
 
-.library-owner p {
+.library-owner p,
+.library-headline {
   margin: var(--space-4) 0 0;
-  color: var(--muted);
-  font-size: 12px;
+  color: var(--color-text-secondary);
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
 }
 
+.library-metrics,
 .library-counts {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: var(--space-24);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-12);
   margin: 0;
 }
 
-.library-counts div {
+.library-metric {
   display: grid;
-  gap: var(--space-4);
+  align-content: start;
+  gap: 4px;
+  min-width: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--metric-accent) 12%, var(--color-surface));
 }
-.library-counts dt {
-  color: var(--muted);
-  font-size: 10px;
+
+.library-metric[data-category="job"] {
+  --metric-accent: var(--color-category-job);
+  --metric-label: var(--color-category-job-text);
 }
-.library-counts dd {
+.library-metric[data-category="project"] {
+  --metric-accent: var(--color-category-project);
+  --metric-label: var(--color-category-project-text);
+}
+.library-metric[data-category="points"] {
+  --metric-accent: var(--color-category-points);
+  --metric-label: var(--color-category-points-text);
+}
+.library-metric[data-category="skills"] {
+  --metric-accent: var(--color-category-skills);
+  --metric-label: var(--color-category-skills-text);
+}
+.library-metric[data-category="credentials"] {
+  --metric-accent: var(--color-category-credentials);
+  --metric-label: var(--color-category-credentials-text);
+}
+
+/*
+ * On the dark canvas a tinted tile needs an edge of its own, otherwise the
+ * tile and the panel it sits on read as one shape.
+ */
+:root[data-theme="dark"] .library-metric {
+  border: 1px solid color-mix(in srgb, var(--metric-accent) 30%, var(--color-border));
+}
+
+.library-metric dt {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
   margin: 0;
-  font-size: 17px;
+  color: var(--metric-label);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 16px;
+}
+
+.library-metric dt span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.library-metric dt svg {
+  flex: 0 0 auto;
+  /*
+   * The bright category hue is reserved for the tile tint. On a tinted tile
+   * it is too light to read as a shape, so the icon takes the text-safe step
+   * of the same hue and stays visible next to its label.
+   */
+  color: var(--metric-label);
+}
+
+.library-metric dd {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: 22px;
   font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  line-height: 28px;
+}
+
+@media (min-width: 768px) {
+  .library-metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .library-overview {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+    align-items: center;
+    gap: 28px;
+  }
+  .library-metrics {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
 }
 
 .library-workbench {
@@ -3812,14 +3933,11 @@ a:focus-visible {
     line-height: 40px;
   }
   .library-overview {
-    align-items: flex-start;
-    flex-direction: column;
     gap: var(--space-16);
     padding: var(--space-16);
   }
   .library-counts {
     justify-content: flex-start;
-    gap: var(--space-12) var(--space-24);
   }
   .library-filter-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
