@@ -677,48 +677,127 @@
   font-size: 9px;
   font-weight: 400;
 }
-.studio-chip-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 7px;
+.studio-skill-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(150px, 100%), 1fr));
+  gap: 8px 10px;
   padding-top: 12px;
 }
-.studio-chip-list > button {
-  display: inline-flex;
-  gap: 6px;
+.studio-skill-option {
+  display: flex;
   align-items: center;
-  min-height: 32px;
-  padding: 5px 8px;
+  gap: 7px;
+  min-width: 0;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--ink);
+  font-size: 11px;
+  line-height: 1.45;
+  cursor: pointer;
+}
+.studio-skill-option:hover {
+  border-color: var(--line);
+  background: var(--surface-soft);
+}
+.studio-skill-option:focus-within {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+.studio-skill-option input[type="checkbox"] {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  accent-color: var(--imagination);
+}
+.studio-skill-option-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.studio-skill-option-recommended {
+  flex: 0 0 auto;
+  color: var(--imagination);
   font-size: 10px;
 }
-.studio-chip-list button small {
+.studio-skill-option-state {
+  flex: 0 0 auto;
+  padding: 1px 6px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-soft);
   color: var(--quiet);
   font-size: 8px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
 }
-.studio-chip-list button[aria-pressed="true"] {
-  border-color: var(--imagination);
+.studio-skill-option.is-added-to-draft .studio-skill-option-state {
+  border-color: color-mix(in srgb, var(--imagination) 45%, var(--line));
   background: var(--imagination-soft);
+  color: var(--imagination-hover);
 }
-.studio-chip-list button[aria-pressed="true"].is-current {
-  border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+.studio-skill-option.is-removed-from-draft .studio-skill-option-state {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
   background: var(--accent-soft);
-}
-.studio-chip-list button[aria-pressed="true"] small {
-  color: var(--imagination);
-}
-.studio-chip-list button[aria-pressed="true"].is-current small {
   color: var(--accent-hover);
+}
+.studio-skill-option:has(input:disabled) {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+.studio-skill-option:has(input:disabled):hover {
+  border-color: transparent;
+  background: none;
+}
+.studio-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+.studio-section-toggles {
+  padding: 12px;
+  margin: 0 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-soft);
+}
+.studio-section-toggles legend {
+  padding: 0 4px;
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 650;
+}
+.studio-section-toggle-count {
+  margin: 0 0 9px;
+  color: var(--muted);
+  font-size: 10px;
+}
+.studio-section-toggle-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 .studio-section-toggle {
   display: flex;
   gap: 9px;
   align-items: center;
-  padding: 11px;
-  margin: 0 0 7px;
+  padding: 8px 11px;
   border: 1px solid var(--line);
   border-radius: 7px;
+  background: var(--surface);
   color: var(--ink);
   font-size: 12px;
+  cursor: pointer;
+}
+.studio-section-toggle input[type="checkbox"] {
+  accent-color: var(--imagination);
 }
 .studio-record,
 .studio-revision {
@@ -1171,9 +1250,8 @@
     align-items: flex-start;
     flex-direction: column;
   }
-  .studio-chip-list > button {
-    flex: 1 1 auto;
-    justify-content: space-between;
+  .studio-skill-grid {
+    grid-template-columns: repeat(auto-fill, minmax(min(148px, 100%), 1fr));
   }
   .studio-achievement-card {
     padding-right: 9px;
