@@ -199,12 +199,21 @@ test("marks a non-HTTP job link invalid with a red border", async ({
   const error = page.locator("#job-url-error");
   await expect(error).toContainText("Enter an HTTP or HTTPS link.");
 
-  // The border transitions, so wait for the settled color.
+  const expectedErrorColor = await page.locator("html").evaluate((root) => {
+    const probe = document.createElement("span");
+    probe.style.color = "var(--danger)";
+    root.append(probe);
+    const color = getComputedStyle(probe).color;
+    probe.remove();
+    return color;
+  });
+
+  // The border transitions, so wait for the settled theme token.
   await expect
     .poll(() =>
       jobUrl.evaluate((element) => getComputedStyle(element).borderTopColor),
     )
-    .toBe("rgb(239, 68, 68)");
+    .toBe(expectedErrorColor);
 
   // The error sits below the control as a 12px helper line.
   const errorStyle = await error.evaluate((element) => {
