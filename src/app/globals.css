@@ -3670,14 +3670,78 @@ a:focus-visible {
   opacity: 0.55;
 }
 
-.selection-analysis-notice {
+/*
+ * The job analysis block states what the builder knows about the analyzed
+ * job description. It never implies an analysis that does not exist.
+ */
+.selection-analysis {
   margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-soft);
+}
+
+.selection-analysis-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.selection-analysis-heading h3 {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.selection-analysis-heading p {
+  margin: 3px 0 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.selection-analysis-state {
+  flex: 0 0 auto;
+  padding: 2px 7px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--quiet);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.selection-analysis-state.is-ready {
+  border-color: color-mix(in srgb, var(--color-success) 45%, transparent);
+  background: var(--teal-soft);
+  color: var(--teal);
+}
+
+.selection-analysis-state.is-loading {
+  border-color: color-mix(in srgb, var(--color-info) 45%, transparent);
+  background: color-mix(in srgb, var(--color-info) 10%, var(--surface));
+  color: var(--color-info-strong);
+}
+
+.selection-analysis-state.is-error {
+  border-color: color-mix(in srgb, var(--color-error) 45%, transparent);
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.selection-analysis-detail {
+  margin: 6px 0 0;
   color: var(--muted);
   font-size: 10px;
   line-height: 1.5;
 }
 
-.selection-analysis-notice a {
+.selection-analysis-detail a {
   color: var(--accent-hover);
 }
 
@@ -3744,9 +3808,30 @@ a:focus-visible {
   gap: 8px;
 }
 
-.selection-coverage-heading strong {
-  color: var(--teal);
+.selection-coverage-source {
+  margin: 3px 0 0;
+  color: var(--quiet);
   font-size: 9px;
+  line-height: 1.45;
+}
+
+.selection-coverage-count {
+  color: var(--teal);
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.selection-coverage-denominator,
+.selection-coverage-breakdown {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.selection-coverage-breakdown {
+  color: var(--quiet);
 }
 
 .selection-coverage progress {
@@ -3788,26 +3873,46 @@ a:focus-visible {
 
 .selection-coverage summary {
   display: grid;
-  grid-template-columns: 76px minmax(0, 1fr);
+  grid-template-columns: 96px minmax(0, 1fr);
   gap: 7px;
   cursor: pointer;
 }
 
 .selection-coverage details p {
-  margin: 4px 0 0 83px;
+  margin: 4px 0 0 103px;
   color: var(--ink);
   overflow-wrap: anywhere;
 }
 
 .coverage-status {
-  color: var(--accent-hover);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--quiet);
   font-size: 8px;
   font-weight: 700;
   text-transform: uppercase;
 }
 
-.coverage-status.is-covered {
+.coverage-status-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+
+.coverage-status.is-supported {
   color: var(--teal);
+}
+
+.coverage-status.is-partial {
+  color: var(--color-warning-strong);
+}
+
+.coverage-status.is-uncertain {
+  color: var(--color-info-strong);
+}
+
+.coverage-status.is-missing {
+  color: var(--quiet);
 }
 
 .selection-coverage > p {
