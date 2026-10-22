@@ -2,6 +2,8 @@ import {
   JobAnalysisPanel,
   type AnalysisPanelProps,
 } from "./job-analysis-panel";
+import { AnalysisSignalRows } from "./analysis-signal-rows";
+import { buildAnalysisSignals } from "@/lib/ui/analysis-preview-model";
 
 export function ATSAnalysisPreview(props: AnalysisPanelProps) {
   // JobAnalysisResult only describes JD extraction. A score must never be
@@ -33,6 +35,9 @@ export function ATSAnalysisPreview(props: AnalysisPanelProps) {
         <strong>Not scored.</strong> This preview extracts job requirements. A
         resume match has not been evaluated.
       </p>
+      {props.state === "success" && props.analysis && (
+        <AnalysisSignalRows signals={buildAnalysisSignals(props.analysis)} />
+      )}
       {props.state === "idle" ? (
         <p className="ats-preview-empty">
           Enter a job description, then select Analyze job description.

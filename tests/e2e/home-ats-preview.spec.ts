@@ -5,6 +5,115 @@ import { JobAnalysisResultSchema } from "../../src/lib/ai/contracts";
 const description =
   "We'll analyze your job description to find key skills, keywords, and requirements that ATS systems look for.";
 
+for (const theme of ["light", "dark"]) {
+  test(`signal rows have truthful textual status, accessible labels and wrapping in ${theme}`, async ({
+    page,
+  }) => {
+    const browserErrors: string[] = [];
+    page.on("pageerror", (error) => browserErrors.push(error.message));
+    page.on("console", (message) => {
+      if (message.type() === "error") browserErrors.push(message.text());
+    });
+    page.on("response", (response) => {
+      if (response.status() >= 500)
+        browserErrors.push(`${response.status()} ${response.url()}`);
+    });
+    await page.goto("/");
+    if (theme === "dark")
+      await page.getByRole("button", { name: "Switch to dark mode" }).click();
+    const preview = page.getByRole("complementary", {
+      name: "ATS analysis preview",
+    });
+    const signals = preview.getByRole("list", {
+      name: "Job description analysis signals",
+    });
+    await expect(signals).toHaveCount(0);
+    let payload = homeAnalysis;
+    await page.route("**/api/ai/analyze-job-description", (route) =>
+      route.fulfill({ json: { analysis: payload } }),
+    );
+    await page
+      .getByRole("textbox", { name: "Job description", exact: true })
+      .fill("Build reliable APIs with TypeScript and PostgreSQL.");
+    await page
+      .getByRole("button", { name: "Analyze job description", exact: true })
+      .click();
+    await expect(signals.getByRole("listitem")).toHaveText([
+      "Extracted: 1 explicit requirement",
+      "Identified: 2 tools and platforms",
+      "Identified: 1 ATS term",
+      "Review inference: 1 context note",
+    ]);
+    await expect(signals.locator(".is-success")).toHaveCount(1);
+    await expect(signals.locator(".is-info")).toHaveCount(2);
+    await expect(signals.locator(".is-attention")).toHaveCount(1);
+    const accessibleList = await signals.ariaSnapshot();
+    expect(accessibleList).toContain("Extracted: 1 explicit requirement");
+    expect(accessibleList).toContain("Review inference: 1 context note");
+    await expect(signals.locator('[aria-hidden="true"] svg')).toHaveCount(4);
+    const iconColors = await signals
+      .locator(".analysis-signal-icon")
+      .evaluateAll((icons) =>
+        icons.map((icon) => {
+          const style = getComputedStyle(icon);
+          return [style.color, style.backgroundColor];
+        }),
+      );
+    for (const [foreground, background] of iconColors)
+      expect(contrast(foreground, background)).toBeGreaterThanOrEqual(3);
+    for (const width of [1440, 1280, 1024, 768, 390, 320]) {
+      await page.setViewportSize({ width, height: 900 });
+      if (width < 700)
+        await expect(page.locator("#workspace-sidebar")).toBeHidden();
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+      ).toBe(true);
+      await signals.screenshot({
+        path: `docs/ui-review/task-24/${theme}-signals-${width}.png`,
+        animations: "disabled",
+        style: "nextjs-portal {display:none}",
+      });
+      if (width === 1440 || width === 320) {
+        await preview.screenshot({
+          path: `docs/ui-review/task-24/${theme}-preview-${width}.png`,
+          animations: "disabled",
+          style: "nextjs-portal {display:none}",
+        });
+        await page.evaluate(() => window.scrollTo(0, 0));
+        await page.screenshot({
+          path: `docs/ui-review/task-24/${theme}-page-${width}.png`,
+          fullPage: true,
+          animations: "disabled",
+          style: "nextjs-portal {display:none}",
+        });
+      }
+    }
+    payload = emptyHomeAnalysis;
+    await page
+      .getByRole("button", { name: "Analyze job description", exact: true })
+      .click();
+    await expect(signals.locator(".is-info")).toHaveCount(4);
+    await expect(signals.locator(".is-success, .is-attention")).toHaveCount(0);
+    const row = signals.getByRole("listitem").first();
+    const labelBounds = await row
+      .locator(".analysis-signal-label")
+      .boundingBox();
+    const iconBounds = await row.locator(".analysis-signal-icon").boundingBox();
+    expect(labelBounds!.height).toBeGreaterThan(20);
+    expect(Math.abs(labelBounds!.y - iconBounds!.y)).toBeLessThanOrEqual(1);
+    await signals.screenshot({
+      path: `docs/ui-review/task-24/${theme}-empty-categories-320.png`,
+      animations: "disabled",
+      style: "nextjs-portal {display:none}",
+    });
+    await page.getByLabel("Company", { exact: true }).fill("New draft context");
+    await expect(signals).toHaveCount(0);
+    expect(browserErrors).toEqual([]);
+  });
+}
+
 test("score contract contains no supported match-score field", () => {
   expect(JobAnalysisResultSchema.safeParse(homeAnalysis).success).toBe(true);
   expect(
