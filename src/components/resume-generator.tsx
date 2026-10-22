@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Search } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, FormEvent } from "react";
 import {
@@ -26,6 +27,10 @@ import { createJobContextId } from "@/lib/ai/job-context";
 import { readJobAnalysisCache } from "@/lib/jd-analysis-cache";
 import { createResumeFilename } from "@/lib/generation/resume-filename";
 import { createResumeExportPackage } from "@/lib/generation/export-package";
+import {
+  countSelectionPoints,
+  filterSelectionGroups,
+} from "@/lib/generation/selection-filter";
 import ResumeStudio from "./resume-studio";
 import { parseStudioSession } from "@/lib/generation/studio-session";
 import { getGenerationOriginNotice } from "@/lib/generation/generation-origin";
@@ -175,6 +180,8 @@ export default function ResumeGenerator({ library, source }: Props) {
   const [draftReady, setDraftReady] = useState(false);
   const [draftNotice, setDraftNotice] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [pointQuery, setPointQuery] = useState("");
+  const [experienceFilter, setExperienceFilter] = useState("");
   const [selectedSkillIds, setSelectedSkillIds] = useState<string[] | null>(
     null,
   );
@@ -228,6 +235,46 @@ export default function ResumeGenerator({ library, source }: Props) {
     () => groups.flatMap((group) => group.points.map((point) => point.id)),
     [groups],
   );
+  /*
+   * The search and the experience filter only change what the list shows.
+   * The selected set stays untouched, so looking for evidence never
+   * deselects it.
+   */
+  const visibleGroups = useMemo(
+    () =>
+      filterSelectionGroups(groups, {
+        query: pointQuery,
+        experienceId: experienceFilter,
+      }),
+    [groups, pointQuery, experienceFilter],
+  );
+  const visiblePointCount = useMemo(
+    () => countSelectionPoints(visibleGroups),
+    [visibleGroups],
+  );
+  const hasPointFilter = pointQuery.trim() !== "" || experienceFilter !== "";
+  /*
+   * The experience filter names every group of the library. The company or
+   * the role is only added when two groups share a title, so the closed
+   * select stays short without hiding a difference.
+   */
+  const experienceOptions = useMemo(() => {
+    const titleCounts = new Map<string, number>();
+    for (const group of groups) {
+      titleCounts.set(group.title, (titleCounts.get(group.title) ?? 0) + 1);
+    }
+    return groups.map((group) => {
+      const kind = group.kind === "JOB" ? "Job" : "Project";
+      const shared = (titleCounts.get(group.title) ?? 0) > 1;
+      return {
+        id: group.id,
+        label:
+          shared && group.subtitle
+            ? `${kind}: ${group.title} · ${group.subtitle}`
+            : `${kind}: ${group.title}`,
+      };
+    });
+  }, [groups]);
   const pointById = useMemo(
     () =>
       new Map(
@@ -402,6 +449,11 @@ export default function ResumeGenerator({ library, source }: Props) {
     setResult(null);
     setCopyMessage("");
     setRequestError("");
+  }
+
+  function resetPointFilters() {
+    setPointQuery("");
+    setExperienceFilter("");
   }
 
   function clearSelection() {
@@ -2076,14 +2128,61 @@ export default function ResumeGenerator({ library, source }: Props) {
                 }}
               />
             )}
+            {(!result || showGenerationSettings) && groups.length > 0 && (
+              <div className="generation-selection-filters">
+                <div className="generation-search-field">
+                  <Search aria-hidden="true" size={14} strokeWidth={2} />
+                  <input
+                    aria-label="Search achievements"
+                    onChange={(event) => setPointQuery(event.target.value)}
+                    placeholder="Search achievements…"
+                    type="search"
+                    value={pointQuery}
+                  />
+                </div>
+                <select
+                  aria-label="Filter by experience"
+                  className="generation-experience-filter"
+                  onChange={(event) => setExperienceFilter(event.target.value)}
+                  value={experienceFilter}
+                >
+                  <option value="">All experiences</option>
+                  {experienceOptions.map((option) => (
+                    <option key={option.id} value={option.id}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                {hasPointFilter && (
+                  <button
+                    className="generation-filter-reset"
+                    onClick={resetPointFilters}
+                    type="button"
+                  >
+                    Reset filters
+                  </button>
+                )}
+                {hasPointFilter && (
+                  <p className="generation-filter-count" role="status">
+                    {visiblePointCount} of {enabledIds.length} achievements
+                    match
+                  </p>
+                )}
+              </div>
+            )}
+
             {(!result || showGenerationSettings) &&
               (groups.length === 0 ? (
                 <p className="generation-empty" role="status">
                   This library has no enabled achievement points.
                 </p>
+              ) : visibleGroups.length === 0 ? (
+                <p className="generation-no-matches" role="status">
+                  No achievements match this search.
+                </p>
               ) : (
                 <div className="generation-groups">
-                  {groups.map((group) => (
+                  {visibleGroups.map((group) => (
                     <fieldset className="generation-group" key={group.id}>
                       <legend>
                         <span>{group.kind}</span>
