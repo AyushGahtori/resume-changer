@@ -2920,14 +2920,12 @@ a:focus-visible {
   }
 }
 
-.library-search,
 .library-filter-grid label {
   display: grid;
   min-width: 0;
   gap: var(--space-8);
 }
 
-.library-search > span,
 .library-filter-grid label > span {
   color: var(--muted);
   font-size: 10px;
@@ -2950,10 +2948,10 @@ a:focus-visible {
   border: 0;
 }
 
-.library-search input,
 .library-filter-grid select {
   width: 100%;
   min-width: 0;
+  height: 40px;
   padding: 0 var(--space-12);
   border: var(--border-strong);
   border-radius: var(--radius-control);
@@ -2963,12 +2961,89 @@ a:focus-visible {
   font-size: 12px;
 }
 
-.library-search input {
+/*
+ * Keep the border on the complete search control so the icon, input, and
+ * conditional clear action read as one field, matching the library board.
+ */
+.library-search {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  min-width: 0;
   height: 44px;
+  padding: 0 var(--space-12);
+  border: var(--border-strong);
+  border-radius: var(--radius-control);
+  background: var(--surface-soft);
 }
 
-.library-filter-grid select {
-  height: 40px;
+.library-search:focus-within {
+  border-color: var(--focus);
+  box-shadow: var(--field-focus-ring);
+}
+
+.library-search-field {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: var(--space-8);
+  min-width: 0;
+  height: 100%;
+}
+
+.library-search-icon {
+  flex: 0 0 auto;
+  color: var(--muted);
+}
+
+.library-search input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  outline: none;
+  background: transparent;
+  color: var(--ink);
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
+}
+
+.library-search input::placeholder {
+  color: var(--muted);
+}
+
+.library-search input::-webkit-search-cancel-button,
+.library-search input::-webkit-search-decoration {
+  appearance: none;
+  display: none;
+}
+
+.library-search-clear {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin-right: calc(0px - var(--space-12));
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.library-search-clear:hover {
+  background: var(--surface-hover);
+  color: var(--ink);
+}
+
+.library-search-clear:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
 }
 
 .library-result-count {
@@ -3012,12 +3087,10 @@ a:focus-visible {
   outline-offset: 1px;
 }
 
-.library-search input:focus,
 .library-filter-grid select:focus {
   border-color: var(--focus);
 }
 
-.library-search input:focus-visible,
 .library-filter-grid select:focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 1px;

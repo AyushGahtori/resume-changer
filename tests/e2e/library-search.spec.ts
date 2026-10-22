@@ -317,3 +317,208 @@ test("reports the matching result count while the query changes", async ({
     .click();
   await expect(count).toHaveText("13 of 13 achievement points");
 });
+
+/**
+ * Task 15 "Style global search and its input states".
+ *
+ * The suite covers the search control: the accessible name and the board
+ * placeholder, the magnifier and the conditional clear action, the neutral
+ * and focused field treatments, the immediate and composable result, the
+ * narrow-screen behaviour, and the empty state that stays distinct from a
+ * load failure.
+ */
+
+/** Reads the search field together with the tokens it is styled from. */
+async function readSearchField(page: Page) {
+  return page.locator(".library-search").evaluate((element) => {
+    const style = getComputedStyle(element);
+    const root = getComputedStyle(document.documentElement);
+    return {
+      background: style.backgroundColor,
+      borderColor: style.borderTopColor,
+      borderRadius: style.borderTopLeftRadius,
+      borderWidth: style.borderTopWidth,
+      boxShadow: style.boxShadow,
+      height: Math.round(element.getBoundingClientRect().height),
+      tokens: {
+        focusBorder: root.getPropertyValue("--color-focus-ring").trim(),
+        neutralBorder: root.getPropertyValue("--color-border-strong").trim(),
+        violet: root.getPropertyValue("--color-violet").trim(),
+        violetLight: root.getPropertyValue("--color-violet-light").trim(),
+      },
+    };
+  });
+}
+
+test("keeps the search name and adds the magnifier and a conditional clear action", async ({
+  page,
+}) => {
+  const search = page.getByRole("searchbox", { name: "Search library" });
+  await expect(search).toBeVisible();
+  await expect(search).toHaveAttribute(
+    "placeholder",
+    "Search achievements... (points, skills, tags, jobs, projects, credentials)",
+  );
+
+  // The magnifier sits inside the field, before the text.
+  await expect(
+    page.locator(".library-search .library-search-icon"),
+  ).toBeVisible();
+
+  // The clear action only appears when there is something to clear.
+  const clear = page.getByRole("button", { name: "Clear search" });
+  await expect(clear).toHaveCount(0);
+
+  await search.fill("docker");
+  await expect(clear).toBeVisible();
+  const clearBounds = await clear.boundingBox();
+  expect(clearBounds?.width).toBeGreaterThanOrEqual(44);
+  expect(clearBounds?.height).toBeGreaterThanOrEqual(44);
+
+  await page.keyboard.press("Tab");
+  await expect(clear).toBeFocused();
+  await clear.click();
+  await expect(search).toHaveValue("");
+  await expect(clear).toHaveCount(0);
+});
+
+test("clears the query without clearing the other facets", async ({ page }) => {
+  const search = page.getByRole("searchbox", { name: "Search library" });
+  await page.getByLabel("Tag").selectOption({ label: "aws" });
+  await search.fill("python");
+  await expect(page.locator(".library-result-count")).toContainText("0 of 13");
+
+  await page.getByRole("button", { name: "Clear search" }).click();
+
+  await expect(search).toHaveValue("");
+  // The facet that was chosen is untouched.
+  await expect(page.getByLabel("Tag")).toHaveValue("aws");
+  await expect(page.locator(".library-result-count")).toContainText("1 of 13");
+});
+
+test("keeps a neutral border at rest and a 2px violet ring on focus", async ({
+  page,
+}) => {
+  const rest = await readSearchField(page);
+  expect(rest.borderWidth).toBe("1px");
+  expect(rest.borderColor).toBe(toRgbString(rest.tokens.neutralBorder));
+  expect(rest.borderRadius).toBe("6px");
+  expect(rest.boxShadow).toBe("none");
+  expect(rest.height).toBe(44);
+
+  const search = page.getByRole("searchbox", { name: "Search library" });
+  await search.focus();
+
+  const focused = await readSearchField(page);
+  expect(focused.borderColor).toBe(toRgbString(focused.tokens.focusBorder));
+  expect(focused.boxShadow).toContain(toRgbString(focused.tokens.violet));
+  expect(focused.boxShadow).toContain("2px");
+
+  // A filled field that is not focused keeps the neutral border.
+  await search.fill("docker");
+  await page.locator(".library-heading h1").click();
+
+  const filled = await readSearchField(page);
+  expect(filled.borderColor).toBe(toRgbString(filled.tokens.neutralBorder));
+  expect(filled.boxShadow).toBe("none");
+});
+
+test("keeps the field treatment in the dark theme", async ({ page }) => {
+  const theme = await page.locator("html").getAttribute("data-theme");
+  if (theme !== "dark") {
+    await page.getByRole("button", { name: "Switch to dark mode" }).click();
+  }
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+
+  const rest = await readSearchField(page);
+  expect(rest.borderColor).toBe(toRgbString(rest.tokens.neutralBorder));
+  expect(rest.boxShadow).toBe("none");
+
+  await page.getByRole("searchbox", { name: "Search library" }).focus();
+
+  const focused = await readSearchField(page);
+  expect(focused.boxShadow).not.toBe("none");
+  expect(focused.boxShadow).toContain(toRgbString(focused.tokens.violetLight));
+  expect(focused.boxShadow).toContain("2px");
+});
+
+test("updates the results as the query is typed, with no hidden delay", async ({
+  page,
+}) => {
+  const count = page.locator(".library-result-count");
+  const before = await count.textContent();
+
+  await page.getByRole("searchbox", { name: "Search library" }).fill("python");
+
+  // The count is read straight after the input event, so a debounced
+  // implementation would still show the previous number here.
+  const immediate = await page.evaluate(
+    () => document.querySelector(".library-result-count")?.textContent ?? "",
+  );
+  expect(immediate).not.toBe(before);
+  expect(immediate).toContain("2 of 13");
+});
+
+test("composes the query with the other facets", async ({ page }) => {
+  const count = page.locator(".library-result-count");
+
+  await page.getByLabel("Linked skill").selectOption({ label: "Python" });
+  await expect(count).toContainText("2 of 13");
+
+  await page.getByRole("searchbox", { name: "Search library" }).fill("python");
+  await expect(count).toContainText("2 of 13");
+
+  await page.getByLabel("Tag").selectOption({ label: "aws" });
+  await expect(count).toContainText("0 of 13");
+});
+
+test("keeps a long query on one line inside the field on a narrow screen", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.reload();
+
+  const search = page.getByRole("searchbox", { name: "Search library" });
+  await search.fill(
+    "a very long query that will not fit inside the field on a small screen",
+  );
+
+  const state = await page.evaluate(() => {
+    const input = document.querySelector(
+      ".library-search input",
+    ) as HTMLInputElement;
+    const field = document.querySelector(".library-search") as HTMLElement;
+    return {
+      clientWidth: input.clientWidth,
+      fieldHeight: Math.round(field.getBoundingClientRect().height),
+      pageOverflow:
+        document.documentElement.scrollWidth -
+        document.documentElement.clientWidth,
+      scrollWidth: input.scrollWidth,
+    };
+  });
+
+  // The entered text stays on one line and scrolls inside the input.
+  expect(state.fieldHeight).toBe(44);
+  expect(state.scrollWidth).toBeGreaterThan(state.clientWidth);
+  // The page itself does not scroll sideways.
+  expect(state.pageOverflow).toBeLessThanOrEqual(1);
+});
+
+test("keeps the no-results state distinct from a load failure and keeps the query editable", async ({
+  page,
+}) => {
+  const search = page.getByRole("searchbox", { name: "Search library" });
+  await search.fill("no matching library content");
+
+  const empty = page.locator(".library-empty");
+  await expect(empty).toBeVisible();
+  await expect(empty).toHaveAttribute("role", "status");
+
+  // A library that cannot be read is rendered as a separate, announced
+  // failure, so the two states never look like each other.
+  await expect(page.locator(".library-error")).toHaveCount(0);
+
+  // The query stays in the field so it can be edited.
+  await expect(search).toHaveValue("no matching library content");
+});

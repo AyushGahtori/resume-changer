@@ -597,12 +597,12 @@ Reference files: `docs/ui-images/achievement-library/search-anatomy-and-states.p
 
 **Files:** `src/components/achievement-library.tsx` or search-workbench component, `src/lib/data/achievement-search.ts` only if preserving its semantics requires a tested helper change, and `tests/e2e/library-search.spec.ts`.
 
-- [ ] Preserve the accessible name `Search library` and existing coverage of point text/ID, experience, tags, linked skill names/aliases, and provenance fields.
-- [ ] Use the board copy `Search achievements... (points, skills, tags, jobs, projects, credentials)` as placeholder only; the label must remain available to assistive technology.
-- [ ] Add a leading magnifier icon and a trailing clear button only when text is present; clear must reset the query without clearing unrelated filters unless the control is explicitly named `Reset filters`.
-- [ ] Keep typing immediate and deterministic; do not introduce hidden debouncing, a server search request, or stale query results without product requirement.
-- [ ] Ensure search-empty and no-results states are distinct from load/API errors and keep query text available for editing.
-- [ ] Test keyboard typing, clear, multiple facets composed with query, zero results, long query wrapping, and both themes.
+- [x] Preserve the accessible name `Search library` and existing coverage of point text/ID, experience, tags, linked skill names/aliases, and provenance fields.
+- [x] Use the board copy `Search achievements... (points, skills, tags, jobs, projects, credentials)` as placeholder only; the label must remain available to assistive technology.
+- [x] Add a leading magnifier icon and a trailing clear button only when text is present; clear must reset the query without clearing unrelated filters unless the control is explicitly named `Reset filters`.
+- [x] Keep typing immediate and deterministic; do not introduce hidden debouncing, a server search request, or stale query results without product requirement.
+- [x] Ensure search-empty and no-results states are distinct from load/API errors and keep query text available for editing.
+- [x] Test keyboard typing, clear, multiple facets composed with query, zero results, long query wrapping, and both themes.
 
 **Acceptance:** Search remains global and composable with every existing facet, and all visible input affordances work.
 
