@@ -29,7 +29,7 @@ const homeActiveRow = {
   },
   dark: {
     color: "rgb(167, 139, 250)",
-    background: "rgb(50, 37, 72)",
+    background: "rgb(48, 35, 66)",
   },
 } as const;
 
