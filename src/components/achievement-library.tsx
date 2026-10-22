@@ -545,7 +545,11 @@ export default function AchievementLibrary({ library, source }: Props) {
             </section>
           )}
 
-          <div className="library-secondary">
+          <div
+            aria-label="Skills and credentials"
+            className="library-secondary"
+            role="region"
+          >
             <details
               className="library-detail library-section"
               id={LIBRARY_SECTION_IDS.skills}
