@@ -11,6 +11,10 @@ import {
   getLibraryFilterOptions,
   type LibraryFilters,
 } from "@/lib/data/achievement-search";
+import {
+  buildProvenanceSegments,
+  PROVENANCE_SEPARATOR,
+} from "@/lib/ui/point-provenance";
 import type {
   AchievementPoint,
   Job,
@@ -30,6 +34,29 @@ function dateRange(start?: string, end?: string | null) {
     return `${month}/${year}`;
   };
   return `${format(start)} – ${end ? format(end) : "Present"}`;
+}
+
+/**
+ * Where an achievement point came from.
+ *
+ * The row is always visible in the card; it is the audit trail, so it is
+ * never hidden behind a hover or a disclosure. The source type carries the
+ * weight, the optional label and reference follow it, and a segment that the
+ * library does not have is left out instead of leaving a separator behind.
+ */
+function PointProvenance({ source }: { source: AchievementPoint["source"] }) {
+  const [type, ...details] = buildProvenanceSegments(source);
+  return (
+    <p className="point-provenance">
+      <span className="point-provenance-prefix">Source:</span>{" "}
+      <strong className="point-provenance-type">{type.text}</strong>
+      {details.map((segment) => (
+        <span className="point-provenance-detail" key={segment.kind}>
+          {` ${PROVENANCE_SEPARATOR} ${segment.text}`}
+        </span>
+      ))}
+    </p>
+  );
 }
 
 function PointRow({
@@ -64,11 +91,6 @@ function PointRow({
         </div>
       </div>
       <p className="library-point-text">{point.text}</p>
-      <p className="point-provenance">
-        Source: <strong>{point.source.type}</strong>
-        {point.source.label ? ` · ${point.source.label}` : ""}
-        {point.source.reference ? ` · ${point.source.reference}` : ""}
-      </p>
       {point.metrics.length > 0 && (
         <ul className="point-metrics" aria-label="Achievement metrics">
           {point.metrics.map((metric) => (
@@ -110,6 +132,7 @@ function PointRow({
           })}
         </div>
       )}
+      <PointProvenance source={point.source} />
     </article>
   );
 }

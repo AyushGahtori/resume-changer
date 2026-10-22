@@ -2323,15 +2323,28 @@ a:focus-visible {
   font-size: 12px;
   line-height: 1.55;
 }
+/*
+ * The provenance line of an achievement card. It is the audit trail, so it
+ * stays muted but readable, it wraps instead of being cut short, and the
+ * source type carries the weight while the optional label and reference stay
+ * in the quieter text color.
+ */
 .point-provenance {
-  margin: 0;
+  margin: 8px 0 0;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 11px;
+  line-height: 16px;
   overflow-wrap: anywhere;
 }
-.point-provenance strong {
+.point-provenance-prefix {
+  color: var(--muted);
+}
+.point-provenance-type {
   color: var(--ink);
   font-weight: 600;
+}
+.point-provenance-detail {
+  color: var(--muted);
 }
 .point-metrics {
   display: grid;
