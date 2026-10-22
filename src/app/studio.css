@@ -5,6 +5,65 @@
     );
   gap: 6px;
 }
+
+/**
+ * Builder composition.
+ *
+ * studio.css is imported before globals.css, so the pane rules below are
+ * scoped to the builder page in order to win over the generic builder
+ * layout defined in globals.css. The selection region is the wider pane
+ * and the live preview the narrower one, and the studio state reuses the
+ * same balance through the shared --preview-share value, so the page keeps
+ * one shape from the first selection to the generated document.
+ */
+.generation-page .generation-layout:not(.is-studio-layout) {
+  grid-template-columns:
+    minmax(0, 1fr)
+    minmax(300px, var(--preview-share, 43%));
+}
+
+/**
+ * On a narrow screen the panes stack. The selection region comes first, so
+ * the work continues from the top of the page, and the preview follows as
+ * the result of that work. The action bar sticks to the bottom of the
+ * viewport so the primary action stays reachable without scrolling past
+ * the whole workspace.
+ */
+@media (max-width: 1100px) {
+  .generation-page .generation-layout:not(.is-studio-layout) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .generation-page .generation-preview {
+    position: static;
+  }
+}
+
+@media (max-width: 700px) {
+  .generation-page .generation-footer {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    align-items: center;
+    flex-direction: row;
+    gap: 12px;
+    margin-top: 12px;
+    padding: 10px 0;
+    background: var(--canvas);
+    box-shadow: 0 -12px 12px -12px rgb(0 0 0 / 40%);
+  }
+
+  .generation-page .generation-footer > span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .generation-page .generation-footer .primary-button {
+    flex: 0 0 auto;
+  }
+}
 .is-studio-layout > .generation-selection {
   padding: 0;
   border: 0;
