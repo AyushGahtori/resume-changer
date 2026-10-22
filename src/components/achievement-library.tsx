@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import AchievementPointEditor from "@/components/achievement-point-editor";
 import AchievementImagination from "@/components/achievement-imagination";
+import AchievementCard from "@/components/library/achievement-card";
 import ProfileSummary from "@/components/library/profile-summary";
 import {
   EMPTY_LIBRARY_FILTERS,
@@ -31,88 +32,6 @@ function dateRange(start?: string, end?: string | null) {
     return `${month}/${year}`;
   };
   return `${format(start)} – ${end ? format(end) : "Present"}`;
-}
-
-function PointRow({
-  point,
-  library,
-  onTag,
-  onSkill,
-  onEdit,
-}: {
-  point: AchievementPoint;
-  library: ResumeLibrary;
-  onTag: (tag: string) => void;
-  onSkill: (skillId: string) => void;
-  onEdit?: () => void;
-}) {
-  const skillsById = new Map(library.skills.map((skill) => [skill.id, skill]));
-  return (
-    <article className="library-point">
-      <div className="library-point-heading">
-        <code>{point.id}</code>
-        <div className="point-row-actions">
-          <span
-            className={`point-status ${point.enabled ? "is-enabled" : "is-disabled"}`}
-          >
-            {point.enabled ? "Enabled" : "Disabled"}
-          </span>
-          {onEdit && (
-            <button className="text-action" onClick={onEdit} type="button">
-              Edit
-            </button>
-          )}
-        </div>
-      </div>
-      <p className="library-point-text">{point.text}</p>
-      <p className="point-provenance">
-        Source: <strong>{point.source.type}</strong>
-        {point.source.label ? ` · ${point.source.label}` : ""}
-        {point.source.reference ? ` · ${point.source.reference}` : ""}
-      </p>
-      {point.metrics.length > 0 && (
-        <ul className="point-metrics" aria-label="Achievement metrics">
-          {point.metrics.map((metric) => (
-            <li key={metric.id}>
-              <strong>
-                {metric.label}: {metric.value}
-                {metric.unit ? ` ${metric.unit}` : ""}
-              </strong>
-              <span>{metric.evidence}</span>
-              {metric.context && <span>{metric.context}</span>}
-            </li>
-          ))}
-        </ul>
-      )}
-      {(point.tags.length > 0 || point.skillIds.length > 0) && (
-        <div className="point-facets">
-          {point.tags.map((tag) => (
-            <button
-              className="facet-chip"
-              key={tag}
-              onClick={() => onTag(tag)}
-              type="button"
-            >
-              #{tag}
-            </button>
-          ))}
-          {point.skillIds.map((id) => {
-            const skill = skillsById.get(id);
-            return skill ? (
-              <button
-                className="facet-chip is-skill"
-                key={id}
-                onClick={() => onSkill(id)}
-                type="button"
-              >
-                {skill.name}
-              </button>
-            ) : null;
-          })}
-        </div>
-      )}
-    </article>
-  );
 }
 
 function ExperienceGroup({
@@ -156,13 +75,14 @@ function ExperienceGroup({
         </span>
       </div>
       {item.points.map((point) => (
-        <PointRow
+        <AchievementCard
           key={point.id}
-          library={library}
+          kind={kind}
+          onEdit={onEdit ? () => onEdit(point) : undefined}
           onSkill={onSkill}
           onTag={onTag}
-          onEdit={onEdit ? () => onEdit(point) : undefined}
           point={point}
+          skills={library.skills}
         />
       ))}
     </section>

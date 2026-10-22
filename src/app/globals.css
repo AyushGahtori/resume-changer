@@ -2393,8 +2393,7 @@ a:focus-visible {
   font-size: 11px;
 }
 
-.text-action,
-.facet-chip {
+.text-action {
   padding: 0;
   border: 0;
   background: transparent;
@@ -2403,8 +2402,7 @@ a:focus-visible {
   font-size: 11px;
   text-align: left;
 }
-.text-action:hover,
-.facet-chip:hover {
+.text-action:hover {
   text-decoration: underline;
 }
 
@@ -2412,7 +2410,7 @@ a:focus-visible {
   margin-top: 24px;
 }
 .experience-group {
-  padding: 19px 2px 9px;
+  padding: 19px 0 22px;
   border-bottom: 1px solid var(--line);
 }
 .experience-heading {
@@ -2443,85 +2441,179 @@ a:focus-visible {
   flex: 0 0 auto;
 }
 
+/*
+ * One achievement is one card. The card owns its own surface, so the
+ * experience group above it only supplies the heading and the context.
+ */
 .library-point {
-  padding: 12px 0 13px;
-  border-bottom: 1px solid var(--line);
+  display: grid;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--shadow-xs);
 }
 .library-point:last-child {
-  border-bottom: 0;
+  margin-bottom: 0;
 }
-.library-point-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+
+.library-point-header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
   gap: 12px;
 }
-.library-point-heading code {
+
+/*
+ * The category tile carries the experience the achievement belongs to. It
+ * uses the same category hue as the library summary, so a job achievement and
+ * a project achievement look the same everywhere in the library.
+ */
+.library-point-icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  color: var(--color-category-job-text);
+  background: color-mix(in srgb, var(--color-category-job) 14%, var(--surface));
+}
+.library-point-icon[data-kind="project"] {
+  color: var(--color-category-project-text);
+  background: color-mix(
+    in srgb,
+    var(--color-category-project) 14%,
+    var(--surface)
+  );
+}
+
+.library-point-intro {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.library-point-context {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.library-point-text {
+  margin: 0;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.5;
   overflow-wrap: anywhere;
+}
+
+.library-point-id {
   color: var(--quiet);
   font-size: 10px;
+  overflow-wrap: anywhere;
 }
+
 .point-status {
-  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border: 1px solid transparent;
+  border-radius: 999px;
   font-size: 10px;
   font-weight: 650;
+  white-space: nowrap;
 }
 .point-status.is-enabled {
   color: var(--teal);
+  border-color: color-mix(in srgb, var(--color-success) 35%, transparent);
+  background: color-mix(in srgb, var(--color-success) 10%, var(--surface));
 }
 .point-status.is-disabled {
   color: var(--danger);
+  border-color: color-mix(in srgb, var(--color-error) 35%, transparent);
+  background: color-mix(in srgb, var(--color-error) 10%, var(--surface));
 }
-.library-point-text {
-  margin: 7px 0;
+
+/*
+ * The metrics sit in one aligned subrow separated by low-contrast dividers.
+ * They are not cards of their own, and a card without metrics simply leaves
+ * the row out.
+ */
+.point-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--line);
+  list-style: none;
+}
+.point-metrics li {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  margin-right: 16px;
+  padding: 12px 16px 0 0;
+  border-right: 1px solid var(--line);
+}
+.point-metrics li:last-child {
+  margin-right: 0;
+  padding-right: 0;
+  border-right: 0;
+}
+.point-metric-label {
+  color: var(--muted);
+  font-size: 11px;
+}
+.point-metric-value {
   color: var(--ink);
-  font-size: 12px;
-  line-height: 1.55;
+  font-size: 15px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
 }
+.point-metric-note {
+  color: var(--quiet);
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.point-facets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+}
+.facet-chip {
+  padding: 3px 9px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-soft);
+  color: var(--accent-hover);
+  cursor: pointer;
+  font-size: 10px;
+  text-align: left;
+}
+.facet-chip:hover {
+  border-color: var(--line-strong);
+}
+.facet-chip.is-skill {
+  color: var(--teal);
+}
+
 .point-provenance {
   margin: 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
   color: var(--muted);
-  font-size: 10px;
+  font-size: 11px;
   overflow-wrap: anywhere;
 }
 .point-provenance strong {
   color: var(--ink);
   font-weight: 600;
-}
-.point-metrics {
-  display: grid;
-  gap: 6px;
-  margin: 8px 0 0;
-  padding: 0;
-  list-style: none;
-}
-.point-metrics li {
-  display: grid;
-  gap: 3px;
-  padding-left: 9px;
-  border-left: 2px solid var(--teal);
-  font-size: 10px;
-}
-.point-metrics strong {
-  color: var(--ink);
-  font-weight: 600;
-}
-.point-metrics span {
-  color: var(--muted);
-  line-height: 1.4;
-}
-.point-facets {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 7px 12px;
-  margin-top: 8px;
-}
-.facet-chip {
-  color: var(--accent-hover);
-  font-size: 10px;
-}
-.facet-chip.is-skill {
-  color: var(--teal);
 }
 
 .library-empty,
@@ -2639,7 +2731,7 @@ a:focus-visible {
 .point-row-actions {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .point-editor {
@@ -3173,6 +3265,21 @@ a:focus-visible {
   .library-overview {
     gap: 16px;
     padding: 16px;
+  }
+  /*
+   * On a phone the card keeps its icon and its text, and the state and the
+   * edit action move onto their own row instead of squeezing the text.
+   */
+  .library-point-header {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .point-row-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+  .point-metrics li {
+    margin-right: 12px;
+    padding-right: 12px;
   }
   .library-filter-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
