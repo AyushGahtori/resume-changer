@@ -25,7 +25,11 @@ export default function PointMetrics({ metrics }: Props) {
         const { value, prefix, suffix } = formatMetricValue(metric);
 
         return (
-          <li className="point-metric" data-metric-id={metric.id} key={metric.id}>
+          <li
+            className="point-metric"
+            data-metric-id={metric.id}
+            key={metric.id}
+          >
             <span className="point-metric-icon" aria-hidden="true">
               <ChartColumn size={20} strokeWidth={2} />
             </span>
