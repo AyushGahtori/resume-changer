@@ -2023,16 +2023,58 @@ a:focus-visible {
   color: var(--quiet);
   font-size: 10px;
 }
+/*
+ * The state of an achievement.
+ *
+ * The word carries the meaning and the colour only repeats it, so the pill
+ * still reads when the colour cannot be told apart.
+ */
 .point-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   flex: 0 0 auto;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
   font-size: 10px;
   font-weight: 650;
 }
+.point-status svg {
+  flex: 0 0 auto;
+}
 .point-status.is-enabled {
-  color: var(--teal);
+  background: var(--color-success-subtle);
+  color: var(--color-success-strong);
 }
 .point-status.is-disabled {
-  color: var(--danger);
+  background: var(--color-error-subtle);
+  color: var(--color-error-strong);
+}
+
+/*
+ * The one action a card supports: opening the editor for this point.
+ */
+.point-edit-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+  font-weight: 600;
+}
+.point-edit-action svg {
+  flex: 0 0 auto;
+}
+.point-edit-action:hover {
+  background: var(--color-surface-alt);
 }
 .library-point-text {
   margin: 10px 0 8px;

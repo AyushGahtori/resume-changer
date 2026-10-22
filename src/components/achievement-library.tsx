@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Check, CircleSlash, Pencil } from "lucide-react";
 import { useMemo, useState } from "react";
 import AchievementPointEditor from "@/components/achievement-point-editor";
 import AchievementImagination from "@/components/achievement-imagination";
@@ -52,13 +53,27 @@ function PointRow({
       <div className="library-point-heading">
         <code>{point.id}</code>
         <div className="point-row-actions">
+          {/*
+           * The state is stated in words first: the colour and the icon only
+           * repeat what the label already says.
+           */}
           <span
             className={`point-status ${point.enabled ? "is-enabled" : "is-disabled"}`}
           >
+            {point.enabled ? (
+              <Check aria-hidden="true" size={13} strokeWidth={2.5} />
+            ) : (
+              <CircleSlash aria-hidden="true" size={13} strokeWidth={2} />
+            )}
             {point.enabled ? "Enabled" : "Disabled"}
           </span>
           {onEdit && (
-            <button className="text-action" onClick={onEdit} type="button">
+            <button
+              className="point-edit-action"
+              onClick={onEdit}
+              type="button"
+            >
+              <Pencil aria-hidden="true" size={14} strokeWidth={2} />
               Edit
             </button>
           )}
