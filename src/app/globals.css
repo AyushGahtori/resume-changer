@@ -3556,6 +3556,13 @@ a:focus-visible {
   gap: 22px;
 }
 
+/* The preview keeps a stable pane beside the editing column on wide screens. */
+@media (min-width: 1101px) {
+  .generation-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(430px, 1.1fr);
+  }
+}
+
 .generation-selection,
 .generation-preview {
   min-width: 0;
@@ -3563,6 +3570,26 @@ a:focus-visible {
   border: 1px solid var(--line);
   border-radius: 7px;
   background: var(--surface);
+}
+
+#resume-editing:focus {
+  outline: none;
+}
+
+#resume-editing:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* The return path only applies when the preview sits below the editor. */
+.preview-return-link {
+  display: none;
+  margin-top: 7px;
+  color: var(--imagination);
+  font-size: 10px;
+  font-weight: 650;
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .generation-section-heading {
@@ -4547,6 +4574,10 @@ a:focus-visible {
 
   .generation-preview {
     position: static;
+  }
+
+  .preview-return-link {
+    display: inline-block;
   }
 }
 

@@ -42,6 +42,10 @@ import {
 import { createJobContextId } from "@/lib/ai/job-context";
 import { readJobAnalysisCache } from "@/lib/jd-analysis-cache";
 import { createResumeFilename } from "@/lib/generation/resume-filename";
+import {
+  describeCompiledPdf,
+  readPageCount,
+} from "@/lib/generation/preview-metadata";
 import { createResumeExportPackage } from "@/lib/generation/export-package";
 import ResumeStudio from "./resume-studio";
 import { parseStudioSession } from "@/lib/generation/studio-session";
@@ -998,7 +1002,7 @@ export default function ResumeGenerator({ library, source }: Props) {
 
       if (
         !response.headers.get("Content-Type")?.includes("application/pdf") ||
-        response.headers.get("X-PDF-Pages") !== "1"
+        readPageCount(response.headers.get("X-PDF-Pages")) !== 1
       ) {
         setCompileError({
           error: "The server returned an unverified PDF. Try compiling again.",
@@ -1018,6 +1022,7 @@ export default function ResumeGenerator({ library, source }: Props) {
       }
       if (controller.signal.aborted) return false;
 
+      const pageCount = readPageCount(response.headers.get("X-PDF-Pages"));
       setPdfUrl(URL.createObjectURL(pdf));
       const bytes = new Uint8Array(await pdf.arrayBuffer());
       let binary = "";
@@ -1029,7 +1034,7 @@ export default function ResumeGenerator({ library, source }: Props) {
       setPdfBase64(compiledPdfBase64);
       await persistGeneration(target, "compiled", compiledPdfBase64);
       setOutputView("pdf");
-      setCompileStatus("PDF ready · 1 page.");
+      setCompileStatus(describeCompiledPdf({ pageCount }));
       return true;
     } catch {
       if (!controller.signal.aborted) {
@@ -1372,6 +1377,8 @@ export default function ResumeGenerator({ library, source }: Props) {
         >
           <section
             className="generation-selection"
+            id="resume-editing"
+            tabIndex={-1}
             aria-label={
               result ? "Resume editing workspace" : "Choose achievements"
             }
@@ -2156,7 +2163,11 @@ export default function ResumeGenerator({ library, source }: Props) {
                   setOutputView("pdf");
                   setCompileError(null);
                   setCompileStatus(
-                    `PDF ready · 1 page${generation.metadata.layout ? ` · ${Math.round(generation.metadata.layout.utilization * 100)}% page fill` : ""}.`,
+                    describeCompiledPdf({
+                      pageCount: generation.metadata.layout?.pageCount ?? null,
+                      utilization:
+                        generation.metadata.layout?.utilization ?? null,
+                    }),
                   );
                 }}
               />
@@ -2276,6 +2287,9 @@ export default function ResumeGenerator({ library, source }: Props) {
                     ? "Compiled from your generated LaTeX"
                     : "Generated from your selected points"}
                 </p>
+                <a className="preview-return-link" href="#resume-editing">
+                  Back to editing
+                </a>
               </div>
               {result && (
                 <div className="generation-output-actions">
