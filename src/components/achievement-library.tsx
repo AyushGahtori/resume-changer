@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { Pencil, Plus } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import AchievementPointEditor from "@/components/achievement-point-editor";
 import AchievementImagination from "@/components/achievement-imagination";
 import {
@@ -174,6 +175,11 @@ export default function AchievementLibrary({ library, source }: Props) {
   const [editor, setEditor] = useState<EditorState>(null);
   const [creating, setCreating] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
+  const editorTriggerRef = useRef<HTMLElement | null>(null);
+  const pendingEditorFocusRef = useRef<HTMLElement | null>(null);
+  const canvasTriggerRef = useRef<HTMLElement | null>(null);
+  const detailedEntryRef = useRef<HTMLButtonElement>(null);
+  const addAchievementRef = useRef<HTMLButtonElement>(null);
   const result = useMemo(
     () => filterAchievementLibrary(library, filters),
     [filters, library],
@@ -205,6 +211,50 @@ export default function AchievementLibrary({ library, source }: Props) {
     setFilters((current) => ({ ...current, [key]: value }));
   }
 
+  /*
+   * The trigger is captured when a flow opens, because closing it has to
+   * hand focus back to the control the reader came from. It is captured at
+   * click time rather than in an effect, because a native modal dialog
+   * moves focus as soon as it opens.
+   */
+  function openEditor(next: EditorState, trigger: HTMLElement | null) {
+    setSaveMessage("");
+    editorTriggerRef.current = trigger;
+    setEditor(next);
+  }
+
+  function openCanvas(trigger: HTMLElement | null) {
+    setSaveMessage("");
+    canvasTriggerRef.current = trigger;
+    setCreating(true);
+  }
+
+  /*
+   * Focus returns to the control that opened a flow, but only after the
+   * flow is gone: the action that opens a flow is disabled while that flow
+   * is open, and a disabled button cannot take focus. The restore therefore
+   * runs in an effect, once the button is enabled again.
+   */
+  useEffect(() => {
+    if (creating) return;
+    const trigger = canvasTriggerRef.current;
+    canvasTriggerRef.current = null;
+    trigger?.focus?.();
+  }, [creating]);
+
+  useEffect(() => {
+    if (editor) return;
+    const trigger = pendingEditorFocusRef.current;
+    pendingEditorFocusRef.current = null;
+    trigger?.focus?.();
+  }, [editor]);
+
+  function closeEditor() {
+    setEditor(null);
+    pendingEditorFocusRef.current = editorTriggerRef.current;
+    editorTriggerRef.current = null;
+  }
+
   return (
     <div className="library-page">
       <div className="library-heading page-heading-row">
@@ -233,26 +283,33 @@ export default function AchievementLibrary({ library, source }: Props) {
 
       {canEdit && (
         <div className="library-edit-toolbar">
-          <span>{saveMessage}</span>
-          <button
-            type="button"
-            onClick={() => {
-              setSaveMessage("");
-              setEditor({ mode: "create" });
-            }}
-          >
-            Detailed entry
-          </button>
-          <button
-            className="primary-button"
-            onClick={() => {
-              setSaveMessage("");
-              setCreating(true);
-            }}
-            type="button"
-          >
-            Add achievement
-          </button>
+          <span className="library-edit-status" role="status">
+            {saveMessage}
+          </span>
+          <div className="library-edit-actions">
+            <button
+              className="library-action library-action--secondary"
+              disabled={editor !== null}
+              onClick={() =>
+                openEditor({ mode: "create" }, detailedEntryRef.current)
+              }
+              ref={detailedEntryRef}
+              type="button"
+            >
+              <Pencil aria-hidden="true" size={16} />
+              Detailed entry
+            </button>
+            <button
+              className="library-action library-action--primary"
+              disabled={creating}
+              onClick={() => openCanvas(addAchievementRef.current)}
+              ref={addAchievementRef}
+              type="button"
+            >
+              <Plus aria-hidden="true" size={18} />
+              Add achievement
+            </button>
+          </div>
         </div>
       )}
 
@@ -289,10 +346,11 @@ export default function AchievementLibrary({ library, source }: Props) {
       {editor && (
         <AchievementPointEditor
           key={editor.mode === "edit" ? editor.point.id : "new-achievement"}
+          focusFirstField={editor.mode === "create"}
           initialPoint={editor.mode === "edit" ? editor.point : undefined}
-          onCancel={() => setEditor(null)}
+          onCancel={closeEditor}
           onSaved={() => {
-            setEditor(null);
+            closeEditor();
             setSaveMessage("Saved to your local library.");
             router.refresh();
           }}
@@ -451,7 +509,11 @@ export default function AchievementLibrary({ library, source }: Props) {
               onTag={(tag) => updateFilter("tag", tag)}
               onEdit={
                 canEdit
-                  ? (point) => setEditor({ mode: "edit", point })
+                  ? (point) =>
+                      openEditor(
+                        { mode: "edit", point },
+                        document.activeElement as HTMLElement | null,
+                      )
                   : undefined
               }
             />
@@ -466,7 +528,11 @@ export default function AchievementLibrary({ library, source }: Props) {
               onTag={(tag) => updateFilter("tag", tag)}
               onEdit={
                 canEdit
-                  ? (point) => setEditor({ mode: "edit", point })
+                  ? (point) =>
+                      openEditor(
+                        { mode: "edit", point },
+                        document.activeElement as HTMLElement | null,
+                      )
                   : undefined
               }
             />

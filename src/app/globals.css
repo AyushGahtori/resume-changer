@@ -2467,18 +2467,136 @@ a:focus-visible {
   font-size: 13px;
 }
 
+/*
+ * Task 10 - the two creation actions.
+ *
+ * `Add achievement` is the primary orange CTA and `Detailed entry` is the
+ * neutral secondary action, so the two creation workflows never look
+ * interchangeable. Both reuse the app-wide action tokens instead of
+ * declaring library-only colours, which keeps the palette decision in one
+ * place for the shared token task.
+ *
+ * Stack rule: the action row keeps both buttons on one line while they
+ * fit and wraps them onto separate lines when they no longer do. Below
+ * 480px the toolbar becomes a column, the actions stack in a fixed order -
+ * secondary first, primary last - and each button takes the full width,
+ * so the primary action stays in the same place at every viewport.
+ */
 .library-edit-toolbar {
   display: flex;
-  min-height: 42px;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
-  gap: 14px;
+  gap: 12px;
   margin: -10px 0 14px;
 }
 
-.library-edit-toolbar > span {
+.library-edit-status {
+  flex: 1 1 auto;
+  min-width: 0;
   color: var(--teal);
   font-size: 11px;
+}
+
+.library-edit-actions {
+  display: flex;
+  flex: 0 1 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.library-action {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 0 18px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+  text-align: center;
+  white-space: nowrap;
+  transition:
+    border-color 120ms ease,
+    background-color 120ms ease,
+    color 120ms ease;
+}
+
+.library-action svg {
+  flex: 0 0 auto;
+}
+
+.library-action:focus-visible {
+  outline: var(--focus-outline);
+  outline-offset: 2px;
+}
+
+.library-action:disabled {
+  cursor: not-allowed;
+}
+
+/*
+ * Primary - the orange CTA. The label keeps the app-wide contrast token
+ * rather than the board's white text, because white on this orange does
+ * not reach the readable contrast the shared tokens guarantee.
+ */
+.library-action--primary {
+  border-color: var(--action-orange-surface);
+  background: var(--action-orange-surface);
+  color: var(--action-orange-label);
+}
+
+.library-action--primary:hover:not(:disabled) {
+  border-color: var(--action-orange-surface-hover);
+  background: var(--action-orange-surface-hover);
+  color: var(--action-orange-label-hover);
+}
+
+.library-action--primary:active:not(:disabled) {
+  border-color: var(--action-orange-surface-pressed);
+  background: var(--action-orange-surface-pressed);
+  color: var(--action-orange-label-pressed);
+}
+
+.library-action--primary:disabled {
+  border-color: var(--action-orange-surface-disabled);
+  background: var(--action-orange-surface-disabled);
+  color: var(--action-orange-label-disabled);
+}
+
+/* Secondary - a neutral outlined action for the manual point editor. */
+.library-action--secondary {
+  border-color: var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+}
+
+.library-action--secondary:hover:not(:disabled) {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface-alt);
+  color: var(--color-text-primary);
+}
+
+.library-action--secondary:active:not(:disabled) {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface-hover);
+  color: var(--color-text-primary);
+}
+
+/*
+ * A disabled action is muted rather than merely inert, so a reader can see
+ * that the flow is already open without relying on the pointer cursor.
+ */
+.library-action--secondary:disabled {
+  border-color: var(--color-border);
+  background: var(--color-surface-alt);
+  color: var(--color-text-muted);
 }
 
 .point-row-actions {
@@ -3091,6 +3209,26 @@ a:focus-visible {
     flex-direction: column-reverse;
   }
   .editor-actions > button {
+    width: 100%;
+  }
+}
+
+/*
+ * Task 10 stack rule. Below 480px the two creation actions no longer fit
+ * side by side, so they stack in a fixed order - secondary first, primary
+ * last - and each button takes the full column width.
+ */
+@media (max-width: 480px) {
+  .library-edit-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .library-edit-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .library-action {
     width: 100%;
   }
 }

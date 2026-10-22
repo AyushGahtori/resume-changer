@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import type {
   AchievementPoint,
   AchievementSource,
@@ -15,6 +15,12 @@ type Props = {
   skills: Skill[];
   onCancel: () => void;
   onSaved: () => void;
+  /**
+   * Moves focus to the first field when the editor opens. Only the new
+   * entry flow uses it, so a keyboard user lands on the identifier field
+   * instead of somewhere above the form.
+   */
+  focusFirstField?: boolean;
 };
 
 type MetricDraft = Metric;
@@ -38,8 +44,10 @@ export default function AchievementPointEditor({
   skills,
   onCancel,
   onSaved,
+  focusFirstField = false,
 }: Props) {
   const isEditing = Boolean(initialPoint);
+  const firstFieldRef = useRef<HTMLInputElement>(null);
   const [pointId, setPointId] = useState(initialPoint?.id ?? "");
   const [parentKey, setParentKey] = useState(
     parents[0] ? `${parents[0].type}:${parents[0].id}` : "",
@@ -62,6 +70,10 @@ export default function AchievementPointEditor({
   );
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (focusFirstField) firstFieldRef.current?.focus();
+  }, [focusFirstField]);
 
   function toggleSkill(id: string) {
     setSkillIds((current) =>
@@ -170,6 +182,7 @@ export default function AchievementPointEditor({
               autoComplete="off"
               onChange={(event) => setPointId(event.target.value)}
               placeholder="achievement-example"
+              ref={firstFieldRef}
               required
               value={pointId}
             />
