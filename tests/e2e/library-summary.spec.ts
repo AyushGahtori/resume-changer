@@ -1,22 +1,27 @@
 import { expect, test } from "@playwright/test";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
-
-const libraryRoot =
-  process.env.RESUME_LIBRARY_ROOT ??
-  join(tmpdir(), "resume-changer-playwright-data-3010");
-const personalLibraryPath = join(libraryRoot, "data", "resume-library.json");
-const exampleLibraryPath = join(
-  process.cwd(),
-  "examples",
-  "sample-resume-library.json",
-);
+import {
+  createPersonalLibraryGuard,
+  exampleLibraryPath,
+  libraryRoot,
+  personalLibraryPath,
+} from "./support/personal-library";
 
 type ProfileFixture = {
   fullName: string;
   headline?: string;
 };
+
+const personalLibrary = createPersonalLibraryGuard();
+
+test.beforeAll(async () => {
+  await personalLibrary.capture();
+});
+
+test.afterAll(async () => {
+  await personalLibrary.restore();
+});
 
 /**
  * Writes an isolated personal library so the summary can be checked against a
