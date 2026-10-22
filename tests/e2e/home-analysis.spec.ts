@@ -118,6 +118,9 @@ test("empty categories are neutral and cache failure remains readable", async ({
   await page
     .getByRole("button", { name: "Analyze job description", exact: true })
     .click();
+  await expect(page.locator(".analysis-status")).toHaveText(
+    "Analysis complete. No supported job details were identified.",
+  );
   await expect(page.locator(".analysis-empty-category")).toHaveCount(0);
   await expect(page.locator(".analysis-empty-summary")).toHaveText(
     "No supported requirements or related signals were identified. Include the full job description for a more useful analysis.",
