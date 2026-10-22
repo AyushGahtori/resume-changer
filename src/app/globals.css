@@ -126,6 +126,17 @@
   /* Role field focus uses a 2px violet ring, per the input reference. */
   --field-focus-ring: 0 0 0 2px var(--color-violet);
   --field-error-ring: 0 0 0 2px var(--color-error);
+
+  /*
+   * Library sticky offsets. The workbench measures the pinned topbar and
+   * its own height at runtime, so the scroll offsets always match the
+   * space the sticky surface actually occupies.
+   */
+  --library-topbar-height: 0px;
+  --library-workbench-height: 0px;
+  --library-sticky-space: calc(
+    var(--library-topbar-height) + var(--library-workbench-height)
+  );
 }
 
 :root[data-theme="dark"] {
@@ -2180,12 +2191,28 @@ a:focus-visible {
   font-weight: 650;
 }
 
+/*
+ * Task 14 "The sticky search and filter workbench".
+ *
+ * The workbench is one surface that keeps the search control, the advanced
+ * facets, and the result summary in a predictable order below the profile
+ * summary. The shared topbar is 60px tall, so the library route pins that
+ * header on wide viewports and the workbench stacks directly below it. The
+ * surface is opaque and separated by a one-pixel border rather than a
+ * shadow, so content scrolling underneath never shows through.
+ */
 .library-controls {
-  margin-top: 18px;
-  padding: 17px 18px 12px;
-  border: 1px solid var(--line);
-  border-radius: 7px;
-  background: var(--surface);
+  display: grid;
+  gap: var(--space-12);
+  margin-top: var(--space-16);
+  padding: var(--space-16);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+}
+
+.library-workbench {
+  position: static;
 }
 
 .library-search,
@@ -2206,7 +2233,6 @@ a:focus-visible {
 .library-filter-grid select {
   width: 100%;
   min-width: 0;
-  height: 38px;
   padding: 0 10px;
   border: 1px solid var(--line-strong);
   border-radius: 5px;
@@ -2216,26 +2242,75 @@ a:focus-visible {
   font-size: 12px;
 }
 
+/* The search control keeps the shared 40-44px visual height. */
+.library-search input {
+  height: 44px;
+}
+
+.library-filter-grid select {
+  height: 40px;
+}
+
 .library-search input:focus,
 .library-filter-grid select:focus {
   border-color: var(--focus);
 }
 .library-filter-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 12px;
-  margin-top: 12px;
+  /* The five facets share one flexible row that wraps as space runs out. */
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: var(--space-12);
 }
 
 .library-filter-summary {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-12);
   min-height: 30px;
-  margin-top: 6px;
   color: var(--muted);
   font-size: 11px;
+}
+
+.library-result-count {
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * The workbench only becomes sticky on wide viewports. On narrow screens
+ * the controls would crowd the content, so they stay in the normal flow
+ * and every control remains reachable.
+ */
+@media (min-width: 1024px) {
+  .library-workspace-frame .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+  }
+
+  .library-workbench {
+    position: sticky;
+    top: var(--library-topbar-height, 0px);
+    z-index: 20;
+  }
+}
+
+/*
+ * Sticky content must never cover a focused control, a dropdown, a
+ * category heading, or a browser anchor target, so the destinations
+ * scroll clear of the pinned header and the workbench.
+ */
+.library-overview,
+.library-experiences,
+.library-secondary,
+.experience-group {
+  scroll-margin-top: var(--library-sticky-space, 0px);
+}
+
+.library-experiences :is(a, button, input, select, textarea, summary),
+.library-secondary :is(a, button, input, select, textarea, summary) {
+  scroll-margin-top: var(--library-sticky-space, 0px);
 }
 
 .text-action,
@@ -3074,8 +3149,8 @@ a:focus-visible {
     grid-template-columns: minmax(0, 1fr);
   }
   .library-controls {
-    padding-right: 13px;
-    padding-left: 13px;
+    padding-right: var(--space-12);
+    padding-left: var(--space-12);
   }
   .library-filter-summary {
     align-items: flex-start;

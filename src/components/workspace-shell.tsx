@@ -211,6 +211,7 @@ export default function WorkspaceShell({ children }: { children: ReactNode }) {
   const frameClassName = [
     "app-frame",
     pathname === "/" && "jd-workspace-frame",
+    pathname === "/library" && "library-workspace-frame",
     !isMobile && isSidebarCollapsed && "is-sidebar-collapsed",
     isMobile && isMobileNavigationOpen && "is-mobile-nav-open",
   ]

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import AchievementPointEditor from "@/components/achievement-point-editor";
 import AchievementImagination from "@/components/achievement-imagination";
+import SearchWorkbench from "@/components/library/search-workbench";
 import {
   EMPTY_LIBRARY_FILTERS,
   filterAchievementLibrary,
@@ -179,9 +180,6 @@ export default function AchievementLibrary({ library, source }: Props) {
     [filters, library],
   );
   const options = useMemo(() => getLibraryFilterOptions(library), [library]);
-  const hasFilters = Object.entries(filters).some(([key, value]) =>
-    key === "status" ? value !== "all" : value !== "",
-  );
   const sourceLabel =
     source === "demo" ? "Fictional demo data" : "My resume data";
   const canEdit = source === "personal";
@@ -314,126 +312,16 @@ export default function AchievementLibrary({ library, source }: Props) {
         />
       )}
 
-      <section
-        className="library-controls"
-        aria-label="Search and filter library"
-      >
-        <label className="library-search">
-          <span>Search library</span>
-          <input
-            onChange={(event) => updateFilter("query", event.target.value)}
-            placeholder="Points, skills, tags, jobs, projects, credentials"
-            type="search"
-            value={filters.query}
-          />
-        </label>
-        <div className="library-filter-grid">
-          <label>
-            <span>Job or project</span>
-            <select
-              onChange={(event) =>
-                updateFilter("experienceId", event.target.value)
-              }
-              value={filters.experienceId}
-            >
-              <option value="">All experience</option>
-              {library.jobs.map((job) => (
-                <option key={job.id} value={`job:${job.id}`}>
-                  {job.title} · {job.company}
-                </option>
-              ))}
-              {library.projects.map((project) => (
-                <option key={project.id} value={`project:${project.id}`}>
-                  {project.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span>Point source</span>
-            <select
-              onChange={(event) =>
-                updateFilter("sourceType", event.target.value)
-              }
-              value={filters.sourceType}
-            >
-              <option value="">All sources</option>
-              {[
-                ...new Set(
-                  [...library.jobs, ...library.projects].flatMap((item) =>
-                    item.points.map((point) => point.source.type),
-                  ),
-                ),
-              ]
-                .sort()
-                .map((type) => (
-                  <option key={type} value={type}>
-                    {type}
-                  </option>
-                ))}
-            </select>
-          </label>
-          <label>
-            <span>Point status</span>
-            <select
-              onChange={(event) =>
-                updateFilter(
-                  "status",
-                  event.target.value as LibraryFilters["status"],
-                )
-              }
-              value={filters.status}
-            >
-              <option value="all">All statuses</option>
-              <option value="enabled">Enabled</option>
-              <option value="disabled">Disabled</option>
-            </select>
-          </label>
-          <label>
-            <span>Linked skill</span>
-            <select
-              onChange={(event) => updateFilter("skillId", event.target.value)}
-              value={filters.skillId}
-            >
-              <option value="">All skills</option>
-              {options.skills.map((skill) => (
-                <option key={skill.id} value={skill.id}>
-                  {skill.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span>Tag</span>
-            <select
-              onChange={(event) => updateFilter("tag", event.target.value)}
-              value={filters.tag}
-            >
-              <option value="">All tags</option>
-              {options.tags.map((tag) => (
-                <option key={tag} value={tag}>
-                  {tag}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-        <div className="library-filter-summary" aria-live="polite">
-          <span>
-            {result.visiblePointCount} of {result.totalPointCount} achievement
-            points
-          </span>
-          {hasFilters && (
-            <button
-              className="text-action"
-              onClick={() => setFilters(EMPTY_LIBRARY_FILTERS)}
-              type="button"
-            >
-              Reset filters
-            </button>
-          )}
-        </div>
-      </section>
+      <SearchWorkbench
+        filters={filters}
+        library={library}
+        onChange={(patch) =>
+          setFilters((current) => ({ ...current, ...patch }))
+        }
+        onReset={() => setFilters(EMPTY_LIBRARY_FILTERS)}
+        options={options}
+        result={result}
+      />
 
       {result.visiblePointCount === 0 ? (
         <p className="library-empty" role="status">
