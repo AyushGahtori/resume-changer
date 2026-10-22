@@ -1,7 +1,11 @@
 import { expect, test, type Page } from "@playwright/test";
-import { copyFile, mkdir, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
+import {
+  createPersonalLibraryGuard,
+  exampleLibraryPath,
+  libraryRoot,
+  personalLibraryPath,
+} from "./support/personal-library";
 import type { ResumeLibrary } from "../../src/lib/schemas/resume-data";
 
 /**
@@ -10,10 +14,7 @@ import type { ResumeLibrary } from "../../src/lib/schemas/resume-data";
  * the browser suite already isolates, and each test writes its own synthetic
  * library there before the page loads it.
  */
-const libraryRoot =
-  process.env.RESUME_LIBRARY_ROOT ??
-  join(tmpdir(), "resume-changer-playwright-data-3010");
-const personalLibraryPath = join(libraryRoot, "data", "resume-library.json");
+const personalLibrary = createPersonalLibraryGuard();
 
 type SyntheticPoint = {
   id: string;
@@ -114,6 +115,28 @@ async function writePersonalLibrary(library: ResumeLibrary) {
 }
 
 const metrics = (page: Page) => page.locator(".library-metric");
+
+type ProfileFixture = {
+  fullName: string;
+  headline?: string;
+};
+
+async function writeIdentityLibrary(profile: ProfileFixture) {
+  const example = JSON.parse(await readFile(exampleLibraryPath, "utf8"));
+  const nextProfile = { ...example.profile, ...profile };
+  if (profile.headline === undefined) {
+    delete nextProfile.headline;
+  }
+  await writePersonalLibrary({ ...example, profile: nextProfile });
+}
+
+test.beforeAll(async () => {
+  await personalLibrary.capture();
+});
+
+test.afterAll(async () => {
+  await personalLibrary.restore();
+});
 
 test.beforeEach(async () => {
   // Every test starts from the shipped sample so a synthetic library from an
@@ -322,4 +345,111 @@ test("keeps every metric label and value visible in both themes", async ({
       await expect(tile.locator("dd")).toBeVisible();
     }
   }
+});
+
+test.describe("library summary identity", () => {
+  test("labels the demo summary as fictional and shows its identity", async ({
+    page,
+  }) => {
+    await page.goto("/library?source=demo");
+
+    const summary = page.getByRole("region", { name: "Library summary" });
+    await expect(summary.getByText("Fictional demo data")).toBeVisible();
+    await expect(
+      summary.getByRole("heading", { name: "Jordan Example" }),
+    ).toBeVisible();
+    await expect(
+      summary.getByText("Software Engineer | Cloud Platforms"),
+    ).toBeVisible();
+  });
+
+  test("labels the personal summary and shows the saved identity", async ({
+    page,
+  }) => {
+    await writeIdentityLibrary({
+      fullName: "Riley Fixture",
+      headline: "Reliability Engineer",
+    });
+    await page.goto("/library");
+
+    const summary = page.getByRole("region", { name: "Library summary" });
+    await expect(summary.getByText("My resume data")).toBeVisible();
+    await expect(
+      summary.getByRole("heading", { name: "Riley Fixture" }),
+    ).toBeVisible();
+    await expect(summary.getByText("Reliability Engineer")).toBeVisible();
+  });
+
+  test("omits an absent headline instead of leaving an empty row", async ({
+    page,
+  }) => {
+    await writeIdentityLibrary({ fullName: "Riley Fixture" });
+    await page.goto("/library");
+
+    const summary = page.getByRole("region", { name: "Library summary" });
+    await expect(
+      summary.getByRole("heading", { name: "Riley Fixture" }),
+    ).toBeVisible();
+    await expect(summary.locator(".library-headline")).toHaveCount(0);
+    await expect(summary.getByText("My resume data")).toBeVisible();
+  });
+
+  test("offers no profile action while no destination exists", async ({
+    page,
+  }) => {
+    // The board's "View details" action needs a real profile or settings
+    // destination. The workspace settings route is still a placeholder, so
+    // the summary must not offer a link that leads nowhere.
+    await page.goto("/library?source=demo");
+
+    const summary = page.getByRole("region", { name: "Library summary" });
+    await expect(summary.getByText("View details")).toHaveCount(0);
+    await expect(summary.locator("a, button")).toHaveCount(0);
+  });
+
+  test("keeps the source label in step with the loaded library", async ({
+    page,
+  }) => {
+    await writeIdentityLibrary({ fullName: "Riley Fixture" });
+    await page.goto("/library");
+
+    const summary = page.getByRole("region", { name: "Library summary" });
+    await expect(summary.getByText("My resume data")).toBeVisible();
+    await expect(
+      summary.getByRole("heading", { name: "Riley Fixture" }),
+    ).toBeVisible();
+
+    await page.getByRole("link", { name: "Demo data" }).click();
+
+    await expect(summary.getByText("Fictional demo data")).toBeVisible();
+    await expect(
+      summary.getByRole("heading", { name: "Jordan Example" }),
+    ).toBeVisible();
+    await expect(summary.getByText("My resume data")).toHaveCount(0);
+  });
+
+  test("keeps the summary counts tied to the whole library while searching", async ({
+    page,
+  }) => {
+    await page.goto("/library?source=demo");
+
+    const summary = page.locator(".library-counts");
+    const before = await summary.locator("dd").allTextContents();
+    expect(before.length).toBe(5);
+
+    const resultSummary = page.locator(".library-filter-summary span");
+    await expect(resultSummary).toHaveText(/^13 of 13 achievement points$/);
+
+    await page.getByRole("searchbox", { name: "Search library" }).fill("queue");
+    await expect(resultSummary).toHaveText(/^\d+ of 13 achievement points$/);
+
+    const visible = Number(
+      (await resultSummary.textContent())?.match(/^(\d+)/)?.[1],
+    );
+    expect(visible).toBeGreaterThan(0);
+    expect(visible).toBeLessThan(13);
+
+    // The library totals must not follow the search result.
+    expect(await summary.locator("dd").allTextContents()).toEqual(before);
+  });
 });
