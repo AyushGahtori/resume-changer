@@ -1,4 +1,3 @@
-[error] No parser could be inferred for file "C:\Users\Ayush\.codex\worktrees\achievement-pr-audit\re_changer\test-results\remote-format-pr83-0.txt".
 import { expect, test, type Page } from "@playwright/test";
 
 /**
@@ -52,7 +51,10 @@ type SurfaceStyle = {
   paddingLeft: string;
 };
 
-async function readSurface(page: Page, selector: string): Promise<SurfaceStyle> {
+async function readSurface(
+  page: Page,
+  selector: string,
+): Promise<SurfaceStyle> {
   const surface = page.locator(selector).first();
 
   return surface.evaluate((element) => {
@@ -243,4 +245,3 @@ test("keeps the point editor a flat nested surface", async ({ page }) => {
   expect(darkEditor.borderTopWidth).toBe("1px");
   expect(darkEditor.backgroundColor).not.toBe(darkEditor.borderTopColor);
 });
-
