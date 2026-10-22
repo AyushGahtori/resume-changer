@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Award, Box, BriefcaseBusiness, ChartNoAxesColumn } from "lucide-react";
 import { useMemo, useState } from "react";
 import AchievementPointEditor from "@/components/achievement-point-editor";
 import AchievementImagination from "@/components/achievement-imagination";
+import LibrarySectionHeader from "@/components/library/library-section-header";
 import {
   EMPTY_LIBRARY_FILTERS,
   filterAchievementLibrary,
@@ -439,102 +441,151 @@ export default function AchievementLibrary({ library, source }: Props) {
         </div>
       </section>
 
-      {result.visiblePointCount === 0 ? (
+      {result.visiblePointCount === 0 && (
         <p className="library-empty" role="status">
           No achievement points match these filters.
         </p>
-      ) : (
-        <div className="library-experiences">
-          {result.jobs.map((job) => (
-            <ExperienceGroup
-              item={job}
-              key={job.id}
-              kind="job"
-              library={library}
-              onSkill={(id) => updateFilter("skillId", id)}
-              onTag={(tag) => updateFilter("tag", tag)}
-              onEdit={
-                canEdit
-                  ? (point) => setEditor({ mode: "edit", point })
-                  : undefined
-              }
-            />
-          ))}
-          {result.projects.map((project) => (
-            <ExperienceGroup
-              item={project}
-              key={project.id}
-              kind="project"
-              library={library}
-              onSkill={(id) => updateFilter("skillId", id)}
-              onTag={(tag) => updateFilter("tag", tag)}
-              onEdit={
-                canEdit
-                  ? (point) => setEditor({ mode: "edit", point })
-                  : undefined
-              }
-            />
-          ))}
-        </div>
       )}
 
-      <section
-        className="library-secondary"
-        aria-label="Skills and credentials"
-      >
-        <details
-          className="library-detail"
-          open={Boolean(filters.query || filters.skillId)}
-        >
-          <summary>
-            Skills <span>{result.skills.length}</span>
-          </summary>
-          {result.skills.length ? (
-            <ul className="skill-list">
-              {result.skills.map((skill) => (
-                <li key={skill.id}>
-                  <div>
-                    <strong>{skill.name}</strong>
-                    {skill.category && <span>{skill.category}</span>}
-                  </div>
-                  <span
-                    className={
-                      skill.isListedOnCurrentResume
-                        ? "skill-listed"
-                        : "skill-unlisted"
-                    }
-                  >
-                    {skill.isListedOnCurrentResume
-                      ? "On current resume"
-                      : "Library only"}
-                  </span>
-                </li>
+      <div className="library-sections">
+        {result.jobs.length > 0 && (
+          <section
+            aria-labelledby="library-section-jobs"
+            className="library-section"
+          >
+            <div className="library-section-header">
+              <LibrarySectionHeader
+                count={result.jobs.length}
+                icon={<BriefcaseBusiness size={18} />}
+                title="Jobs"
+                titleId="library-section-jobs"
+                tone="jobs"
+              />
+            </div>
+            <div className="library-section-body">
+              {result.jobs.map((job) => (
+                <ExperienceGroup
+                  item={job}
+                  key={job.id}
+                  kind="job"
+                  library={library}
+                  onSkill={(id) => updateFilter("skillId", id)}
+                  onTag={(tag) => updateFilter("tag", tag)}
+                  onEdit={
+                    canEdit
+                      ? (point) => setEditor({ mode: "edit", point })
+                      : undefined
+                  }
+                />
               ))}
-            </ul>
-          ) : (
-            <p className="secondary-empty">No skills match this search.</p>
-          )}
-        </details>
-        <details className="library-detail" open={Boolean(filters.query)}>
-          <summary>
-            Credentials <span>{result.credentials.length}</span>
-          </summary>
-          {result.credentials.length ? (
-            <ul className="credential-list">
-              {result.credentials.map((credential) => (
-                <li key={credential.id}>
-                  <strong>{credential.name}</strong>
-                  <span>
-                    {credential.kind} · {credential.issuer}
-                  </span>
-                </li>
+            </div>
+          </section>
+        )}
+
+        {result.projects.length > 0 && (
+          <section
+            aria-labelledby="library-section-projects"
+            className="library-section"
+          >
+            <div className="library-section-header">
+              <LibrarySectionHeader
+                count={result.projects.length}
+                icon={<Box size={18} />}
+                title="Projects"
+                titleId="library-section-projects"
+                tone="projects"
+              />
+            </div>
+            <div className="library-section-body">
+              {result.projects.map((project) => (
+                <ExperienceGroup
+                  item={project}
+                  key={project.id}
+                  kind="project"
+                  library={library}
+                  onSkill={(id) => updateFilter("skillId", id)}
+                  onTag={(tag) => updateFilter("tag", tag)}
+                  onEdit={
+                    canEdit
+                      ? (point) => setEditor({ mode: "edit", point })
+                      : undefined
+                  }
+                />
               ))}
-            </ul>
-          ) : (
-            <p className="secondary-empty">No credentials match this search.</p>
-          )}
-        </details>
-      </section>
+            </div>
+          </section>
+        )}
+
+        <div className="library-secondary">
+          <details
+            className="library-detail library-section"
+            open={Boolean(filters.query || filters.skillId)}
+          >
+            <summary className="library-section-header">
+              <LibrarySectionHeader
+                count={result.skills.length}
+                icon={<ChartNoAxesColumn size={18} />}
+                title="Skills"
+                titleId="library-section-skills"
+                tone="skills"
+              />
+            </summary>
+            {result.skills.length ? (
+              <ul className="skill-list">
+                {result.skills.map((skill) => (
+                  <li key={skill.id}>
+                    <div>
+                      <strong>{skill.name}</strong>
+                      {skill.category && <span>{skill.category}</span>}
+                    </div>
+                    <span
+                      className={
+                        skill.isListedOnCurrentResume
+                          ? "skill-listed"
+                          : "skill-unlisted"
+                      }
+                    >
+                      {skill.isListedOnCurrentResume
+                        ? "On current resume"
+                        : "Library only"}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="secondary-empty">No skills match this search.</p>
+            )}
+          </details>
+          <details
+            className="library-detail library-section"
+            open={Boolean(filters.query)}
+          >
+            <summary className="library-section-header">
+              <LibrarySectionHeader
+                count={result.credentials.length}
+                icon={<Award size={18} />}
+                title="Credentials"
+                titleId="library-section-credentials"
+                tone="credentials"
+              />
+            </summary>
+            {result.credentials.length ? (
+              <ul className="credential-list">
+                {result.credentials.map((credential) => (
+                  <li key={credential.id}>
+                    <strong>{credential.name}</strong>
+                    <span>
+                      {credential.kind} · {credential.issuer}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="secondary-empty">No credentials match this search.</p>
+            )}
+          </details>
+        </div>
+      </div>
     </div>
   );
 }

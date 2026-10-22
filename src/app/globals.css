@@ -2293,12 +2293,14 @@ a:focus-visible {
   text-decoration: underline;
 }
 
-.library-experiences {
-  margin-top: 24px;
-}
 .experience-group {
   padding: 19px 2px 9px;
   border-bottom: 1px solid var(--line);
+}
+/* The last group of a section ends the section, so it keeps no rule of its
+   own. */
+.library-section-body .experience-group:last-child {
+  border-bottom: 0;
 }
 .experience-heading {
   display: flex;
@@ -2419,29 +2421,97 @@ a:focus-visible {
   padding: 20px 0;
   border-bottom: 1px solid var(--line);
 }
-.library-secondary {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 24px;
-  margin-top: 22px;
+/* The library body is organised into four category sections. Each one
+   carries a small icon tile in the colour of its category, the category
+   name, and the number of items the section holds, so the page reads as
+   four scannable regions instead of one long list. */
+.library-sections {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-32);
+  margin-top: var(--space-24);
 }
-.library-detail {
+
+.library-section {
   min-width: 0;
-  border-top: 1px solid var(--line);
 }
-.library-detail summary {
+
+.library-section-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 13px 0;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 650;
+  gap: var(--space-12);
+  padding-bottom: var(--space-12);
+  border-bottom: 1px solid var(--line);
 }
-.library-detail summary span {
-  color: var(--muted);
-  font-size: 11px;
-  font-weight: 500;
+
+.library-section-icon {
+  display: inline-flex;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-card);
+}
+
+.library-section-icon--jobs {
+  background: var(--color-orange-subtle);
+  color: var(--color-orange-strong);
+}
+
+.library-section-icon--projects {
+  background: var(--color-violet-subtle);
+  color: var(--color-violet-strong);
+}
+
+/* The info scale has no subtle tone of its own, so the tile mixes the base
+   colour into the surface instead. */
+.library-section-icon--skills {
+  background: color-mix(in srgb, var(--color-info) 16%, var(--color-surface));
+  color: var(--color-info-strong);
+}
+
+.library-section-icon--credentials {
+  background: var(--color-success-subtle);
+  color: var(--color-success-strong);
+}
+
+.library-section-title {
+  margin: 0;
+  font-size: var(--type-section-heading-size);
+  line-height: var(--type-section-heading-line-height);
+  font-weight: 700;
+}
+
+.library-section-count {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 0 var(--space-8);
+  border-radius: var(--radius-full);
+  background: var(--color-surface-alt);
+  color: var(--color-text-secondary);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line-height);
+  font-weight: 600;
+}
+
+.library-section-body {
+  display: flex;
+  flex-direction: column;
+}
+
+.library-secondary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-32);
+}
+
+.library-detail {
+  min-width: 0;
+}
+.library-detail summary {
+  cursor: pointer;
 }
 .skill-list,
 .credential-list {
@@ -3094,8 +3164,7 @@ a:focus-visible {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .library-secondary {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 16px;
+    gap: var(--space-24);
   }
   .library-source-switch a {
     padding: 8px;
