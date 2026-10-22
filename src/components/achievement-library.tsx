@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import AchievementPointEditor from "@/components/achievement-point-editor";
 import AchievementImagination from "@/components/achievement-imagination";
+import ProfileSummary from "@/components/library/profile-summary";
 import {
   EMPTY_LIBRARY_FILTERS,
   filterAchievementLibrary,
@@ -182,8 +183,6 @@ export default function AchievementLibrary({ library, source }: Props) {
   const hasFilters = Object.entries(filters).some(([key, value]) =>
     key === "status" ? value !== "all" : value !== "",
   );
-  const sourceLabel =
-    source === "demo" ? "Fictional demo data" : "My resume data";
   const canEdit = source === "personal";
   const parentOptions = [
     ...library.jobs.map((job) => ({
@@ -256,35 +255,11 @@ export default function AchievementLibrary({ library, source }: Props) {
         </div>
       )}
 
-      <section className="library-overview" aria-label="Library summary">
-        <div className="library-owner">
-          <span className="source-indicator">{sourceLabel}</span>
-          <h2>{library.profile.fullName}</h2>
-          {library.profile.headline && <p>{library.profile.headline}</p>}
-        </div>
-        <dl className="library-counts">
-          <div>
-            <dt>Jobs</dt>
-            <dd>{library.jobs.length}</dd>
-          </div>
-          <div>
-            <dt>Projects</dt>
-            <dd>{library.projects.length}</dd>
-          </div>
-          <div>
-            <dt>Points</dt>
-            <dd>{result.totalPointCount}</dd>
-          </div>
-          <div>
-            <dt>Skills</dt>
-            <dd>{library.skills.length}</dd>
-          </div>
-          <div>
-            <dt>Credentials</dt>
-            <dd>{library.credentials.length}</dd>
-          </div>
-        </dl>
-      </section>
+      <ProfileSummary
+        library={library}
+        source={source}
+        totalPointCount={result.totalPointCount}
+      />
 
       {editor && (
         <AchievementPointEditor
