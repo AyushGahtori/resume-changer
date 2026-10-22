@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Briefcase, Check, CircleSlash, Folder } from "lucide-react";
+import { Briefcase, Check, CircleSlash, Folder, Pencil } from "lucide-react";
 import PointMetrics from "@/components/library/point-metrics";
 import {
   buildPointChips,
@@ -124,7 +124,12 @@ export default function AchievementCard({
             {point.enabled ? "Enabled" : "Disabled"}
           </span>
           {onEdit ? (
-            <button className="text-action" onClick={onEdit} type="button">
+            <button
+              className="point-edit-action"
+              onClick={onEdit}
+              type="button"
+            >
+              <Pencil aria-hidden="true" size={14} strokeWidth={2} />
               Edit
             </button>
           ) : null}
