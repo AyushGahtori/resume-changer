@@ -70,9 +70,7 @@ function PointRow({
         {point.source.label ? ` · ${point.source.label}` : ""}
         {point.source.reference ? ` · ${point.source.reference}` : ""}
       </p>
-      {point.metrics.length > 0 && (
-        <PointMetrics metrics={point.metrics} />
-      )}
+      {point.metrics.length > 0 && <PointMetrics metrics={point.metrics} />}
       {(point.tags.length > 0 || point.skillIds.length > 0) && (
         <div className="point-facets">
           {point.tags.map((tag) => (
