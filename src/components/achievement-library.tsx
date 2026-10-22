@@ -245,65 +245,66 @@ export default function AchievementLibrary({ library, source }: Props) {
   return (
     <div className="library-page">
       <header className="library-page-header">
-        <div className="library-heading page-heading-row">
-          <div>
+        <div className="library-heading">
+          <div className="library-heading-copy">
             <p className="eyebrow">YOUR EXPERIENCE</p>
             <h1>Achievement library</h1>
             <p className="page-intro">
               Browse the resume information saved in this workspace.
             </p>
           </div>
-          <div
-            className="library-source-switch"
-            aria-label="Library data source"
-          >
-            <Link
-              aria-current={source === "personal" ? "page" : undefined}
-              href="/library"
+          <div className="library-header-controls">
+            <div
+              className="library-source-switch"
+              aria-label="Library data source"
             >
-              My data
-            </Link>
-            <Link
-              aria-current={source === "demo" ? "page" : undefined}
-              href="/library?source=demo"
-            >
-              Demo data
-            </Link>
+              <Link
+                aria-current={source === "personal" ? "page" : undefined}
+                href="/library"
+              >
+                My data
+              </Link>
+              <Link
+                aria-current={source === "demo" ? "page" : undefined}
+                href="/library?source=demo"
+              >
+                Demo data
+              </Link>
+            </div>
+            {canEdit && (
+              <div className="library-edit-toolbar">
+                {saveMessage ? <span role="status">{saveMessage}</span> : null}
+                <button
+                  className="ui-button ui-button--secondary"
+                  onClick={() => openEditor()}
+                  type="button"
+                >
+                  <DetailedEntryIcon
+                    aria-hidden="true"
+                    size={detailedEntryAction.iconSize}
+                    strokeWidth={2}
+                  />
+                  {detailedEntryAction.label}
+                </button>
+                <button
+                  className="ui-button ui-button--primary"
+                  onClick={() => {
+                    setSaveMessage("");
+                    setCreating(true);
+                  }}
+                  type="button"
+                >
+                  <AddIcon
+                    aria-hidden="true"
+                    size={addAction.iconSize}
+                    strokeWidth={2}
+                  />
+                  {addAction.label}
+                </button>
+              </div>
+            )}
           </div>
         </div>
-
-        {canEdit && (
-          <div className="library-edit-toolbar">
-            <span>{saveMessage}</span>
-            <button
-              className="ui-button ui-button--secondary"
-              onClick={() => openEditor()}
-              type="button"
-            >
-              <DetailedEntryIcon
-                aria-hidden="true"
-                size={detailedEntryAction.iconSize}
-                strokeWidth={2}
-              />
-              {detailedEntryAction.label}
-            </button>
-            <button
-              className="ui-button ui-button--primary"
-              onClick={() => {
-                setSaveMessage("");
-                setCreating(true);
-              }}
-              type="button"
-            >
-              <AddIcon
-                aria-hidden="true"
-                size={addAction.iconSize}
-                strokeWidth={2}
-              />
-              {addAction.label}
-            </button>
-          </div>
-        )}
       </header>
       <ProfileSummary library={library} sourceLabel={sourceLabel} />
 
