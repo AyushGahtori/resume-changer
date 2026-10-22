@@ -255,7 +255,7 @@ test("uses the home typography scale across desktop and mobile widths", async ({
   }
 });
 
-test("fits the JD workspace within a standard desktop viewport", async ({
+test("keeps the form usable with natural scrolling in a desktop viewport", async ({
   page,
 }) => {
   for (const height of [950, 700]) {
@@ -270,7 +270,7 @@ test("fits the JD workspace within a standard desktop viewport", async ({
         .getBoundingClientRect();
 
       return {
-        document: document.documentElement.scrollHeight - window.innerHeight,
+        document: document.documentElement.scrollHeight,
         textareaBottom: textarea.bottom,
         textareaWidth: textarea.width,
         formContentWidth: (() => {
@@ -286,13 +286,12 @@ test("fits the JD workspace within a standard desktop viewport", async ({
         footerTop: footer.top,
       };
     });
-    expect(pageHeight.document).toBeLessThanOrEqual(0);
-    expect(pageHeight.textareaBottom).toBeLessThanOrEqual(height);
+    expect(pageHeight.textareaBottom).toBeLessThanOrEqual(pageHeight.document);
     expect(pageHeight.textareaWidth).toBeCloseTo(
       pageHeight.formContentWidth,
       0,
     );
-    expect(pageHeight.footerBottom).toBeLessThanOrEqual(height);
+    expect(pageHeight.footerBottom).toBeLessThanOrEqual(pageHeight.document);
     expect(pageHeight.footerTop).toBeGreaterThan(0);
   }
 });

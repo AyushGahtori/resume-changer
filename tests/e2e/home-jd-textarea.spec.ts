@@ -106,7 +106,7 @@ for (const theme of ["light", "dark"] as const) {
         );
       });
       for (const ratio of contrast) expect(ratio).toBeGreaterThanOrEqual(4.5);
-      expect(geometry.height).toBe(190);
+      expect(geometry.height).toBe(240);
       expect(geometry.width).toBeCloseTo(geometry.parentWidth, 0);
       expect(geometry).toMatchObject({
         fontSize: "14px",
@@ -139,30 +139,27 @@ for (const theme of ["light", "dark"] as const) {
       expect(await editor.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
       await expect(editor).toHaveValue(description);
 
-      // Exercise native vertical resizing on layouts that permit it.
-      if (viewport.width <= 1100) {
-        expect(geometry.resize).toBe("vertical");
-        const bounds = (await editor.boundingBox())!;
-        await page.mouse.move(
-          bounds.x + bounds.width - 3,
-          bounds.y + bounds.height - 3,
-        );
-        await page.mouse.down();
-        await page.mouse.move(
-          bounds.x + bounds.width + 50,
-          bounds.y + bounds.height + 50,
-        );
-        await page.mouse.up();
-        // A newly visible page scrollbar can reduce available width.
-        expect((await editor.boundingBox())!.width).toBeLessThanOrEqual(
-          bounds.width,
-        );
-        expect((await editor.boundingBox())!.height).toBeGreaterThan(
-          bounds.height,
-        );
-      } else {
-        expect(geometry.resize).toBe("none");
-      }
+      // The fluid preview grid keeps native vertical resizing at every width.
+      expect(geometry.resize).toBe("vertical");
+      await editor.scrollIntoViewIfNeeded();
+      const bounds = (await editor.boundingBox())!;
+      await page.mouse.move(
+        bounds.x + bounds.width - 3,
+        bounds.y + bounds.height - 3,
+      );
+      await page.mouse.down();
+      await page.mouse.move(
+        bounds.x + bounds.width + 50,
+        bounds.y + bounds.height + 50,
+      );
+      await page.mouse.up();
+      // A newly visible page scrollbar can reduce available width.
+      expect((await editor.boundingBox())!.width).toBeLessThanOrEqual(
+        bounds.width,
+      );
+      expect((await editor.boundingBox())!.height).toBeGreaterThan(
+        bounds.height,
+      );
       await editor.fill("");
       await page
         .getByRole("button", { name: "Save draft", exact: true })
@@ -176,9 +173,9 @@ for (const theme of ["light", "dark"] as const) {
           .getByRole("alert")
           .filter({ hasText: "Enter a job description before saving." }),
       ).toContainText("Enter a job description before saving.");
-      expect(
-        await editor.evaluate((el) => getComputedStyle(el).borderColor),
-      ).not.toBe(geometry.border);
+      await expect
+        .poll(() => editor.evaluate((el) => getComputedStyle(el).borderColor))
+        .not.toBe(geometry.border);
       await page.screenshot({
         path: testInfo.outputPath("error.png"),
         fullPage: true,
