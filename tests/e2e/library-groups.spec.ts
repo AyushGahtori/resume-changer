@@ -1,236 +1,486 @@
-import { expect, test } from "@playwright/test";
-import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
+import { expect, test, type Page } from "@playwright/test";
+import { copyFile, mkdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-const sampleLibraryPath = join(
-  process.cwd(),
-  "examples",
-  "sample-resume-library.json",
-);
+/**
+ * Task 20 coverage for the group headers, their counts, their date ranges
+ * and their disclosure.
+ *
+ * Every fixture here is fictional. The demo library is the shipped sample
+ * data, and the second fixture is a small synthetic library written into
+ * the isolated test data root so the absent-end-date rule can be checked
+ * on a rendered header.
+ */
 
-const personalLibraryRoot =
-  process.env.RESUME_LIBRARY_ROOT ??
-  join(tmpdir(), "resume-changer-playwright-data-3010");
+const group = (page: Page, title: string) =>
+  page.locator(".experience-group").filter({ hasText: title });
 
-const personalLibraryPath = join(
-  personalLibraryRoot,
-  "data",
-  "resume-library.json",
-);
+const toggle = (page: Page, title: string) =>
+  group(page, title).locator(".experience-toggle");
 
-async function writePersonalLibrary(library: unknown) {
-  await mkdir(join(personalLibraryRoot, "data"), { recursive: true });
-  await writeFile(personalLibraryPath, `${JSON.stringify(library, null, 2)}\n`);
+/** A fictional library with an open-ended project and an undated project. */
+const OPEN_ENDED_LIBRARY = {
+  schemaVersion: 1,
+  profile: {
+    id: "profile-group-fixture",
+    fullName: "Robin Fixture",
+    headline: "Fictional fixture for the group header tests",
+    links: [],
+    education: [],
+  },
+  jobs: [
+    {
+      id: "job-ongoing-fixture",
+      company: "Fixture Works",
+      title: "Staff Engineer",
+      employmentType: "full-time",
+      startDate: "2023-03",
+      endDate: null,
+      points: [
+        {
+          id: "achievement-fixture-ongoing",
+          text: "Shipped a fictional internal tool.",
+          tags: [],
+          skillIds: [],
+          metrics: [],
+          source: { type: "user-notes", label: "Fictional note" },
+          enabled: true,
+        },
+      ],
+    },
+  ],
+  projects: [
+    {
+      id: "project-open-ended-fixture",
+      name: "Open Ended",
+      role: "Builder",
+      startDate: "2024-05",
+      /*
+       * The end date is absent on purpose. An absent end date is an
+       * unknown end, not an ongoing project.
+       */
+      points: [
+        {
+          id: "achievement-fixture-open-ended",
+          text: "Kept a fictional project running without an end date.",
+          tags: [],
+          skillIds: [],
+          metrics: [],
+          source: { type: "user-notes", label: "Fictional note" },
+          enabled: true,
+        },
+      ],
+    },
+    {
+      id: "project-undated-fixture",
+      name: "Undated",
+      role: "Builder",
+      points: [
+        {
+          id: "achievement-fixture-undated",
+          text: "Recorded a fictional project without any dates.",
+          tags: [],
+          skillIds: [],
+          metrics: [],
+          source: { type: "user-notes", label: "Fictional note" },
+          enabled: true,
+        },
+      ],
+    },
+    {
+      id: "project-long-name-fixture",
+      name: "Enterprise Platform Modernisation And Reliability Engineering Programme",
+      role: "Principal Engineer, Cross Team Reliability Working Group",
+      startDate: "2021-06",
+      endDate: "2023-11",
+      points: [
+        {
+          id: "achievement-fixture-long-name",
+          text: "Ran a fictional programme with a deliberately long name.",
+          tags: [],
+          skillIds: [],
+          metrics: [],
+          source: { type: "user-notes", label: "Fictional note" },
+          enabled: true,
+        },
+      ],
+    },
+  ],
+  skills: [],
+  credentials: [],
+  preferences: {
+    sectionOrder: ["experience", "projects", "skills", "credentials"],
+    maxPages: 1,
+  },
+};
+
+function libraryRoot() {
+  return (
+    process.env.RESUME_LIBRARY_ROOT ??
+    join(tmpdir(), "resume-changer-playwright-data-3010")
+  );
 }
 
-function sectionDetails(page: import("@playwright/test").Page, title: string) {
-  return page
-    .getByRole("heading", { name: title, exact: true })
-    .locator("xpath=ancestor::details");
+async function writeFixtureLibrary() {
+  const dataFolder = join(libraryRoot(), "data");
+  await mkdir(dataFolder, { recursive: true });
+  await writeFile(
+    join(dataFolder, "resume-library.json"),
+    `${JSON.stringify(OPEN_ENDED_LIBRARY, null, 2)}\n`,
+    "utf8",
+  );
 }
 
-test.afterEach(async () => {
-  // The personal library root is shared by the whole browser suite, so the
-  // sample file is put back after a test replaces it.
-  await copyFile(sampleLibraryPath, personalLibraryPath);
-});
-
-test("organises the library into Jobs, Projects, Skills, and Credentials", async ({
-  page,
-}) => {
-  await page.goto("/library?source=demo");
-
-  const jobs = page.getByRole("region", { name: "Jobs", exact: true });
-  const projects = page.getByRole("region", { name: "Projects", exact: true });
-
-  await expect(jobs).toBeVisible();
-  await expect(projects).toBeVisible();
-  await expect(
-    page.getByRole("heading", { name: "Skills", exact: true }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("heading", { name: "Credentials", exact: true }),
-  ).toBeVisible();
-
-  // The four categories keep the order of the page map.
-  await expect(page.locator(".library-section-title")).toHaveText([
-    "Jobs",
-    "Projects",
-    "Skills",
-    "Credentials",
-  ]);
-
-  // Every experience group stays inside the region of its own category.
-  await expect(
-    jobs.getByRole("heading", { name: "Platform Engineer" }),
-  ).toBeVisible();
-  await expect(
-    jobs.getByRole("heading", { name: "Software Engineer" }),
-  ).toBeVisible();
-  await expect(
-    projects.getByRole("heading", { name: "QueueBoard" }),
-  ).toBeVisible();
-  await expect(
-    projects.getByRole("heading", { name: "FieldNotes" }),
-  ).toBeVisible();
-});
-
-test("states the number of records that each section holds", async ({
-  page,
-}) => {
-  await page.goto("/library?source=demo");
-
-  const jobs = page.getByRole("region", { name: "Jobs", exact: true });
-  const projects = page.getByRole("region", { name: "Projects", exact: true });
-
-  await expect(jobs.locator(".library-section-count")).toHaveText("2");
-  await expect(jobs.locator(".experience-group")).toHaveCount(2);
-  await expect(projects.locator(".library-section-count")).toHaveText("2");
-  await expect(projects.locator(".experience-group")).toHaveCount(2);
-
-  const skills = sectionDetails(page, "Skills");
-  const credentials = sectionDetails(page, "Credentials");
-
-  await expect(skills.locator(".library-section-count")).toHaveText("14");
-  await expect(credentials.locator(".library-section-count")).toHaveText("2");
-
-  // The secondary sections stay usable as disclosures.
-  await skills.locator("summary").click();
-  await credentials.locator("summary").click();
-  await expect(skills.locator(".skill-list li")).toHaveCount(14);
-  await expect(credentials.locator(".credential-list li")).toHaveCount(2);
-});
-
-test("drops a parent section when none of its points match", async ({
-  page,
-}) => {
-  await page.goto("/library?source=demo");
-
-  await page
-    .getByLabel("Job or project")
-    .selectOption("job:job-example-cloud-labs");
-
-  const jobs = page.getByRole("region", { name: "Jobs", exact: true });
-  await expect(jobs.locator(".library-section-count")).toHaveText("1");
-  await expect(jobs.locator(".experience-group")).toHaveCount(1);
-  await expect(
-    jobs.getByRole("heading", { name: "Software Engineer" }),
-  ).toHaveCount(0);
-
-  // The project section has no matching point, so it is not rendered.
-  await expect(
-    page.getByRole("region", { name: "Projects", exact: true }),
-  ).toHaveCount(0);
-  await expect(page.getByRole("status")).toHaveCount(0);
-});
-
-test("keeps the secondary sections in step with the query", async ({
-  page,
-}) => {
-  await page.goto("/library?source=demo");
-
-  await page
-    .getByRole("searchbox", { name: "Search library" })
-    .fill("Cloud Deployment Foundations");
-
-  const credentials = sectionDetails(page, "Credentials");
-  const skills = sectionDetails(page, "Skills");
-
-  await expect(credentials.locator(".library-section-count")).toHaveText("1");
-  await expect(
-    credentials.getByText("Cloud Deployment Foundations (Demo)"),
-  ).toBeVisible();
-  await expect(skills.locator(".library-section-count")).toHaveText("0");
-  await expect(skills.getByText("No skills match this search.")).toBeVisible();
-
-  // No point matches the query, so the experience sections are not rendered.
-  await expect(
-    page.getByRole("region", { name: "Jobs", exact: true }),
-  ).toHaveCount(0);
-  await expect(
-    page.getByRole("region", { name: "Projects", exact: true }),
-  ).toHaveCount(0);
-  await expect(page.getByRole("status")).toHaveText(
-    "No achievement points match these filters.",
+/**
+ * Puts the sample library back.
+ *
+ * The suite shares one data folder, so a fixture left behind would reach the
+ * specs that run after this one and change what they find. The sample
+ * library is the one the server seeded the folder with.
+ */
+async function restoreSampleLibrary() {
+  const dataFolder = join(libraryRoot(), "data");
+  await mkdir(dataFolder, { recursive: true });
+  await copyFile(
+    join(process.cwd(), "examples", "sample-resume-library.json"),
+    join(dataFolder, "resume-library.json"),
   );
+}
+
+test.describe("achievement library group headers", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto("/library?source=demo");
+  });
+
+  test("shows the group type, title, context, count and date range", async ({
+    page,
+  }) => {
+    const job = group(page, "Platform Engineer");
+
+    await expect(job).toHaveAttribute("aria-label", "Job: Platform Engineer");
+    await expect(
+      job.getByRole("heading", { name: "Platform Engineer" }),
+    ).toBeVisible();
+    await expect(job.locator(".experience-kind")).toHaveText("JOB");
+    await expect(job.locator(".experience-subtitle")).toHaveText(
+      "Example Cloud Labs",
+    );
+    await expect(job.locator(".experience-count")).toHaveText("4 achievements");
+    await expect(job.locator(".experience-dates")).toHaveText(
+      "Jan 2023 – Present",
+    );
+    await expect(job.locator(".experience-dates time").first()).toHaveAttribute(
+      "datetime",
+      "2023-01",
+    );
+
+    const project = group(page, "QueueBoard");
+    await expect(project).toHaveAttribute("aria-label", "Project: QueueBoard");
+    await expect(project.locator(".experience-kind")).toHaveText("PROJECT");
+    await expect(project.locator(".experience-count")).toHaveText(
+      "3 achievements",
+    );
+    await expect(project.locator(".experience-dates")).toHaveText(
+      "Feb 2024 – Aug 2024",
+    );
+  });
+
+  test("marks a finished role with its end month instead of Present", async ({
+    page,
+  }) => {
+    const job = group(page, "Software Engineer");
+
+    await expect(job.locator(".experience-dates")).toHaveText(
+      "Jun 2021 – Dec 2022",
+    );
+    await expect(job.locator(".experience-dates")).not.toContainText("Present");
+  });
+
+  test("counts only the points a filter leaves visible", async ({ page }) => {
+    const job = group(page, "Platform Engineer");
+    await expect(job.locator(".experience-count")).toHaveText("4 achievements");
+
+    await page.getByLabel("Point source").selectOption("project-document");
+
+    const remaining = group(page, "Platform Engineer");
+    await expect(remaining.locator(".experience-count")).toHaveText(
+      "2 achievements",
+    );
+  });
+
+  test("omits a group that has no matching point", async ({ page }) => {
+    await page
+      .getByLabel("Job or project")
+      .selectOption("project:project-queueboard");
+
+    await expect(page.locator(".experience-group")).toHaveCount(1);
+    await expect(page.locator(".experience-group")).toContainText("QueueBoard");
+  });
+
+  test("collapses and expands a group with a real disclosure button", async ({
+    page,
+  }) => {
+    const button = toggle(page, "Platform Engineer");
+    await expect(button).toHaveAttribute("aria-expanded", "true");
+
+    const panelId = await button.getAttribute("aria-controls");
+    expect(panelId).toBeTruthy();
+    const panel = page.locator(`#${panelId}`);
+    await expect(panel).toBeVisible();
+
+    const expandedChevron = await button
+      .locator(".experience-chevron")
+      .evaluate((element) => getComputedStyle(element).transform);
+
+    await button.click();
+
+    await expect(button).toHaveAttribute("aria-expanded", "false");
+    await expect(panel).toBeHidden();
+    await expect(button).toBeFocused();
+
+    const collapsedChevron = await button
+      .locator(".experience-chevron")
+      .evaluate((element) => getComputedStyle(element).transform);
+    expect(collapsedChevron).not.toBe(expandedChevron);
+
+    await button.click();
+    await expect(button).toHaveAttribute("aria-expanded", "true");
+    await expect(panel).toBeVisible();
+  });
+
+  test("operates the disclosure from the keyboard and keeps the focus", async ({
+    page,
+  }) => {
+    const button = toggle(page, "Platform Engineer");
+    await button.focus();
+    await expect(button).toBeFocused();
+
+    await page.keyboard.press("Enter");
+
+    await expect(button).toHaveAttribute("aria-expanded", "false");
+    await expect(button).toBeFocused();
+    expect(
+      await button.evaluate((element) => element.matches(":focus-visible")),
+    ).toBe(true);
+
+    await page.keyboard.press("Space");
+    await expect(button).toHaveAttribute("aria-expanded", "true");
+    await expect(button).toBeFocused();
+  });
+
+  test("keeps a collapsed group collapsed when the filters change", async ({
+    page,
+  }) => {
+    const button = toggle(page, "QueueBoard");
+    await button.click();
+    await expect(button).toHaveAttribute("aria-expanded", "false");
+
+    /*
+     * The filter hides the group completely, so the group is unmounted and
+     * mounted again when the filter is cleared. The state the reader gave
+     * it has to survive that.
+     */
+    await page
+      .getByLabel("Job or project")
+      .selectOption("job:job-example-cloud-labs");
+    await expect(page.locator(".experience-group")).toHaveCount(1);
+
+    await page.getByRole("button", { name: "Reset filters" }).click();
+    await expect(toggle(page, "QueueBoard")).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+    await expect(button).toBeVisible();
+  });
+
+  test("keeps the reader's place when a group is opened and closed", async ({
+    page,
+  }) => {
+    const button = toggle(page, "Platform Engineer");
+    await button.scrollIntoViewIfNeeded();
+    await page.evaluate(() => {
+      const header = document.querySelector(".experience-toggle");
+      const topbar = document.querySelector(".topbar");
+      const workbench = document.querySelector(".library-workbench");
+      if (header) {
+        const reservedTop =
+          (topbar?.getBoundingClientRect().height ?? 0) +
+          (workbench?.getBoundingClientRect().height ?? 0) +
+          24;
+        window.scrollTo(
+          0,
+          header.getBoundingClientRect().top + window.scrollY - reservedTop,
+        );
+      }
+    });
+
+    const before = await button.boundingBox();
+    const scrollBefore = await page.evaluate(() => window.scrollY);
+    expect(before).not.toBeNull();
+
+    await button.click();
+
+    const after = await button.boundingBox();
+    expect(after).not.toBeNull();
+    expect(after!.y).toBeCloseTo(before!.y, 0);
+    expect(await page.evaluate(() => window.scrollY)).toBe(scrollBefore);
+  });
+
+  test("keeps the content below a collapsed group in place", async ({
+    page,
+  }) => {
+    /*
+     * The group is toggled with a scripted click, so the page is not
+     * scrolled to it first. The group ends up above the viewport, and the
+     * content the reader is looking at has to stay where it is.
+     */
+    await page.evaluate(() => {
+      const headers = document.querySelectorAll(".experience-toggle");
+      const second = headers[1];
+      if (second) {
+        window.scrollTo(0, second.getBoundingClientRect().top + window.scrollY);
+      }
+    });
+
+    const reference = await page
+      .locator(".experience-group")
+      .nth(1)
+      .locator(".experience-heading")
+      .boundingBox();
+    expect(reference).not.toBeNull();
+
+    await page.evaluate(() => {
+      const first = document.querySelectorAll(".experience-toggle")[0];
+      if (first instanceof HTMLElement) first.click();
+    });
+
+    const after = await page
+      .locator(".experience-group")
+      .nth(1)
+      .locator(".experience-heading")
+      .boundingBox();
+    expect(after).not.toBeNull();
+    expect(after!.y).toBeCloseTo(reference!.y, 0);
+  });
+
+  test("keeps the header readable on a narrow viewport", async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 740 });
+    await page.reload();
+
+    const job = group(page, "Platform Engineer");
+    const count = job.locator(".experience-count");
+    const chevron = job.locator(".experience-chevron");
+    const dates = job.locator(".experience-dates");
+    await expect(count).toBeVisible();
+    await expect(chevron).toBeVisible();
+    await expect(dates).toBeVisible();
+
+    const dimensions = await page.evaluate(() => ({
+      documentWidth: document.documentElement.scrollWidth,
+      viewportWidth: document.documentElement.clientWidth,
+    }));
+    expect(dimensions.documentWidth).toBeLessThanOrEqual(
+      dimensions.viewportWidth,
+    );
+
+    const countBox = await count.boundingBox();
+    const chevronBox = await chevron.boundingBox();
+    const headingBox = await job
+      .locator(".experience-heading-text")
+      .boundingBox();
+    const dateBox = await dates.boundingBox();
+    expect(countBox).not.toBeNull();
+    expect(chevronBox).not.toBeNull();
+    expect(headingBox).not.toBeNull();
+    expect(dateBox).not.toBeNull();
+
+    // The count is never squeezed behind the chevron.
+    expect(countBox!.x + countBox!.width).toBeLessThanOrEqual(
+      chevronBox!.x + 1,
+    );
+    // The date range moves below the title on a narrow viewport.
+    expect(dateBox!.y).toBeGreaterThan(headingBox!.y + headingBox!.height - 1);
+  });
 });
 
-test("does not file education under one of the four categories", async ({
-  page,
-}) => {
-  await page.goto("/library?source=demo");
+test.describe("achievement library group headers without a known end", () => {
+  test.beforeEach(async ({ page }) => {
+    await writeFixtureLibrary();
+    await page.goto("/library");
+  });
 
-  const credentials = sectionDetails(page, "Credentials");
-  await credentials.locator("summary").click();
-  await expect(credentials.locator(".credential-list li")).toHaveCount(2);
+  test.afterEach(async () => {
+    await restoreSampleLibrary();
+  });
 
-  // Education belongs to the profile record, so it never appears as a
-  // credential or as any other category of the library.
-  await expect(page.locator(".library-sections")).not.toContainText(
-    "Example State University",
-  );
-  await expect(page.locator(".library-sections")).not.toContainText(
-    "Bachelor of Science",
-  );
-});
+  test("never shows Present for an absent end date", async ({ page }) => {
+    const project = group(page, "Open Ended");
 
-test("rebuilds the sections when the data source changes", async ({ page }) => {
-  const library = JSON.parse(await readFile(sampleLibraryPath, "utf8"));
-  const jobs = library.jobs.slice(0, 1);
-  const keptPointIds = new Set(
-    jobs.flatMap((job: { points: Array<{ id: string }> }) =>
-      job.points.map((point) => point.id),
-    ),
-  );
-  // A skill may only point at an achievement that the library still holds.
-  const skills = library.skills.map(
-    (skill: { evidenceAchievementIds: string[] }) => ({
-      ...skill,
-      evidenceAchievementIds: skill.evidenceAchievementIds.filter((id) =>
-        keptPointIds.has(id),
-      ),
-    }),
-  );
-  await writePersonalLibrary({ ...library, jobs, projects: [], skills });
+    await expect(project.locator(".experience-dates")).toHaveText("May 2024");
+    await expect(project.locator(".experience-dates")).not.toContainText(
+      "Present",
+    );
+  });
 
-  await page.goto("/library");
+  test("omits the date range when the source holds no date", async ({
+    page,
+  }) => {
+    const project = group(page, "Undated");
 
-  const jobsSection = page.getByRole("region", { name: "Jobs", exact: true });
-  await expect(jobsSection.locator(".library-section-count")).toHaveText("1");
-  await expect(
-    page.getByRole("region", { name: "Projects", exact: true }),
-  ).toHaveCount(0);
-  await expect(page.getByText("My resume data")).toBeVisible();
+    await expect(project.locator(".experience-dates")).toHaveCount(0);
+    await expect(project.locator(".experience-count")).toHaveText(
+      "1 achievement",
+    );
+  });
 
-  // The demo source keeps its own records.
-  await page.goto("/library?source=demo");
-  await expect(
-    page.getByRole("region", { name: "Projects", exact: true }),
-  ).toBeVisible();
-  await expect(
-    page
-      .getByRole("region", { name: "Jobs", exact: true })
-      .locator(".library-section-count"),
-  ).toHaveText("2");
-});
+  test("shows Present for a role whose end date is null", async ({ page }) => {
+    const job = group(page, "Staff Engineer");
 
-test("keeps the sections readable on a narrow viewport", async ({ page }) => {
-  await page.setViewportSize({ width: 320, height: 900 });
-  await page.goto("/library?source=demo");
+    await expect(job.locator(".experience-dates")).toHaveText(
+      "Mar 2023 – Present",
+    );
+  });
 
-  await expect(
-    page.getByRole("heading", { name: "Jobs", exact: true }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("heading", { name: "Credentials", exact: true }),
-  ).toBeVisible();
+  test("keeps a long title and context readable on a narrow viewport", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 320, height: 740 });
+    await page.reload();
 
-  const dimensions = await page.evaluate(() => ({
-    documentWidth: document.documentElement.scrollWidth,
-    viewportWidth: document.documentElement.clientWidth,
-  }));
-  expect(dimensions.documentWidth).toBeLessThanOrEqual(
-    dimensions.viewportWidth,
-  );
+    const project = group(
+      page,
+      "Enterprise Platform Modernisation And Reliability Engineering Programme",
+    );
+    const title = project.locator(".experience-title");
+    const subtitle = project.locator(".experience-subtitle");
+    await expect(title).toBeVisible();
+    await expect(subtitle).toBeVisible();
+
+    /*
+     * The long title wraps inside the header instead of pushing the row
+     * past the edge of the viewport.
+     */
+    const dimensions = await page.evaluate(() => ({
+      documentWidth: document.documentElement.scrollWidth,
+      viewportWidth: document.documentElement.clientWidth,
+    }));
+    expect(dimensions.documentWidth).toBeLessThanOrEqual(
+      dimensions.viewportWidth,
+    );
+
+    const titleBox = await title.boundingBox();
+    const subtitleBox = await subtitle.boundingBox();
+    const chevronBox = await project
+      .locator(".experience-chevron")
+      .boundingBox();
+    expect(titleBox).not.toBeNull();
+    expect(subtitleBox).not.toBeNull();
+    expect(chevronBox).not.toBeNull();
+
+    // The title wraps onto a second line instead of running under the chevron.
+    expect(titleBox!.width).toBeLessThanOrEqual(chevronBox!.x + 1);
+    expect(titleBox!.height).toBeGreaterThan(24);
+    expect(subtitleBox!.y).toBeGreaterThan(titleBox!.y);
+  });
 });

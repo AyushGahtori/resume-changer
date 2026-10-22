@@ -5,8 +5,11 @@ import { useRouter } from "next/navigation";
 import {
   Award,
   Box,
+  Briefcase,
   BriefcaseBusiness,
+  ChevronDown,
   ChartNoAxesColumn,
+  FolderKanban,
   Lock,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -28,6 +31,10 @@ import {
   type LibrarySort,
   type LibraryFilters,
 } from "@/lib/data/achievement-search";
+import {
+  formatExperienceRange,
+  type ExperienceRange,
+} from "@/lib/data/experience-dates";
 import { LIBRARY_ACTIONS } from "@/lib/ui/library-actions";
 import type {
   AchievementPoint,
@@ -41,15 +48,38 @@ type Props = { library: ResumeLibrary; source: ResumeDataSource };
 type EditorState =
   { mode: "create" } | { mode: "edit"; point: AchievementPoint } | null;
 
-function dateRange(start?: string, end?: string | null) {
-  if (!start) return "";
-  const format = (value: string) => {
-    const [year, month] = value.split("-");
-    return `${month}/${year}`;
-  };
-  return `${format(start)} – ${end ? format(end) : "Present"}`;
+type GroupKind = "job" | "project";
+
+function groupKey(kind: GroupKind, id: string) {
+  return kind + "-" + id;
 }
 
+function RangeText({ range }: { range: ExperienceRange }) {
+  if (range.start && range.end) {
+    return (
+      <>
+        <time dateTime={range.start.value}>{range.start.label}</time>
+        {" – "}
+        <time dateTime={range.end.value}>{range.end.label}</time>
+      </>
+    );
+  }
+  if (range.start && range.present) {
+    return (
+      <>
+        <time dateTime={range.start.value}>{range.start.label}</time>
+        {" – Present"}
+      </>
+    );
+  }
+  if (range.start) {
+    return <time dateTime={range.start.value}>{range.start.label}</time>;
+  }
+  if (range.end) {
+    return <time dateTime={range.end.value}>{range.end.label}</time>;
+  }
+  return <>Present</>;
+}
 function PointRow({
   point,
   library,
@@ -147,56 +177,95 @@ function ExperienceGroup({
   item,
   kind,
   library,
+  collapsed,
   onTag,
   onSkill,
   onEdit,
+  onToggle,
 }: {
   item: (Job | Project) & { points: AchievementPoint[] };
-  kind: "job" | "project";
+  kind: GroupKind;
   library: ResumeLibrary;
+  collapsed: boolean;
   onTag: (tag: string) => void;
   onSkill: (skillId: string) => void;
   onEdit?: (point: AchievementPoint) => void;
+  onToggle: (key: string) => void;
 }) {
   const isJob = kind === "job";
   const job = isJob ? (item as Job) : null;
   const project = isJob ? null : (item as Project);
   const title = job?.title ?? project?.name ?? "";
   const organization = job?.company ?? project?.role;
+  const range = formatExperienceRange(
+    job ? job.startDate : project?.startDate,
+    job ? job.endDate : project?.endDate,
+  );
+  const key = groupKey(kind, item.id);
+  const panelId = "library-group-panel-" + key;
+  const titleId = "library-group-title-" + key;
+  const expanded = !collapsed;
+  const GroupIcon = isJob ? Briefcase : FolderKanban;
 
   return (
     <section
       className="experience-group"
-      aria-label={`${isJob ? "Job" : "Project"}: ${title}`}
+      aria-label={(isJob ? "Job: " : "Project: ") + title}
     >
-      <div className="experience-heading">
-        <div>
-          <p className="experience-kind">{isJob ? "JOB" : "PROJECT"}</p>
-          <h3>{title}</h3>
-          {organization && (
-            <p className="experience-subtitle">{organization}</p>
+      <h3 aria-labelledby={titleId} className="experience-heading">
+        <button
+          aria-controls={panelId}
+          aria-expanded={expanded}
+          className="experience-toggle"
+          onClick={() => onToggle(key)}
+          type="button"
+        >
+          <span
+            aria-hidden="true"
+            className={"experience-icon-tile is-" + kind}
+          >
+            <GroupIcon size={18} />
+          </span>
+          <span className="experience-heading-text">
+            <span className="experience-kind">{isJob ? "JOB" : "PROJECT"}</span>
+            <span className="experience-title" id={titleId}>
+              {title}
+            </span>
+            {organization && (
+              <span className="experience-subtitle">{organization}</span>
+            )}
+          </span>
+          <span className="experience-count">
+            {item.points.length} achievement
+            {item.points.length === 1 ? "" : "s"}
+          </span>
+          {range && (
+            <span className="experience-dates">
+              <RangeText range={range} />
+            </span>
           )}
-        </div>
-        <span className="experience-dates">
-          {job
-            ? dateRange(job.startDate, job.endDate)
-            : dateRange(project?.startDate, project?.endDate)}
-        </span>
+          <ChevronDown
+            aria-hidden="true"
+            className="experience-chevron"
+            size={16}
+          />
+        </button>
+      </h3>
+      <div className="experience-panel" hidden={!expanded} id={panelId}>
+        {item.points.map((point) => (
+          <PointRow
+            key={point.id}
+            library={library}
+            onSkill={onSkill}
+            onTag={onTag}
+            onEdit={onEdit ? () => onEdit(point) : undefined}
+            point={point}
+          />
+        ))}
       </div>
-      {item.points.map((point) => (
-        <PointRow
-          key={point.id}
-          library={library}
-          onSkill={onSkill}
-          onTag={onTag}
-          onEdit={onEdit ? () => onEdit(point) : undefined}
-          point={point}
-        />
-      ))}
     </section>
   );
 }
-
 export default function AchievementLibrary({ library, source }: Props) {
   const router = useRouter();
   const [filters, setFilters] = useState<LibraryFilters>(EMPTY_LIBRARY_FILTERS);
@@ -204,6 +273,9 @@ export default function AchievementLibrary({ library, source }: Props) {
   const [editor, setEditor] = useState<EditorState>(null);
   const [creating, setCreating] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
+  const [collapsedGroups, setCollapsedGroups] = useState<ReadonlySet<string>>(
+    () => new Set<string>(),
+  );
   const addAction = LIBRARY_ACTIONS["add-achievement"];
   const detailedEntryAction = LIBRARY_ACTIONS["detailed-entry"];
   const AddIcon = addAction.icon;
@@ -243,6 +315,15 @@ export default function AchievementLibrary({ library, source }: Props) {
     value: LibraryFilters[Key],
   ) {
     setFilters((current) => ({ ...current, [key]: value }));
+  }
+
+  function toggleGroup(key: string) {
+    setCollapsedGroups((current) => {
+      const next = new Set(current);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
   }
 
   /*
@@ -432,12 +513,14 @@ export default function AchievementLibrary({ library, source }: Props) {
               <div className="library-section-body">
                 {result.jobs.map((job) => (
                   <ExperienceGroup
+                    collapsed={collapsedGroups.has(groupKey("job", job.id))}
                     item={job}
                     key={job.id}
                     kind="job"
                     library={library}
                     onSkill={(id) => updateFilter("skillId", id)}
                     onTag={(tag) => updateFilter("tag", tag)}
+                    onToggle={toggleGroup}
                     onEdit={
                       canEdit
                         ? (point) =>
@@ -471,12 +554,16 @@ export default function AchievementLibrary({ library, source }: Props) {
               <div className="library-section-body">
                 {result.projects.map((project) => (
                   <ExperienceGroup
+                    collapsed={collapsedGroups.has(
+                      groupKey("project", project.id),
+                    )}
                     item={project}
                     key={project.id}
                     kind="project"
                     library={library}
                     onSkill={(id) => updateFilter("skillId", id)}
                     onTag={(tag) => updateFilter("tag", tag)}
+                    onToggle={toggleGroup}
                     onEdit={
                       canEdit
                         ? (point) =>
