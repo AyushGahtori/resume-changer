@@ -1,10 +1,6 @@
 import type { ReactNode } from "react";
 
-export type LibrarySectionTone =
-  | "jobs"
-  | "projects"
-  | "skills"
-  | "credentials";
+export type LibrarySectionTone = "jobs" | "projects" | "skills" | "credentials";
 
 type Props = {
   count: number;

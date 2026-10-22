@@ -581,7 +581,9 @@ export default function AchievementLibrary({ library, source }: Props) {
                 ))}
               </ul>
             ) : (
-              <p className="secondary-empty">No credentials match this search.</p>
+              <p className="secondary-empty">
+                No credentials match this search.
+              </p>
             )}
           </details>
         </div>

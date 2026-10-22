@@ -76,7 +76,9 @@ test("organises the library into Jobs, Projects, Skills, and Credentials", async
   ).toBeVisible();
 });
 
-test("states the number of records that each section holds", async ({ page }) => {
+test("states the number of records that each section holds", async ({
+  page,
+}) => {
   await page.goto("/library?source=demo");
 
   const jobs = page.getByRole("region", { name: "Jobs", exact: true });
@@ -105,7 +107,9 @@ test("drops a parent section when none of its points match", async ({
 }) => {
   await page.goto("/library?source=demo");
 
-  await page.getByLabel("Job or project").selectOption("job:job-example-cloud-labs");
+  await page
+    .getByLabel("Job or project")
+    .selectOption("job:job-example-cloud-labs");
 
   const jobs = page.getByRole("region", { name: "Jobs", exact: true });
   await expect(jobs.locator(".library-section-count")).toHaveText("1");
@@ -138,9 +142,7 @@ test("keeps the secondary sections in step with the query", async ({
     credentials.getByText("Cloud Deployment Foundations (Demo)"),
   ).toBeVisible();
   await expect(skills.locator(".library-section-count")).toHaveText("0");
-  await expect(
-    skills.getByText("No skills match this search."),
-  ).toBeVisible();
+  await expect(skills.getByText("No skills match this search.")).toBeVisible();
 
   // No point matches the query, so the experience sections are not rendered.
   await expect(
@@ -173,9 +175,7 @@ test("does not file education under one of the four categories", async ({
   );
 });
 
-test("rebuilds the sections when the data source changes", async ({
-  page,
-}) => {
+test("rebuilds the sections when the data source changes", async ({ page }) => {
   const library = JSON.parse(await readFile(sampleLibraryPath, "utf8"));
   const jobs = library.jobs.slice(0, 1);
   const keptPointIds = new Set(
