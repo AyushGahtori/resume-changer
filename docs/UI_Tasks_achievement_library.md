@@ -210,25 +210,25 @@ Before implementing any guidance in Reference Interpretation, open and inspect t
 
 The first column records printed light values. Dark values marked `estimate` are visual starting points, not measured labels. Compare the rendered UI in both themes and maintain WCAG contrast. Existing app-wide variables are the implementation source; do not add a second copy under `.library-page`.
 
-| Token | Achievement board light value | Dark starting value | Intended use |
-| --- | --- | --- | --- |
-| Canvas | `#F8FAFC` | `#151522` estimate | Main page background |
-| Sidebar | `#FAFBFD` | `#0F1220` | Persistent navigation |
-| Surface | `#FFFFFF` | `#17192D` estimate | Summary and content surfaces |
-| Surface alternate | `#F1F5F9` | `#202238` estimate | Inputs and subtle secondary regions |
-| Text primary | `#0F172A` | `#F8FAFC` estimate | Titles and core content |
-| Text secondary | `#334155` | `#C4C8D8` estimate | Supporting copy and nav |
-| Muted text | `#64748B` | `#9BA2B8` estimate | Metadata and captions |
-| Border | `#CBD5E1` | `#34374F` estimate | Card, control, and divider outlines |
-| Brand orange | `#FF7A45` | `#FF7A45` | Primary Add action and job marker |
-| Orange light | `#FFE9E0` | `#40251F` estimate | Soft action/category tint |
-| Brand violet | `#7C3AED` | `#A78BFA` | Focus, selected state, project accent |
-| Violet light | `#EFEBFF` | `#302342` estimate | Soft selection and category surfaces |
-| Success | `#10B981` | `#34D399` estimate | Enabled/confirmed only |
-| Warning | `#F59E0B` | `#FBBF24` estimate | A real warning only |
-| Error | `#EF4444` | `#F87171` estimate | Validation/failed state |
-| Info | `#3B82F6` | `#60A5FA` estimate | Neutral information |
-| Purple category | `#8B5CF6` | `#A78BFA` estimate | Project/category marker only |
+| Token             | Achievement board light value | Dark starting value | Intended use                          |
+| ----------------- | ----------------------------- | ------------------- | ------------------------------------- |
+| Canvas            | `#F8FAFC`                     | `#151522` estimate  | Main page background                  |
+| Sidebar           | `#FAFBFD`                     | `#0F1220`           | Persistent navigation                 |
+| Surface           | `#FFFFFF`                     | `#17192D` estimate  | Summary and content surfaces          |
+| Surface alternate | `#F1F5F9`                     | `#202238` estimate  | Inputs and subtle secondary regions   |
+| Text primary      | `#0F172A`                     | `#F8FAFC` estimate  | Titles and core content               |
+| Text secondary    | `#334155`                     | `#C4C8D8` estimate  | Supporting copy and nav               |
+| Muted text        | `#64748B`                     | `#9BA2B8` estimate  | Metadata and captions                 |
+| Border            | `#CBD5E1`                     | `#34374F` estimate  | Card, control, and divider outlines   |
+| Brand orange      | `#FF7A45`                     | `#FF7A45`           | Primary Add action and job marker     |
+| Orange light      | `#FFE9E0`                     | `#40251F` estimate  | Soft action/category tint             |
+| Brand violet      | `#7C3AED`                     | `#A78BFA`           | Focus, selected state, project accent |
+| Violet light      | `#EFEBFF`                     | `#302342` estimate  | Soft selection and category surfaces  |
+| Success           | `#10B981`                     | `#34D399` estimate  | Enabled/confirmed only                |
+| Warning           | `#F59E0B`                     | `#FBBF24` estimate  | A real warning only                   |
+| Error             | `#EF4444`                     | `#F87171` estimate  | Validation/failed state               |
+| Info              | `#3B82F6`                     | `#60A5FA` estimate  | Neutral information                   |
+| Purple category   | `#8B5CF6`                     | `#A78BFA` estimate  | Project/category marker only          |
 
 The type board prints Display 56/64, H1 48/56, H2 32/40, H3 24/32, H4 18/28, Body Large 16/24, Body 14/20, Body Small 12/16, Label 12/16, and Caption 11/14. The page title in the product mockup is more compact than the poster's Display sample. Preserve Georgia/Times and Arial/Helvetica; do not load the board's Playfair Display/Inter. The spacing board uses 4/8/12/16/24/32/48/64px and radius 4/8/12/16/24/full. The app's compact-card constraint takes precedence: controls use 6px radius, cards up to 8px, and small chips/pills may be fully rounded. Use only None/XS shadows for this workspace.
 

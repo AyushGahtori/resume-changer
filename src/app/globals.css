@@ -37,6 +37,33 @@
   --color-info-strong: #1d4ed8;
   --color-focus-ring: #7c3aed;
 
+  /*
+   * Home action-bar state tokens. Each variant carries an explicit
+   * default/hover/pressed/disabled surface plus a matching label color so
+   * every state keeps a text contrast of at least 4.5:1 in both themes.
+   */
+  --action-ghost-surface: #ffffff;
+  --action-ghost-surface-hover: #f1f5f9;
+  --action-ghost-surface-pressed: #e2e8f0;
+  --action-ghost-surface-disabled: #f8fafc;
+  --action-ghost-label: #0f172a;
+  --action-ghost-label-disabled: #64748b;
+  --action-violet-surface: #ede9fe;
+  --action-violet-surface-hover: #ddd0fb;
+  --action-violet-surface-pressed: #7c3aed;
+  --action-violet-surface-disabled: #ddd6fe;
+  --action-violet-label: #6d28d9;
+  --action-violet-label-pressed: #ffffff;
+  --action-violet-label-disabled: #6d28d9;
+  --action-orange-surface: #f97316;
+  --action-orange-surface-hover: #c2410c;
+  --action-orange-surface-pressed: #9a3412;
+  --action-orange-surface-disabled: #fdba74;
+  --action-orange-label: #0f172a;
+  --action-orange-label-hover: #ffffff;
+  --action-orange-label-pressed: #ffffff;
+  --action-orange-label-disabled: #0f172a;
+
   /* Compatibility aliases keep existing app and studio styles theme-aware. */
   --canvas: var(--color-canvas);
   --sidebar: var(--color-sidebar);
@@ -136,6 +163,32 @@
   --color-info: #60a5fa;
   --color-info-strong: #60a5fa;
   --color-focus-ring: #a78bfa;
+
+  /*
+   * Dark action-bar states. Dark surfaces rely on a visible border and a
+   * surface step rather than a light-mode shadow.
+   */
+  --action-ghost-surface: #211d2e;
+  --action-ghost-surface-hover: #2a2538;
+  --action-ghost-surface-pressed: #342f43;
+  --action-ghost-surface-disabled: #1a1626;
+  --action-ghost-label: #f8fafc;
+  --action-ghost-label-disabled: #a49fb4;
+  --action-violet-surface: #7c3aed;
+  --action-violet-surface-hover: #6d28d9;
+  --action-violet-surface-pressed: #5b21b6;
+  --action-violet-surface-disabled: #2a2140;
+  --action-violet-label: #ffffff;
+  --action-violet-label-pressed: #ffffff;
+  --action-violet-label-disabled: #a49fb4;
+  --action-orange-surface: #f97316;
+  --action-orange-surface-hover: #fdba74;
+  --action-orange-surface-pressed: #c2410c;
+  --action-orange-surface-disabled: #4a2a19;
+  --action-orange-label: #171421;
+  --action-orange-label-hover: #171421;
+  --action-orange-label-pressed: #ffffff;
+  --action-orange-label-disabled: #e0a578;
 
   --canvas: var(--color-canvas);
   --sidebar: var(--color-sidebar);
@@ -704,9 +757,41 @@ h1 {
 }
 
 .storage-notice {
-  margin: -16px 0 18px;
-  color: var(--danger);
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0 0 16px;
+  padding: 12px 16px;
+  border-radius: 6px;
+  background: var(--surface-soft);
+  color: var(--muted);
   font-size: 12px;
+}
+
+.storage-notice > span {
+  flex: 0 0 16px;
+  font-size: 16px;
+}
+
+.jd-form .draft-state {
+  margin-top: 12px;
+  padding: 0;
+  white-space: normal;
+}
+
+.jd-form .draft-dot {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 8px;
+}
+.jd-form .draft-state.is-saved {
+  color: var(--color-success-strong);
+}
+.jd-form .draft-state.is-error {
+  color: var(--danger);
+}
+.jd-form .draft-saving {
+  background: var(--imagination);
 }
 
 .jd-form {
@@ -1125,6 +1210,26 @@ h1 {
   flex: 0 0 auto;
 }
 
+/*
+ * The icon slot keeps its footprint in every state so swapping a glyph for
+ * the loading spinner never resizes the control.
+ */
+.home-action-icon {
+  display: inline-flex;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  align-items: center;
+  justify-content: center;
+}
+
+/* The loading spinner is 16px so it reads as a progress indicator. */
+.home-action-spinner {
+  width: 16px;
+  height: 16px;
+  animation: home-action-spin 900ms linear infinite;
+}
+
 .home-action-button:focus-visible {
   outline: 3px solid var(--color-focus-ring);
   outline-offset: 3px;
@@ -1137,76 +1242,119 @@ h1 {
 
 .home-action-button:disabled {
   cursor: not-allowed;
-  opacity: 0.58;
+  opacity: 1;
 }
 
+/*
+ * Clear draft - ghost/tertiary. A neutral outlined control that keeps the
+ * lowest visual emphasis of the three actions.
+ */
 .home-action-button--ghost {
   min-width: 132px;
   border-color: var(--color-border);
-  background: var(--color-surface);
-  color: var(--color-text-primary);
+  background: var(--action-ghost-surface);
+  color: var(--action-ghost-label);
 }
 
 .home-action-button--ghost:hover:not(:disabled) {
   border-color: var(--color-border-strong);
-  background: var(--color-surface-alt);
+  background: var(--action-ghost-surface-hover);
+  color: var(--action-ghost-label);
 }
 
 .home-action-button--ghost:active:not(:disabled) {
-  background: var(--color-surface-hover);
+  border-color: var(--color-border-strong);
+  background: var(--action-ghost-surface-pressed);
+  color: var(--action-ghost-label);
 }
 
+.home-action-button--ghost:disabled {
+  border-color: var(--color-border);
+  background: var(--action-ghost-surface-disabled);
+  color: var(--action-ghost-label-disabled);
+}
+
+/*
+ * Analyze job description - secondary AI action. Soft violet in light mode
+ * and a stronger violet in dark mode, as the reference action bar shows.
+ */
 .home-action-button--secondary {
   min-width: 228px;
   border-color: color-mix(
     in srgb,
     var(--color-violet) 20%,
-    var(--color-violet-subtle)
+    var(--action-violet-surface)
   );
-  background: var(--color-violet-subtle);
-  color: var(--color-violet-strong);
+  background: var(--action-violet-surface);
+  color: var(--action-violet-label);
 }
 
 .home-action-button--secondary:hover:not(:disabled) {
   border-color: var(--color-violet);
-  background: var(--color-violet-light);
-  color: var(--color-text-primary);
+  background: var(--action-violet-surface-hover);
+  color: var(--action-violet-label);
 }
 
 .home-action-button--secondary:active:not(:disabled) {
-  border-color: var(--color-violet);
-  background: var(--color-violet);
-  color: var(--color-text-inverse);
+  border-color: var(--action-violet-surface-pressed);
+  background: var(--action-violet-surface-pressed);
+  color: var(--action-violet-label-pressed);
 }
 
+.home-action-button--secondary:disabled {
+  border-color: color-mix(
+    in srgb,
+    var(--color-violet) 20%,
+    var(--action-violet-surface-disabled)
+  );
+  background: var(--action-violet-surface-disabled);
+  color: var(--action-violet-label-disabled);
+}
+
+/*
+ * A busy action is still the live control, so it keeps the default surface
+ * and label rather than the muted disabled treatment. The spinner and the
+ * changed label carry the state, so colour is never the only signal.
+ */
+.home-action-button[aria-busy="true"]:disabled {
+  border-color: var(--color-violet);
+  background: var(--action-violet-surface);
+  color: var(--action-violet-label);
+}
+
+/*
+ * Save draft - primary CTA. Orange by default, deepening on hover and
+ * press, and fading to a pale orange when it cannot run.
+ */
 .home-action-button--primary {
   min-width: 136px;
-  border-color: var(--color-orange);
-  background: var(--color-orange);
-  color: var(--color-text-on-orange);
+  border-color: var(--action-orange-surface);
+  background: var(--action-orange-surface);
+  color: var(--action-orange-label);
 }
 
 .home-action-button--primary:hover:not(:disabled) {
-  border-color: var(--color-orange-strong);
-  background: var(--color-orange-strong);
-  color: var(--color-text-on-orange-hover);
+  border-color: var(--action-orange-surface-hover);
+  background: var(--action-orange-surface-hover);
+  color: var(--action-orange-label-hover);
 }
 
 .home-action-button--primary:active:not(:disabled) {
-  border-color: var(--color-orange-strong);
-  background: var(--color-orange-strong);
-  color: var(--color-text-on-orange-hover);
+  border-color: var(--action-orange-surface-pressed);
+  background: var(--action-orange-surface-pressed);
+  color: var(--action-orange-label-pressed);
 }
 
 .home-action-button--primary:disabled {
-  border-color: var(--color-orange-light);
-  background: var(--color-orange-light);
-  color: var(--color-text-on-orange);
-  opacity: 1;
+  border-color: var(--action-orange-surface-disabled);
+  background: var(--action-orange-surface-disabled);
+  color: var(--action-orange-label-disabled);
 }
 
-.home-action-spinner {
-  animation: home-action-spin 900ms linear infinite;
+.home-action-button--primary[aria-busy="true"]:disabled {
+  border-color: var(--action-orange-surface);
+  background: var(--action-orange-surface);
+  color: var(--action-orange-label);
 }
 
 @keyframes home-action-spin {
@@ -1342,6 +1490,161 @@ a:focus-visible {
 
 .analysis-section li + li {
   margin-top: 3px;
+}
+
+/* Task 21: current-response analysis, with natural page scrolling. */
+.analysis-panel {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.analysis-panel .jd-analysis-heading {
+  flex-wrap: wrap;
+}
+.analysis-panel .jd-analysis-heading > div {
+  flex: 1 1 180px;
+}
+.analysis-panel .jd-analysis-heading button {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+.jd-page .analysis-panel .analysis-status {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 16px;
+}
+.analysis-loading {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding-top: 16px;
+  min-height: 160px;
+}
+.analysis-spinner {
+  display: inline-block;
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--line);
+  border-top-color: var(--imagination);
+  border-radius: 50%;
+  animation: analysis-spin 800ms linear infinite;
+}
+@keyframes analysis-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.analysis-skeleton {
+  display: grid;
+  flex: 1;
+  gap: 12px;
+}
+.analysis-skeleton span {
+  height: 16px;
+  border-radius: 4px;
+  background: var(--surface-soft);
+}
+.analysis-skeleton span:nth-child(2) {
+  width: 80%;
+}
+.analysis-skeleton span:nth-child(4) {
+  width: 65%;
+}
+.analysis-error-notice {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px solid var(--danger);
+  border-radius: 6px;
+  background: var(--danger-soft);
+}
+.analysis-notice-icon {
+  display: inline-flex;
+  flex: 0 0 20px;
+  width: 20px;
+  height: 20px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  color: var(--danger);
+  font-weight: 700;
+}
+.analysis-error-notice p {
+  margin: 0 0 8px;
+  color: var(--danger);
+  font-size: 14px;
+  line-height: 20px;
+}
+.analysis-error-notice p + p {
+  color: var(--muted);
+}
+.jd-page .analysis-panel button {
+  min-height: 44px;
+}
+.analysis-role dt {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 16px;
+}
+.analysis-role dd {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+}
+.jd-page .analysis-panel .analysis-section h3 {
+  margin-bottom: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 24px;
+}
+.jd-page .analysis-panel .analysis-section li {
+  margin-top: 8px;
+  font-size: 14px;
+  line-height: 20px;
+}
+.jd-page .analysis-panel .analysis-empty-category {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 20px;
+}
+.analysis-inferred {
+  padding: 12px;
+  border-radius: 6px;
+  background: var(--imagination-soft);
+}
+.jd-page .analysis-panel .analysis-cache-notice {
+  margin: 12px 0 0;
+  padding: 12px;
+  border-left: 2px solid var(--accent);
+  color: var(--muted);
+  background: var(--surface-soft);
+}
+@media (prefers-reduced-motion: reduce) {
+  .analysis-spinner {
+    animation: none;
+  }
+}
+@media (min-width: 1101px) and (min-height: 640px) {
+  .jd-workspace-frame:has(.analysis-panel) {
+    height: auto;
+    min-height: 100dvh;
+    overflow: visible;
+  }
+  .jd-workspace-frame:has(.analysis-panel) .main-column {
+    height: auto;
+    min-height: 100dvh;
+  }
+  .jd-workspace-frame:has(.analysis-panel) .jd-form {
+    flex: none;
+  }
+  .jd-workspace-frame:has(.analysis-panel) .jd-form textarea {
+    min-height: 240px;
+    resize: vertical;
+  }
 }
 
 .jd-page {

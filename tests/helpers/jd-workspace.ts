@@ -26,5 +26,5 @@ export async function fillJobDraft(page: Page, draft: JobDraft) {
   await page.getByLabel("Role title").fill(draft.roleTitle);
   if (draft.jobUrl) await page.getByLabel("Job link").fill(draft.jobUrl);
   await jobDescriptionField(page).fill(draft.jobDescription);
-  await expect(page.getByRole("status")).toContainText("Saved locally");
+  await expect(page.getByRole("status")).toContainText("Saved on this device");
 }
