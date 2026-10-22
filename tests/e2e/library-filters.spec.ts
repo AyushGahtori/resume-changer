@@ -1,3 +1,4 @@
+[error] No parser could be inferred for file "C:\Users\Ayush\.codex\worktrees\achievement-pr-audit\re_changer\test-results\remote-format-pr80-0.txt".
 import { expect, test } from "@playwright/test";
 
 /**
@@ -162,3 +163,4 @@ test("keeps the data source and the theme when the filters are reset", async ({
   await expect(page).toHaveURL(/source=demo/);
   await expect(page.getByText("Fictional demo data")).toBeVisible();
 });
+
