@@ -1,4 +1,3 @@
-[error] No parser could be inferred for file "C:\Users\Ayush\.codex\worktrees\achievement-pr-audit\re_changer\test-results\remote-format-pr86-1.txt".
 import { describe, expect, it } from "vitest";
 import demoLibrary from "../../../examples/sample-resume-library.json";
 import {
@@ -30,9 +29,14 @@ describe("library summary counts", () => {
   it("counts the achievement points of jobs and projects together", () => {
     const counts = getLibraryMetricCounts({
       ...library,
-      jobs: [{ ...library.jobs[0], points: library.jobs[0].points.slice(0, 2) }],
+      jobs: [
+        { ...library.jobs[0], points: library.jobs[0].points.slice(0, 2) },
+      ],
       projects: [
-        { ...library.projects[0], points: library.projects[0].points.slice(0, 1) },
+        {
+          ...library.projects[0],
+          points: library.projects[0].points.slice(0, 1),
+        },
       ],
     });
 
@@ -87,4 +91,3 @@ describe("metric count formatting", () => {
     expect(formatMetricCount(1001)).toBe("1,001");
   });
 });
-
