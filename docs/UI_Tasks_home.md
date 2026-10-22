@@ -10,12 +10,13 @@ This is a visual and interaction plan, not authorization to change backend behav
 
 ## Reference Interpretation
 
-- **Palette and use:** Primary violet `#7C3AED` is for AI actions, active emphasis, focus, and analysis accents; light violet `#A78BFA` is secondary emphasis; violet subtle `#EDE9FE` is a quiet selected/pro-tip surface. Orange `#F97316` is the main Save action and required/attention accent; light orange `#FDBA74` is a softer accent; orange subtle `#FFF7ED` is a light badge surface. Use text primary `#0F172A`, secondary `#475569`, border `#E2E8F0`, surface `#F8FAFC`, alternate surface `#F1F5F9`, inverse `#FFFFFF`, success `#10B981`, warning `#F59E0B`, error `#EF4444`, and info `#3B82F6`. Gradients `#7C3AED → #A855F7` and `#F97316 → #FDBA74` are accents for branded/AI controls only, not page backgrounds or decorative section fills.
+- **Palette and use:** Primary violet `#7C3AED` is for AI actions, active emphasis, focus, and analysis accents; light violet `#A78BFA` is secondary emphasis; violet subtle `#EFEBFF` is a quiet selected/pro-tip surface. Orange `#FF7A45` is the main Save action and required/attention accent; light orange `#FDBA74` is a softer accent; orange subtle `#FFE9E0` is a light badge surface. Use text primary `#0F172A`, secondary `#334155`, border `#CBD5E1`, surface `#F8FAFC`, alternate surface `#F1F5F9`, inverse `#FFFFFF`, success `#10B981`, warning `#F59E0B`, error `#EF4444`, and info `#3B82F6`. Gradients `#7C3AED → #A855F7` and `#FF7A45 → #FDBA74` are accents for branded/AI controls only, not page backgrounds or decorative section fills.
+  **Shared-token reconciliation (Achievement Library Task 02):** these values are the single shared token source in `src/app/globals.css`, reconciled with [`UI_Tasks_achievement_library.md`](UI_Tasks_achievement_library.md) so the home page and the library render the same palette. Orange is used as a fill with the dark label `#0F172A`; orange _text_ uses the darker orange-strong `#B23C0C` so small labels stay readable, so the reference's white-on-orange text is not used.
   **Required visual reference:** Before applying these tokens, open and inspect the palette crop. This image is mandatory reference material.
 
 ![Required palette reference from UI Kit](ui-images/home/ui-kit-palette.png)
 
-- **Dark palette behavior:** Use deep ink/plum page and sidebar surfaces, a slightly lifted card surface, a clear one-pixel border, pale primary text, muted lavender-gray secondary text, and the same semantic violet/orange/status hues adjusted only as needed for contrast. Do not simply invert light colors, use pure black, or put light-mode shadows on dark cards. Active navigation is a tinted violet surface; primary Save remains orange; AI action remains violet.
+- **Dark palette behavior:** Use deep ink page and sidebar surfaces, a slightly lifted card surface, a clear one-pixel border, pale primary text, muted gray secondary text, and the same semantic violet/orange/status hues adjusted only as needed for contrast. Do not simply invert light colors, use pure black, or put light-mode shadows on dark cards. Active navigation is a tinted violet surface; primary Save remains orange; AI action remains violet.
   **Required visual reference:** Open and inspect the dark-mode sidebar and action-bar crops before implementing dark surfaces. The screenshot colors are visual references; use written/project contrast rules where necessary.
 
 ![Required dark-theme sidebar reference](ui-images/home/sidebar-light-dark.png)
@@ -171,25 +172,29 @@ Before implementing any guidance in Reference Interpretation, open and inspect t
 
 The light-theme hex values printed on the UI-kit board are the source tokens. The dark-mode board is visual-only and has no printed hex labels; the dark values below are explicit starting estimates to make implementation/test review reproducible, and must be contrast-checked against the rendered controls before acceptance.
 
-| Token             | Light reference    | Dark starting value | Intended use                        |
-| ----------------- | ------------------ | ------------------- | ----------------------------------- |
-| Canvas            | `#F8FAFC`          | `#171421`           | Main workspace background           |
-| Sidebar           | Cool white surface | `#14111F`           | Persistent navigation surface       |
-| Surface           | `#FFFFFF`          | `#211D2E`           | Form and preview                    |
-| Surface alternate | `#F1F5F9`          | `#2A2538`           | Inputs, hover and secondary regions |
-| Text primary      | `#0F172A`          | `#F8FAFC`           | Titles and entered values           |
-| Text secondary    | `#475569`          | `#B7B3C7`           | Supporting copy and navigation      |
-| Border            | `#E2E8F0`          | `#3A3548`           | Input/card outlines and dividers    |
-| Violet primary    | `#7C3AED`          | `#7C3AED`           | AI button and selected actions      |
-| Violet light      | `#A78BFA`          | `#A78BFA`           | Focus/highlight/icon                |
-| Violet subtle     | `#EDE9FE`          | `#322548`           | Selected and tip surfaces           |
-| Orange primary    | `#F97316`          | `#F97316`           | Save action and required markers    |
-| Orange light      | `#FDBA74`          | `#FDBA74`           | Soft orange accent                  |
-| Orange subtle     | `#FFF7ED`          | `#442719`           | Beta/required badge backgrounds     |
-| Success           | `#10B981`          | `#34D399`           | Saved/confirmed state               |
-| Warning           | `#F59E0B`          | `#FBBF24`           | Attention state                     |
-| Error             | `#EF4444`          | `#F87171`           | Validation/failure state            |
-| Info              | `#3B82F6`          | `#60A5FA`           | Neutral information                 |
+**Reconciled with the Achievement Library board (Task 02).** The home board and the Achievement Library board print different orange, violet-soft, text-secondary, and border values. The values below are now the single shared token source in `src/app/globals.css` for both plans: the Achievement Library board's printed values won where the two boards disagreed, and the dark column carries the matching dark equivalents. See [`docs/ui-audit/library-task-02/README.md`](../ui-audit/library-task-02/README.md) for the printed-versus-estimated breakdown.
+
+| Token             | Light reference | Dark starting value | Intended use                        |
+| ----------------- | --------------- | ------------------- | ----------------------------------- |
+| Canvas            | `#F8FAFC`       | `#151522`           | Main workspace background           |
+| Sidebar           | `#FAFBFD`       | `#0F1220`           | Persistent navigation surface       |
+| Surface           | `#FFFFFF`       | `#17192D`           | Form and preview                    |
+| Surface alternate | `#F1F5F9`       | `#202238`           | Inputs, hover and secondary regions |
+| Text primary      | `#0F172A`       | `#F8FAFC`           | Titles and entered values           |
+| Text secondary    | `#334155`       | `#C4C8D8`           | Supporting copy and navigation      |
+| Border            | `#CBD5E1`       | `#34374F`           | Input/card outlines and dividers    |
+| Violet primary    | `#7C3AED`       | `#7C3AED`           | AI button and selected actions      |
+| Violet light      | `#A78BFA`       | `#A78BFA`           | Focus/highlight/icon                |
+| Violet subtle     | `#EFEBFF`       | `#302342`           | Selected and tip surfaces           |
+| Orange primary    | `#FF7A45`       | `#FF7A45`           | Save action and required markers    |
+| Orange light      | `#FDBA74`       | `#FDBA74`           | Soft orange accent                  |
+| Orange subtle     | `#FFE9E0`       | `#40251F`           | Beta/required badge backgrounds     |
+| Success           | `#10B981`       | `#34D399`           | Saved/confirmed state               |
+| Warning           | `#F59E0B`       | `#FBBF24`           | Attention state                     |
+| Error             | `#EF4444`       | `#F87171`           | Validation/failure state            |
+| Info              | `#3B82F6`       | `#60A5FA`           | Neutral information                 |
+
+The orange fill carries the dark label `#0F172A` (`#151522` in dark mode) because white on `#FF7A45` is only 2.6:1. Small orange text uses the darker orange-strong `#B23C0C` (light) and `#FDBA74` (dark) so a 9-12px label still clears 4.5:1.
 
 The board's full type scale is Display 56/64 bold, H1 40/48 bold, H2 32/40 semibold, H3 24/32 semibold, H4 20/28 medium, Body Large 16/24 regular, Body 14/20 regular, Caption 12/16 regular, and Small 11/14 regular. Preserve the app's existing font families and apply the H1 scale to this page rather than the 56px poster title. The spacing scale is 4/8/12/16/24/32/48/64px; radius examples are 0/6/8/12/16/999px; the shadow board shows None/XS/Sm/Md/Lg/XL, with home cards limited to XS/Sm. Use orange for the primary Save action and required markers, violet for AI action/focus/selection, neutral surfaces for form fields, and semantic status colors only when the associated status is real.
 
@@ -250,7 +255,7 @@ Reference file: docs/ui-images/home/ui-kit-palette.png
 **Files:** `src/app/globals.css`; optionally `tests/unit/ui/design-tokens.test.ts` if tokens use a testable TypeScript module instead of CSS custom properties.
 
 - [ ] Replace scattered home colors with named light/dark custom properties for canvas, sidebar, surface, alternate surface, primary/secondary/quiet text, border, violet, violet-soft, orange, orange-soft, success, warning, error, info, and focus ring.
-- [ ] Match the reference light palette where it remains legible with the existing fonts: violet `#7C3AED`, light violet `#A78BFA`, subtle violet `#EDE9FE`, orange `#F97316`, light orange `#FDBA74`, subtle orange `#FFF7ED`, text `#0F172A`, secondary `#475569`, border `#E2E8F0`, surface `#F8FAFC`, alternate `#F1F5F9`, success `#10B981`, warning `#F59E0B`, error `#EF4444`, info `#3B82F6`.
+- [ ] Match the reference light palette where it remains legible with the existing fonts: violet `#7C3AED`, light violet `#A78BFA`, subtle violet `#EFEBFF`, orange `#FF7A45`, light orange `#FDBA74`, subtle orange `#FFE9E0`, text `#0F172A`, secondary `#334155`, border `#CBD5E1`, surface `#F8FAFC`, alternate `#F1F5F9`, success `#10B981`, warning `#F59E0B`, error `#EF4444`, info `#3B82F6`. Reconciled with the Achievement Library board in Task 02 of [`UI_Tasks_achievement_library.md`](UI_Tasks_achievement_library.md); the shared token source is `src/app/globals.css`.
 - [ ] Choose dark equivalents that preserve contrast and the board's deep ink/violet atmosphere; keep orange an accent, not the page background. Use the existing theme attribute so other pages retain theme behavior.
 - [ ] Keep the broad background quiet and mostly flat. Gradients may accent relevant AI/brand actions; do not add decorative orbs, bokeh, or a full-page gradient.
 
@@ -298,7 +303,7 @@ Reference files: docs/ui-images/home/ui-kit-shadow-scale.png, docs/ui-images/hom
 
 **Acceptance:** Surface hierarchy and spacing are consistent without nested floating cards or heavy shadows.
 
-**Visual specification:** Use an 8px base rhythm and the explicit 4/8/12/16/24/32/48/64px steps. Main form and preview surfaces use white/cool-neutral fill, thin `#E2E8F0` border, up to 8px corner radius, and only an XS/Sm shadow. Form interior uses 24px desktop padding, 16px tablet padding, and 12-16px mobile padding. Inputs/buttons use 6px radius; badges and chips may be fully rounded; circular theme/status icon controls remain circular. Maintain at least 16px between the form and preview and 24px before a new major page section.
+**Visual specification:** Use an 8px base rhythm and the explicit 4/8/12/16/24/32/48/64px steps. Main form and preview surfaces use white/cool-neutral fill, thin `#CBD5E1` border, up to 8px corner radius, and only an XS/Sm shadow. Form interior uses 24px desktop padding, 16px tablet padding, and 12-16px mobile padding. Inputs/buttons use 6px radius; badges and chips may be fully rounded; circular theme/status icon controls remain circular. Maintain at least 16px between the form and preview and 24px before a new major page section.
 
 ### Task 05: Standardize Button And Icon Conventions
 
@@ -459,7 +464,7 @@ Reference file: docs/ui-images/home/role-details-full-form-themes.png
 
 **Acceptance:** Role/JD read as one workflow with clear optional/required distinctions.
 
-**Visual specification:** This is the main light card in the content column: white/cool-white fill, 1px `#E2E8F0` border, up to 8px radius, no nested card, and 24px inner padding on desktop. Header row has `Role details` at 18-20px/28px semibold, `Target position` directly below at 13-14px/20px muted, and a right-aligned `LINK OPTIONAL` badge with 10-11px uppercase text, 1px neutral outline, white/transparent fill, and 4-6px radius. Separate the role fields and JD section with a 1px divider and 20-24px vertical spacing. In dark mode preserve this anatomy with a lifted surface and visible border.
+**Visual specification:** This is the main light card in the content column: white/cool-white fill, 1px `#CBD5E1` border, up to 8px radius, no nested card, and 24px inner padding on desktop. Header row has `Role details` at 18-20px/28px semibold, `Target position` directly below at 13-14px/20px muted, and a right-aligned `LINK OPTIONAL` badge with 10-11px uppercase text, 1px neutral outline, white/transparent fill, and 4-6px radius. Separate the role fields and JD section with a 1px divider and 20-24px vertical spacing. In dark mode preserve this anatomy with a lifted surface and visible border.
 
 ### Task 13: Restyle Company, Role Title, And Job-Link Inputs
 
@@ -481,7 +486,7 @@ Reference files: docs/ui-images/home/role-details-anatomy-and-field-behavior.png
 
 **Acceptance:** Inputs preserve values and validation while matching reference hierarchy at every viewport.
 
-**Visual specification:** Desktop row contains three equal-width fields with 12-16px gaps. Each field label sits 6-8px above a 44px input. Company placeholder is `Company name`, role placeholder `e.g. Backend Engineer` (or keep the existing placeholder if that is the established product copy), and link placeholder `https://`. Use an existing company/building icon, briefcase icon, and chain-link icon at 16-18px, slate-colored and inset 12px from the left; keep text start aligned across fields when icons are present. Input text is 14px/20px, placeholder 14px/20px secondary, 1px `#E2E8F0` border, white surface, and 6px radius. Focus is a violet 2px outer ring; invalid link is red border plus a 12px error line below; disabled is `#F1F5F9` with readable muted text. Do not insert the reference's Google logo or Google value.
+**Visual specification:** Desktop row contains three equal-width fields with 12-16px gaps. Each field label sits 6-8px above a 44px input. Company placeholder is `Company name`, role placeholder `e.g. Backend Engineer` (or keep the existing placeholder if that is the established product copy), and link placeholder `https://`. Use an existing company/building icon, briefcase icon, and chain-link icon at 16-18px, slate-colored and inset 12px from the left; keep text start aligned across fields when icons are present. Input text is 14px/20px, placeholder 14px/20px secondary, 1px `#CBD5E1` border, white surface, and 6px radius. Focus is a violet 2px outer ring; invalid link is red border plus a 12px error line below; disabled is `#F1F5F9` with readable muted text. Do not insert the reference's Google logo or Google value.
 
 ### Task 14: Restyle Required JD Label And Helper Copy
 

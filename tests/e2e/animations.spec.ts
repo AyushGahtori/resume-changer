@@ -26,12 +26,15 @@ test("settles while an animation that never finishes is on screen", async ({
   // The button shows a spinner while the analysis runs. The spinner rotates
   // forever, so waiting for it to finish would wait forever.
   await expect(
-    page.getByRole("button", { name: "Analyzing..." }),
+    page
+      .getByRole("form", { name: "Role details" })
+      .getByRole("button", { name: "Analyzing..." }),
   ).toBeVisible();
   await expect(
     page
+      .getByRole("form", { name: "Role details" })
       .getByRole("button", { name: "Analyzing..." })
-      .locator("svg.home-action-spinner"),
+      .locator(".home-action-spinner"),
   ).toBeVisible();
 
   await waitForAnimationsToSettle(page.locator(".app-frame"));
