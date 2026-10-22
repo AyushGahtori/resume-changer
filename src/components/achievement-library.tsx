@@ -6,10 +6,15 @@ import { useMemo, useState } from "react";
 import AchievementPointEditor from "@/components/achievement-point-editor";
 import AchievementImagination from "@/components/achievement-imagination";
 import {
+  DEFAULT_LIBRARY_SORT,
   EMPTY_LIBRARY_FILTERS,
+  LIBRARY_SORT_OPTIONS,
   filterAchievementLibrary,
+  formatLibraryResultCount,
   getLibraryFilterOptions,
+  sortFilteredLibrary,
   type LibraryFilters,
+  type LibrarySort,
 } from "@/lib/data/achievement-search";
 import type {
   AchievementPoint,
@@ -171,12 +176,17 @@ function ExperienceGroup({
 export default function AchievementLibrary({ library, source }: Props) {
   const router = useRouter();
   const [filters, setFilters] = useState<LibraryFilters>(EMPTY_LIBRARY_FILTERS);
+  const [sort, setSort] = useState<LibrarySort>(DEFAULT_LIBRARY_SORT);
   const [editor, setEditor] = useState<EditorState>(null);
   const [creating, setCreating] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
-  const result = useMemo(
+  const filtered = useMemo(
     () => filterAchievementLibrary(library, filters),
     [filters, library],
+  );
+  const result = useMemo(
+    () => sortFilteredLibrary(filtered, sort),
+    [filtered, sort],
   );
   const options = useMemo(() => getLibraryFilterOptions(library), [library]);
   const hasFilters = Object.entries(filters).some(([key, value]) =>
@@ -327,102 +337,116 @@ export default function AchievementLibrary({ library, source }: Props) {
             value={filters.query}
           />
         </label>
-        <div className="library-filter-grid">
-          <label>
-            <span>Job or project</span>
-            <select
-              onChange={(event) =>
-                updateFilter("experienceId", event.target.value)
-              }
-              value={filters.experienceId}
-            >
-              <option value="">All experience</option>
-              {library.jobs.map((job) => (
-                <option key={job.id} value={`job:${job.id}`}>
-                  {job.title} · {job.company}
-                </option>
-              ))}
-              {library.projects.map((project) => (
-                <option key={project.id} value={`project:${project.id}`}>
-                  {project.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span>Point source</span>
-            <select
-              onChange={(event) =>
-                updateFilter("sourceType", event.target.value)
-              }
-              value={filters.sourceType}
-            >
-              <option value="">All sources</option>
-              {[
-                ...new Set(
-                  [...library.jobs, ...library.projects].flatMap((item) =>
-                    item.points.map((point) => point.source.type),
-                  ),
-                ),
-              ]
-                .sort()
-                .map((type) => (
-                  <option key={type} value={type}>
-                    {type}
+        <div className="library-filter-row">
+          <div className="library-filter-grid">
+            <label>
+              <span>Job or project</span>
+              <select
+                onChange={(event) =>
+                  updateFilter("experienceId", event.target.value)
+                }
+                value={filters.experienceId}
+              >
+                <option value="">All experience</option>
+                {library.jobs.map((job) => (
+                  <option key={job.id} value={`job:${job.id}`}>
+                    {job.title} · {job.company}
                   </option>
                 ))}
-            </select>
-          </label>
-          <label>
-            <span>Point status</span>
+                {library.projects.map((project) => (
+                  <option key={project.id} value={`project:${project.id}`}>
+                    {project.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>Point source</span>
+              <select
+                onChange={(event) =>
+                  updateFilter("sourceType", event.target.value)
+                }
+                value={filters.sourceType}
+              >
+                <option value="">All sources</option>
+                {[
+                  ...new Set(
+                    [...library.jobs, ...library.projects].flatMap((item) =>
+                      item.points.map((point) => point.source.type),
+                    ),
+                  ),
+                ]
+                  .sort()
+                  .map((type) => (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
+                  ))}
+              </select>
+            </label>
+            <label>
+              <span>Point status</span>
+              <select
+                onChange={(event) =>
+                  updateFilter(
+                    "status",
+                    event.target.value as LibraryFilters["status"],
+                  )
+                }
+                value={filters.status}
+              >
+                <option value="all">All statuses</option>
+                <option value="enabled">Enabled</option>
+                <option value="disabled">Disabled</option>
+              </select>
+            </label>
+            <label>
+              <span>Linked skill</span>
+              <select
+                onChange={(event) =>
+                  updateFilter("skillId", event.target.value)
+                }
+                value={filters.skillId}
+              >
+                <option value="">All skills</option>
+                {options.skills.map((skill) => (
+                  <option key={skill.id} value={skill.id}>
+                    {skill.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>Tag</span>
+              <select
+                onChange={(event) => updateFilter("tag", event.target.value)}
+                value={filters.tag}
+              >
+                <option value="">All tags</option>
+                {options.tags.map((tag) => (
+                  <option key={tag} value={tag}>
+                    {tag}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <label className="library-sort">
+            <span>Sort</span>
             <select
-              onChange={(event) =>
-                updateFilter(
-                  "status",
-                  event.target.value as LibraryFilters["status"],
-                )
-              }
-              value={filters.status}
+              aria-label="Sort"
+              onChange={(event) => setSort(event.target.value as LibrarySort)}
+              value={sort}
             >
-              <option value="all">All statuses</option>
-              <option value="enabled">Enabled</option>
-              <option value="disabled">Disabled</option>
-            </select>
-          </label>
-          <label>
-            <span>Linked skill</span>
-            <select
-              onChange={(event) => updateFilter("skillId", event.target.value)}
-              value={filters.skillId}
-            >
-              <option value="">All skills</option>
-              {options.skills.map((skill) => (
-                <option key={skill.id} value={skill.id}>
-                  {skill.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span>Tag</span>
-            <select
-              onChange={(event) => updateFilter("tag", event.target.value)}
-              value={filters.tag}
-            >
-              <option value="">All tags</option>
-              {options.tags.map((tag) => (
-                <option key={tag} value={tag}>
-                  {tag}
+              {LIBRARY_SORT_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
                 </option>
               ))}
             </select>
           </label>
         </div>
-        <div className="library-filter-summary" aria-live="polite">
-          <span>
-            {result.visiblePointCount} of {result.totalPointCount} achievement
-            points
-          </span>
+        <div className="library-filter-summary">
           {hasFilters && (
             <button
               className="text-action"
@@ -432,6 +456,12 @@ export default function AchievementLibrary({ library, source }: Props) {
               Reset filters
             </button>
           )}
+          <span className="library-result-count" aria-live="polite">
+            {formatLibraryResultCount(
+              result.visiblePointCount,
+              result.totalPointCount,
+            )}
+          </span>
         </div>
       </section>
 

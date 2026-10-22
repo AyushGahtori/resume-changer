@@ -2054,22 +2054,81 @@ a:focus-visible {
 .library-filter-grid select:focus {
   border-color: var(--focus);
 }
-.library-filter-grid {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+/*
+ * The filter row holds the category dropdowns and the sort control. The
+ * sort control sits at the right of the row on desktop and drops onto its
+ * own row on narrow screens.
+ */
+.library-filter-row {
+  display: flex;
+  align-items: flex-end;
   gap: 12px;
   margin-top: 12px;
 }
 
+.library-filter-grid {
+  display: grid;
+  flex: 1 1 auto;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  min-width: 0;
+}
+
+/*
+ * The result count sits under the filters, aligned with the filter row
+ * above it, and the reset action sits at the right of the same row.
+ */
 .library-filter-summary {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  flex-wrap: wrap;
+  gap: 8px 12px;
   min-height: 30px;
   margin-top: 6px;
   color: var(--muted);
   font-size: 11px;
+}
+
+.library-result-count {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.library-sort {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+}
+
+.library-sort > span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.library-sort select {
+  height: 38px;
+  min-width: 0;
+  padding: 0 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: 5px;
+  outline: none;
+  background: var(--surface-soft);
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.library-sort select:focus {
+  border-color: var(--focus);
+}
+
+.library-sort select:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
 }
 
 .text-action,
@@ -2859,7 +2918,11 @@ a:focus-visible {
     justify-content: flex-start;
     gap: 12px 21px;
   }
+  .library-filter-row {
+    flex-wrap: wrap;
+  }
   .library-filter-grid {
+    flex: 1 1 100%;
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .library-secondary {
@@ -2911,8 +2974,15 @@ a:focus-visible {
     padding-right: 13px;
     padding-left: 13px;
   }
+  .library-sort {
+    margin-left: 0;
+  }
   .library-filter-summary {
     align-items: flex-start;
+    flex-direction: column;
+  }
+  .library-result-count {
+    margin-left: 0;
   }
   .metric-fields {
     grid-template-columns: minmax(0, 1fr);
