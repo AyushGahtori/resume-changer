@@ -45,6 +45,24 @@ export function ATSAnalysisPreview(props: AnalysisPanelProps) {
       ) : (
         <JobAnalysisPanel {...props} embedded />
       )}
+      <section className="ats-tip" aria-labelledby="ats-tip-title">
+        <svg
+          className="ats-tip-icon"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.7"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M9 18h6m-5 3h4M8 14a6 6 0 1 1 8 0c-1.2 1-1 2-1 4H9c0-2 .2-3-1-4Z" />
+        </svg>
+        <div>
+          <h3 id="ats-tip-title">Pro tip</h3>
+          <p>Review the extracted requirements before tailoring your resume.</p>
+        </div>
+      </section>
     </aside>
   );
 }
