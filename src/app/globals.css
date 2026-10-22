@@ -3484,8 +3484,19 @@ a:focus-visible {
   margin-bottom: 20px;
 }
 
+/*
+ * The page header states the product title in the serif display size, and the
+ * step label above it stays a compact orange eyebrow. The header is a working
+ * context block, not a hero, so it keeps a tight bottom margin and the work
+ * below it starts inside the first viewport.
+ */
 .generation-heading h1 {
-  font-size: 38px;
+  font-size: var(--type-page-title-size);
+  line-height: var(--type-page-title-line-height);
+}
+
+.generation-page .eyebrow {
+  letter-spacing: 0.08em;
 }
 
 .generation-draft {
@@ -4448,7 +4459,8 @@ a:focus-visible {
   }
 
   .generation-heading h1 {
-    font-size: 34px;
+    font-size: 32px;
+    line-height: 40px;
   }
 
   .generation-draft {
