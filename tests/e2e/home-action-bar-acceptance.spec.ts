@@ -81,7 +81,7 @@ for (const theme of ["light", "dark"]) {
       await expect(save.locator("svg")).toHaveAttribute("aria-hidden", "true");
       await expect(analyze).toHaveCSS(
         "background-color",
-        theme === "light" ? "rgb(237, 233, 254)" : "rgb(124, 58, 237)",
+        theme === "light" ? "rgb(239, 235, 255)" : "rgb(124, 58, 237)",
       );
       await expect(save).toHaveCSS("background-color", "rgb(249, 115, 22)");
       await capture(page, `${theme}-${width}-idle`);
