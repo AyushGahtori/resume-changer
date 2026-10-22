@@ -1,4 +1,5 @@
 import { Briefcase, Check, CircleSlash, Folder } from "lucide-react";
+import PointMetrics from "@/components/library/point-metrics";
 import type { AchievementPoint, Skill } from "@/lib/schemas/resume-data";
 
 type Props = {
@@ -29,16 +30,6 @@ const CATEGORY_ICON = {
   job: Briefcase,
   project: Folder,
 } as const;
-
-/**
- * A percent sign belongs to the number, every other unit stands apart from
- * it.
- */
-function formatMetricValue(value: string, unit?: string) {
-  const trimmed = unit?.trim();
-  if (!trimmed) return value;
-  return trimmed === "%" ? `${value}${trimmed}` : `${value} ${trimmed}`;
-}
 
 /**
  * One achievement, as a single card.
@@ -98,20 +89,7 @@ export default function AchievementCard({
       </header>
 
       {point.metrics.length > 0 ? (
-        <ul className="point-metrics" aria-label="Achievement metrics">
-          {point.metrics.map((metric) => (
-            <li key={metric.id}>
-              <span className="point-metric-label">{metric.label}</span>
-              <span className="point-metric-value">
-                {formatMetricValue(metric.value, metric.unit)}
-              </span>
-              <span className="point-metric-note">{metric.evidence}</span>
-              {metric.context ? (
-                <span className="point-metric-note">{metric.context}</span>
-              ) : null}
-            </li>
-          ))}
-        </ul>
+        <PointMetrics metrics={point.metrics} />
       ) : null}
 
       {point.tags.length > 0 || linkedSkills.length > 0 ? (

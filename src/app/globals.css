@@ -162,6 +162,9 @@
   --type-metadata-line-height: 16px;
   --type-metric-value-size: 26px;
   --type-metric-value-line-height: 32px;
+  /* Board metric value range for quantified achievement outcomes. */
+  --type-card-metric-value-size: 20px;
+  --type-card-metric-value-line-height: 24px;
   --space-4: 4px;
   --space-8: 8px;
   --space-12: 12px;
@@ -3427,41 +3430,88 @@ a:focus-visible {
   color: var(--ink);
   font-weight: 600;
 }
+/*
+ * Keep each quantified outcome, its value and its supporting evidence together.
+ * The grid adds no nested card surface and never treats a positive-looking
+ * number as a success signal.
+ */
 .point-metrics {
-  display: flex;
-  flex-wrap: wrap;
-  margin: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-12);
+  margin: var(--space-12) 0 0;
   padding: 0;
-  border-top: var(--border-default);
   list-style: none;
 }
-.point-metrics li {
+
+@media (min-width: 700px) {
+  .point-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.point-metric {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: var(--space-8);
+  min-width: 0;
+}
+
+.point-metric-icon {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-control);
+  background: var(--color-violet-subtle);
+  color: var(--color-violet-strong);
+}
+
+.point-metric-body {
   display: grid;
   gap: 2px;
   min-width: 0;
-  margin-right: var(--space-16);
-  padding: var(--space-12) var(--space-16) 0 0;
-  border-right: var(--border-default);
 }
-.point-metrics li:last-child {
-  margin-right: 0;
-  padding-right: 0;
-  border-right: 0;
-}
+
 .point-metric-label {
-  color: var(--muted);
-  font-size: var(--type-metadata-size);
-}
-.point-metric-value {
-  color: var(--ink);
+  margin: 0;
+  color: var(--color-text-secondary);
   font-size: var(--type-body-size);
-  font-weight: 650;
-  font-variant-numeric: tabular-nums;
+  line-height: var(--type-body-line-height);
+  font-weight: 600;
+  overflow-wrap: anywhere;
 }
-.point-metric-note {
-  color: var(--quiet);
+
+.point-metric-value {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: var(--type-card-metric-value-size);
+  line-height: var(--type-card-metric-value-line-height);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.point-metric-unit {
+  color: var(--color-text-secondary);
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+  font-weight: 600;
+}
+
+.point-metric-evidence,
+.point-metric-context {
+  margin: 2px 0 0;
+  color: var(--color-text-muted);
   font-size: var(--type-metadata-size);
   line-height: var(--type-metadata-line-height);
+  overflow-wrap: anywhere;
+}
+
+.point-metric-context-label {
+  color: var(--color-text-secondary);
+  font-weight: 600;
 }
 .point-facets {
   display: flex;
@@ -3722,11 +3772,6 @@ a:focus-visible {
   .point-row-actions {
     grid-column: 1 / -1;
     justify-content: flex-start;
-  }
-
-  .point-metrics li {
-    margin-right: var(--space-12);
-    padding-right: var(--space-12);
   }
 }
 
@@ -6089,18 +6134,18 @@ a:focus-visible {
   line-height: var(--type-metadata-line-height);
 }
 
-.library-page .point-metrics li {
-  font-size: var(--type-metadata-size);
-  line-height: var(--type-metadata-line-height);
-}
-
-.library-page .point-metric-value {
+.library-page .point-metric-label {
   font-size: var(--type-body-size);
   line-height: var(--type-body-line-height);
 }
 
-.library-page .point-metric-label,
-.library-page .point-metric-note {
+.library-page .point-metric-value {
+  font-size: var(--type-card-metric-value-size);
+  line-height: var(--type-card-metric-value-line-height);
+}
+
+.library-page .point-metric-evidence,
+.library-page .point-metric-context {
   font-size: var(--type-metadata-size);
   line-height: var(--type-metadata-line-height);
 }

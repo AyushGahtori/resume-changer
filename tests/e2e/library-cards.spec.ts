@@ -170,6 +170,12 @@ function syntheticLibrary(
   };
 }
 
+function libraryWithMetrics(metrics: SyntheticPoint["metrics"]): ResumeLibrary {
+  const library = syntheticLibrary();
+  library.jobs[0].points[0].metrics = metrics;
+  return library;
+}
+
 async function writePersonalLibrary(library: ResumeLibrary) {
   await mkdir(join(libraryRoot, "data"), { recursive: true });
   await writeFile(personalLibraryPath, JSON.stringify(library), "utf8");
@@ -314,7 +320,7 @@ test("keeps the header the same height for zero, one, and many metrics", async (
         return {
           id: node.getAttribute("aria-labelledby"),
           height: Math.round(header.getBoundingClientRect().height),
-          metrics: node.querySelectorAll(".point-metrics li").length,
+          metrics: node.querySelectorAll(".point-metric").length,
         };
       }),
     );
@@ -345,7 +351,7 @@ test("shows the metric values, evidence, and context", async ({ page }) => {
   const metrics = page
     .locator("article.library-point")
     .filter({ hasText: "achievement-card-many-metrics" })
-    .locator(".point-metrics li");
+    .locator(".point-metric");
 
   await expect(metrics).toHaveCount(3);
   await expect(metrics.nth(0).locator(".point-metric-label")).toHaveText(
@@ -357,11 +363,11 @@ test("shows the metric values, evidence, and context", async ({ page }) => {
   await expect(metrics.nth(1).locator(".point-metric-value")).toHaveText(
     "-20 ms",
   );
-  await expect(metrics.nth(1).locator(".point-metric-note").nth(0)).toHaveText(
+  await expect(metrics.nth(1).locator(".point-metric-evidence")).toHaveText(
     "Synthetic evidence",
   );
-  await expect(metrics.nth(1).locator(".point-metric-note").nth(1)).toHaveText(
-    "Synthetic context",
+  await expect(metrics.nth(1).locator(".point-metric-context")).toHaveText(
+    "Context Synthetic context",
   );
 });
 
@@ -488,4 +494,295 @@ test("keeps the card inside a narrow viewport without hiding the actions", async
   });
   expect(layout.actionsBottom).toBeLessThanOrEqual(layout.headerBottom + 1);
   expect(layout.textRight).toBeLessThanOrEqual(layout.cardRight);
+});
+
+test("shows the label, value, unit, evidence and context of a metric", async ({
+  page,
+}) => {
+  await writePersonalLibrary(
+    libraryWithMetrics([
+      {
+        id: "metric-fixture-main",
+        label: "Throughput improvement",
+        value: "28",
+        unit: "%",
+        evidence: "Recorded by the synthetic benchmark.",
+        context: "Synthetic benchmark scenario",
+      },
+    ]),
+  );
+  await page.goto("/library");
+
+  const metric = page.locator(".point-metric").first();
+  await expect(metric).toHaveAttribute("data-metric-id", "metric-fixture-main");
+  await expect(metric.locator(".point-metric-label")).toHaveText(
+    "Throughput improvement",
+  );
+  await expect(metric.locator(".point-metric-number")).toHaveText("28");
+  await expect(metric.locator(".point-metric-unit")).toHaveText("%");
+  // The number and its unit read as one figure.
+  await expect(metric.locator(".point-metric-value")).toHaveText("28%");
+  await expect(metric.locator(".point-metric-evidence")).toHaveText(
+    "Recorded by the synthetic benchmark.",
+  );
+  await expect(metric.locator(".point-metric-context")).toContainText(
+    "Synthetic benchmark scenario",
+  );
+});
+
+test("keeps the evidence in the card without a hover", async ({ page }) => {
+  await writePersonalLibrary(
+    libraryWithMetrics([
+      {
+        id: "metric-fixture-evidence",
+        label: "Throughput",
+        value: "28",
+        evidence: "Synthetic evidence",
+      },
+    ]),
+  );
+  await page.goto("/library");
+
+  const evidence = page.locator(".point-metric-evidence").first();
+  await expect(evidence).toBeVisible();
+
+  const state = await evidence.evaluate((node) => {
+    const style = getComputedStyle(node);
+    const details = node.closest("details");
+    return {
+      visibility: style.visibility,
+      display: style.display,
+      opacity: style.opacity,
+      inClosedDetails: Boolean(details && !details.open),
+      title: node.getAttribute("title"),
+    };
+  });
+
+  expect(state.visibility).toBe("visible");
+  expect(state.display).not.toBe("none");
+  expect(state.opacity).toBe("1");
+  // The evidence is not parked in a closed disclosure or a tooltip.
+  expect(state.inClosedDetails).toBe(false);
+  expect(state.title).toBeNull();
+});
+
+test("does not present a metric value as a positive score", async ({
+  page,
+}) => {
+  await writePersonalLibrary(
+    libraryWithMetrics([
+      {
+        id: "metric-fixture-color",
+        label: "Throughput",
+        value: "28",
+        evidence: "Synthetic evidence",
+      },
+    ]),
+  );
+  await page.goto("/library");
+
+  const value = page.locator(".point-metric-value").first();
+  const color = await value.evaluate((node) => getComputedStyle(node).color);
+  const statusColor = await page
+    .locator(".point-status.is-enabled")
+    .first()
+    .evaluate((node) => getComputedStyle(node).color);
+
+  expect(color).not.toBe(statusColor);
+
+  // No trend arrow is added to a figure that only states a number.
+  expect(await value.locator("svg").count()).toBe(0);
+
+  const iconColor = await page
+    .locator(".point-metric-icon")
+    .first()
+    .evaluate((node) => getComputedStyle(node).color);
+  expect(iconColor).not.toBe(statusColor);
+});
+
+test("puts two metrics in two columns and stacks them on a phone", async ({
+  page,
+}) => {
+  await writePersonalLibrary(
+    libraryWithMetrics([
+      {
+        id: "metric-fixture-one",
+        label: "Throughput improvement",
+        value: "28",
+        unit: "%",
+        evidence: "Recorded by the fictional benchmark.",
+      },
+      {
+        id: "metric-fixture-two",
+        label: "Investigation time reduction",
+        value: "20",
+        unit: "%",
+        evidence: "Recorded by the fictional usability exercise.",
+      },
+    ]),
+  );
+
+  await page.setViewportSize({ width: 768, height: 1024 });
+  await page.goto("/library");
+
+  const card = page.locator(".library-point").first();
+  await expect(card.locator(".point-metric")).toHaveCount(2);
+
+  const wide = await page.evaluate(() => {
+    const grid = document.querySelector(".point-metrics") as HTMLElement;
+    const metrics = Array.from(
+      document.querySelectorAll(".library-point .point-metric"),
+    ) as HTMLElement[];
+    return {
+      columns: getComputedStyle(grid)
+        .gridTemplateColumns.split(" ")
+        .filter(Boolean).length,
+      tops: metrics.map((metric) =>
+        Math.round(metric.getBoundingClientRect().top),
+      ),
+    };
+  });
+
+  expect(wide.columns).toBe(2);
+  // Both metrics share the row.
+  expect(wide.tops[0]).toBe(wide.tops[1]);
+
+  await page.setViewportSize({ width: 390, height: 844 });
+
+  const narrow = await page.evaluate(() => {
+    const grid = document.querySelector(".point-metrics") as HTMLElement;
+    const metrics = Array.from(
+      document.querySelectorAll(".library-point .point-metric"),
+    ) as HTMLElement[];
+    return {
+      columns: getComputedStyle(grid)
+        .gridTemplateColumns.split(" ")
+        .filter(Boolean).length,
+      tops: metrics.map((metric) =>
+        Math.round(metric.getBoundingClientRect().top),
+      ),
+    };
+  });
+
+  expect(narrow.columns).toBe(1);
+  // The metrics are stacked instead of squeezed side by side.
+  expect(narrow.tops[0]).not.toBe(narrow.tops[1]);
+});
+
+test("omits a unit and a context the metric does not have", async ({
+  page,
+}) => {
+  await writePersonalLibrary(
+    libraryWithMetrics([
+      {
+        id: "metric-fixture-plain",
+        label: "Servers migrated",
+        value: "12",
+        evidence: "Recorded during the migration window.",
+      },
+    ]),
+  );
+  await page.goto("/library");
+
+  const metric = page
+    .locator(".library-point")
+    .first()
+    .locator(".point-metric");
+  await expect(metric.locator(".point-metric-label")).toHaveText(
+    "Servers migrated",
+  );
+  await expect(metric.locator(".point-metric-number")).toHaveText("12");
+  await expect(metric.locator(".point-metric-value")).toHaveText("12");
+  // Nothing is invented for the fields the metric does not carry.
+  await expect(metric.locator(".point-metric-unit")).toHaveCount(0);
+  await expect(metric.locator(".point-metric-context")).toHaveCount(0);
+  await expect(metric.locator(".point-metric-evidence")).toHaveText(
+    "Recorded during the migration window.",
+  );
+});
+
+test("renders every metric once and keeps its identifier", async ({ page }) => {
+  await writePersonalLibrary(
+    libraryWithMetrics([
+      {
+        id: "metric-fixture-one",
+        label: "Throughput improvement",
+        value: "28",
+        unit: "%",
+        evidence: "Recorded by the fictional benchmark.",
+      },
+      {
+        id: "metric-fixture-two",
+        label: "Investigation time reduction",
+        value: "20",
+        unit: "%",
+        evidence: "Recorded by the fictional usability exercise.",
+      },
+    ]),
+  );
+  await page.goto("/library");
+
+  const card = page.locator(".library-point").first();
+  const metrics = card.locator(".point-metric");
+  await expect(metrics).toHaveCount(2);
+
+  const ids = await metrics.evaluateAll((nodes) =>
+    nodes.map((node) => node.getAttribute("data-metric-id")),
+  );
+  expect(ids).toEqual(["metric-fixture-one", "metric-fixture-two"]);
+
+  // No metric is rendered twice, so no figure is counted twice.
+  const text = (await card.textContent()) ?? "";
+  expect(text.split("Throughput improvement").length - 1).toBe(1);
+  expect(text.split("Investigation time reduction").length - 1).toBe(1);
+});
+
+test("keeps long metric text inside the card", async ({ page }) => {
+  await writePersonalLibrary(
+    libraryWithMetrics([
+      {
+        id: "metric-fixture-long",
+        label:
+          "A very long metric label that keeps going well past the width of a card column",
+        value: "1234567890123456789",
+        unit: "requests per second",
+        context:
+          "A long context sentence that also has to find a home inside the card without pushing the page sideways.",
+        evidence:
+          "A long evidence sentence that explains where the figure comes from and has to stay readable at every width.",
+      },
+    ]),
+  );
+  await page.setViewportSize({ width: 320, height: 740 });
+  await page.goto("/library");
+
+  const layout = await page.evaluate(() => {
+    const metric = document.querySelector(".point-metric") as HTMLElement;
+    const value = metric.querySelector(".point-metric-value") as HTMLElement;
+    const evidence = metric.querySelector(
+      ".point-metric-evidence",
+    ) as HTMLElement;
+    return {
+      documentWidth: document.documentElement.scrollWidth,
+      viewportWidth: document.documentElement.clientWidth,
+      metricWidth: metric.scrollWidth,
+      metricClientWidth: metric.clientWidth,
+      valueWidth: value.scrollWidth,
+      valueClientWidth: value.clientWidth,
+      evidenceWidth: evidence.scrollWidth,
+      evidenceClientWidth: evidence.clientWidth,
+    };
+  });
+
+  expect(layout.documentWidth).toBeLessThanOrEqual(layout.viewportWidth);
+  expect(layout.metricWidth).toBeLessThanOrEqual(layout.metricClientWidth + 1);
+  expect(layout.valueWidth).toBeLessThanOrEqual(layout.valueClientWidth + 1);
+  expect(layout.evidenceWidth).toBeLessThanOrEqual(
+    layout.evidenceClientWidth + 1,
+  );
+
+  // The figure itself is still complete.
+  await expect(page.locator(".point-metric-number").first()).toHaveText(
+    "1234567890123456789",
+  );
 });
