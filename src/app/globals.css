@@ -90,6 +90,8 @@
   --shadow: 0 14px 40px rgb(32 44 37 / 5%);
   --type-page-title-size: 40px;
   --type-page-title-line-height: 48px;
+  --type-page-title-mobile-size: 32px;
+  --type-page-title-mobile-line-height: 40px;
   --type-section-heading-size: 24px;
   --type-section-heading-line-height: 32px;
   --type-card-heading-size: 16px;
@@ -98,6 +100,10 @@
   --type-field-label-line-height: 20px;
   --type-body-size: 14px;
   --type-body-line-height: 20px;
+  --type-body-large-size: 16px;
+  --type-body-large-line-height: 24px;
+  --type-label-size: 12px;
+  --type-label-line-height: 16px;
   --type-helper-size: 12px;
   --type-helper-line-height: 16px;
   --type-caption-size: 12px;
@@ -3488,7 +3494,18 @@ a:focus-visible {
 }
 
 .generation-heading h1 {
-  font-size: 38px;
+  font-size: var(--type-page-title-size);
+  line-height: var(--type-page-title-line-height);
+}
+
+.generation-heading .eyebrow {
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+}
+
+.generation-heading .page-intro {
+  font-size: var(--type-body-large-size);
+  line-height: var(--type-body-large-line-height);
 }
 
 .generation-draft {
@@ -3501,7 +3518,9 @@ a:focus-visible {
   border-left: 2px solid var(--teal);
   background: var(--surface-soft);
   color: var(--muted);
-  font-size: 11px;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
+  font-variant-numeric: tabular-nums;
 }
 
 .generation-draft > div {
@@ -3518,7 +3537,9 @@ a:focus-visible {
 
 .generation-draft strong {
   color: var(--ink);
-  font-size: 12px;
+  font-size: var(--type-card-heading-size);
+  line-height: var(--type-card-heading-line-height);
+  font-weight: 600;
 }
 
 .generation-draft a,
@@ -3530,16 +3551,18 @@ a:focus-visible {
   flex: 0 0 100%;
   margin: 0;
   color: var(--quiet);
-  font-size: 9px;
-  font-weight: 700;
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+  font-weight: 600;
+  letter-spacing: 0;
 }
 
 .generation-notice,
 .generation-error-message {
   margin: 0 0 12px;
   color: var(--muted);
-  font-size: 11px;
-  line-height: 1.5;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
 }
 
 .generation-error-message {
@@ -3567,6 +3590,7 @@ a:focus-visible {
 
 .generation-section-heading {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
@@ -3575,20 +3599,24 @@ a:focus-visible {
 
 .generation-section-heading h2 {
   margin: 0;
-  font-size: 15px;
-  font-weight: 650;
+  font-size: var(--type-section-heading-size);
+  line-height: var(--type-section-heading-line-height);
+  font-weight: 600;
 }
 
 .generation-section-heading p {
   margin: 5px 0 0;
   color: var(--muted);
-  font-size: 10px;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
+  font-variant-numeric: tabular-nums;
 }
 
 .generation-selection-actions,
 .generation-output-actions {
   display: flex;
-  flex: 0 0 auto;
+  flex: 0 1 auto;
+  max-width: 100%;
   gap: 7px;
 }
 
@@ -3619,7 +3647,8 @@ a:focus-visible {
   background: transparent;
   color: var(--muted);
   cursor: pointer;
-  font-size: 10px;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
 }
 
 .generation-output-tabs button[aria-selected="true"] {
@@ -3642,7 +3671,8 @@ a:focus-visible {
   background: var(--surface);
   color: var(--muted);
   cursor: pointer;
-  font-size: 10px;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
 }
 
 .generation-selection-actions button:hover,
@@ -3656,7 +3686,7 @@ a:focus-visible {
   border-color: color-mix(in srgb, var(--imagination) 45%, var(--line));
   background: var(--imagination-soft);
   color: var(--imagination-hover);
-  font-weight: 650;
+  font-weight: 600;
 }
 
 .generation-selection-actions .generation-ai-button:hover:not(:disabled) {
@@ -3673,8 +3703,8 @@ a:focus-visible {
 .selection-analysis-notice {
   margin: 0 0 12px;
   color: var(--muted);
-  font-size: 10px;
-  line-height: 1.5;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
 }
 
 .selection-analysis-notice a {
@@ -3698,15 +3728,16 @@ a:focus-visible {
 .selection-coverage h4,
 .selection-skill-recommendations h4 {
   margin: 0;
-  font-size: 11px;
-  font-weight: 650;
+  font-size: var(--type-card-heading-size);
+  line-height: var(--type-card-heading-line-height);
+  font-weight: 600;
 }
 
 .selection-recommendation-heading p {
   margin: 4px 0 0;
   color: var(--muted);
-  font-size: 10px;
-  line-height: 1.45;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
 }
 
 .selection-recommendation-heading button {
@@ -3718,15 +3749,16 @@ a:focus-visible {
   background: var(--surface);
   color: var(--muted);
   cursor: pointer;
-  font-size: 9px;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
 }
 
 .selection-budget,
 .selection-fallback-notice {
   margin: 7px 0 0;
   color: var(--muted);
-  font-size: 9px;
-  line-height: 1.45;
+  font-size: var(--type-helper-size);
+  line-height: var(--type-helper-line-height);
 }
 
 .selection-fallback-notice {
@@ -3746,7 +3778,10 @@ a:focus-visible {
 
 .selection-coverage-heading strong {
   color: var(--teal);
-  font-size: 9px;
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
 .selection-coverage progress {
@@ -3764,8 +3799,9 @@ a:focus-visible {
 .coverage-category h5 {
   margin: 0;
   color: var(--ink);
-  font-size: 9px;
-  font-weight: 650;
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+  font-weight: 600;
 }
 
 .selection-coverage ul {
@@ -3778,8 +3814,8 @@ a:focus-visible {
 
 .selection-coverage li {
   color: var(--muted);
-  font-size: 9px;
-  line-height: 1.45;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
 }
 
 .selection-coverage details {
@@ -3801,8 +3837,10 @@ a:focus-visible {
 
 .coverage-status {
   color: var(--accent-hover);
-  font-size: 8px;
-  font-weight: 700;
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+  font-weight: 600;
+  letter-spacing: 0;
   text-transform: uppercase;
 }
 
@@ -3813,7 +3851,8 @@ a:focus-visible {
 .selection-coverage > p {
   margin: 5px 0 0;
   color: var(--muted);
-  font-size: 9px;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
 }
 
 .selection-skill-recommendations {
@@ -3828,7 +3867,8 @@ a:focus-visible {
   align-items: start;
   gap: 7px;
   color: var(--ink);
-  font-size: 9px;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
 }
 
 .selection-skill-option input {
@@ -3848,8 +3888,8 @@ a:focus-visible {
 .selection-skill-option small {
   margin-top: 3px;
   color: var(--muted);
-  font-size: 8px;
-  line-height: 1.4;
+  font-size: var(--type-helper-size);
+  line-height: var(--type-helper-line-height);
 }
 
 .guided-tailor-review {
@@ -3873,8 +3913,9 @@ a:focus-visible {
 .guided-tailor-proposal h4 {
   margin: 0;
   color: var(--ink);
-  font-size: 11px;
-  font-weight: 650;
+  font-size: var(--type-card-heading-size);
+  line-height: var(--type-card-heading-line-height);
+  font-weight: 600;
 }
 
 .guided-tailor-heading p,
@@ -3882,15 +3923,17 @@ a:focus-visible {
 .guided-tailor-proposal p {
   margin: 4px 0 0;
   color: var(--muted);
-  font-size: 9px;
-  line-height: 1.5;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
 }
 
 .guided-tailor-count {
   flex: 0 0 auto;
   color: var(--accent-hover);
-  font-size: 9px;
-  font-weight: 650;
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
 .guided-tailor-actions {
@@ -3907,7 +3950,8 @@ a:focus-visible {
   background: var(--surface);
   color: var(--ink);
   cursor: pointer;
-  font-size: 9px;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
 }
 
 .guided-tailor-actions button:disabled {
@@ -3922,8 +3966,8 @@ a:focus-visible {
 .auto-tailor-status {
   margin: 8px 0 12px;
   color: var(--muted);
-  font-size: 10px;
-  line-height: 1.5;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
 }
 
 .draft-handoff {
@@ -3931,13 +3975,13 @@ a:focus-visible {
   border-top: 1px solid var(--line);
   padding-top: 8px;
   color: var(--muted);
-  font-size: 9px;
-  line-height: 1.5;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
 }
 
 .draft-handoff summary {
   color: var(--ink);
-  font-weight: 650;
+  font-weight: 600;
   cursor: pointer;
 }
 
@@ -3963,7 +4007,10 @@ a:focus-visible {
 
 .draft-handoff li strong {
   color: var(--accent-hover);
-  font-size: 8px;
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+  font-weight: 600;
+  letter-spacing: 0;
   text-transform: uppercase;
 }
 
@@ -3987,7 +4034,9 @@ a:focus-visible {
 .draft-evidence-suggestions h4 {
   margin: 0;
   color: var(--ink);
-  font-size: 10px;
+  font-size: var(--type-card-heading-size);
+  line-height: var(--type-card-heading-line-height);
+  font-weight: 600;
 }
 
 .draft-evidence-suggestions > p,
@@ -3995,8 +4044,8 @@ a:focus-visible {
 .draft-evidence-suggestions small {
   margin: 0;
   color: var(--muted);
-  font-size: 9px;
-  line-height: 1.5;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
   overflow-wrap: anywhere;
 }
 
@@ -4012,7 +4061,9 @@ a:focus-visible {
 
 .draft-evidence-suggestions article > strong {
   color: var(--ink);
-  font-size: 9px;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
+  font-weight: 600;
 }
 
 .draft-evidence-suggestions select {
@@ -4024,7 +4075,8 @@ a:focus-visible {
   background: var(--surface);
   color: var(--ink);
   font: inherit;
-  font-size: 9px;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
 }
 
 .guided-tailor-proposals {
@@ -4057,8 +4109,10 @@ a:focus-visible {
   display: block;
   margin-bottom: 4px;
   color: var(--accent-hover);
-  font-size: 8px;
-  font-weight: 700;
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+  font-weight: 600;
+  letter-spacing: 0;
   text-transform: uppercase;
 }
 
@@ -4078,8 +4132,8 @@ a:focus-visible {
   background: var(--surface-soft);
   color: var(--ink);
   font: inherit;
-  font-size: 9px;
-  line-height: 1.5;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
   resize: vertical;
 }
 
@@ -4089,11 +4143,12 @@ a:focus-visible {
   flex-wrap: wrap;
   gap: 4px 8px;
   color: var(--muted);
-  font-size: 8px;
+  font-size: var(--type-helper-size);
+  line-height: var(--type-helper-line-height);
 }
 
 .guided-tailor-terms > span {
-  font-weight: 650;
+  font-weight: 600;
 }
 
 .guided-tailor-terms ul {
@@ -4117,7 +4172,8 @@ a:focus-visible {
   align-items: flex-start;
   gap: 6px;
   color: var(--ink);
-  font-size: 9px;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
   font-weight: 600;
   cursor: pointer;
 }
@@ -4193,18 +4249,23 @@ a:focus-visible {
 
 .generation-group legend span {
   color: var(--accent);
-  font-size: 8px;
-  font-weight: 700;
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+  font-weight: 600;
+  letter-spacing: 0;
 }
 
 .generation-group legend strong {
   color: var(--ink);
-  font-size: 11px;
+  font-size: var(--type-card-heading-size);
+  line-height: var(--type-card-heading-line-height);
+  font-weight: 600;
 }
 
 .generation-group legend small {
   color: var(--muted);
-  font-size: 10px;
+  font-size: var(--type-helper-size);
+  line-height: var(--type-helper-line-height);
 }
 
 .generation-points {
@@ -4220,8 +4281,8 @@ a:focus-visible {
   border-bottom: 1px solid var(--line);
   color: var(--ink);
   cursor: pointer;
-  font-size: 11px;
-  line-height: 1.5;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
 }
 
 .generation-point input {
@@ -4239,8 +4300,8 @@ a:focus-visible {
   display: block;
   margin-top: 4px;
   color: var(--muted);
-  font-size: 9px;
-  line-height: 1.4;
+  font-size: var(--type-helper-size);
+  line-height: var(--type-helper-line-height);
 }
 
 .generation-preview {
@@ -4254,7 +4315,8 @@ a:focus-visible {
   place-items: center;
   border: 1px dashed var(--line-strong);
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
   text-align: center;
 }
 
@@ -4266,7 +4328,8 @@ a:focus-visible {
 .generation-metadata {
   margin: 0 0 9px;
   color: var(--muted);
-  font-size: 10px;
+  font-size: var(--type-helper-size);
+  line-height: var(--type-helper-line-height);
 }
 
 .generation-origin {
@@ -4277,8 +4340,8 @@ a:focus-visible {
   border-radius: 5px;
   background: var(--surface-soft);
   color: var(--ink);
-  font-size: 11px;
-  line-height: 1.5;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
 }
 
 .latex-preview {
@@ -4292,8 +4355,8 @@ a:focus-visible {
   background: var(--surface-soft);
   color: var(--ink);
   font-family: "Cascadia Code", Consolas, monospace;
-  font-size: 10px;
-  line-height: 1.55;
+  font-size: var(--type-helper-size);
+  line-height: var(--type-helper-line-height);
   tab-size: 2;
   white-space: pre;
   scrollbar-color: var(--accent) var(--surface-soft);
@@ -4311,8 +4374,9 @@ a:focus-visible {
 
 .generation-error-message summary {
   cursor: pointer;
-  font-size: 10px;
-  font-weight: 650;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
+  font-weight: 600;
 }
 
 .generation-error-message pre {
@@ -4321,7 +4385,8 @@ a:focus-visible {
   margin: 8px 0 0;
   color: var(--ink);
   font-family: "Cascadia Code", Consolas, monospace;
-  font-size: 10px;
+  font-size: var(--type-helper-size);
+  line-height: var(--type-helper-line-height);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
@@ -4360,7 +4425,8 @@ a:focus-visible {
   background: var(--surface);
   color: var(--ink);
   cursor: pointer;
-  font-size: 10px;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
 }
 
 .pdf-preview-toolbar button:hover:not(:disabled) {
@@ -4378,7 +4444,8 @@ a:focus-visible {
   align-items: center;
   gap: 8px;
   color: var(--muted);
-  font-size: 10px;
+  font-size: var(--type-helper-size);
+  line-height: var(--type-helper-line-height);
   font-variant-numeric: tabular-nums;
 }
 
@@ -4416,7 +4483,8 @@ a:focus-visible {
   padding-top: 15px;
   border-top: 1px solid var(--line);
   color: var(--muted);
-  font-size: 10px;
+  font-size: var(--type-helper-size);
+  line-height: var(--type-helper-line-height);
 }
 
 .generation-error {
@@ -4426,13 +4494,14 @@ a:focus-visible {
 }
 
 .generation-error h1 {
-  font-size: 34px;
+  font-size: var(--type-page-title-size);
+  line-height: var(--type-page-title-line-height);
 }
 
 .generation-error > p:not(.eyebrow) {
   color: var(--muted);
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--type-body-large-size);
+  line-height: var(--type-body-large-line-height);
 }
 
 @media (max-width: 1100px) {
@@ -4451,7 +4520,8 @@ a:focus-visible {
   }
 
   .generation-heading h1 {
-    font-size: 34px;
+    font-size: var(--type-page-title-mobile-size);
+    line-height: var(--type-page-title-mobile-line-height);
   }
 
   .generation-draft {
@@ -4495,7 +4565,8 @@ a:focus-visible {
     min-height: 260px;
     max-height: 60vh;
     padding: 11px;
-    font-size: 9px;
+    font-size: var(--type-helper-size);
+    line-height: var(--type-helper-line-height);
   }
 
   .generation-footer {

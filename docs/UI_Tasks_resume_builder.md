@@ -332,11 +332,11 @@ Reference files: docs/ui-images/resume-builder/ui-kit-typography.png, docs/ui-im
 
 **Files:** src/app/globals.css and component styles only where existing typography is not already tokenized; add computed-style checks to a focused UI test where useful.
 
-- [ ] Preserve Georgia/Times for current serif headings and Arial/Helvetica for operational UI. Do not load Playfair Display/Inter or change remote font dependencies.
-- [ ] Define/reuse responsive sizes: page title near 40/48 desktop and 32/40 mobile; section 24/32; card title 16-20/24; body 14-16/20-24; labels/meta 12/16.
-- [ ] Use semibold labels/headings, regular explanatory text, and stable tabular counts where the app already uses numeric comparisons.
-- [ ] Keep letter spacing at zero; do not use viewport-scaled font sizes or shrink text to fit.
-- [ ] Check long company names, job titles, skill labels, counts, and validation copy wrap without clipping in both themes.
+- [x] Preserve Georgia/Times for current serif headings and Arial/Helvetica for operational UI. Do not load Playfair Display/Inter or change remote font dependencies.
+- [x] Define/reuse responsive sizes: page title near 40/48 desktop and 32/40 mobile; section 24/32; card title 16-20/24; body 14-16/20-24; labels/meta 12/16.
+- [x] Use semibold labels/headings, regular explanatory text, and stable tabular counts where the app already uses numeric comparisons.
+- [x] Keep letter spacing at zero; do not use viewport-scaled font sizes or shrink text to fit.
+- [x] Check long company names, job titles, skill labels, counts, and validation copy wrap without clipping in both themes.
 
 **Acceptance:** Product hierarchy follows the board while retaining the existing fonts and readable line lengths at supported widths.
 
