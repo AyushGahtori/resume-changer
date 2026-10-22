@@ -2,6 +2,119 @@ import { expect, test } from "@playwright/test";
 import { homeAnalysis } from "../helpers/home-analysis";
 
 for (const theme of ["light", "dark"]) {
+  test(`adaptive workflow and keyboard scrolling in ${theme}`, async ({
+    page,
+  }) => {
+    if (theme === "dark")
+      await page.getByRole("button", { name: "Switch to dark mode" }).click();
+    for (const width of [1440, 1024, 768, 390, 320]) {
+      await page.setViewportSize({ width, height: 844 });
+      if (width === 768) {
+        await expect(page.locator(".sidebar")).toHaveCSS("width", "72px");
+        await expect(
+          page.getByRole("button", { name: "Expand sidebar" }),
+        ).toBeVisible();
+      }
+      if (width < 700)
+        await expect(page.locator("#workspace-sidebar")).toBeHidden();
+      await page.getByLabel("Company", { exact: true }).fill("Example Systems");
+      const jd = page.getByRole("textbox", {
+        name: "Job description",
+        exact: true,
+      });
+      await jd.focus();
+      await page.keyboard.type("A role with accessible interfaces.");
+      await expect(jd).toBeInViewport();
+      await page
+        .getByRole("button", { name: "Save draft", exact: true })
+        .click();
+      await expect(page.locator(".form-save-feedback")).toContainText(
+        "Draft saved",
+      );
+      if (width < 700) {
+        const fields = await page
+          .locator(".metadata-fields input")
+          .evaluateAll((els) =>
+            els.map((el) => {
+              const r = el.getBoundingClientRect();
+              return { x: r.x, width: r.width, y: r.y };
+            }),
+          );
+        expect(fields[1].y).toBeGreaterThan(fields[0].y);
+        expect(fields[2].y).toBeGreaterThan(fields[1].y);
+        expect(
+          fields.every(
+            (f) =>
+              Math.abs(f.x - fields[0].x) < 1 &&
+              Math.abs(f.width - fields[0].width) < 1,
+          ),
+        ).toBe(true);
+        const buttons = await page
+          .locator(".form-actions button")
+          .evaluateAll((els) =>
+            els.map((el) => {
+              const r = el.getBoundingClientRect();
+              return { x: r.x, width: r.width, y: r.y, height: r.height };
+            }),
+          );
+        expect(
+          buttons.every(
+            (b) => b.height >= 44 && Math.abs(b.width - buttons[0].width) < 1,
+          ),
+        ).toBe(true);
+        expect(buttons[1].y).toBeGreaterThan(buttons[0].y);
+        expect(buttons[2].y).toBeGreaterThan(buttons[1].y);
+      }
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+      ).toBe(true);
+      await page.evaluate(() => scrollTo(0, 0));
+      await page.screenshot({
+        path: `docs/ui-review/task-27/${theme}-${width}.png`,
+        fullPage: true,
+        animations: "disabled",
+        style: "nextjs-portal{display:none}",
+      });
+      await page
+        .getByRole("button", { name: "Clear draft", exact: true })
+        .click();
+    }
+  });
+}
+
+test("short mobile drawer scrolls internally and tablet preference remains operable", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 320 });
+  await page.getByRole("button", { name: "Open navigation" }).click();
+  const drawer = page.getByRole("dialog", { name: "Navigation menu" });
+  const settings = drawer.getByRole("link", { name: "Settings", exact: true });
+  await settings.focus();
+  await expect(settings).toBeInViewport();
+  expect(await drawer.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(
+    true,
+  );
+  await page.screenshot({
+    path: "docs/ui-review/task-27/short-drawer.png",
+    animations: "disabled",
+    style: "nextjs-portal{display:none}",
+  });
+  await page.keyboard.press("Escape");
+  await expect(
+    page.getByRole("button", { name: "Open navigation" }),
+  ).toBeFocused();
+  await page.setViewportSize({ width: 768, height: 844 });
+  await page.getByRole("button", { name: "Expand sidebar" }).click();
+  await expect(
+    page.getByRole("button", { name: "Collapse sidebar" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Collapse sidebar" }).click();
+  await expect(page.locator(".sidebar")).toHaveCSS("width", "72px");
+});
+
+for (const theme of ["light", "dark"]) {
   test(`desktop grid alignment and growing content in ${theme}`, async ({
     page,
   }) => {

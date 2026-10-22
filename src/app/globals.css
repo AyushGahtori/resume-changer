@@ -4537,6 +4537,46 @@ a:focus-visible {
     padding: 24px;
   }
 }
+@media (max-width: 700px) {
+  .jd-workspace-frame .page-content {
+    padding: 24px 16px 32px;
+  }
+  .jd-work-grid .jd-form {
+    padding: 16px;
+  }
+  .jd-work-grid .metadata-fields {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+  .jd-work-grid .form-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+  .jd-work-grid .form-actions button {
+    width: 100%;
+    min-height: 44px;
+    white-space: nowrap;
+  }
+  .jd-work-grid .input-metrics {
+    gap: 8px;
+  }
+  html[data-shell-hydrated] .sidebar {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  html[data-shell-hydrated] .sidebar-header,
+  html[data-shell-hydrated] .main-navigation,
+  html[data-shell-hydrated] .sidebar-bottom {
+    flex-shrink: 0;
+  }
+}
+@media (max-width: 380px) {
+  .jd-work-grid .jd-form {
+    padding: 12px;
+  }
+}
+
 /* Analysis content must follow the form instead of shrinking it over its actions. */
 @media (min-width: 701px) {
   .jd-workspace-frame .jd-page:has(> .jd-analysis) > .jd-form {

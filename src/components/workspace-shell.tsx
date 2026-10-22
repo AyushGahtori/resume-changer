@@ -57,7 +57,11 @@ export default function WorkspaceShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [isMobile, setIsMobile] = useState(false);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isCompact, setIsCompact] = useState(false);
+  const [sidebarPreference, setSidebarPreference] = useState<boolean | null>(
+    null,
+  );
+  const isSidebarCollapsed = sidebarPreference ?? isCompact;
   const [isMobileNavigationOpen, setIsMobileNavigationOpen] = useState(false);
   const currentPage = navigation.find((item) => item.href === pathname);
   const sidebarRef = useRef<HTMLElement>(null);
@@ -68,18 +72,24 @@ export default function WorkspaceShell({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(max-width: 700px)");
+    const compactQuery = window.matchMedia(
+      "(min-width: 701px) and (max-width: 1023px)",
+    );
     const updateMobileState = () => {
       const mobile = mediaQuery.matches;
       setIsMobile(mobile);
+      setIsCompact(compactQuery.matches);
       if (!mobile) setIsMobileNavigationOpen(false);
     };
 
     updateMobileState();
     document.documentElement.dataset.shellHydrated = "true";
     mediaQuery.addEventListener("change", updateMobileState);
+    compactQuery.addEventListener("change", updateMobileState);
 
     return () => {
       mediaQuery.removeEventListener("change", updateMobileState);
+      compactQuery.removeEventListener("change", updateMobileState);
       delete document.documentElement.dataset.shellHydrated;
     };
   }, []);
@@ -198,7 +208,7 @@ export default function WorkspaceShell({ children }: { children: ReactNode }) {
       return;
     }
 
-    setIsSidebarCollapsed((collapsed) => !collapsed);
+    setSidebarPreference(!isSidebarCollapsed);
   }
 
   const navigationLabel = isMobile

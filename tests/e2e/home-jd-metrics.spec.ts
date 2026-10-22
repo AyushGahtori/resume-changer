@@ -116,7 +116,7 @@ test("metrics retain reference scale and wrap without clipping in both themes", 
         fontSize: "12px",
         lineHeight: "16px",
         numerals: "tabular-nums",
-        gap: "12px",
+        gap: width <= 1100 ? "8px" : "12px",
         below: true,
         overflow: false,
       });
