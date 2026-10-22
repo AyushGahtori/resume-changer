@@ -141,7 +141,7 @@ checkbox on `/generate`. The cause was this branch's new spec, not the product
 code. The new spec writes a fictional library into the shared browser-suite
 data folder to check the absent-end-date rule on a rendered header, and it
 left that fixture behind. The suite shares one data folder, so the fixture
-reached the specs that ran afterwards, and `/generate` loads the *personal*
+reached the specs that ran afterwards, and `/generate` loads the _personal_
 library, which stopped offering the sample achievements the Quora spec
 selects. The new spec now puts the sample library back after every fixture
 test, the same way `tests/e2e/library-editing.spec.ts` already does. Running
