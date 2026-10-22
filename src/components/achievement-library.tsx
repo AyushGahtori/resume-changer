@@ -2,11 +2,15 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import AchievementPointEditor from "@/components/achievement-point-editor";
 import AchievementImagination from "@/components/achievement-imagination";
 import AchievementCard from "@/components/library/achievement-card";
 import ProfileSummary from "@/components/library/profile-summary";
+import {
+  LibraryEmptyState,
+  LibraryReadOnlyNotice,
+} from "@/components/library/library-states";
 import {
   EMPTY_LIBRARY_FILTERS,
   filterAchievementLibrary,
@@ -47,7 +51,7 @@ function ExperienceGroup({
   library: ResumeLibrary;
   onTag: (tag: string) => void;
   onSkill: (skillId: string) => void;
-  onEdit?: (point: AchievementPoint) => void;
+  onEdit?: (point: AchievementPoint, trigger: HTMLButtonElement) => void;
 }) {
   const isJob = kind === "job";
   const job = isJob ? (item as Job) : null;
@@ -78,7 +82,7 @@ function ExperienceGroup({
         <AchievementCard
           key={point.id}
           kind={kind}
-          onEdit={onEdit ? () => onEdit(point) : undefined}
+          onEdit={onEdit ? (trigger) => onEdit(point, trigger) : undefined}
           onSkill={onSkill}
           onTag={onTag}
           point={point}
@@ -116,12 +120,48 @@ export default function AchievementLibrary({ library, source }: Props) {
       type: "project" as const,
     })),
   ];
+  const editorRegionRef = useRef<HTMLDivElement>(null);
+  const editorTriggerRef = useRef<HTMLElement | null>(null);
+  const detailedEntryRef = useRef<HTMLButtonElement>(null);
+  /**
+   * A library with nothing in it and a library whose contents are hidden are
+   * different situations, so they get different messages. The total count is
+   * filter-independent, so it tells the two apart.
+   */
+  const hasNoData = result.totalPointCount === 0;
+  const hasNoMatches = !hasNoData && result.visiblePointCount === 0;
+
+  useEffect(() => {
+    if (!editor) return;
+
+    // The editor opens above the list, so the keyboard follows it there
+    // instead of staying on the button that opened it.
+    const firstField = editorRegionRef.current?.querySelector<HTMLElement>(
+      "input, textarea, select",
+    );
+    firstField?.focus();
+  }, [editor]);
 
   function updateFilter<Key extends keyof LibraryFilters>(
     key: Key,
     value: LibraryFilters[Key],
   ) {
     setFilters((current) => ({ ...current, [key]: value }));
+  }
+
+  function openEditor(next: EditorState, trigger: HTMLElement) {
+    setSaveMessage("");
+    editorTriggerRef.current = trigger;
+    setEditor(next);
+  }
+
+  function closeEditor() {
+    setEditor(null);
+    // The keyboard goes back to the control that opened the editor, so a
+    // reader who cancels is not dropped at the top of the page.
+    const trigger = editorTriggerRef.current;
+    editorTriggerRef.current = null;
+    trigger?.focus();
   }
 
   return (
@@ -150,15 +190,17 @@ export default function AchievementLibrary({ library, source }: Props) {
         </div>
       </div>
 
+      {canEdit ? null : <LibraryReadOnlyNotice />}
+
       {canEdit && (
         <div className="library-edit-toolbar">
           <span>{saveMessage}</span>
           <button
+            ref={detailedEntryRef}
             type="button"
-            onClick={() => {
-              setSaveMessage("");
-              setEditor({ mode: "create" });
-            }}
+            onClick={(event) =>
+              openEditor({ mode: "create" }, event.currentTarget)
+            }
           >
             Detailed entry
           </button>
@@ -181,20 +223,22 @@ export default function AchievementLibrary({ library, source }: Props) {
         totalPointCount={result.totalPointCount}
       />
 
-      {editor && (
-        <AchievementPointEditor
-          key={editor.mode === "edit" ? editor.point.id : "new-achievement"}
-          initialPoint={editor.mode === "edit" ? editor.point : undefined}
-          onCancel={() => setEditor(null)}
-          onSaved={() => {
-            setEditor(null);
-            setSaveMessage("Saved to your local library.");
-            router.refresh();
-          }}
-          parents={parentOptions}
-          skills={library.skills}
-        />
-      )}
+      <div className="library-editor-region" ref={editorRegionRef}>
+        {editor && (
+          <AchievementPointEditor
+            key={editor.mode === "edit" ? editor.point.id : "new-achievement"}
+            initialPoint={editor.mode === "edit" ? editor.point : undefined}
+            onCancel={closeEditor}
+            onSaved={() => {
+              closeEditor();
+              setSaveMessage("Saved to your local library.");
+              router.refresh();
+            }}
+            parents={parentOptions}
+            skills={library.skills}
+          />
+        )}
+      </div>
       {creating && (
         <AchievementImagination
           library={library}
@@ -330,10 +374,26 @@ export default function AchievementLibrary({ library, source }: Props) {
         </div>
       </section>
 
-      {result.visiblePointCount === 0 ? (
-        <p className="library-empty" role="status">
-          No achievement points match these filters.
-        </p>
+      {hasNoData ? (
+        <LibraryEmptyState
+          onAdd={
+            canEdit
+              ? () =>
+                  openEditor(
+                    { mode: "create" },
+                    detailedEntryRef.current ?? document.body,
+                  )
+              : undefined
+          }
+          totalPointCount={result.totalPointCount}
+          variant="no-data"
+        />
+      ) : hasNoMatches ? (
+        <LibraryEmptyState
+          onReset={() => setFilters(EMPTY_LIBRARY_FILTERS)}
+          totalPointCount={result.totalPointCount}
+          variant="no-matches"
+        />
       ) : (
         <div className="library-experiences">
           {result.jobs.map((job) => (
@@ -346,7 +406,8 @@ export default function AchievementLibrary({ library, source }: Props) {
               onTag={(tag) => updateFilter("tag", tag)}
               onEdit={
                 canEdit
-                  ? (point) => setEditor({ mode: "edit", point })
+                  ? (point, trigger) =>
+                      openEditor({ mode: "edit", point }, trigger)
                   : undefined
               }
             />
@@ -361,7 +422,8 @@ export default function AchievementLibrary({ library, source }: Props) {
               onTag={(tag) => updateFilter("tag", tag)}
               onEdit={
                 canEdit
-                  ? (point) => setEditor({ mode: "edit", point })
+                  ? (point, trigger) =>
+                      openEditor({ mode: "edit", point }, trigger)
                   : undefined
               }
             />
@@ -403,7 +465,11 @@ export default function AchievementLibrary({ library, source }: Props) {
               ))}
             </ul>
           ) : (
-            <p className="secondary-empty">No skills match this search.</p>
+            <p className="secondary-empty">
+              {library.skills.length === 0
+                ? "No skills saved in this library."
+                : "No skills match this search."}
+            </p>
           )}
         </details>
         <details className="library-detail" open={Boolean(filters.query)}>
@@ -422,7 +488,11 @@ export default function AchievementLibrary({ library, source }: Props) {
               ))}
             </ul>
           ) : (
-            <p className="secondary-empty">No credentials match this search.</p>
+            <p className="secondary-empty">
+              {library.credentials.length === 0
+                ? "No credentials saved in this library."
+                : "No credentials match this search."}
+            </p>
           )}
         </details>
       </section>

@@ -2330,6 +2330,14 @@ a:focus-visible {
     align-items: center;
     gap: 28px;
   }
+}
+
+/*
+ * Five metric tiles only fit beside the identity on a wide page. Below that
+ * they wrap onto a second row instead of shrinking their labels into an
+ * ellipsis.
+ */
+@media (min-width: 1440px) {
   .library-metrics {
     grid-template-columns: repeat(5, minmax(0, 1fr));
   }
@@ -2375,6 +2383,16 @@ a:focus-visible {
 .library-filter-grid select:focus {
   border-color: var(--focus);
 }
+
+/*
+ * A keyboard focus ring has to be visible, not only a border colour change.
+ */
+.library-search input:focus-visible,
+.library-filter-grid select:focus-visible {
+  outline: var(--focus-outline);
+  outline-offset: 1px;
+}
+
 .library-filter-grid {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -2382,8 +2400,20 @@ a:focus-visible {
   margin-top: 12px;
 }
 
+/*
+ * Five filters only fit on one row when the page is wide. Below that they
+ * wrap onto more rows instead of squeezing the labels and the selected
+ * value into an unreadable column.
+ */
+@media (max-width: 1024px) {
+  .library-filter-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
 .library-filter-summary {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
@@ -2420,6 +2450,9 @@ a:focus-visible {
   gap: 20px;
   margin-bottom: 5px;
 }
+.experience-heading > div {
+  min-width: 0;
+}
 .experience-kind {
   margin: 0 0 4px;
   color: var(--accent-hover);
@@ -2430,12 +2463,16 @@ a:focus-visible {
   margin: 0;
   font-size: 16px;
   font-weight: 650;
+  overflow-wrap: anywhere;
 }
 .experience-subtitle,
 .experience-dates {
   margin: 4px 0 0;
   color: var(--muted);
   font-size: 11px;
+}
+.experience-subtitle {
+  overflow-wrap: anywhere;
 }
 .experience-dates {
   flex: 0 0 auto;
@@ -2567,17 +2604,20 @@ a:focus-visible {
 .point-metric-label {
   color: var(--muted);
   font-size: 11px;
+  overflow-wrap: anywhere;
 }
 .point-metric-value {
   color: var(--ink);
   font-size: 15px;
   font-weight: 650;
   font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
 }
 .point-metric-note {
   color: var(--quiet);
   font-size: 10px;
   line-height: 1.4;
+  overflow-wrap: anywhere;
 }
 
 .point-facets {
@@ -2616,15 +2656,75 @@ a:focus-visible {
   font-weight: 600;
 }
 
-.library-empty,
 .secondary-empty {
   color: var(--muted);
   font-size: 12px;
 }
-.library-empty {
+
+/*
+ * The library states. Each one says what is missing and what can be done
+ * about it: a library with no achievements needs an achievement, a library
+ * whose achievements are all filtered away needs a wider search, and the
+ * demo library needs a switch to real data. They are three different asks,
+ * so they are three different messages.
+ */
+.library-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: -10px 0 16px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--color-violet) 28%, var(--line));
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--color-violet) 7%, var(--surface));
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.library-notice svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+  color: var(--color-violet-strong);
+}
+
+.library-notice strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.library-state {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
   margin: 24px 0;
-  padding: 20px 0;
-  border-bottom: 1px solid var(--line);
+  padding: 26px 24px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 8px;
+  background: var(--surface-soft);
+}
+
+.library-state-icon {
+  color: var(--muted);
+}
+
+.library-state h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 650;
+  line-height: 1.4;
+}
+
+.library-state-message {
+  max-width: 62ch;
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.library-state-action {
+  margin-top: 2px;
 }
 .library-secondary {
   display: grid;
@@ -2706,6 +2806,11 @@ a:focus-visible {
   color: var(--muted);
   font-size: 13px;
   line-height: 1.6;
+  /*
+   * The message names the data file and the folder it should live in, and
+   * both can be long unbroken paths.
+   */
+  overflow-wrap: anywhere;
 }
 .library-switch-link {
   display: inline-block;
@@ -2716,11 +2821,27 @@ a:focus-visible {
 
 .library-edit-toolbar {
   display: flex;
+  flex-wrap: wrap;
   min-height: 42px;
   align-items: center;
   justify-content: flex-end;
   gap: 14px;
   margin: -10px 0 14px;
+}
+
+.library-edit-toolbar button:not(.primary-button) {
+  display: inline-flex;
+  min-height: 39px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 14px;
+  border: var(--border-control);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .library-edit-toolbar > span {
@@ -3242,7 +3363,13 @@ a:focus-visible {
     font-size: 34px;
   }
 
+  /*
+   * On a phone the page title and the source switch stop sharing a row, so
+   * neither one has to be squeezed into half the width.
+   */
   .library-heading {
+    align-items: flex-start;
+    flex-direction: column;
     gap: 16px;
   }
   .history-heading {
@@ -3292,6 +3419,31 @@ a:focus-visible {
     padding: 8px;
   }
 
+  /*
+   * The dates move under the experience title, so a long company name and a
+   * long date range never fight for the same line.
+   */
+  .experience-heading {
+    flex-direction: column;
+    gap: 8px;
+  }
+  .experience-dates {
+    flex: 0 0 auto;
+  }
+
+  /*
+   * A phone is a touch device, so the library's own controls get a target a
+   * thumb can hit. The same rule applies to a touch screen of any width.
+   */
+  .facet-chip,
+  .point-row-actions .text-action,
+  .library-filter-summary .text-action,
+  .library-state-action {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+  }
+
   .point-editor {
     padding: 18px 15px;
   }
@@ -3336,6 +3488,12 @@ a:focus-visible {
   .library-filter-summary {
     align-items: flex-start;
   }
+  .library-state {
+    padding: 20px 16px;
+  }
+  .library-edit-toolbar > button {
+    flex: 1 1 auto;
+  }
   .metric-fields {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -3348,6 +3506,20 @@ a:focus-visible {
   }
   .editor-actions > button {
     width: 100%;
+  }
+}
+
+/*
+ * A touch screen of any width gets the same generous targets as a phone.
+ */
+@media (pointer: coarse) {
+  .facet-chip,
+  .point-row-actions .text-action,
+  .library-filter-summary .text-action,
+  .library-state-action {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
   }
 }
 

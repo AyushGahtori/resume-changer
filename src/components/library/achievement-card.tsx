@@ -22,12 +22,22 @@ type Props = {
   context?: string;
   onTag?: (tag: string) => void;
   onSkill?: (skillId: string) => void;
-  onEdit?: () => void;
+  /**
+   * Opens the editor for this achievement. The button that was pressed is
+   * handed back, so the library can return the keyboard to it when the
+   * editor closes.
+   */
+  onEdit?: (trigger: HTMLButtonElement) => void;
 };
 
 const CATEGORY_ICON = {
   job: Briefcase,
   project: Folder,
+} as const;
+
+const CATEGORY_NAME = {
+  job: "Job achievement",
+  project: "Project achievement",
 } as const;
 
 /**
@@ -69,11 +79,12 @@ export default function AchievementCard({
     <article className="library-point" aria-labelledby={headingId}>
       <header className="library-point-header">
         <span
+          aria-label={CATEGORY_NAME[kind]}
           className="library-point-icon"
           data-kind={kind}
-          aria-hidden="true"
+          role="img"
         >
-          <Icon size={18} strokeWidth={2} />
+          <Icon aria-hidden="true" size={18} strokeWidth={2} />
         </span>
         <div className="library-point-intro">
           {context ? <p className="library-point-context">{context}</p> : null}
@@ -90,7 +101,11 @@ export default function AchievementCard({
             {point.enabled ? "Enabled" : "Disabled"}
           </span>
           {onEdit ? (
-            <button className="text-action" onClick={onEdit} type="button">
+            <button
+              className="text-action"
+              onClick={(event) => onEdit(event.currentTarget)}
+              type="button"
+            >
               Edit
             </button>
           ) : null}

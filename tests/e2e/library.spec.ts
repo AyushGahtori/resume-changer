@@ -50,8 +50,11 @@ test("shows an empty state and supports searching credentials", async ({
     .getByRole("searchbox", { name: "Search library" })
     .fill("no matching library content");
   await expect(page.getByRole("status")).toHaveText(
-    "No achievement points match these filters.",
+    "None of the 13 achievements in this library match the current search and filters.",
   );
+  await expect(
+    page.getByRole("heading", { name: "No achievements match these filters" }),
+  ).toBeVisible();
   await page
     .getByRole("searchbox", { name: "Search library" })
     .fill("Cloud Deployment Foundations");
