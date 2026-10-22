@@ -145,12 +145,12 @@
   font-size: 15px;
 }
 .studio-navigation button[aria-pressed="true"] {
-  border-color: color-mix(in srgb, var(--accent) 25%, var(--line));
-  background: var(--accent-soft);
-  color: var(--accent-hover);
+  border-color: color-mix(in srgb, var(--imagination) 25%, var(--line));
+  background: var(--imagination-soft);
+  color: var(--imagination-hover);
 }
 .studio-navigation button[aria-pressed="true"] > span {
-  color: var(--accent);
+  color: var(--imagination);
 }
 .studio-navigation .studio-setup-link {
   margin-top: auto;
@@ -700,14 +700,14 @@
   background: var(--imagination-soft);
 }
 .studio-chip-list button[aria-pressed="true"].is-current {
-  border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
-  background: var(--accent-soft);
+  border-color: color-mix(in srgb, var(--imagination) 55%, var(--line));
+  background: var(--imagination-soft);
 }
 .studio-chip-list button[aria-pressed="true"] small {
   color: var(--imagination);
 }
 .studio-chip-list button[aria-pressed="true"].is-current small {
-  color: var(--accent-hover);
+  color: var(--imagination-hover);
 }
 .studio-section-toggle {
   display: flex;
@@ -1047,8 +1047,8 @@
   font-size: 9px;
 }
 .pdf-fit-button[aria-pressed="true"] {
-  border-color: var(--accent);
-  color: var(--accent);
+  border-color: var(--imagination);
+  color: var(--imagination);
 }
 .pdf-preview-toolbar {
   flex-wrap: wrap;

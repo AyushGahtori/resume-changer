@@ -3835,7 +3835,7 @@ a:focus-visible {
   width: 13px;
   height: 13px;
   margin: 1px 0 0;
-  accent-color: var(--accent);
+  accent-color: var(--imagination);
 }
 
 .selection-skill-option span,
@@ -4126,7 +4126,7 @@ a:focus-visible {
   width: 13px;
   height: 13px;
   margin: 0;
-  accent-color: var(--accent);
+  accent-color: var(--imagination);
 }
 
 .generation-output-actions .generation-compile-button {
@@ -4228,7 +4228,7 @@ a:focus-visible {
   width: 14px;
   height: 14px;
   margin: 1px 0 0;
-  accent-color: var(--teal);
+  accent-color: var(--imagination);
 }
 
 .generation-point span {
