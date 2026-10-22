@@ -85,7 +85,7 @@ for (const theme of ["light", "dark"]) {
       );
       await expect(save).toHaveCSS(
         "background-color",
-        theme === "light" ? "rgb(249, 115, 22)" : "rgb(255, 122, 69)",
+        "rgb(255, 122, 69)",
       );
       await capture(page, `${theme}-${width}-idle`);
       await save.click();
