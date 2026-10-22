@@ -1202,6 +1202,18 @@ export default function ResumeGenerator({ library, source }: Props) {
     recommendedSkillIds.some(
       (id) => selectedSkillIds !== null && !selectedSkillIds.includes(id),
     );
+  /**
+   * The compile control stays a single utility action: it creates the first
+   * PDF, recompiles the current LaTeX once one exists, and reports the
+   * pending state while the compiler runs.
+   */
+  const compileActionLabel = isCompiling
+    ? pdfUrl
+      ? "Compiling…"
+      : "Creating PDF…"
+    : pdfUrl
+      ? "Recompile"
+      : "Create PDF";
 
   return (
     <section className="generation-page" aria-labelledby="page-title">
@@ -2216,33 +2228,48 @@ export default function ResumeGenerator({ library, source }: Props) {
                       disabled={!pdfUrl}
                       onClick={() => setOutputView("pdf")}
                       role="tab"
+                      title={
+                        pdfUrl
+                          ? "Show the compiled PDF"
+                          : "Compile the PDF to preview it here"
+                      }
                       type="button"
                     >
                       PDF
                     </button>
                   </div>
-                  {outputView === "pdf" && pdfUrl ? (
-                    <>
-                      <button
-                        aria-label="Download PDF"
-                        onClick={downloadPdf}
-                        title="Download PDF"
-                        type="button"
-                      >
-                        Download PDF
-                      </button>
-                      <button
-                        onClick={() => compilePdf()}
-                        disabled={isCompiling}
-                        type="button"
-                      >
-                        {isCompiling ? "Compiling…" : "Recompile"}
-                      </button>
-                    </>
-                  ) : (
+                  <button
+                    aria-describedby={
+                      pdfUrl ? undefined : "generation-pdf-availability"
+                    }
+                    aria-label="Download PDF"
+                    className="generation-action generation-action-download"
+                    disabled={!pdfUrl || isCompiling}
+                    onClick={downloadPdf}
+                    title={
+                      pdfUrl
+                        ? "Download the compiled PDF"
+                        : "Compile the PDF to enable this download"
+                    }
+                    type="button"
+                  >
+                    Download PDF
+                  </button>
+                  <button
+                    aria-busy={isCompiling}
+                    className="generation-action generation-action-compile"
+                    disabled={isCompiling || isGenerating}
+                    onClick={() => compilePdf()}
+                    title="Compile the current generated LaTeX into a PDF"
+                    type="button"
+                  >
+                    {compileActionLabel}
+                  </button>
+                  {outputView === "latex" && (
                     <>
                       <button
                         aria-label="Copy LaTeX"
+                        className="generation-action generation-action-utility"
                         onClick={copyLatex}
                         title="Copy LaTeX"
                         type="button"
@@ -2251,35 +2278,43 @@ export default function ResumeGenerator({ library, source }: Props) {
                       </button>
                       <button
                         aria-label="Download LaTeX file"
+                        className="generation-action generation-action-utility"
                         onClick={downloadLatex}
                         title="Download LaTeX file"
                         type="button"
                       >
                         Download LaTeX
                       </button>
-                      <button
-                        className="primary-button generation-compile-button"
-                        disabled={isCompiling || isGenerating}
-                        onClick={() => compilePdf()}
-                        type="button"
-                      >
-                        {isCompiling ? "Creating PDF…" : "Create PDF"}
-                      </button>
                     </>
                   )}
-                  {result && (
-                    <button
-                      aria-label="Download export package"
-                      onClick={downloadExportPackage}
-                      title="Download LaTeX, PDF when available, and generation metadata"
-                      type="button"
-                    >
-                      Export package
-                    </button>
-                  )}
+                  <button
+                    aria-label="Download export package"
+                    className="generation-action generation-action-utility"
+                    disabled={isCompiling}
+                    onClick={downloadExportPackage}
+                    title={
+                      isCompiling
+                        ? "Wait for the current compile to finish."
+                        : "Download LaTeX, PDF when available, and generation metadata"
+                    }
+                    type="button"
+                  >
+                    Export package
+                  </button>
                 </div>
               )}
             </div>
+
+            {result && !pdfUrl && (
+              <p
+                className="generation-action-hint"
+                id="generation-pdf-availability"
+              >
+                {isCompiling
+                  ? "Compiling your generated LaTeX into a PDF…"
+                  : "No compiled PDF yet. Choose “Create PDF” to compile your generated LaTeX; the PDF download and the PDF inside the export package stay unavailable until it succeeds."}
+              </p>
+            )}
 
             {requestError && (
               <p className="generation-error-message" role="alert">

@@ -126,4 +126,15 @@ describe("resume export package", () => {
       ),
     ).toBe(false);
   });
+
+  it("packages the compiled PDF bytes without altering them", async () => {
+    const current = generation();
+    const pdf = "%PDF-1.7\n1 0 obj\n<< /Type /Catalog >>\nendobj\n%%EOF\n";
+    const exported = createResumeExportPackage(current, btoa(pdf));
+    const files = readStoredZip(
+      new Uint8Array(await exported.blob.arrayBuffer()),
+    );
+    expect(exported.filename).toBe("example-systems-platform-engineer.zip");
+    expect(files.get("example-systems-platform-engineer.pdf")).toBe(pdf);
+  });
 });
