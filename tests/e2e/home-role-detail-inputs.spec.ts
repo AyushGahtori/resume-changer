@@ -201,7 +201,7 @@ test("marks a non-HTTP job link invalid with a red border", async ({
 
   const expectedErrorColor = await page.locator("html").evaluate((root) => {
     const probe = document.createElement("span");
-    probe.style.color = "var(--danger)";
+    probe.style.color = "var(--color-error)";
     root.append(probe);
     const color = getComputedStyle(probe).color;
     probe.remove();
