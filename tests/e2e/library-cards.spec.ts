@@ -66,9 +66,7 @@ async function writePersonalLibrary(fixture: LibraryFixture) {
     firstJob.points[0] = {
       ...firstPoint,
       text: fixture.point.text,
-      ...(fixture.point.metrics
-        ? { metrics: fixture.point.metrics }
-        : {}),
+      ...(fixture.point.metrics ? { metrics: fixture.point.metrics } : {}),
       source: {
         type: fixture.point.sourceType ?? "user-notes",
         label: fixture.point.sourceLabel ?? "Fixture entry",
@@ -441,7 +439,9 @@ test("keeps the evidence in the card without a hover", async ({ page }) => {
   expect(state.title).toBeNull();
 });
 
-test("does not present a metric value as a positive score", async ({ page }) => {
+test("does not present a metric value as a positive score", async ({
+  page,
+}) => {
   await page.goto("/library?source=demo");
 
   const value = page.locator(".point-metric-value").first();
@@ -499,7 +499,8 @@ test("puts two metrics in two columns and stacks them on a phone", async ({
       document.querySelectorAll(".library-point .point-metric"),
     ) as HTMLElement[];
     return {
-      columns: getComputedStyle(grid).gridTemplateColumns.split(" ")
+      columns: getComputedStyle(grid)
+        .gridTemplateColumns.split(" ")
         .filter(Boolean).length,
       tops: metrics.map((metric) =>
         Math.round(metric.getBoundingClientRect().top),
@@ -519,7 +520,8 @@ test("puts two metrics in two columns and stacks them on a phone", async ({
       document.querySelectorAll(".library-point .point-metric"),
     ) as HTMLElement[];
     return {
-      columns: getComputedStyle(grid).gridTemplateColumns.split(" ")
+      columns: getComputedStyle(grid)
+        .gridTemplateColumns.split(" ")
         .filter(Boolean).length,
       tops: metrics.map((metric) =>
         Math.round(metric.getBoundingClientRect().top),
@@ -532,7 +534,9 @@ test("puts two metrics in two columns and stacks them on a phone", async ({
   expect(narrow.tops[0]).not.toBe(narrow.tops[1]);
 });
 
-test("omits a unit and a context the metric does not have", async ({ page }) => {
+test("omits a unit and a context the metric does not have", async ({
+  page,
+}) => {
   await writePersonalLibrary({
     point: {
       text: "A plain outcome.",
@@ -548,7 +552,10 @@ test("omits a unit and a context the metric does not have", async ({ page }) => 
   });
   await page.goto("/library");
 
-  const metric = page.locator(".library-point").first().locator(".point-metric");
+  const metric = page
+    .locator(".library-point")
+    .first()
+    .locator(".point-metric");
   await expect(metric.locator(".point-metric-label")).toHaveText(
     "Servers migrated",
   );
@@ -649,7 +656,7 @@ test("keeps long metric text inside the card", async ({ page }) => {
   );
 
   // The figure itself is still complete.
-  await expect(
-    page.locator(".point-metric-number").first(),
-  ).toHaveText("1234567890123456789");
+  await expect(page.locator(".point-metric-number").first()).toHaveText(
+    "1234567890123456789",
+  );
 });
