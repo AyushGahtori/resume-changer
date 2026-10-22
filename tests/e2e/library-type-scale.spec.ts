@@ -181,8 +181,8 @@ test("applies the shared type scale to the library hierarchy", async ({
   const pointStatus = await readType(page, ".point-status");
   const pointText = await readType(page, ".library-point-text");
   const provenance = await readType(page, ".point-provenance");
-  const metricLabelInCard = await readType(page, ".point-metrics strong");
-  const metricEvidence = await readType(page, ".point-metrics span");
+  const metricLabelInCard = await readType(page, ".point-metric-label");
+  const metricEvidence = await readType(page, ".point-metric-evidence");
   const chip = await readType(page, ".facet-chip");
   const sectionTitle = await readType(page, ".library-detail summary");
   const searchLabel = await readType(page, ".library-search > span");

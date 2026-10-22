@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import AchievementPointEditor from "@/components/achievement-point-editor";
 import AchievementImagination from "@/components/achievement-imagination";
+import PointMetrics from "@/components/library/point-metrics";
 import {
   EMPTY_LIBRARY_FILTERS,
   filterAchievementLibrary,
@@ -70,18 +71,7 @@ function PointRow({
         {point.source.reference ? ` · ${point.source.reference}` : ""}
       </p>
       {point.metrics.length > 0 && (
-        <ul className="point-metrics" aria-label="Achievement metrics">
-          {point.metrics.map((metric) => (
-            <li key={metric.id}>
-              <strong>
-                {metric.label}: {metric.value}
-                {metric.unit ? ` ${metric.unit}` : ""}
-              </strong>
-              <span>{metric.evidence}</span>
-              {metric.context && <span>{metric.context}</span>}
-            </li>
-          ))}
-        </ul>
+        <PointMetrics metrics={point.metrics} />
       )}
       {(point.tags.length > 0 || point.skillIds.length > 0) && (
         <div className="point-facets">
