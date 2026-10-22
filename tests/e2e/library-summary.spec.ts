@@ -323,3 +323,274 @@ test("keeps every metric label and value visible in both themes", async ({
     }
   }
 });
+
+/**
+ * The colour a custom property resolves to on the current theme.
+ *
+ * The probe keeps the comparison honest in both themes: the tile is checked
+ * against the token it claims to use, not against a hard coded value.
+ */
+async function tokenColor(page: Page, token: string) {
+  return page.evaluate((name) => {
+    const probe = document.createElement("span");
+    probe.style.color = `var(${name})`;
+    document.body.appendChild(probe);
+    const color = getComputedStyle(probe).color;
+    probe.remove();
+    return color;
+  }, token);
+}
+
+type MetricTile = {
+  category: string | null;
+  label: string | null;
+  value: string | null;
+  iconColor: string;
+  background: string;
+  iconSize: number;
+  width: number;
+  height: number;
+  top: number;
+  left: number;
+  focusable: boolean;
+  links: number;
+};
+
+async function readMetricTiles(page: Page): Promise<MetricTile[]> {
+  return page.locator(".library-metric").evaluateAll((nodes) =>
+    nodes.map((node) => {
+      const tile = node as HTMLElement;
+      const icon = tile.querySelector("dt svg") as SVGElement;
+      const box = tile.getBoundingClientRect();
+      return {
+        category: tile.getAttribute("data-category"),
+        label: tile.querySelector("dt span")?.textContent ?? null,
+        value: tile.querySelector("dd")?.textContent ?? null,
+        iconColor: getComputedStyle(icon).color,
+        background: getComputedStyle(tile).backgroundColor,
+        iconSize: icon.getBoundingClientRect().width,
+        width: box.width,
+        height: box.height,
+        top: Math.round(box.top),
+        left: Math.round(box.left),
+        focusable: tile.hasAttribute("tabindex"),
+        links: tile.querySelectorAll("a").length,
+      };
+    }),
+  );
+}
+
+test("gives every metric its own restrained category accent", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/library?source=demo");
+
+  const tiles = await readMetricTiles(page);
+  expect(tiles.map((tile) => tile.category)).toEqual([
+    "job",
+    "project",
+    "points",
+    "skills",
+    "credentials",
+  ]);
+
+  for (const tile of tiles) {
+    const category = tile.category!;
+    // The label and the icon read in the text safe step of the category hue.
+    expect(tile.iconColor).toBe(
+      await tokenColor(page, `--color-category-${category}-text`),
+    );
+    // The tile is a tint of that hue, not the saturated category colour.
+    expect(tile.background).not.toBe(
+      await tokenColor(page, `--color-category-${category}`),
+    );
+  }
+
+  // Every category keeps its own colour, so the tiles are told apart.
+  expect(new Set(tiles.map((tile) => tile.iconColor)).size).toBe(5);
+});
+
+test("states every count as text next to an icon and a label", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/library?source=demo");
+
+  const tiles = await readMetricTiles(page);
+  expect(tiles.map((tile) => tile.label)).toEqual([
+    "Jobs",
+    "Projects",
+    "Points",
+    "Skills",
+    "Credentials",
+  ]);
+  // The count is real text, not a number carried by the icon or the colour.
+  for (const tile of tiles) {
+    expect(tile.value).toMatch(/^\d[\d,]*$/);
+  }
+
+  // The icons belong to the agreed 18px to 20px range.
+  for (const tile of tiles) {
+    expect(tile.iconSize).toBeGreaterThanOrEqual(18);
+    expect(tile.iconSize).toBeLessThanOrEqual(20);
+  }
+
+  // A metric that is not a link stays out of the tab order.
+  for (const tile of tiles) {
+    expect(tile.focusable).toBe(false);
+    expect(tile.links).toBe(0);
+  }
+});
+
+test("sets the metric label and value in the agreed type scale", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/library?source=demo");
+
+  const scale = await page.locator(".library-metric").first().evaluate((tile) => {
+    const label = getComputedStyle(tile.querySelector("dt")!);
+    const value = getComputedStyle(tile.querySelector("dd")!);
+    return {
+      labelSize: label.fontSize,
+      labelLineHeight: label.lineHeight,
+      valueSize: value.fontSize,
+      valueLineHeight: value.lineHeight,
+      valueWeight: value.fontWeight,
+    };
+  });
+
+  expect(scale.labelSize).toBe("12px");
+  expect(scale.labelLineHeight).toBe("16px");
+  expect(scale.valueSize).toBe("26px");
+  expect(scale.valueLineHeight).toBe("32px");
+  expect(scale.valueWeight).toBe("700");
+});
+
+test("lays the metric row out in equal columns that wrap when they must", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/library?source=demo");
+
+  const wide = await page.evaluate(() => {
+    const grid = document.querySelector(".library-metrics") as HTMLElement;
+    const tiles = Array.from(
+      document.querySelectorAll(".library-metric"),
+    ) as HTMLElement[];
+    return {
+      columns: getComputedStyle(grid).gridTemplateColumns.split(" ")
+        .filter(Boolean).length,
+      rows: new Set(tiles.map((tile) => Math.round(tile.getBoundingClientRect().top)))
+        .size,
+      widths: tiles.map((tile) => Math.round(tile.getBoundingClientRect().width)),
+    };
+  });
+
+  // A wide screen holds the five metrics in one row of equal columns.
+  expect(wide.columns).toBe(5);
+  expect(wide.rows).toBe(1);
+  expect(new Set(wide.widths).size).toBe(1);
+
+  // A tablet keeps the same tiles but wraps them onto a second row.
+  await page.setViewportSize({ width: 768, height: 1024 });
+  const tablet = await page.evaluate(() => {
+    const grid = document.querySelector(".library-metrics") as HTMLElement;
+    const tiles = Array.from(
+      document.querySelectorAll(".library-metric"),
+    ) as HTMLElement[];
+    const rowWidths = new Map<number, Set<number>>();
+    for (const tile of tiles) {
+      const box = tile.getBoundingClientRect();
+      const row = Math.round(box.top);
+      const widths = rowWidths.get(row) ?? new Set<number>();
+      widths.add(Math.round(box.width));
+      rowWidths.set(row, widths);
+    }
+    return {
+      columns: getComputedStyle(grid).gridTemplateColumns.split(" ")
+        .filter(Boolean).length,
+      rows: rowWidths.size,
+      equalWithinRow: Array.from(rowWidths.values()).every(
+        (widths) => widths.size === 1,
+      ),
+      overflow: document.documentElement.scrollWidth - window.innerWidth,
+    };
+  });
+
+  expect(tablet.rows).toBeGreaterThan(1);
+  expect(tablet.equalWithinRow).toBe(true);
+  expect(tablet.overflow).toBeLessThanOrEqual(0);
+});
+
+test("uses two columns and a full width final tile on a phone", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/library?source=demo");
+
+  const layout = await page.evaluate(() => {
+    const grid = document.querySelector(".library-metrics") as HTMLElement;
+    const tiles = Array.from(
+      document.querySelectorAll(".library-metric"),
+    ) as HTMLElement[];
+    const first = tiles[0].getBoundingClientRect();
+    const second = tiles[1].getBoundingClientRect();
+    const last = tiles[tiles.length - 1].getBoundingClientRect();
+    return {
+      columns: getComputedStyle(grid).gridTemplateColumns.split(" ")
+        .filter(Boolean).length,
+      lastSpansRow: Math.abs(last.width - (second.left - first.left + second.width)) < 2,
+      overflow: document.documentElement.scrollWidth - window.innerWidth,
+    };
+  });
+
+  expect(layout.columns).toBe(2);
+  // The fifth tile has no partner, so it takes the whole row.
+  expect(layout.lastSpansRow).toBe(true);
+  expect(layout.overflow).toBeLessThanOrEqual(0);
+});
+
+test("keeps a large count inside the tile and groups it readably", async ({
+  page,
+}) => {
+  const skills = Array.from({ length: 1200 }, (_, index) => ({
+    id: `skill-bulk-${index}`,
+    name: `Bulk Skill ${index}`,
+    category: "Engineering",
+    aliases: [] as string[],
+    sources: ["user-notes" as const],
+    isListedOnCurrentResume: true,
+    evidenceAchievementIds: [] as string[],
+  }));
+
+  await writePersonalLibrary(syntheticLibrary({ skills }));
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/library");
+
+  const tiles = await readMetricTiles(page);
+  const skillsTile = tiles[3];
+  expect(skillsTile.value).toBe("1,200");
+
+  // The tile keeps the size of its neighbours, the count only steps down.
+  expect(skillsTile.width).toBe(tiles[0].width);
+  expect(skillsTile.height).toBe(tiles[0].height);
+
+  const value = await page
+    .locator(".library-metric")
+    .nth(3)
+    .locator("dd")
+    .evaluate((node) => {
+      const style = getComputedStyle(node);
+      return {
+        size: style.fontSize,
+        lineHeight: style.lineHeight,
+        clipped: node.scrollWidth > node.clientWidth + 1,
+      };
+    });
+
+  expect(value.size).toBe("24px");
+  expect(value.lineHeight).toBe("32px");
+  expect(value.clipped).toBe(false);
+});

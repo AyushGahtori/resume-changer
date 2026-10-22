@@ -2236,20 +2236,36 @@ a:focus-visible {
 }
 
 .library-metrics {
+  /*
+   * The five tiles are equal columns. On a phone two sit side by side and
+   * the last one takes the full width; from a tablet up the row grows as
+   * many equal columns as the labels still fit in.
+   */
+  --metric-gap: var(--space-12);
+  --metric-value-size: 26px;
+  --metric-value-line-height: 32px;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  gap: var(--metric-gap);
   margin: 0;
 }
 
 .library-metric {
   display: grid;
   align-content: start;
-  gap: 4px;
+  gap: var(--space-4);
   min-width: 0;
-  padding: 10px 12px;
-  border-radius: 8px;
+  padding: var(--space-12);
+  border-radius: var(--radius-card);
   background: color-mix(in srgb, var(--metric-accent) 12%, var(--surface));
+}
+
+/*
+ * The fifth tile has no partner in a two column phone grid, so it spans the
+ * row instead of leaving an empty column beside it.
+ */
+.library-metric:last-child {
+  grid-column: 1 / -1;
 }
 
 .library-metric[data-category="job"] {
@@ -2288,15 +2304,18 @@ a:focus-visible {
   min-width: 0;
   margin: 0;
   color: var(--metric-label);
-  font-size: 12px;
+  font-size: var(--type-caption-size);
   font-weight: 600;
-  line-height: 16px;
+  line-height: var(--type-caption-line-height);
 }
 
+/*
+ * A label that no longer fits wraps onto a second line instead of being
+ * cut off, so every tile keeps its full name at any width.
+ */
 .library-metric dt span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .library-metric dt svg {
@@ -2312,15 +2331,35 @@ a:focus-visible {
 .library-metric dd {
   margin: 0;
   color: var(--ink);
-  font-size: 22px;
-  font-weight: 650;
+  font-size: var(--metric-value-size);
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
-  line-height: 28px;
+  line-height: var(--metric-value-line-height);
+  /*
+   * A long count wraps inside the tile rather than pushing the tile wider,
+   * so the tile keeps its size whatever the library holds.
+   */
+  overflow-wrap: anywhere;
+}
+
+/*
+ * A count with more than four characters steps down one size, so a grouped
+ * number such as 1,200 still sits inside the same tile.
+ */
+.library-metric dd.is-compact {
+  font-size: 24px;
 }
 
 @media (min-width: 768px) {
+  /*
+   * From a tablet up the row holds as many equal columns as the labels
+   * still fit in, and wraps to a second row when they no longer do.
+   */
   .library-metrics {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  }
+  .library-metric:last-child {
+    grid-column: auto;
   }
 }
 
@@ -2329,9 +2368,6 @@ a:focus-visible {
     grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
     align-items: center;
     gap: 28px;
-  }
-  .library-metrics {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 }
 
