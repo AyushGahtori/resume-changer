@@ -1,7 +1,3 @@
-Warning: truncated output (original token count: 4681)
-Total output lines: 598
-
-[error] No parser could be inferred for file "C:\Users\Ayush\.codex\worktrees\achievement-pr-audit\re_changer\test-results\remote-format-pr86-0.txt".
 import { expect, test, type Page } from "@playwright/test";
 import { copyFile, mkdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
