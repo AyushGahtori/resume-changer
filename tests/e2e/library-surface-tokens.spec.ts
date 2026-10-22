@@ -1,3 +1,4 @@
+[error] No parser could be inferred for file "C:\Users\Ayush\.codex\worktrees\achievement-pr-audit\re_changer\test-results\remote-format-pr83-0.txt".
 import { expect, test, type Page } from "@playwright/test";
 
 /**
@@ -242,3 +243,4 @@ test("keeps the point editor a flat nested surface", async ({ page }) => {
   expect(darkEditor.borderTopWidth).toBe("1px");
   expect(darkEditor.backgroundColor).not.toBe(darkEditor.borderTopColor);
 });
+
