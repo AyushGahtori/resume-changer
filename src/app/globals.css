@@ -2979,16 +2979,13 @@ a:focus-visible {
     border-bottom: 0;
     box-shadow: none;
     transform: translateX(calc(-100% - 12px));
-    transition:
-      transform 180ms ease,
-      visibility 0s linear 180ms;
+    transition: transform 180ms ease;
     visibility: hidden;
   }
 
   .app-frame.is-mobile-nav-open .sidebar {
     box-shadow: 0 16px 40px rgb(15 23 42 / 18%);
     transform: translateX(0);
-    transition-delay: 0s, 0s;
     visibility: visible;
   }
 
@@ -4553,6 +4550,256 @@ a:focus-visible {
 @media (min-width: 701px) and (max-width: 1100px) {
   .jd-workspace-frame .page-content {
     padding: 24px;
+  }
+}
+@media (max-width: 700px) {
+  .jd-workspace-frame .page-content {
+    padding: 24px 16px 32px;
+  }
+  .jd-work-grid .jd-form {
+    padding: 16px;
+  }
+  .jd-work-grid .metadata-fields {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+  .jd-work-grid .form-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+  .jd-work-grid .form-actions button {
+    width: 100%;
+    min-height: 44px;
+    white-space: nowrap;
+  }
+  .jd-work-grid .input-metrics {
+    gap: 8px;
+  }
+  html[data-shell-hydrated] .sidebar {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  html[data-shell-hydrated] .sidebar-header,
+  html[data-shell-hydrated] .main-navigation,
+  html[data-shell-hydrated] .sidebar-bottom {
+    flex-shrink: 0;
+  }
+}
+@media (max-width: 380px) {
+  .jd-work-grid .jd-form {
+    padding: 12px;
+  }
+}
+
+/* UI task 28: perceptible boundaries, keyboard focus and accessible controls. */
+.jd-workspace-frame {
+  --control-boundary: #64748b;
+  --focus-outline: 2px solid var(--focus);
+}
+:root[data-theme="dark"] .jd-workspace-frame {
+  --control-boundary: #827990;
+}
+.jd-workspace-frame .jd-form :is(input, textarea) {
+  border-color: var(--control-boundary);
+}
+.jd-workspace-frame .jd-form :is(input, textarea)[aria-invalid="true"] {
+  border-color: var(--danger);
+}
+.jd-workspace-frame .jd-form :is(input, textarea):focus {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  box-shadow: none;
+}
+.jd-workspace-frame :is(button, a):focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.jd-workspace-frame :is(.clear-button, .theme-toggle, .sidebar-toggle) {
+  border-color: var(--control-boundary);
+}
+.jd-workspace-frame
+  :is(
+    .clear-button,
+    .primary-button,
+    .theme-toggle,
+    .sidebar-toggle,
+    .sidebar-close,
+    .brand
+  ) {
+  min-height: 44px;
+  min-width: 44px;
+}
+.jd-workspace-frame :is(.theme-toggle, .sidebar-toggle) {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+}
+.jd-workspace-frame .primary-button {
+  border-color: var(--color-orange-strong);
+}
+.jd-page :is(.eyebrow, .required-label) {
+  color: var(--color-orange-strong);
+}
+.jd-helper {
+  margin: -4px 0 12px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 16px;
+}
+.jd-page .field-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 8px 0 0;
+}
+.field-error svg {
+  flex: 0 0 auto;
+}
+.analysis-panel-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+.analysis-panel .analysis-retry {
+  min-width: 118px;
+}
+.analysis-panel .analysis-retry[aria-disabled="true"] {
+  cursor: wait;
+  color: var(--muted);
+}
+.analysis-error-notice {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+}
+.analysis-error-notice .analysis-retry {
+  grid-column: 2;
+  justify-self: start;
+}
+.workspace-skip-link {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 1100;
+  padding: 12px 16px;
+  transform: translateY(-150%);
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink);
+}
+.workspace-skip-link:focus {
+  transform: none;
+}
+
+/* UI task 29: corrections found during final reference acceptance. */
+.jd-page h1 {
+  font-weight: 700;
+}
+.jd-page .page-intro {
+  max-width: 680px;
+  margin-top: 8px;
+  font-size: 16px;
+  line-height: 24px;
+}
+.jd-page .field-group input {
+  height: 44px;
+}
+.jd-page .form-actions button {
+  min-height: 44px;
+  white-space: nowrap;
+  transition:
+    background-color 200ms ease,
+    border-color 200ms ease,
+    color 200ms ease,
+    transform 100ms ease;
+}
+.jd-page .form-actions :is(.analyze-button, .primary-button) {
+  padding-inline: 20px;
+}
+.jd-page .form-actions .analyze-button {
+  width: 244px;
+  min-width: 244px;
+  gap: 8px;
+}
+.jd-page .form-actions .analyze-button:where(:enabled, [aria-busy="true"]) {
+  border-color: var(--color-violet);
+  background: var(--color-violet-subtle);
+  color: #6d28d9;
+}
+.jd-page .analyze-button > :is(svg, .analysis-spinner) {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+}
+.jd-page .analyze-button .analysis-spinner {
+  border-color: currentColor;
+  border-right-color: transparent;
+}
+.jd-page .analyze-button:hover:enabled {
+  background: #ddd6fe;
+}
+.jd-page .analyze-button:active:enabled {
+  background: #6d28d9;
+  color: white;
+}
+.jd-page .form-actions .clear-button:active:enabled {
+  transform: scale(0.98);
+}
+.jd-page .form-actions .clear-button:not(.analyze-button):active:enabled {
+  background: var(--surface-hover);
+  border-color: var(--ink);
+}
+.jd-page .form-actions .primary-button:active:enabled {
+  transform: scale(0.98);
+  background: #9a3412;
+  color: white;
+}
+.jd-page .form-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 1;
+}
+.jd-page .form-actions .analyze-button[aria-busy="true"] {
+  cursor: wait;
+}
+:root[data-theme="dark"]
+  .jd-page
+  .analyze-button:where(:enabled, [aria-busy="true"]) {
+  background: #7c3aed;
+  color: white;
+  border-color: #a78bfa;
+}
+:root[data-theme="dark"] .jd-page .analyze-button:hover:enabled {
+  background: #6d28d9;
+}
+:root[data-theme="dark"] .jd-page .analyze-button:active:enabled {
+  background: #5b21b6;
+}
+:root[data-theme="dark"] .jd-page .primary-button:active:enabled {
+  background: #fdba74;
+  color: #171421;
+}
+@media (max-width: 700px) {
+  .jd-page .form-actions .analyze-button {
+    width: 100%;
+    min-width: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .jd-workspace-frame .sidebar {
+    transition: none !important;
+  }
+  .jd-workspace-frame *,
+  .jd-workspace-frame *::before,
+  .jd-workspace-frame *::after {
+    animation: none !important;
+    scroll-behavior: auto !important;
+  }
+  .jd-page .form-actions button {
+    transition: none !important;
+  }
+  .jd-page .form-actions button:active:enabled {
+    transform: none;
   }
 }
 /* Analysis content must follow the form instead of shrinking it over its actions. */

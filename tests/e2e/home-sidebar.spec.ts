@@ -152,6 +152,10 @@ test("provides visible active, hover, and keyboard focus states in both themes",
     });
     await page.keyboard.press("Tab");
     await expect(
+      page.getByRole("link", { name: "Skip to main content" }),
+    ).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(
       page.getByRole("link", { name: "Resume Changer home" }),
     ).toBeFocused();
 
@@ -173,7 +177,7 @@ test("provides visible active, hover, and keyboard focus states in both themes",
           };
         });
         expect(focusStyles.outlineStyle).toBe("solid");
-        expect(focusStyles.outlineWidth).toBeGreaterThanOrEqual(3);
+        expect(focusStyles.outlineWidth).toBe(2);
         expect(
           contrastRatio(focusStyles.outlineColor, focusStyles.backgroundColor),
         ).toBeGreaterThanOrEqual(3);
@@ -218,6 +222,7 @@ test("keeps sidebar rows contained across desktop, zoom-equivalent, and mobile w
           labelRight: labelBounds.right,
           labelTop: labelBounds.top,
           labelBottom: labelBounds.bottom,
+          labelVisible: labelBounds.width > 1 && labelBounds.height > 1,
           iconWidth: icon.getBoundingClientRect().width,
           iconHeight: icon.getBoundingClientRect().height,
         };
@@ -227,9 +232,14 @@ test("keeps sidebar rows contained across desktop, zoom-equivalent, and mobile w
         viewportWidth: window.innerWidth,
         documentWidth: document.documentElement.scrollWidth,
         sidebarRight,
+        collapsed: document
+          .querySelector(".app-frame")!
+          .classList.contains("is-sidebar-collapsed"),
         overflowX: getComputedStyle(navigation).overflowX,
         navRowGap: getComputedStyle(navigation).rowGap,
         navColumnGap: getComputedStyle(navigation).columnGap,
+        navigationWidth: navigation.clientWidth,
+        navigationScrollWidth: navigation.scrollWidth,
         activeLeft: document
           .querySelector(".nav-link.is-active")!
           .getBoundingClientRect().left,
@@ -243,6 +253,14 @@ test("keeps sidebar rows contained across desktop, zoom-equivalent, and mobile w
     expect(metrics.navRowGap).toBe("8px");
     expect(metrics.navColumnGap).toBe("8px");
     expect(metrics.activeLeft).toBeGreaterThanOrEqual(0);
+    if (metrics.collapsed) {
+      // Flyout tooltips intentionally extend beyond the narrow rail.
+      expect(metrics.overflowX).toBe("visible");
+    } else {
+      expect(metrics.navigationScrollWidth).toBeLessThanOrEqual(
+        metrics.navigationWidth,
+      );
+    }
     if (width <= 700) {
       expect(metrics.overflowX).toBe("visible");
     }
@@ -252,12 +270,15 @@ test("keeps sidebar rows contained across desktop, zoom-equivalent, and mobile w
         item.height,
         "row height at viewport " + width + "px",
       ).toBeGreaterThanOrEqual(48);
-      expect(item.gap).toBe("12px");
+      expect(item.gap).toBe(metrics.collapsed ? "0px" : "12px");
       expect(item.iconWidth).toBe(20);
       expect(item.iconHeight).toBe(20);
-      expect(item.labelRight).toBeLessThanOrEqual(item.right);
-      expect(item.labelTop).toBeGreaterThanOrEqual(item.top);
-      expect(item.labelBottom).toBeLessThanOrEqual(item.bottom);
+      expect(item.labelVisible).toBe(!metrics.collapsed);
+      if (item.labelVisible) {
+        expect(item.labelRight).toBeLessThanOrEqual(item.right);
+        expect(item.labelTop).toBeGreaterThanOrEqual(item.top);
+        expect(item.labelBottom).toBeLessThanOrEqual(item.bottom);
+      }
       expect(item.left).toBeGreaterThanOrEqual(0);
       expect(item.right).toBeLessThanOrEqual(metrics.sidebarRight);
     }

@@ -55,6 +55,15 @@ export default function JDWorkspace({
   const autosaveTimeout = useRef<number | null>(null);
   const draftChanged = useRef(false);
 
+  function focusField(field: "jobDescription" | "jobUrl") {
+    const input = document.getElementById(
+      field === "jobDescription" ? "job-description" : "job-url",
+    );
+    window.requestAnimationFrame(() => {
+      if (input?.isConnected) input.focus();
+    });
+  }
+
   // Storage access itself can throw, before the storage helpers can catch it.
   function localStorageOrUnavailable(): Storage {
     try {
@@ -162,6 +171,7 @@ export default function JDWorkspace({
       }));
       setAnalysisError("Check the job description and try again.");
       setAnalysisState("error");
+      focusField("jobDescription");
       return;
     }
 
@@ -230,6 +240,7 @@ export default function JDWorkspace({
     if (Object.keys(nextErrors).length > 0) {
       setSaveFeedbackError(true);
       setSaveFeedback("Fix the highlighted fields before saving.");
+      focusField(nextErrors.jobDescription ? "jobDescription" : "jobUrl");
       return;
     }
 
@@ -356,6 +367,7 @@ export default function JDWorkspace({
             }
             aria-invalid={Boolean(descriptionError)}
             disabled={!isReady}
+            required
             id="job-description"
             name="jobDescription"
             onChange={(event) =>
@@ -428,7 +440,7 @@ export default function JDWorkspace({
                 ) : (
                   <>
                     <span className="home-action-icon">
-                      <Sparkles aria-hidden="true" size={18} />
+                      <Sparkles aria-hidden="true" size={16} />
                     </span>
                     <span>
                       {analysisState === "error"

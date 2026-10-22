@@ -200,7 +200,7 @@ test("keeps the orange save action legible and the focus ring contrasted", async
     });
 
     expect(appearance.outlineStyle).toBe("solid");
-    expect(appearance.outlineWidth).toBe("3px");
+    expect(appearance.outlineWidth).toBe("2px");
     expect(parseCssColor(appearance.outlineColor)).toEqual(
       parseCssColor(appearance.focusToken),
     );

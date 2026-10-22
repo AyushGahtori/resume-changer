@@ -311,10 +311,19 @@ for (const theme of ["light", "dark"]) {
       await page.setViewportSize({ width, height: 900 });
       if (width < 700)
         await expect(page.locator("#workspace-sidebar")).toBeHidden();
-      const formBounds = await page.locator(".jd-form").boundingBox();
-      const previewBounds = await preview.boundingBox();
-      expect(formBounds).not.toBeNull();
-      expect(previewBounds).not.toBeNull();
+      // Read both surfaces in one frame: the sidebar width animates on resize.
+      const { formBounds, previewBounds } = await page.evaluate(() => {
+        const read = (selector: string) => {
+          const { x, y, width, height } = document
+            .querySelector(selector)!
+            .getBoundingClientRect();
+          return { x, y, width, height };
+        };
+        return {
+          formBounds: read(".jd-form"),
+          previewBounds: read(".ats-preview"),
+        };
+      });
       if (width >= 1280) {
         expect(Math.abs(formBounds!.y - previewBounds!.y)).toBeLessThanOrEqual(
           1,

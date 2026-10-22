@@ -48,11 +48,6 @@ export function JobAnalysisPanel({
           <Heading id="analysis-title">Job description analysis</Heading>
           <p>Review what the AI extracted before continuing.</p>
         </div>
-        {state === "success" && (
-          <button className="clear-button" onClick={onAnalyze} type="button">
-            Reanalyze
-          </button>
-        )}
       </div>
       <p className="analysis-status" role="status" aria-live="polite">
         {state === "loading"
@@ -74,24 +69,41 @@ export function JobAnalysisPanel({
           </div>
         </div>
       )}
-      {state === "error" && (
-        <div className="analysis-error-notice">
+      <div
+        className={
+          state === "error" ? "analysis-error-notice" : "analysis-panel-actions"
+        }
+      >
+        {state === "error" && (
           <span className="analysis-notice-icon" aria-hidden="true">
             !
           </span>
-          <div>
+        )}
+        {state === "error" && (
+          <div id="analysis-error-message">
             <p>{error}</p>
             <p>Your draft is unchanged. You can retry the analysis.</p>
-            <button
-              className="clear-button analysis-retry"
-              onClick={onAnalyze}
-              type="button"
-            >
-              Retry
-            </button>
           </div>
-        </div>
-      )}
+        )}
+        <button
+          key="analysis-action"
+          className="clear-button analysis-retry"
+          aria-disabled={state === "loading"}
+          aria-describedby={
+            state === "error" ? "analysis-error-message" : undefined
+          }
+          onClick={() => {
+            if (state !== "loading") onAnalyze();
+          }}
+          type="button"
+        >
+          {state === "loading"
+            ? "Analyzing..."
+            : state === "error"
+              ? "Retry"
+              : "Reanalyze"}
+        </button>
+      </div>
       {state === "success" && analysis && (
         <>
           {!cacheSaved && (
