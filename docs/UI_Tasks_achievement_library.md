@@ -394,12 +394,12 @@ Reference files: `docs/ui-images/achievement-library/achievement-overview-light-
 
 **Files:** `src/components/achievement-library.tsx`, any justified child components under `src/components/library/`, `src/app/globals.css`, and `tests/e2e/library-layout.spec.ts`.
 
-- [ ] Keep the existing shared `WorkspaceShell` as owner of brand, sidebar, breadcrumb, theme, and responsive navigation. Do not create a second shell or duplicate sidebar.
-- [ ] Arrange library content in the sequence: page context/header and controls, profile summary, sticky search/filter workbench, category navigation, Jobs/Projects/Skills/Credentials content, and truthful empty/error states.
-- [ ] Keep the main content in a flexible `minmax(0, 1fr)` track with `min-width: 0`; allow the page to scroll naturally for long libraries.
-- [ ] Use sibling section surfaces and unframed grouping; do not nest the entire page inside a marketing-style card.
-- [ ] Preserve source links, editor overlays, search state, filtering, and local save messages while components are extracted.
-- [ ] Add a focused layout test for landmarks, section order, and no horizontal overflow.
+- [x] Keep the existing shared `WorkspaceShell` as owner of brand, sidebar, breadcrumb, theme, and responsive navigation. Do not create a second shell or duplicate sidebar.
+- [x] Arrange library content in the sequence: page context/header and controls, profile summary, sticky search/filter workbench, category navigation, Jobs/Projects/Skills/Credentials content, and truthful empty/error states.
+- [x] Keep the main content in a flexible `minmax(0, 1fr)` track with `min-width: 0`; allow the page to scroll naturally for long libraries.
+- [x] Use sibling section surfaces and unframed grouping; do not nest the entire page inside a marketing-style card.
+- [x] Preserve source links, editor overlays, search state, filtering, and local save messages while components are extracted.
+- [x] Add a focused layout test for landmarks, section order, and no horizontal overflow.
 
 **Acceptance:** The library reads as a structured evidence workspace in the established app shell and all current workflows remain reachable.
 

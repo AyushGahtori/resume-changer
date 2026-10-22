@@ -32,7 +32,7 @@ test("achievement library remains scrollable on a full desktop viewport", async 
   await expect
     .poll(() => page.evaluate(() => window.scrollY))
     .toBeGreaterThan(0);
-  await expect(page.locator(".library-secondary")).toBeInViewport();
+  await expect(page.locator("#library-credentials")).toBeInViewport();
 });
 
 test("creates a point with a metric and persists it after reload", async ({
