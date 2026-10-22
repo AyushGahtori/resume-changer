@@ -1,4 +1,3 @@
-[error] No parser could be inferred for file "C:\Users\Ayush\.codex\worktrees\achievement-pr-audit\re_changer\test-results\remote-format-pr80-0.txt".
 import { expect, test } from "@playwright/test";
 
 /**
@@ -9,9 +8,11 @@ import { expect, test } from "@playwright/test";
 const libraryRoute = "/library?source=demo";
 
 async function groupLabels(page: import("@playwright/test").Page) {
-  return page.locator(".experience-group").evaluateAll((groups) =>
-    groups.map((group) => group.getAttribute("aria-label")),
-  );
+  return page
+    .locator(".experience-group")
+    .evaluateAll((groups) =>
+      groups.map((group) => group.getAttribute("aria-label")),
+    );
 }
 
 test.beforeEach(async ({ page }) => {
@@ -83,7 +84,9 @@ test("reorders the groups for every sort option", async ({ page }) => {
   ]);
 });
 
-test("sorts the points inside a group and keeps the count", async ({ page }) => {
+test("sorts the points inside a group and keeps the count", async ({
+  page,
+}) => {
   await page.getByLabel("Sort").selectOption("alphabetical");
 
   const firstGroupPoints = page
@@ -163,4 +166,3 @@ test("keeps the data source and the theme when the filters are reset", async ({
   await expect(page).toHaveURL(/source=demo/);
   await expect(page.getByText("Fictional demo data")).toBeVisible();
 });
-
