@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import type {
   AchievementPoint,
   AchievementSource,
@@ -11,6 +11,8 @@ import type {
 type ParentOption = { id: string; label: string; type: "job" | "project" };
 type Props = {
   initialPoint?: AchievementPoint;
+  /** Renders the editor inside the card it belongs to, without a second card. */
+  inline?: boolean;
   parents: ParentOption[];
   skills: Skill[];
   onCancel: () => void;
@@ -34,12 +36,15 @@ function optional(value: string) {
 
 export default function AchievementPointEditor({
   initialPoint,
+  inline = false,
   parents,
   skills,
   onCancel,
   onSaved,
 }: Props) {
   const isEditing = Boolean(initialPoint);
+  const idFieldRef = useRef<HTMLInputElement>(null);
+  const textFieldRef = useRef<HTMLTextAreaElement>(null);
   const [pointId, setPointId] = useState(initialPoint?.id ?? "");
   const [parentKey, setParentKey] = useState(
     parents[0] ? `${parents[0].type}:${parents[0].id}` : "",
@@ -62,6 +67,13 @@ export default function AchievementPointEditor({
   );
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+
+  // The editor takes focus when it opens so the form is reachable from the
+  // keyboard, and the entered values survive a failed save.
+  useEffect(() => {
+    const field = isEditing ? textFieldRef.current : idFieldRef.current;
+    field?.focus();
+  }, [isEditing]);
 
   function toggleSkill(id: string) {
     setSkillIds((current) =>
@@ -143,7 +155,10 @@ export default function AchievementPointEditor({
   }
 
   return (
-    <form className="point-editor" onSubmit={submit}>
+    <form
+      className={inline ? "point-editor is-inline" : "point-editor"}
+      onSubmit={submit}
+    >
       <div className="point-editor-heading">
         <div>
           <p className="eyebrow">
@@ -170,6 +185,7 @@ export default function AchievementPointEditor({
               autoComplete="off"
               onChange={(event) => setPointId(event.target.value)}
               placeholder="achievement-example"
+              ref={idFieldRef}
               required
               value={pointId}
             />
@@ -198,6 +214,7 @@ export default function AchievementPointEditor({
         <span>Achievement text</span>
         <textarea
           onChange={(event) => setText(event.target.value)}
+          ref={textFieldRef}
           required
           rows={4}
           value={text}

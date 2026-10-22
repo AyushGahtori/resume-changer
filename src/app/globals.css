@@ -2212,6 +2212,19 @@ a:focus-visible {
   box-shadow: var(--shadow);
 }
 
+/* The editor opens inside the card it belongs to, so it keeps the card
+   surface and is separated from the summary by a divider instead of
+   becoming a second floating card. */
+.point-editor.is-inline {
+  margin: 16px 0 0;
+  padding: 16px 0 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
 .point-editor-heading,
 .metric-editor-heading {
   display: flex;

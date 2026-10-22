@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import AchievementPointEditor from "@/components/achievement-point-editor";
 import AchievementImagination from "@/components/achievement-imagination";
 import {
@@ -22,6 +22,8 @@ import type { ResumeDataSource } from "@/lib/data/loaders";
 type Props = { library: ResumeLibrary; source: ResumeDataSource };
 type EditorState =
   { mode: "create" } | { mode: "edit"; point: AchievementPoint } | null;
+type ParentOption = { id: string; label: string; type: "job" | "project" };
+type EditorHandlers = { onCancel: () => void; onSaved: () => void };
 
 function dateRange(start?: string, end?: string | null) {
   if (!start) return "";
@@ -38,12 +40,16 @@ function PointRow({
   onTag,
   onSkill,
   onEdit,
+  editor,
+  parents,
 }: {
   point: AchievementPoint;
   library: ResumeLibrary;
   onTag: (tag: string) => void;
   onSkill: (skillId: string) => void;
-  onEdit?: () => void;
+  onEdit?: (point: AchievementPoint, trigger: HTMLButtonElement) => void;
+  editor?: { pointId: string; handlers: EditorHandlers };
+  parents: ParentOption[];
 }) {
   const skillsById = new Map(library.skills.map((skill) => [skill.id, skill]));
   return (
@@ -57,7 +63,11 @@ function PointRow({
             {point.enabled ? "Enabled" : "Disabled"}
           </span>
           {onEdit && (
-            <button className="text-action" onClick={onEdit} type="button">
+            <button
+              className="text-action"
+              onClick={(event) => onEdit(point, event.currentTarget)}
+              type="button"
+            >
               Edit
             </button>
           )}
@@ -110,6 +120,16 @@ function PointRow({
           })}
         </div>
       )}
+      {editor?.pointId === point.id && (
+        <AchievementPointEditor
+          initialPoint={point}
+          inline
+          onCancel={editor.handlers.onCancel}
+          onSaved={editor.handlers.onSaved}
+          parents={parents}
+          skills={library.skills}
+        />
+      )}
     </article>
   );
 }
@@ -121,13 +141,17 @@ function ExperienceGroup({
   onTag,
   onSkill,
   onEdit,
+  editor,
+  parents,
 }: {
   item: (Job | Project) & { points: AchievementPoint[] };
   kind: "job" | "project";
   library: ResumeLibrary;
   onTag: (tag: string) => void;
   onSkill: (skillId: string) => void;
-  onEdit?: (point: AchievementPoint) => void;
+  onEdit?: (point: AchievementPoint, trigger: HTMLButtonElement) => void;
+  editor?: { pointId: string; handlers: EditorHandlers };
+  parents: ParentOption[];
 }) {
   const isJob = kind === "job";
   const job = isJob ? (item as Job) : null;
@@ -157,10 +181,12 @@ function ExperienceGroup({
       {item.points.map((point) => (
         <PointRow
           key={point.id}
+          editor={editor}
           library={library}
           onSkill={onSkill}
           onTag={onTag}
-          onEdit={onEdit ? () => onEdit(point) : undefined}
+          onEdit={onEdit}
+          parents={parents}
           point={point}
         />
       ))}
@@ -174,6 +200,26 @@ export default function AchievementLibrary({ library, source }: Props) {
   const [editor, setEditor] = useState<EditorState>(null);
   const [creating, setCreating] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
+  const editorTriggerRef = useRef<HTMLElement | null>(null);
+  const canvasTriggerRef = useRef<HTMLElement | null>(null);
+
+  // Closing the editor hands focus back to the control that opened it, so a
+  // keyboard user keeps their place in the card they were reading.
+  useEffect(() => {
+    if (editor) return;
+    const trigger = editorTriggerRef.current;
+    editorTriggerRef.current = null;
+    if (trigger?.isConnected) trigger.focus();
+  }, [editor]);
+
+  // The Imagination Canvas is a modal dialog, so it hands focus back to the
+  // add control when it closes.
+  useEffect(() => {
+    if (creating) return;
+    const trigger = canvasTriggerRef.current;
+    canvasTriggerRef.current = null;
+    if (trigger?.isConnected) trigger.focus();
+  }, [creating]);
   const result = useMemo(
     () => filterAchievementLibrary(library, filters),
     [filters, library],
@@ -204,6 +250,32 @@ export default function AchievementLibrary({ library, source }: Props) {
   ) {
     setFilters((current) => ({ ...current, [key]: value }));
   }
+
+  function openEditor(state: EditorState, trigger: HTMLElement) {
+    setSaveMessage("");
+    editorTriggerRef.current = trigger;
+    setEditor(state);
+  }
+
+  function closeEditor() {
+    setEditor(null);
+  }
+
+  function saveEditor() {
+    setEditor(null);
+    setSaveMessage("Saved to your local library.");
+    router.refresh();
+  }
+
+  // The editor opens inside the card it belongs to, so the card keeps its
+  // context while the point is being changed.
+  const editorState =
+    editor?.mode === "edit"
+      ? {
+          pointId: editor.point.id,
+          handlers: { onCancel: closeEditor, onSaved: saveEditor },
+        }
+      : undefined;
 
   return (
     <div className="library-page">
@@ -236,17 +308,17 @@ export default function AchievementLibrary({ library, source }: Props) {
           <span>{saveMessage}</span>
           <button
             type="button"
-            onClick={() => {
-              setSaveMessage("");
-              setEditor({ mode: "create" });
-            }}
+            onClick={(event) =>
+              openEditor({ mode: "create" }, event.currentTarget)
+            }
           >
             Detailed entry
           </button>
           <button
             className="primary-button"
-            onClick={() => {
+            onClick={(event) => {
               setSaveMessage("");
+              canvasTriggerRef.current = event.currentTarget;
               setCreating(true);
             }}
             type="button"
@@ -254,6 +326,16 @@ export default function AchievementLibrary({ library, source }: Props) {
             Add achievement
           </button>
         </div>
+      )}
+
+      {editor?.mode === "create" && (
+        <AchievementPointEditor
+          initialPoint={undefined}
+          onCancel={closeEditor}
+          onSaved={saveEditor}
+          parents={parentOptions}
+          skills={library.skills}
+        />
       )}
 
       <section className="library-overview" aria-label="Library summary">
@@ -286,20 +368,6 @@ export default function AchievementLibrary({ library, source }: Props) {
         </dl>
       </section>
 
-      {editor && (
-        <AchievementPointEditor
-          key={editor.mode === "edit" ? editor.point.id : "new-achievement"}
-          initialPoint={editor.mode === "edit" ? editor.point : undefined}
-          onCancel={() => setEditor(null)}
-          onSaved={() => {
-            setEditor(null);
-            setSaveMessage("Saved to your local library.");
-            router.refresh();
-          }}
-          parents={parentOptions}
-          skills={library.skills}
-        />
-      )}
       {creating && (
         <AchievementImagination
           library={library}
@@ -443,6 +511,7 @@ export default function AchievementLibrary({ library, source }: Props) {
         <div className="library-experiences">
           {result.jobs.map((job) => (
             <ExperienceGroup
+              editor={editorState}
               item={job}
               key={job.id}
               kind="job"
@@ -451,13 +520,16 @@ export default function AchievementLibrary({ library, source }: Props) {
               onTag={(tag) => updateFilter("tag", tag)}
               onEdit={
                 canEdit
-                  ? (point) => setEditor({ mode: "edit", point })
+                  ? (point, trigger) =>
+                      openEditor({ mode: "edit", point }, trigger)
                   : undefined
               }
+              parents={parentOptions}
             />
           ))}
           {result.projects.map((project) => (
             <ExperienceGroup
+              editor={editorState}
               item={project}
               key={project.id}
               kind="project"
@@ -466,9 +538,11 @@ export default function AchievementLibrary({ library, source }: Props) {
               onTag={(tag) => updateFilter("tag", tag)}
               onEdit={
                 canEdit
-                  ? (point) => setEditor({ mode: "edit", point })
+                  ? (point, trigger) =>
+                      openEditor({ mode: "edit", point }, trigger)
                   : undefined
               }
+              parents={parentOptions}
             />
           ))}
         </div>
