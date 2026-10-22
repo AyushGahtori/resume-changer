@@ -15,7 +15,7 @@ import {
   Moon,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
 const THEME_STORAGE_KEY = "resume-changer.theme.v1";
@@ -63,7 +63,11 @@ export default function WorkspaceShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [isMobile, setIsMobile] = useState(false);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isCompact, setIsCompact] = useState(false);
+  const [sidebarPreference, setSidebarPreference] = useState<boolean | null>(
+    null,
+  );
+  const isSidebarCollapsed = sidebarPreference ?? isCompact;
   const [isMobileNavigationOpen, setIsMobileNavigationOpen] = useState(false);
   const currentPage = navigation.find((item) => item.href === pathname);
   const sidebarRef = useRef<HTMLElement>(null);
@@ -74,18 +78,24 @@ export default function WorkspaceShell({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(max-width: 700px)");
+    const compactQuery = window.matchMedia(
+      "(min-width: 701px) and (max-width: 1023px)",
+    );
     const updateMobileState = () => {
       const mobile = mediaQuery.matches;
       setIsMobile(mobile);
+      setIsCompact(compactQuery.matches);
       if (!mobile) setIsMobileNavigationOpen(false);
     };
 
     updateMobileState();
     document.documentElement.dataset.shellHydrated = "true";
     mediaQuery.addEventListener("change", updateMobileState);
+    compactQuery.addEventListener("change", updateMobileState);
 
     return () => {
       mediaQuery.removeEventListener("change", updateMobileState);
+      compactQuery.removeEventListener("change", updateMobileState);
       delete document.documentElement.dataset.shellHydrated;
     };
   }, []);
@@ -102,16 +112,6 @@ export default function WorkspaceShell({ children }: { children: ReactNode }) {
     previousPathname.current = pathname;
     setIsMobileNavigationOpen(false);
   }, [pathname]);
-
-  useLayoutEffect(() => {
-    if (!isMobile || !isMobileNavigationOpen) return;
-
-    const focusFrame = window.requestAnimationFrame(() => {
-      mobileCloseButtonRef.current?.focus({ preventScroll: true });
-    });
-
-    return () => window.cancelAnimationFrame(focusFrame);
-  }, [isMobile, isMobileNavigationOpen]);
 
   useEffect(() => {
     if (!isMobile || !isMobileNavigationOpen) return;
@@ -155,18 +155,38 @@ export default function WorkspaceShell({ children }: { children: ReactNode }) {
       }
     }
 
-    function keepFocusInSidebar(event: FocusEvent) {
-      if (!sidebar!.contains(event.target as Node)) {
-        mobileCloseButtonRef.current?.focus();
+    let recoveryFrame: number | null = null;
+    function focusDrawerWhenVisible() {
+      if (!sidebar?.isConnected || sidebar.contains(document.activeElement))
+        return;
+      mobileCloseButtonRef.current?.focus({ preventScroll: true });
+      // Focus can be rejected while a reopened drawer is still being painted.
+      // Keep checking the rendered state until focus enters, or cleanup closes it.
+      if (!sidebar.contains(document.activeElement)) {
+        recoveryFrame = window.requestAnimationFrame(focusDrawerWhenVisible);
       }
+    }
+
+    function recoverFocusAfterBlur() {
+      if (recoveryFrame !== null) window.cancelAnimationFrame(recoveryFrame);
+      recoveryFrame = window.requestAnimationFrame(focusDrawerWhenVisible);
+    }
+
+    function keepFocusInSidebar(event: FocusEvent) {
+      if (!sidebar!.contains(event.target as Node)) recoverFocusAfterBlur();
     }
 
     document.addEventListener("keydown", handleKeyDown);
     document.addEventListener("focusin", keepFocusInSidebar);
+    document.addEventListener("focusout", recoverFocusAfterBlur);
+    sidebar.scrollTop = 0;
+    recoverFocusAfterBlur();
 
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
       document.removeEventListener("focusin", keepFocusInSidebar);
+      document.removeEventListener("focusout", recoverFocusAfterBlur);
+      if (recoveryFrame !== null) window.cancelAnimationFrame(recoveryFrame);
       document.body.style.overflow = previousBodyOverflow;
     };
   }, [isMobile, isMobileNavigationOpen]);
@@ -204,7 +224,7 @@ export default function WorkspaceShell({ children }: { children: ReactNode }) {
       return;
     }
 
-    setIsSidebarCollapsed((collapsed) => !collapsed);
+    setSidebarPreference(!isSidebarCollapsed);
   }
 
   const navigationLabel = isMobile
@@ -226,6 +246,9 @@ export default function WorkspaceShell({ children }: { children: ReactNode }) {
 
   return (
     <div className={frameClassName}>
+      <a className="workspace-skip-link" href="#workspace-content">
+        Skip to main content
+      </a>
       <button
         aria-hidden="true"
         className="nav-scrim"
@@ -361,7 +384,9 @@ export default function WorkspaceShell({ children }: { children: ReactNode }) {
             </button>
           </div>
         </header>
-        <main className="page-content">{children}</main>
+        <main className="page-content" id="workspace-content" tabIndex={-1}>
+          {children}
+        </main>
       </div>
     </div>
   );

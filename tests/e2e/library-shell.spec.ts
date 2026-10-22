@@ -12,8 +12,8 @@ const libraryRoute = "/library";
 
 const libraryActiveRow = {
   light: {
-    color: "rgb(194, 65, 12)",
-    background: "rgb(255, 247, 237)",
+    color: "rgb(178, 60, 12)",
+    background: "rgb(255, 233, 224)",
   },
   dark: {
     color: "rgb(255, 138, 61)",
@@ -24,8 +24,8 @@ const libraryActiveRow = {
 
 const homeActiveRow = {
   light: {
-    color: "rgb(194, 65, 12)",
-    background: "rgb(255, 247, 237)",
+    color: "rgb(178, 60, 12)",
+    background: "rgb(255, 233, 224)",
   },
   dark: {
     color: "rgb(167, 139, 250)",

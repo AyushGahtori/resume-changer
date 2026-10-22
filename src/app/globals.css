@@ -1,29 +1,40 @@
 @import "tailwindcss";
 @import "./studio.css";
 
+/*
+ * Shared design tokens.
+ *
+ * These are the single named token source for every route. The light values
+ * follow the Achievement Library board palette
+ * (docs/ui-images/achievement-library/library-color-palette.png) so the
+ * library and the home page render the same brand colors, and the dark theme
+ * below carries the matching dark equivalents. Values that the board does not
+ * print are marked as implementation estimates in
+ * docs/ui-audit/library-task-02/README.md.
+ */
 :root {
   color-scheme: light;
   --color-canvas: #f8fafc;
-  --color-sidebar: #ffffff;
+  --color-sidebar: #fafbfd;
   --color-surface: #ffffff;
   --color-surface-alt: #f1f5f9;
   --color-surface-hover: #e8eef5;
   --color-text-primary: #0f172a;
-  --color-text-secondary: #475569;
+  --color-text-secondary: #334155;
   --color-text-muted: #64748b;
   --color-text-inverse: #ffffff;
   --color-text-on-orange: #0f172a;
   --color-text-on-orange-hover: #ffffff;
-  --color-border: #e2e8f0;
-  --color-border-strong: #cbd5e1;
+  --color-border: #cbd5e1;
+  --color-border-strong: #94a3b8;
   --color-violet: #7c3aed;
   --color-violet-light: #a78bfa;
-  --color-violet-subtle: #ede9fe;
+  --color-violet-subtle: #efebff;
   --color-violet-strong: #6d28d9;
-  --color-orange: #f97316;
+  --color-orange: #ff7a45;
   --color-orange-light: #fdba74;
-  --color-orange-subtle: #fff7ed;
-  --color-orange-strong: #c2410c;
+  --color-orange-subtle: #ffe9e0;
+  --color-orange-strong: #b23c0c;
   --color-success: #10b981;
   --color-success-strong: #047857;
   --color-success-subtle: #ecfdf5;
@@ -50,28 +61,45 @@
    * Home action-bar state tokens. Each variant carries an explicit
    * default/hover/pressed/disabled surface plus a matching label color so
    * every state keeps a text contrast of at least 4.5:1 in both themes.
+   *
+   * A state token that carries a brand or text color resolves to the shared
+   * palette above, so the action bar can never drift onto a second copy of
+   * the orange or the violet. Only the neutral control-elevation steps stay
+   * literal, because they exist to separate a control from its canvas.
    */
   --action-ghost-surface: #ffffff;
   --action-ghost-surface-hover: #f1f5f9;
   --action-ghost-surface-pressed: #e2e8f0;
   --action-ghost-surface-disabled: #f8fafc;
-  --action-ghost-label: #0f172a;
-  --action-ghost-label-disabled: #64748b;
-  --action-violet-surface: #ede9fe;
+  --action-ghost-label: var(--color-text-primary);
+  --action-ghost-label-disabled: var(--color-text-muted);
+  --action-violet-surface: var(--color-violet-subtle);
   --action-violet-surface-hover: #ddd0fb;
-  --action-violet-surface-pressed: #7c3aed;
+  --action-violet-surface-pressed: var(--color-violet);
   --action-violet-surface-disabled: #ddd6fe;
-  --action-violet-label: #6d28d9;
+  --action-violet-label: var(--color-violet-strong);
   --action-violet-label-pressed: #ffffff;
-  --action-violet-label-disabled: #6d28d9;
-  --action-orange-surface: #f97316;
-  --action-orange-surface-hover: #c2410c;
+  --action-violet-label-disabled: var(--color-violet-strong);
+  --action-orange-surface: var(--color-orange);
+  --action-orange-surface-hover: var(--color-orange-strong);
   --action-orange-surface-pressed: #9a3412;
-  --action-orange-surface-disabled: #fdba74;
-  --action-orange-label: #0f172a;
-  --action-orange-label-hover: #ffffff;
+  --action-orange-surface-disabled: var(--color-orange-light);
+  --action-orange-label: var(--color-text-on-orange);
+  --action-orange-label-hover: var(--color-text-on-orange-hover);
   --action-orange-label-pressed: #ffffff;
   --action-orange-label-disabled: #0f172a;
+
+  /*
+   * Category identifier colors. Each one labels a kind of library record.
+   * They are identifiers only: they never mean "good", "bad", or "risky", and
+   * they are deliberately independent of the semantic status tokens above so a
+   * category can never read as a health signal.
+   */
+  --color-category-job: #ff7a45;
+  --color-category-project: #7c3aed;
+  --color-category-points: #f59e0b;
+  --color-category-skills: #10b981;
+  --color-category-credentials: #4f46e5;
 
   /* Compatibility aliases keep existing app and studio styles theme-aware. */
   --canvas: var(--color-canvas);
@@ -139,26 +167,26 @@
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --color-canvas: #171421;
-  --color-sidebar: #14111f;
-  --color-surface: #211d2e;
-  --color-surface-alt: #2a2538;
-  --color-surface-hover: #342f43;
+  --color-canvas: #151522;
+  --color-sidebar: #0f1220;
+  --color-surface: #17192d;
+  --color-surface-alt: #202238;
+  --color-surface-hover: #2a2c46;
   --color-text-primary: #f8fafc;
-  --color-text-secondary: #b7b3c7;
-  --color-text-muted: #a49fb4;
+  --color-text-secondary: #c4c8d8;
+  --color-text-muted: #9ba2b8;
   --color-text-inverse: #ffffff;
-  --color-text-on-orange: #171421;
-  --color-text-on-orange-hover: #171421;
-  --color-border: #3a3548;
-  --color-border-strong: #514a61;
+  --color-text-on-orange: #151522;
+  --color-text-on-orange-hover: #151522;
+  --color-border: #34374f;
+  --color-border-strong: #464a6b;
   --color-violet: #7c3aed;
   --color-violet-light: #a78bfa;
-  --color-violet-subtle: #322548;
+  --color-violet-subtle: #302342;
   --color-violet-strong: #a78bfa;
-  --color-orange: #f97316;
+  --color-orange: #ff7a45;
   --color-orange-light: #fdba74;
-  --color-orange-subtle: #442719;
+  --color-orange-subtle: #40251f;
   --color-orange-strong: #fdba74;
   --color-success: #34d399;
   --color-success-strong: #34d399;
@@ -184,29 +212,37 @@
 
   /*
    * Dark action-bar states. Dark surfaces rely on a visible border and a
-   * surface step rather than a light-mode shadow.
+   * surface step rather than a light-mode shadow. The brand and label colors
+   * resolve to the same shared palette as the light theme.
    */
   --action-ghost-surface: #211d2e;
   --action-ghost-surface-hover: #2a2538;
   --action-ghost-surface-pressed: #342f43;
   --action-ghost-surface-disabled: #1a1626;
-  --action-ghost-label: #f8fafc;
-  --action-ghost-label-disabled: #a49fb4;
-  --action-violet-surface: #7c3aed;
+  --action-ghost-label: var(--color-text-primary);
+  --action-ghost-label-disabled: var(--color-text-muted);
+  --action-violet-surface: var(--color-violet);
   --action-violet-surface-hover: #6d28d9;
   --action-violet-surface-pressed: #5b21b6;
   --action-violet-surface-disabled: #2a2140;
-  --action-violet-label: #ffffff;
-  --action-violet-label-pressed: #ffffff;
-  --action-violet-label-disabled: #a49fb4;
-  --action-orange-surface: #f97316;
-  --action-orange-surface-hover: #fdba74;
+  --action-violet-label: var(--color-text-inverse);
+  --action-violet-label-pressed: var(--color-text-inverse);
+  --action-violet-label-disabled: var(--color-text-muted);
+  --action-orange-surface: var(--color-orange);
+  --action-orange-surface-hover: var(--color-orange-strong);
   --action-orange-surface-pressed: #c2410c;
   --action-orange-surface-disabled: #4a2a19;
-  --action-orange-label: #171421;
-  --action-orange-label-hover: #171421;
+  --action-orange-label: var(--color-text-on-orange);
+  --action-orange-label-hover: var(--color-text-on-orange-hover);
   --action-orange-label-pressed: #ffffff;
   --action-orange-label-disabled: #e0a578;
+
+  /* Dark category identifiers follow the same label mapping as light mode. */
+  --color-category-job: #ff7a45;
+  --color-category-project: #a78bfa;
+  --color-category-points: #fbbf24;
+  --color-category-skills: #34d399;
+  --color-category-credentials: #818cf8;
 
   --canvas: var(--color-canvas);
   --sidebar: var(--color-sidebar);
@@ -332,7 +368,7 @@ a {
   height: 24px;
   flex: 0 0 24px;
   place-items: center;
-  color: var(--accent);
+  color: var(--accent-hover);
 }
 
 .sidebar-label,
@@ -723,7 +759,7 @@ a {
 
 .eyebrow {
   margin: 0 0 13px;
-  color: var(--accent);
+  color: var(--accent-hover);
 }
 
 .eyebrow span {
@@ -1416,7 +1452,7 @@ a:focus-visible {
 
 .jd-analysis .analysis-cache-notice {
   margin-top: 12px;
-  color: var(--accent);
+  color: var(--accent-hover);
   font-size: 11px;
 }
 
@@ -1518,6 +1554,232 @@ a:focus-visible {
   min-width: 0;
   overflow-wrap: anywhere;
 }
+
+/* Task 22: the form and preview are sibling working surfaces. */
+.jd-work-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+  min-width: 0;
+}
+.jd-work-grid > * {
+  min-width: 0;
+}
+.ats-preview {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--shadow-xs);
+  min-height: 240px;
+  overflow-wrap: anywhere;
+}
+.ats-preview-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.ats-preview-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  color: var(--color-violet-strong);
+  background: var(--imagination-soft);
+}
+.ats-preview-icon svg {
+  width: 18px;
+  height: 18px;
+}
+.ats-preview-heading h2 {
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+  color: var(--ink);
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 600;
+}
+.ats-beta {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 8px;
+  border-radius: 4px;
+  background: var(--color-orange-subtle);
+  color: var(--color-orange-strong);
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 600;
+}
+.ats-preview-description {
+  margin: 12px 0 0;
+  max-width: 44ch;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 20px;
+}
+.ats-preview-empty {
+  margin: 16px 0 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 20px;
+}
+.ats-score-notice {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 16px;
+}
+.ats-score-notice strong {
+  font-weight: 600;
+}
+.ats-tip {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  gap: 12px;
+  margin-top: 16px;
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--color-violet-subtle);
+  color: var(--color-violet-strong);
+}
+.ats-tip-icon {
+  width: 20px;
+  height: 20px;
+}
+.ats-tip h3 {
+  margin: 0 0 4px;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+}
+.ats-tip p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 18px;
+  overflow-wrap: anywhere;
+}
+.analysis-signals {
+  display: grid;
+  gap: 8px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.analysis-signal {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  align-items: start;
+  column-gap: 12px;
+  min-height: 24px;
+}
+.analysis-signal-icon {
+  display: inline-flex;
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: var(--color-violet-strong);
+  background: var(--color-violet-subtle);
+}
+.analysis-signal.is-success .analysis-signal-icon {
+  color: var(--color-success-strong);
+  background: var(--color-success-subtle);
+}
+.analysis-signal.is-attention .analysis-signal-icon {
+  color: var(--color-warning-strong);
+  background: var(--color-warning-subtle);
+}
+.analysis-signal-label {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 20px;
+}
+.ats-preview .jd-analysis {
+  margin-top: 16px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+}
+.ats-preview .analysis-grid {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+}
+.ats-preview .analysis-role {
+  grid-template-columns: minmax(0, 1fr);
+}
+.ats-preview .jd-analysis-heading > div {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.ats-preview .jd-analysis-heading {
+  justify-content: flex-end;
+}
+.ats-preview .analysis-inferred {
+  padding: 12px;
+}
+.jd-work-grid .form-footer {
+  flex-wrap: wrap;
+}
+.jd-work-grid .form-actions {
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+.jd-workspace-frame:has(.jd-work-grid) {
+  height: auto;
+  min-height: 100dvh;
+  overflow: visible;
+}
+.jd-workspace-frame:has(.jd-work-grid) .main-column {
+  height: auto;
+  min-height: 100dvh;
+}
+.jd-workspace-frame:has(.jd-work-grid) .jd-form {
+  flex: none;
+}
+.jd-workspace-frame:has(.jd-work-grid) .jd-form textarea {
+  min-height: 240px;
+  flex: none;
+  resize: vertical;
+}
+@media (min-width: 1280px) {
+  .jd-work-grid {
+    grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr);
+  }
+  .jd-workspace-frame:has(.jd-work-grid) .page-content {
+    padding: 32px;
+  }
+}
+@media (max-width: 700px) {
+  .jd-work-grid {
+    gap: 16px;
+  }
+  .jd-work-grid .form-actions {
+    width: 100%;
+    margin-left: 0;
+  }
+}
 .analysis-panel .jd-analysis-heading {
   flex-wrap: wrap;
 }
@@ -1616,7 +1878,7 @@ a:focus-visible {
   font-weight: 600;
   line-height: 20px;
 }
-.jd-page .analysis-panel .analysis-section h3 {
+.jd-page .analysis-panel .analysis-section :is(h3, h4) {
   margin-bottom: 8px;
   font-size: 16px;
   font-weight: 600;
@@ -1649,25 +1911,6 @@ a:focus-visible {
     animation: none;
   }
 }
-@media (min-width: 1101px) and (min-height: 640px) {
-  .jd-workspace-frame:has(.analysis-panel) {
-    height: auto;
-    min-height: 100dvh;
-    overflow: visible;
-  }
-  .jd-workspace-frame:has(.analysis-panel) .main-column {
-    height: auto;
-    min-height: 100dvh;
-  }
-  .jd-workspace-frame:has(.analysis-panel) .jd-form {
-    flex: none;
-  }
-  .jd-workspace-frame:has(.analysis-panel) .jd-form textarea {
-    min-height: 240px;
-    resize: vertical;
-  }
-}
-
 .jd-page {
   letter-spacing: 0;
 }
@@ -1793,7 +2036,7 @@ a:focus-visible {
 }
 
 .note-mark {
-  color: var(--accent);
+  color: var(--accent-hover);
   font-size: 15px;
 }
 
@@ -2349,7 +2592,7 @@ a:focus-visible {
 }
 .experience-kind {
   margin: 0 0 4px;
-  color: var(--accent);
+  color: var(--accent-hover);
   font-size: 9px;
   font-weight: 700;
 }
@@ -2442,7 +2685,7 @@ a:focus-visible {
   margin-top: 8px;
 }
 .facet-chip {
-  color: var(--accent);
+  color: var(--accent-hover);
   font-size: 10px;
 }
 .facet-chip.is-skill {
@@ -2717,67 +2960,26 @@ a:focus-visible {
   gap: 10px;
 }
 
-@media (min-width: 1101px) and (min-height: 640px) {
-  .jd-workspace-frame {
-    height: 100dvh;
-    min-height: 0;
-    overflow: hidden;
-  }
-
-  .jd-workspace-frame .main-column {
-    display: flex;
-    min-height: 0;
-    flex-direction: column;
-    height: 100dvh;
-  }
-
+/* Home workspace: content grows naturally; the header spans both surfaces. */
+@media (min-width: 701px) {
   .jd-workspace-frame .page-content {
-    display: flex;
-    min-height: 0;
-    flex: 1;
-    flex-direction: column;
-    padding: var(--space-24) var(--space-32);
+    width: min(100%, 1440px);
+    padding: 32px;
   }
-
   .jd-workspace-frame .jd-page {
-    display: flex;
-    min-height: 0;
-    flex: 1;
-    flex-direction: column;
+    width: 100%;
+    max-width: none;
+    margin: 0;
   }
-
   .jd-workspace-frame .page-heading-row {
-    margin-bottom: 20px;
+    margin-bottom: 24px;
   }
-
-  .jd-workspace-frame .jd-form {
-    display: flex;
-    min-height: 0;
-    flex: 1;
-    flex-direction: column;
-    padding: var(--space-24);
-  }
-
-  .jd-workspace-frame .form-topline {
-    margin-bottom: var(--space-24);
-  }
-
-  .jd-workspace-frame .form-divider {
-    margin: var(--space-24) 0;
-  }
-
   .jd-workspace-frame .jd-form textarea {
-    /* Keep actions visible in the fixed-height desktop workspace. */
-    min-height: 120px;
-    flex: 0 1 190px;
-    resize: none;
-  }
-
-  .jd-workspace-frame .workspace-note {
-    margin-top: 12px;
+    min-height: 240px;
+    max-width: none;
+    resize: vertical;
   }
 }
-
 @media (max-width: 1100px) {
   .app-frame {
     grid-template-columns: 220px minmax(0, 1fr);
@@ -2893,16 +3095,13 @@ a:focus-visible {
     border-bottom: 0;
     box-shadow: none;
     transform: translateX(calc(-100% - 12px));
-    transition:
-      transform 180ms ease,
-      visibility 0s linear 180ms;
+    transition: transform 180ms ease;
     visibility: hidden;
   }
 
   .app-frame.is-mobile-nav-open .sidebar {
     box-shadow: 0 16px 40px rgb(15 23 42 / 18%);
     transform: translateX(0);
-    transition-delay: 0s, 0s;
     visibility: visible;
   }
 
@@ -4120,7 +4319,7 @@ a:focus-visible {
 }
 
 .generation-group legend span {
-  color: var(--accent);
+  color: var(--accent-hover);
   font-size: 8px;
   font-weight: 700;
 }
@@ -4456,6 +4655,262 @@ a:focus-visible {
   }
 }
 
+/* Keep the established tablet inset when the home desktop frame becomes fluid. */
+@media (min-width: 701px) and (max-width: 1100px) {
+  .jd-workspace-frame .page-content {
+    padding: 24px;
+  }
+}
+@media (max-width: 700px) {
+  .jd-workspace-frame .page-content {
+    padding: 24px 16px 32px;
+  }
+  .jd-work-grid .jd-form {
+    padding: 16px;
+  }
+  .jd-work-grid .metadata-fields {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+  .jd-work-grid .form-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+  .jd-work-grid .form-actions button {
+    width: 100%;
+    min-height: 44px;
+    white-space: nowrap;
+  }
+  .jd-work-grid .input-metrics {
+    gap: 8px;
+  }
+  html[data-shell-hydrated] .sidebar {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  html[data-shell-hydrated] .sidebar-header,
+  html[data-shell-hydrated] .main-navigation,
+  html[data-shell-hydrated] .sidebar-bottom {
+    flex-shrink: 0;
+  }
+}
+@media (max-width: 380px) {
+  .jd-work-grid .jd-form {
+    padding: 12px;
+  }
+}
+
+/* UI task 28: perceptible boundaries, keyboard focus and accessible controls. */
+.jd-workspace-frame {
+  --control-boundary: #64748b;
+  --focus-outline: 2px solid var(--focus);
+}
+:root[data-theme="dark"] .jd-workspace-frame {
+  --control-boundary: #827990;
+}
+.jd-workspace-frame .jd-form :is(input, textarea) {
+  border-color: var(--control-boundary);
+}
+.jd-workspace-frame .jd-form :is(input, textarea)[aria-invalid="true"] {
+  border-color: var(--danger);
+}
+.jd-workspace-frame .jd-form :is(input, textarea):focus {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  box-shadow: none;
+}
+.jd-workspace-frame :is(button, a):focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.jd-workspace-frame :is(.clear-button, .theme-toggle, .sidebar-toggle) {
+  border-color: var(--control-boundary);
+}
+.jd-workspace-frame
+  :is(
+    .clear-button,
+    .primary-button,
+    .theme-toggle,
+    .sidebar-toggle,
+    .sidebar-close,
+    .brand
+  ) {
+  min-height: 44px;
+  min-width: 44px;
+}
+.jd-workspace-frame :is(.theme-toggle, .sidebar-toggle) {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+}
+.jd-workspace-frame .primary-button {
+  border-color: var(--color-orange-strong);
+}
+.jd-page :is(.eyebrow, .required-label) {
+  color: var(--color-orange-strong);
+}
+.jd-helper {
+  margin: -4px 0 12px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 16px;
+}
+.jd-page .field-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 8px 0 0;
+}
+.field-error svg {
+  flex: 0 0 auto;
+}
+.analysis-panel-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+.analysis-panel .analysis-retry {
+  min-width: 118px;
+}
+.analysis-panel .analysis-retry[aria-disabled="true"] {
+  cursor: wait;
+  color: var(--muted);
+}
+.analysis-error-notice {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+}
+.analysis-error-notice .analysis-retry {
+  grid-column: 2;
+  justify-self: start;
+}
+.workspace-skip-link {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 1100;
+  padding: 12px 16px;
+  transform: translateY(-150%);
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink);
+}
+.workspace-skip-link:focus {
+  transform: none;
+}
+
+/* UI task 29: corrections found during final reference acceptance. */
+.jd-page h1 {
+  font-weight: 700;
+}
+.jd-page .page-intro {
+  max-width: 680px;
+  margin-top: 8px;
+  font-size: 16px;
+  line-height: 24px;
+}
+.jd-page .field-group input {
+  height: 44px;
+}
+.jd-page .form-actions button {
+  min-height: 44px;
+  white-space: nowrap;
+  transition:
+    background-color 200ms ease,
+    border-color 200ms ease,
+    color 200ms ease,
+    transform 100ms ease;
+}
+.jd-page .form-actions :is(.analyze-button, .primary-button) {
+  padding-inline: 20px;
+}
+.jd-page .form-actions .analyze-button {
+  width: 244px;
+  min-width: 244px;
+  gap: 8px;
+}
+.jd-page .form-actions .analyze-button:where(:enabled, [aria-busy="true"]) {
+  border-color: var(--color-violet);
+  background: var(--color-violet-subtle);
+  color: #6d28d9;
+}
+.jd-page .analyze-button > :is(svg, .analysis-spinner) {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+}
+.jd-page .analyze-button .analysis-spinner {
+  border-color: currentColor;
+  border-right-color: transparent;
+}
+.jd-page .analyze-button:hover:enabled {
+  background: #ddd6fe;
+}
+.jd-page .analyze-button:active:enabled {
+  background: #6d28d9;
+  color: white;
+}
+.jd-page .form-actions .clear-button:active:enabled {
+  transform: scale(0.98);
+}
+.jd-page .form-actions .clear-button:not(.analyze-button):active:enabled {
+  background: var(--surface-hover);
+  border-color: var(--ink);
+}
+.jd-page .form-actions .primary-button:active:enabled {
+  transform: scale(0.98);
+  background: #9a3412;
+  color: white;
+}
+.jd-page .form-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 1;
+}
+.jd-page .form-actions .analyze-button[aria-busy="true"] {
+  cursor: wait;
+}
+:root[data-theme="dark"]
+  .jd-page
+  .analyze-button:where(:enabled, [aria-busy="true"]) {
+  background: #7c3aed;
+  color: white;
+  border-color: #a78bfa;
+}
+:root[data-theme="dark"] .jd-page .analyze-button:hover:enabled {
+  background: #6d28d9;
+}
+:root[data-theme="dark"] .jd-page .analyze-button:active:enabled {
+  background: #5b21b6;
+}
+:root[data-theme="dark"] .jd-page .primary-button:active:enabled {
+  background: #fdba74;
+  color: #171421;
+}
+@media (max-width: 700px) {
+  .jd-page .form-actions .analyze-button {
+    width: 100%;
+    min-width: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .jd-workspace-frame .sidebar {
+    transition: none !important;
+  }
+  .jd-workspace-frame *,
+  .jd-workspace-frame *::before,
+  .jd-workspace-frame *::after {
+    animation: none !important;
+    scroll-behavior: auto !important;
+  }
+  .jd-page .form-actions button {
+    transition: none !important;
+  }
+  .jd-page .form-actions button:active:enabled {
+    transform: none;
+  }
+}
 /* Analysis content must follow the form instead of shrinking it over its actions. */
 @media (min-width: 701px) {
   .jd-workspace-frame .jd-page:has(> .jd-analysis) > .jd-form {

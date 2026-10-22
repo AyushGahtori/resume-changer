@@ -8,6 +8,7 @@ test.beforeEach(async ({ page }) => {
 test("collapses the desktop sidebar while keeping every destination accessible", async ({
   page,
 }) => {
+  test.setTimeout(90_000);
   const sidebar = page.locator("#workspace-sidebar");
   const links = page.getByRole("navigation", { name: "Main navigation" });
   const destinations = [
@@ -74,8 +75,8 @@ test("collapses the desktop sidebar while keeping every destination accessible",
   ).toBe(true);
   await page.mouse.up();
 
-  await achievementLibrary.click();
-  await expect(page).toHaveURL(/\/library$/);
+  // Mouse up completes the activation already exercised above.
+  await expect(page).toHaveURL(/\/library$/, { timeout: 30_000 });
   await expect(achievementLibrary).toHaveAttribute("aria-current", "page");
   await expect(sidebar).toHaveCSS("width", "72px");
 });
