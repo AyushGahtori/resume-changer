@@ -355,7 +355,7 @@ export default function AchievementLibrary({ library, source }: Props) {
           </div>
         </div>
       </header>
-      <ProfileSummary library={library} source={source} totalPointCount={result.totalPointCount} />
+      <ProfileSummary library={library} source={source} />
 
       {editor && (
         <AchievementPointEditor
