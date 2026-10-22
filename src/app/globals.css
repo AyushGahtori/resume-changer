@@ -112,14 +112,26 @@
   --space-32: 32px;
   --space-48: 48px;
   --space-64: 64px;
+
+  /*
+   * Task 04: shared radius, border, and shadow rhythm.
+   *
+   * The Achievement Library board prints a 4/8/12/16/24px radius scale and a
+   * None/XS/SM shadow scale, but the compact app rules win where the two
+   * disagree: controls stop at 6px, cards at 8px, and only chips, pills, and
+   * circular icons are fully rounded. Shadows stay at None, XS, and SM so no
+   * page reintroduces the board's MD/LG elevation or its Glow treatment.
+   */
+  --radius-xs: 4px;
   --radius-control: 6px;
   --radius-card: 8px;
   --radius-full: 999px;
   --border-default: 1px solid var(--color-border);
   --border-control: 1px solid var(--color-border);
+  --border-strong: 1px solid var(--color-border-strong);
   --shadow-xs: 0 1px 2px
     color-mix(in srgb, var(--color-text-primary) 5%, transparent);
-  --shadow-sm: 0 2px 4px
+  --shadow-sm: 0 2px 6px
     color-mix(in srgb, var(--color-text-primary) 8%, transparent);
   --focus-ring: 0 0 0 3px var(--focus);
   --focus-outline: 3px solid var(--focus);
@@ -213,6 +225,10 @@
   --danger-soft: var(--color-error-subtle);
   --focus: var(--color-focus-ring);
   --shadow: 0 16px 48px rgb(0 0 0 / 18%);
+  /*
+   * Dark surfaces are separated by a visible border and a tonal step rather
+   * than by a light-mode shadow or a glow.
+   */
   --shadow-xs: none;
   --shadow-sm: none;
 
@@ -2095,7 +2111,7 @@ a:focus-visible {
 }
 
 .library-heading {
-  margin-bottom: 24px;
+  margin-bottom: var(--space-24);
 }
 
 .library-heading h1 {
@@ -2105,16 +2121,16 @@ a:focus-visible {
 .library-source-switch {
   display: inline-flex;
   flex: 0 0 auto;
-  gap: 3px;
-  padding: 3px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  border: var(--border-default);
+  border-radius: var(--radius-control);
   background: var(--surface);
 }
 
 .library-source-switch a {
-  padding: 8px 10px;
-  border-radius: 4px;
+  padding: var(--space-8) var(--space-12);
+  border-radius: var(--radius-xs);
   color: var(--muted);
   font-size: 12px;
   text-decoration: none;
@@ -2130,16 +2146,18 @@ a:focus-visible {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 24px;
-  padding: 19px 22px;
-  border: 1px solid var(--line);
-  border-radius: 7px;
+  gap: var(--space-24);
+  padding: var(--space-24);
+  border: var(--border-default);
+  border-radius: var(--radius-card);
   background: var(--surface);
+  /* The summary is the one major light surface that earns a faint lift. */
+  box-shadow: var(--shadow-xs);
 }
 
 .source-indicator {
   display: inline-block;
-  margin-bottom: 5px;
+  margin-bottom: var(--space-4);
   color: var(--teal);
   font-size: 10px;
   font-weight: 700;
@@ -2153,7 +2171,7 @@ a:focus-visible {
 }
 
 .library-owner p {
-  margin: 4px 0 0;
+  margin: var(--space-4) 0 0;
   color: var(--muted);
   font-size: 12px;
 }
@@ -2162,13 +2180,13 @@ a:focus-visible {
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
-  gap: 22px;
+  gap: var(--space-24);
   margin: 0;
 }
 
 .library-counts div {
   display: grid;
-  gap: 3px;
+  gap: var(--space-4);
 }
 .library-counts dt {
   color: var(--muted);
@@ -2181,10 +2199,10 @@ a:focus-visible {
 }
 
 .library-controls {
-  margin-top: 18px;
-  padding: 17px 18px 12px;
-  border: 1px solid var(--line);
-  border-radius: 7px;
+  margin-top: var(--space-24);
+  padding: var(--space-16);
+  border: var(--border-default);
+  border-radius: var(--radius-card);
   background: var(--surface);
 }
 
@@ -2192,7 +2210,7 @@ a:focus-visible {
 .library-filter-grid label {
   display: grid;
   min-width: 0;
-  gap: 6px;
+  gap: var(--space-8);
 }
 
 .library-search > span,
@@ -2206,10 +2224,10 @@ a:focus-visible {
 .library-filter-grid select {
   width: 100%;
   min-width: 0;
-  height: 38px;
-  padding: 0 10px;
-  border: 1px solid var(--line-strong);
-  border-radius: 5px;
+  height: 40px;
+  padding: 0 var(--space-12);
+  border: var(--border-strong);
+  border-radius: var(--radius-control);
   outline: none;
   background: var(--surface-soft);
   color: var(--ink);
@@ -2223,17 +2241,17 @@ a:focus-visible {
 .library-filter-grid {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 12px;
-  margin-top: 12px;
+  gap: var(--space-12);
+  margin-top: var(--space-12);
 }
 
 .library-filter-summary {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  min-height: 30px;
-  margin-top: 6px;
+  gap: var(--space-12);
+  min-height: 32px;
+  margin-top: var(--space-8);
   color: var(--muted);
   font-size: 11px;
 }
@@ -2254,21 +2272,21 @@ a:focus-visible {
 }
 
 .library-experiences {
-  margin-top: 24px;
+  margin-top: var(--space-24);
 }
 .experience-group {
-  padding: 19px 2px 9px;
-  border-bottom: 1px solid var(--line);
+  padding: var(--space-16) 0 var(--space-8);
+  border-bottom: var(--border-default);
 }
 .experience-heading {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 20px;
-  margin-bottom: 5px;
+  gap: var(--space-24);
+  margin-bottom: var(--space-8);
 }
 .experience-kind {
-  margin: 0 0 4px;
+  margin: 0 0 var(--space-4);
   color: var(--accent);
   font-size: 9px;
   font-weight: 700;
@@ -2280,7 +2298,7 @@ a:focus-visible {
 }
 .experience-subtitle,
 .experience-dates {
-  margin: 4px 0 0;
+  margin: var(--space-4) 0 0;
   color: var(--muted);
   font-size: 11px;
 }
@@ -2289,8 +2307,8 @@ a:focus-visible {
 }
 
 .library-point {
-  padding: 12px 0 13px;
-  border-bottom: 1px solid var(--line);
+  padding: var(--space-12) 0;
+  border-bottom: var(--border-default);
 }
 .library-point:last-child {
   border-bottom: 0;
@@ -2299,7 +2317,7 @@ a:focus-visible {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-12);
 }
 .library-point-heading code {
   overflow-wrap: anywhere;
@@ -2318,7 +2336,7 @@ a:focus-visible {
   color: var(--danger);
 }
 .library-point-text {
-  margin: 7px 0;
+  margin: var(--space-8) 0;
   color: var(--ink);
   font-size: 12px;
   line-height: 1.55;
@@ -2335,15 +2353,15 @@ a:focus-visible {
 }
 .point-metrics {
   display: grid;
-  gap: 6px;
-  margin: 8px 0 0;
+  gap: var(--space-8);
+  margin: var(--space-8) 0 0;
   padding: 0;
   list-style: none;
 }
 .point-metrics li {
   display: grid;
-  gap: 3px;
-  padding-left: 9px;
+  gap: var(--space-4);
+  padding-left: var(--space-8);
   border-left: 2px solid var(--teal);
   font-size: 10px;
 }
@@ -2358,8 +2376,8 @@ a:focus-visible {
 .point-facets {
   display: flex;
   flex-wrap: wrap;
-  gap: 7px 12px;
-  margin-top: 8px;
+  gap: var(--space-8) var(--space-12);
+  margin-top: var(--space-8);
 }
 .facet-chip {
   color: var(--accent);
@@ -2375,25 +2393,25 @@ a:focus-visible {
   font-size: 12px;
 }
 .library-empty {
-  margin: 24px 0;
-  padding: 20px 0;
-  border-bottom: 1px solid var(--line);
+  margin: var(--space-24) 0;
+  padding: var(--space-16) 0;
+  border-bottom: var(--border-default);
 }
 .library-secondary {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 24px;
-  margin-top: 22px;
+  gap: var(--space-24);
+  margin-top: var(--space-24);
 }
 .library-detail {
   min-width: 0;
-  border-top: 1px solid var(--line);
+  border-top: var(--border-default);
 }
 .library-detail summary {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 13px 0;
+  padding: var(--space-12) 0;
   cursor: pointer;
   font-size: 14px;
   font-weight: 650;
@@ -2416,9 +2434,9 @@ a:focus-visible {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 9px 0;
-  border-top: 1px solid var(--line);
+  gap: var(--space-12);
+  padding: var(--space-8) 0;
+  border-top: var(--border-default);
   font-size: 11px;
 }
 .skill-list li > div,
@@ -2433,7 +2451,7 @@ a:focus-visible {
 .skill-list li > div span,
 .credential-list li > span {
   display: block;
-  margin-top: 3px;
+  margin-top: var(--space-4);
   color: var(--muted);
   font-size: 10px;
 }
@@ -2448,8 +2466,8 @@ a:focus-visible {
 }
 .library-error {
   width: min(100%, 760px);
-  margin: 30px auto;
-  padding: 24px 0;
+  margin: var(--space-32) auto;
+  padding: var(--space-24) 0;
 }
 .library-error h1 {
   font-size: 32px;
@@ -2462,18 +2480,18 @@ a:focus-visible {
 }
 .library-switch-link {
   display: inline-block;
-  margin-top: 10px;
+  margin-top: var(--space-12);
   color: var(--teal);
   font-size: 13px;
 }
 
 .library-edit-toolbar {
   display: flex;
-  min-height: 42px;
+  min-height: 44px;
   align-items: center;
   justify-content: flex-end;
-  gap: 14px;
-  margin: -10px 0 14px;
+  gap: var(--space-12);
+  margin: calc(var(--space-12) * -1) 0 var(--space-16);
 }
 
 .library-edit-toolbar > span {
@@ -2484,18 +2502,20 @@ a:focus-visible {
 .point-row-actions {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-12);
 }
 
 .point-editor {
   display: grid;
-  gap: 17px;
-  margin: 18px 0 22px;
-  padding: 22px;
-  border: 1px solid var(--line-strong);
-  border-radius: 7px;
+  gap: var(--space-16);
+  margin: var(--space-16) 0 var(--space-24);
+  padding: var(--space-24);
+  border: var(--border-strong);
+  border-radius: var(--radius-card);
   background: var(--surface);
-  box-shadow: var(--shadow);
+  /* The editor is a nested surface: at most a subtle Sm, and no shadow in
+     dark mode where the border and tonal step carry the separation. */
+  box-shadow: var(--shadow-sm);
 }
 
 .point-editor-heading,
@@ -2503,11 +2523,11 @@ a:focus-visible {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-12);
 }
 
 .point-editor-heading .eyebrow {
-  margin-bottom: 5px;
+  margin-bottom: var(--space-4);
 }
 .point-editor-heading h2 {
   margin: 0;
@@ -2520,8 +2540,8 @@ a:focus-visible {
   width: 34px;
   height: 34px;
   place-items: center;
-  border: 1px solid var(--line);
-  border-radius: 5px;
+  border: var(--border-default);
+  border-radius: var(--radius-control);
   background: var(--surface);
   color: var(--muted);
   cursor: pointer;
@@ -2532,12 +2552,12 @@ a:focus-visible {
 .editor-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 13px;
+  gap: var(--space-12);
 }
 .editor-field {
   display: grid;
   min-width: 0;
-  gap: 6px;
+  gap: var(--space-8);
 }
 .editor-field > span {
   color: var(--muted);
@@ -2549,9 +2569,9 @@ a:focus-visible {
 .editor-field textarea {
   width: 100%;
   min-width: 0;
-  padding: 9px 10px;
-  border: 1px solid var(--line-strong);
-  border-radius: 5px;
+  padding: var(--space-8) var(--space-12);
+  border: var(--border-strong);
+  border-radius: var(--radius-control);
   outline: none;
   background: var(--surface-soft);
   color: var(--ink);
@@ -2559,11 +2579,11 @@ a:focus-visible {
 }
 .editor-field input,
 .editor-field select {
-  min-height: 38px;
+  min-height: 40px;
 }
 .editor-field select[multiple] {
   height: auto;
-  padding: 6px 8px;
+  padding: var(--space-8);
 }
 .editor-field textarea {
   resize: vertical;
@@ -2582,11 +2602,11 @@ a:focus-visible {
 }
 .metric-editor {
   display: grid;
-  gap: 10px;
+  gap: var(--space-12);
 }
 .metric-editor-heading {
-  border-bottom: 1px solid var(--line);
-  padding-bottom: 9px;
+  border-bottom: var(--border-default);
+  padding-bottom: var(--space-8);
 }
 .metric-editor-heading h3 {
   margin: 0;
@@ -2595,14 +2615,15 @@ a:focus-visible {
 .metric-fields {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 11px;
+  gap: var(--space-12);
   margin: 0;
-  padding: 13px;
-  border: 1px solid var(--line);
-  border-radius: 5px;
+  padding: var(--space-12);
+  /* A grouped fieldset, not a nested card: no fill, no shadow of its own. */
+  border: var(--border-default);
+  border-radius: var(--radius-control);
 }
 .metric-fields legend {
-  padding: 0 5px;
+  padding: 0 var(--space-4);
   color: var(--muted);
   font-size: 10px;
 }
@@ -2616,7 +2637,7 @@ a:focus-visible {
 .editor-enabled {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-8);
   color: var(--ink);
   font-size: 12px;
 }
@@ -2634,7 +2655,7 @@ a:focus-visible {
 .editor-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 10px;
+  gap: var(--space-12);
 }
 
 @media (min-width: 1101px) and (min-height: 640px) {
@@ -2996,7 +3017,7 @@ a:focus-visible {
   }
 
   .library-heading {
-    gap: 16px;
+    gap: var(--space-16);
   }
   .history-heading {
     align-items: flex-start;
@@ -3018,33 +3039,33 @@ a:focus-visible {
   .library-overview {
     align-items: flex-start;
     flex-direction: column;
-    gap: 16px;
-    padding: 16px;
+    gap: var(--space-16);
+    padding: var(--space-16);
   }
   .library-counts {
     justify-content: flex-start;
-    gap: 12px 21px;
+    gap: var(--space-12) var(--space-24);
   }
   .library-filter-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .library-secondary {
     grid-template-columns: minmax(0, 1fr);
-    gap: 16px;
+    gap: var(--space-16);
   }
   .library-source-switch a {
-    padding: 8px;
+    padding: var(--space-8);
   }
 
   .point-editor {
-    padding: 18px 15px;
+    padding: var(--space-16);
   }
   .editor-grid {
     grid-template-columns: minmax(0, 1fr);
   }
   .metric-fields {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    padding: 10px;
+    padding: var(--space-12);
   }
 }
 
@@ -3074,8 +3095,13 @@ a:focus-visible {
     grid-template-columns: minmax(0, 1fr);
   }
   .library-controls {
-    padding-right: 13px;
-    padding-left: 13px;
+    padding-right: var(--space-12);
+    padding-left: var(--space-12);
+  }
+  /* Insets step down a second time so the narrow layout keeps its content. */
+  .library-overview,
+  .point-editor {
+    padding: var(--space-12);
   }
   .library-filter-summary {
     align-items: flex-start;
