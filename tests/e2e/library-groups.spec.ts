@@ -1,18 +1,23 @@
 import { expect, test } from "@playwright/test";
 import { copyFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import {
+  createPersonalLibraryGuard,
+  exampleLibraryPath,
+  personalLibraryPath,
+} from "./support/personal-library";
 
-const libraryRoot =
-  process.env.RESUME_LIBRARY_ROOT ??
-  join(tmpdir(), "resume-changer-playwright-data-3010");
-const personalLibraryPath = join(libraryRoot, "data", "resume-library.json");
+const personalLibrary = createPersonalLibraryGuard();
+
+test.beforeAll(async () => {
+  await personalLibrary.capture();
+});
+
+test.afterAll(async () => {
+  await personalLibrary.restore();
+});
 
 test.beforeEach(async ({ page }) => {
-  await copyFile(
-    join(process.cwd(), "examples", "sample-resume-library.json"),
-    personalLibraryPath,
-  );
+  await copyFile(exampleLibraryPath, personalLibraryPath);
   await page.goto("/library");
 });
 
