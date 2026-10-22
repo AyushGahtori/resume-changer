@@ -370,6 +370,12 @@ a {
   transform: scale(0.98);
 }
 
+/*
+ * The active destination keeps the orange accent in both themes. The
+ * accent tokens already resolve to a light orange on the dark canvas, so
+ * the current row reads the same way in either theme and no second,
+ * theme-specific treatment is needed.
+ */
 .nav-link.is-active {
   background: var(--accent-soft);
   color: var(--accent-hover);
@@ -378,15 +384,6 @@ a {
 
 .nav-link.is-active .nav-icon {
   color: var(--accent-hover);
-}
-
-:root[data-theme="dark"] .nav-link.is-active {
-  background: var(--imagination-soft);
-  color: var(--color-violet-light);
-}
-
-:root[data-theme="dark"] .nav-link.is-active .nav-icon {
-  color: var(--color-violet-light);
 }
 
 .nav-icon {
