@@ -76,11 +76,12 @@ that clears the pinned band, measured at 179px of workbench height against a
 
 - `npm run lint` — passed.
 - `npm run typecheck` — passed.
-- `npm test` — 552 passed, 10 skipped, 1 failed. The failure is
-  `tests/unit/ai/mock-provider.test.ts > is selected by the provider factory`,
-  a 5s timeout that also fails on the untouched base commit `2afe609` in this
-  environment and passes when the file is run alone. It is unrelated to this
-  task and was not changed here.
+- `npm test` — 553 passed, 10 skipped, 0 failed. While the browser suite was
+  building in parallel, `tests/unit/ai/mock-provider.test.ts > is selected by
+  the provider factory` intermittently hit its 5s timeout; it also fails that
+  way on the untouched base commit `2afe609` in this environment and passes
+  when the file is run alone. It is a load-sensitive timing issue unrelated to
+  this task, and it was not changed here.
 - `npx playwright test tests/e2e/library.spec.ts tests/e2e/library-layout.spec.ts tests/e2e/library-editing.spec.ts` — 20 passed.
 - `git diff --check` — clean.
 
