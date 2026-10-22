@@ -1,0 +1,6238 @@
+{
+  "measurements": [
+    {
+      "viewport": {
+        "name": "1440x900",
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "surface": "demo",
+      "document": {
+        "scrollWidth": 1440,
+        "clientWidth": 1440,
+        "scrollHeight": 2627,
+        "horizontalOverflow": false
+      },
+      "tokens": {
+        "--color-canvas": "#f8fafc",
+        "--color-sidebar": "#fff",
+        "--color-surface": "#fff",
+        "--color-surface-alt": "#f1f5f9",
+        "--color-text-primary": "#0f172a",
+        "--color-text-secondary": "#475569",
+        "--color-text-muted": "#64748b",
+        "--color-border": "#e2e8f0",
+        "--color-border-strong": "#cbd5e1",
+        "--color-orange": "#f97316",
+        "--color-orange-subtle": "#fff7ed",
+        "--color-violet": "#7c3aed",
+        "--color-violet-subtle": "#ede9fe",
+        "--color-success": "#10b981",
+        "--color-warning": "#f59e0b",
+        "--color-error": "#ef4444",
+        "--color-info": "#3b82f6",
+        "--color-focus-ring": "#7c3aed"
+      },
+      "geometry": {
+        "sidebar": {
+          "x": 0,
+          "y": 0,
+          "width": 260,
+          "height": 900,
+          "bottom": 900
+        },
+        "topbar": {
+          "x": 260,
+          "y": 0,
+          "width": 1180,
+          "height": 60,
+          "bottom": 60
+        },
+        "pageContent": {
+          "x": 260,
+          "y": 60,
+          "width": 1180,
+          "height": 2566.77,
+          "bottom": 2626.77
+        },
+        "libraryPage": {
+          "x": 292,
+          "y": 92,
+          "width": 1116,
+          "height": 2502.77,
+          "bottom": 2594.77
+        },
+        "libraryHeading": {
+          "x": 292,
+          "y": 92,
+          "width": 1116,
+          "height": 102.55,
+          "bottom": 194.55
+        },
+        "sourceSwitch": {
+          "x": 1252.95,
+          "y": 152.55,
+          "width": 155.05,
+          "height": 42,
+          "bottom": 194.55
+        },
+        "editToolbar": null,
+        "overview": {
+          "x": 292,
+          "y": 218.55,
+          "width": 1116,
+          "height": 122.5,
+          "bottom": 341.05
+        },
+        "owner": {
+          "x": 315,
+          "y": 238.55,
+          "width": 193.88,
+          "height": 82.5,
+          "bottom": 321.05
+        },
+        "counts": {
+          "x": 1138.02,
+          "y": 258.05,
+          "width": 246.98,
+          "height": 43.5,
+          "bottom": 301.55
+        },
+        "controls": {
+          "x": 292,
+          "y": 359.05,
+          "width": 1116,
+          "height": 197,
+          "bottom": 556.05
+        },
+        "search": {
+          "x": 311,
+          "y": 377.05,
+          "width": 1078,
+          "height": 59,
+          "bottom": 436.05
+        },
+        "filterGrid": {
+          "x": 311,
+          "y": 448.05,
+          "width": 1078,
+          "height": 59,
+          "bottom": 507.05
+        },
+        "filterSummary": {
+          "x": 311,
+          "y": 513.05,
+          "width": 1078,
+          "height": 30,
+          "bottom": 543.05
+        },
+        "experiences": {
+          "x": 292,
+          "y": 580.05,
+          "width": 1116,
+          "height": 1944.72,
+          "bottom": 2524.77
+        },
+        "firstGroup": {
+          "x": 292,
+          "y": 580.05,
+          "width": 1116,
+          "height": 598.38,
+          "bottom": 1178.42
+        },
+        "firstPoint": {
+          "x": 294,
+          "y": 666.05,
+          "width": 1112,
+          "height": 168.59,
+          "bottom": 834.64
+        },
+        "secondary": {
+          "x": 292,
+          "y": 2546.77,
+          "width": 1116,
+          "height": 48,
+          "bottom": 2594.77
+        },
+        "error": null
+      },
+      "typography": {
+        "pageTitle": {
+          "font-family": "Georgia, \"Times New Roman\", serif",
+          "font-size": "38px",
+          "line-height": "42.56px",
+          "font-weight": "400",
+          "color": "rgb(15, 23, 42)"
+        },
+        "eyebrow": {
+          "font-family": "Arial, Helvetica, sans-serif",
+          "font-size": "10px",
+          "line-height": "15px",
+          "font-weight": "700",
+          "color": "rgb(249, 115, 22)"
+        },
+        "intro": {
+          "font-size": "14px",
+          "line-height": "21px",
+          "color": "rgb(71, 85, 105)"
+        },
+        "profileName": {
+          "font-family": "Georgia, \"Times New Roman\", serif",
+          "font-size": "23px",
+          "line-height": "34.5px",
+          "font-weight": "400"
+        },
+        "metricLabel": {
+          "font-size": "10px",
+          "line-height": "15px",
+          "color": "rgb(71, 85, 105)"
+        },
+        "metricValue": {
+          "font-size": "17px",
+          "line-height": "25.5px",
+          "font-weight": "650"
+        },
+        "groupTitle": {
+          "font-family": "Arial, Helvetica, sans-serif",
+          "font-size": "16px",
+          "line-height": "24px",
+          "font-weight": "650"
+        },
+        "pointText": {
+          "font-size": "12px",
+          "line-height": "18.6px",
+          "color": "rgb(15, 23, 42)"
+        },
+        "pointId": {
+          "font-size": "10px",
+          "line-height": "15px"
+        },
+        "provenance": {
+          "font-size": "10px",
+          "line-height": "15px",
+          "color": "rgb(71, 85, 105)"
+        },
+        "metricStrong": {
+          "font-size": "10px",
+          "line-height": "15px"
+        },
+        "chip": {
+          "font-size": "10px",
+          "line-height": "15px",
+          "border-radius": "0px",
+          "padding": "0px"
+        },
+        "status": {
+          "font-size": "10px",
+          "line-height": "15px",
+          "border-radius": "0px"
+        },
+        "searchInput": {
+          "height": "38px",
+          "border-radius": "5px",
+          "border": "1px solid rgb(203, 213, 225)",
+          "padding": "0px 10px",
+          "font-size": "12px"
+        },
+        "facetSelect": {
+          "height": "38px",
+          "border-radius": "5px",
+          "border": "1px solid rgb(203, 213, 225)",
+          "font-size": "12px"
+        }
+      },
+      "structure": {
+        "pageChildren": [
+          "library-heading",
+          "library-overview",
+          "library-controls",
+          "library-experiences",
+          "library-secondary"
+        ],
+        "headings": [
+          {
+            "level": "h1",
+            "text": "Achievement library"
+          },
+          {
+            "level": "h2",
+            "text": "Jordan Example"
+          },
+          {
+            "level": "h3",
+            "text": "Platform Engineer"
+          },
+          {
+            "level": "h3",
+            "text": "Software Engineer"
+          },
+          {
+            "level": "h3",
+            "text": "QueueBoard"
+          },
+          {
+            "level": "h3",
+            "text": "FieldNotes"
+          }
+        ],
+        "landmarks": [
+          {
+            "tag": "aside",
+            "className": "sidebar",
+            "label": null
+          },
+          {
+            "tag": "nav",
+            "className": "main-navigation",
+            "label": "Main navigation"
+          },
+          {
+            "tag": "header",
+            "className": "topbar",
+            "label": null
+          },
+          {
+            "tag": "nav",
+            "className": "breadcrumbs",
+            "label": "Breadcrumb"
+          },
+          {
+            "tag": "main",
+            "className": "page-content",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "library-overview",
+            "label": "Library summary"
+          },
+          {
+            "tag": "section",
+            "className": "library-controls",
+            "label": "Search and filter library"
+          },
+          {
+            "tag": "section",
+            "className": "experience-group",
+            "label": "Job: Platform Engineer"
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "experience-group",
+            "label": "Job: Software Engineer"
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "experience-group",
+            "label": "Project: QueueBoard"
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "experience-group",
+            "label": "Project: FieldNotes"
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "library-secondary",
+            "label": "Skills and credentials"
+          }
+        ]
+      },
+      "counts": {
+        "experienceGroups": 4,
+        "jobGroups": 2,
+        "projectGroups": 2,
+        "points": 13,
+        "provenanceRows": 13,
+        "metricItems": 2,
+        "facetChips": 64,
+        "tagChips": 38,
+        "skillChips": 26,
+        "enabledPills": 13,
+        "disabledPills": 0,
+        "skillRows": 14,
+        "credentialRows": 2,
+        "filterSelects": 5
+      },
+      "overflowing": []
+    },
+    {
+      "viewport": {
+        "name": "1440x900",
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "dark",
+      "surface": "demo",
+      "document": {
+        "scrollWidth": 1440,
+        "clientWidth": 1440,
+        "scrollHeight": 2627,
+        "horizontalOverflow": false
+      },
+      "tokens": {
+        "--color-canvas": "#171421",
+        "--color-sidebar": "#14111f",
+        "--color-surface": "#211d2e",
+        "--color-surface-alt": "#2a2538",
+        "--color-text-primary": "#f8fafc",
+        "--color-text-secondary": "#b7b3c7",
+        "--color-text-muted": "#a49fb4",
+        "--color-border": "#3a3548",
+        "--color-border-strong": "#514a61",
+        "--color-orange": "#f97316",
+        "--color-orange-subtle": "#442719",
+        "--color-violet": "#7c3aed",
+        "--color-violet-subtle": "#322548",
+        "--color-success": "#34d399",
+        "--color-warning": "#fbbf24",
+        "--color-error": "#f87171",
+        "--color-info": "#60a5fa",
+        "--color-focus-ring": "#a78bfa"
+      },
+      "geometry": {
+        "sidebar": {
+          "x": 0,
+          "y": 0,
+          "width": 260,
+          "height": 900,
+          "bottom": 900
+        },
+        "topbar": {
+          "x": 260,
+          "y": 0,
+          "width": 1180,
+          "height": 60,
+          "bottom": 60
+        },
+        "pageContent": {
+          "x": 260,
+          "y": 60,
+          "width": 1180,
+          "height": 2566.77,
+          "bottom": 2626.77
+        },
+        "libraryPage": {
+          "x": 292,
+          "y": 92,
+          "width": 1116,
+          "height": 2502.77,
+          "bottom": 2594.77
+        },
+        "libraryHeading": {
+          "x": 292,
+          "y": 92,
+          "width": 1116,
+          "height": 102.55,
+          "bottom": 194.55
+        },
+        "sourceSwitch": {
+          "x": 1252.95,
+          "y": 152.55,
+          "width": 155.05,
+          "height": 42,
+          "bottom": 194.55
+        },
+        "editToolbar": null,
+        "overview": {
+          "x": 292,
+          "y": 218.55,
+          "width": 1116,
+          "height": 122.5,
+          "bottom": 341.05
+        },
+        "owner": {
+          "x": 315,
+          "y": 238.55,
+          "width": 193.88,
+          "height": 82.5,
+          "bottom": 321.05
+        },
+        "counts": {
+          "x": 1138.02,
+          "y": 258.05,
+          "width": 246.98,
+          "height": 43.5,
+          "bottom": 301.55
+        },
+        "controls": {
+          "x": 292,
+          "y": 359.05,
+          "width": 1116,
+          "height": 197,
+          "bottom": 556.05
+        },
+        "search": {
+          "x": 311,
+          "y": 377.05,
+          "width": 1078,
+          "height": 59,
+          "bottom": 436.05
+        },
+        "filterGrid": {
+          "x": 311,
+          "y": 448.05,
+          "width": 1078,
+          "height": 59,
+          "bottom": 507.05
+        },
+        "filterSummary": {
+          "x": 311,
+          "y": 513.05,
+          "width": 1078,
+          "height": 30,
+          "bottom": 543.05
+        },
+        "experiences": {
+          "x": 292,
+          "y": 580.05,
+          "width": 1116,
+          "height": 1944.72,
+          "bottom": 2524.77
+        },
+        "firstGroup": {
+          "x": 292,
+          "y": 580.05,
+          "width": 1116,
+          "height": 598.38,
+          "bottom": 1178.42
+        },
+        "firstPoint": {
+          "x": 294,
+          "y": 666.05,
+          "width": 1112,
+          "height": 168.59,
+          "bottom": 834.64
+        },
+        "secondary": {
+          "x": 292,
+          "y": 2546.77,
+          "width": 1116,
+          "height": 48,
+          "bottom": 2594.77
+        },
+        "error": null
+      },
+      "typography": {
+        "pageTitle": {
+          "font-family": "Georgia, \"Times New Roman\", serif",
+          "font-size": "38px",
+          "line-height": "42.56px",
+          "font-weight": "400",
+          "color": "rgb(248, 250, 252)"
+        },
+        "eyebrow": {
+          "font-family": "Arial, Helvetica, sans-serif",
+          "font-size": "10px",
+          "line-height": "15px",
+          "font-weight": "700",
+          "color": "rgb(249, 115, 22)"
+        },
+        "intro": {
+          "font-size": "14px",
+          "line-height": "21px",
+          "color": "rgb(183, 179, 199)"
+        },
+        "profileName": {
+          "font-family": "Georgia, \"Times New Roman\", serif",
+          "font-size": "23px",
+          "line-height": "34.5px",
+          "font-weight": "400"
+        },
+        "metricLabel": {
+          "font-size": "10px",
+          "line-height": "15px",
+          "color": "rgb(183, 179, 199)"
+        },
+        "metricValue": {
+          "font-size": "17px",
+          "line-height": "25.5px",
+          "font-weight": "650"
+        },
+        "groupTitle": {
+          "font-family": "Arial, Helvetica, sans-serif",
+          "font-size": "16px",
+          "line-height": "24px",
+          "font-weight": "650"
+        },
+        "pointText": {
+          "font-size": "12px",
+          "line-height": "18.6px",
+          "color": "rgb(248, 250, 252)"
+        },
+        "pointId": {
+          "font-size": "10px",
+          "line-height": "15px"
+        },
+        "provenance": {
+          "font-size": "10px",
+          "line-height": "15px",
+          "color": "rgb(183, 179, 199)"
+        },
+        "metricStrong": {
+          "font-size": "10px",
+          "line-height": "15px"
+        },
+        "chip": {
+          "font-size": "10px",
+          "line-height": "15px",
+          "border-radius": "0px",
+          "padding": "0px"
+        },
+        "status": {
+          "font-size": "10px",
+          "line-height": "15px",
+          "border-radius": "0px"
+        },
+        "searchInput": {
+          "height": "38px",
+          "border-radius": "5px",
+          "border": "1px solid rgb(81, 74, 97)",
+          "padding": "0px 10px",
+          "font-size": "12px"
+        },
+        "facetSelect": {
+          "height": "38px",
+          "border-radius": "5px",
+          "border": "1px solid rgb(81, 74, 97)",
+          "font-size": "12px"
+        }
+      },
+      "structure": {
+        "pageChildren": [
+          "library-heading",
+          "library-overview",
+          "library-controls",
+          "library-experiences",
+          "library-secondary"
+        ],
+        "headings": [
+          {
+            "level": "h1",
+            "text": "Achievement library"
+          },
+          {
+            "level": "h2",
+            "text": "Jordan Example"
+          },
+          {
+            "level": "h3",
+            "text": "Platform Engineer"
+          },
+          {
+            "level": "h3",
+            "text": "Software Engineer"
+          },
+          {
+            "level": "h3",
+            "text": "QueueBoard"
+          },
+          {
+            "level": "h3",
+            "text": "FieldNotes"
+          }
+        ],
+        "landmarks": [
+          {
+            "tag": "aside",
+            "className": "sidebar",
+            "label": null
+          },
+          {
+            "tag": "nav",
+            "className": "main-navigation",
+            "label": "Main navigation"
+          },
+          {
+            "tag": "header",
+            "className": "topbar",
+            "label": null
+          },
+          {
+            "tag": "nav",
+            "className": "breadcrumbs",
+            "label": "Breadcrumb"
+          },
+          {
+            "tag": "main",
+            "className": "page-content",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "library-overview",
+            "label": "Library summary"
+          },
+          {
+            "tag": "section",
+            "className": "library-controls",
+            "label": "Search and filter library"
+          },
+          {
+            "tag": "section",
+            "className": "experience-group",
+            "label": "Job: Platform Engineer"
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "experience-group",
+            "label": "Job: Software Engineer"
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "experience-group",
+            "label": "Project: QueueBoard"
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "experience-group",
+            "label": "Project: FieldNotes"
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "library-secondary",
+            "label": "Skills and credentials"
+          }
+        ]
+      },
+      "counts": {
+        "experienceGroups": 4,
+        "jobGroups": 2,
+        "projectGroups": 2,
+        "points": 13,
+        "provenanceRows": 13,
+        "metricItems": 2,
+        "facetChips": 64,
+        "tagChips": 38,
+        "skillChips": 26,
+        "enabledPills": 13,
+        "disabledPills": 0,
+        "skillRows": 14,
+        "credentialRows": 2,
+        "filterSelects": 5
+      },
+      "overflowing": []
+    },
+    {
+      "viewport": {
+        "name": "1024x768",
+        "width": 1024,
+        "height": 768
+      },
+      "theme": "light",
+      "surface": "demo",
+      "document": {
+        "scrollWidth": 1024,
+        "clientWidth": 1024,
+        "scrollHeight": 2627,
+        "horizontalOverflow": false
+      },
+      "tokens": {
+        "--color-canvas": "#f8fafc",
+        "--color-sidebar": "#fff",
+        "--color-surface": "#fff",
+        "--color-surface-alt": "#f1f5f9",
+        "--color-text-primary": "#0f172a",
+        "--color-text-secondary": "#475569",
+        "--color-text-muted": "#64748b",
+        "--color-border": "#e2e8f0",
+        "--color-border-strong": "#cbd5e1",
+        "--color-orange": "#f97316",
+        "--color-orange-subtle": "#fff7ed",
+        "--color-violet": "#7c3aed",
+        "--color-violet-subtle": "#ede9fe",
+        "--color-success": "#10b981",
+        "--color-warning": "#f59e0b",
+        "--color-error": "#ef4444",
+        "--color-info": "#3b82f6",
+        "--color-focus-ring": "#7c3aed"
+      },
+      "geometry": {
+        "sidebar": {
+          "x": 0,
+          "y": 0,
+          "width": 220,
+          "height": 768,
+          "bottom": 768
+        },
+        "topbar": {
+          "x": 220,
+          "y": 0,
+          "width": 804,
+          "height": 60,
+          "bottom": 60
+        },
+        "pageContent": {
+          "x": 220,
+          "y": 60,
+          "width": 804,
+          "height": 2566.77,
+          "bottom": 2626.77
+        },
+        "libraryPage": {
+          "x": 244,
+          "y": 92,
+          "width": 756,
+          "height": 2502.77,
+          "bottom": 2594.77
+        },
+        "libraryHeading": {
+          "x": 244,
+          "y": 92,
+          "width": 756,
+          "height": 102.55,
+          "bottom": 194.55
+        },
+        "sourceSwitch": {
+          "x": 844.95,
+          "y": 152.55,
+          "width": 155.05,
+          "height": 42,
+          "bottom": 194.55
+        },
+        "editToolbar": null,
+        "overview": {
+          "x": 244,
+          "y": 218.55,
+          "width": 756,
+          "height": 122.5,
+          "bottom": 341.05
+        },
+        "owner": {
+          "x": 267,
+          "y": 238.55,
+          "width": 193.88,
+          "height": 82.5,
+          "bottom": 321.05
+        },
+        "counts": {
+          "x": 730.02,
+          "y": 258.05,
+          "width": 246.98,
+          "height": 43.5,
+          "bottom": 301.55
+        },
+        "controls": {
+          "x": 244,
+          "y": 359.05,
+          "width": 756,
+          "height": 197,
+          "bottom": 556.05
+        },
+        "search": {
+          "x": 263,
+          "y": 377.05,
+          "width": 718,
+          "height": 59,
+          "bottom": 436.05
+        },
+        "filterGrid": {
+          "x": 263,
+          "y": 448.05,
+          "width": 718,
+          "height": 59,
+          "bottom": 507.05
+        },
+        "filterSummary": {
+          "x": 263,
+          "y": 513.05,
+          "width": 718,
+          "height": 30,
+          "bottom": 543.05
+        },
+        "experiences": {
+          "x": 244,
+          "y": 580.05,
+          "width": 756,
+          "height": 1944.72,
+          "bottom": 2524.77
+        },
+        "firstGroup": {
+          "x": 244,
+          "y": 580.05,
+          "width": 756,
+          "height": 598.38,
+          "bottom": 1178.42
+        },
+        "firstPoint": {
+          "x": 246,
+          "y": 666.05,
+          "width": 752,
+          "height": 168.59,
+          "bottom": 834.64
+        },
+        "secondary": {
+          "x": 244,
+          "y": 2546.77,
+          "width": 756,
+          "height": 48,
+          "bottom": 2594.77
+        },
+        "error": null
+      },
+      "typography": {
+        "pageTitle": {
+          "font-family": "Georgia, \"Times New Roman\", serif",
+          "font-size": "38px",
+          "line-height": "42.56px",
+          "font-weight": "400",
+          "color": "rgb(15, 23, 42)"
+        },
+        "eyebrow": {
+          "font-family": "Arial, Helvetica, sans-serif",
+          "font-size": "10px",
+          "line-height": "15px",
+          "font-weight": "700",
+          "color": "rgb(249, 115, 22)"
+        },
+        "intro": {
+          "font-size": "14px",
+          "line-height": "21px",
+          "color": "rgb(71, 85, 105)"
+        },
+        "profileName": {
+          "font-family": "Georgia, \"Times New Roman\", serif",
+          "font-size": "23px",
+          "line-height": "34.5px",
+          "font-weight": "400"
+        },
+        "metricLabel": {
+          "font-size": "10px",
+          "line-height": "15px",
+          "color": "rgb(71, 85, 105)"
+        },
+        "metricValue": {
+          "font-size": "17px",
+          "line-height": "25.5px",
+          "font-weight": "650"
+        },
+        "groupTitle": {
+          "font-family": "Arial, Helvetica, sans-serif",
+          "font-size": "16px",
+          "line-height": "24px",
+          "font-weight": "650"
+        },
+        "pointText": {
+          "font-size": "12px",
+          "line-height": "18.6px",
+          "color": "rgb(15, 23, 42)"
+        },
+        "pointId": {
+          "font-size": "10px",
+          "line-height": "15px"
+        },
+        "provenance": {
+          "font-size": "10px",
+          "line-height": "15px",
+          "color": "rgb(71, 85, 105)"
+        },
+        "metricStrong": {
+          "font-size": "10px",
+          "line-height": "15px"
+        },
+        "chip": {
+          "font-size": "10px",
+          "line-height": "15px",
+          "border-radius": "0px",
+          "padding": "0px"
+        },
+        "status": {
+          "font-size": "10px",
+          "line-height": "15px",
+          "border-radius": "0px"
+        },
+        "searchInput": {
+          "height": "38px",
+          "border-radius": "5px",
+          "border": "1px solid rgb(203, 213, 225)",
+          "padding": "0px 10px",
+          "font-size": "12px"
+        },
+        "facetSelect": {
+          "height": "38px",
+          "border-radius": "5px",
+          "border": "1px solid rgb(203, 213, 225)",
+          "font-size": "12px"
+        }
+      },
+      "structure": {
+        "pageChildren": [
+          "library-heading",
+          "library-overview",
+          "library-controls",
+          "library-experiences",
+          "library-secondary"
+        ],
+        "headings": [
+          {
+            "level": "h1",
+            "text": "Achievement library"
+          },
+          {
+            "level": "h2",
+            "text": "Jordan Example"
+          },
+          {
+            "level": "h3",
+            "text": "Platform Engineer"
+          },
+          {
+            "level": "h3",
+            "text": "Software Engineer"
+          },
+          {
+            "level": "h3",
+            "text": "QueueBoard"
+          },
+          {
+            "level": "h3",
+            "text": "FieldNotes"
+          }
+        ],
+        "landmarks": [
+          {
+            "tag": "aside",
+            "className": "sidebar",
+            "label": null
+          },
+          {
+            "tag": "nav",
+            "className": "main-navigation",
+            "label": "Main navigation"
+          },
+          {
+            "tag": "header",
+            "className": "topbar",
+            "label": null
+          },
+          {
+            "tag": "nav",
+            "className": "breadcrumbs",
+            "label": "Breadcrumb"
+          },
+          {
+            "tag": "main",
+            "className": "page-content",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "library-overview",
+            "label": "Library summary"
+          },
+          {
+            "tag": "section",
+            "className": "library-controls",
+            "label": "Search and filter library"
+          },
+          {
+            "tag": "section",
+            "className": "experience-group",
+            "label": "Job: Platform Engineer"
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "experience-group",
+            "label": "Job: Software Engineer"
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "experience-group",
+            "label": "Project: QueueBoard"
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "experience-group",
+            "label": "Project: FieldNotes"
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "library-secondary",
+            "label": "Skills and credentials"
+          }
+        ]
+      },
+      "counts": {
+        "experienceGroups": 4,
+        "jobGroups": 2,
+        "projectGroups": 2,
+        "points": 13,
+        "provenanceRows": 13,
+        "metricItems": 2,
+        "facetChips": 64,
+        "tagChips": 38,
+        "skillChips": 26,
+        "enabledPills": 13,
+        "disabledPills": 0,
+        "skillRows": 14,
+        "credentialRows": 2,
+        "filterSelects": 5
+      },
+      "overflowing": []
+    },
+    {
+      "viewport": {
+        "name": "1024x768",
+        "width": 1024,
+        "height": 768
+      },
+      "theme": "dark",
+      "surface": "demo",
+      "document": {
+        "scrollWidth": 1024,
+        "clientWidth": 1024,
+        "scrollHeight": 2627,
+        "horizontalOverflow": false
+      },
+      "tokens": {
+        "--color-canvas": "#171421",
+        "--color-sidebar": "#14111f",
+        "--color-surface": "#211d2e",
+        "--color-surface-alt": "#2a2538",
+        "--color-text-primary": "#f8fafc",
+        "--color-text-secondary": "#b7b3c7",
+        "--color-text-muted": "#a49fb4",
+        "--color-border": "#3a3548",
+        "--color-border-strong": "#514a61",
+        "--color-orange": "#f97316",
+        "--color-orange-subtle": "#442719",
+        "--color-violet": "#7c3aed",
+        "--color-violet-subtle": "#322548",
+        "--color-success": "#34d399",
+        "--color-warning": "#fbbf24",
+        "--color-error": "#f87171",
+        "--color-info": "#60a5fa",
+        "--color-focus-ring": "#a78bfa"
+      },
+      "geometry": {
+        "sidebar": {
+          "x": 0,
+          "y": 0,
+          "width": 220,
+          "height": 768,
+          "bottom": 768
+        },
+        "topbar": {
+          "x": 220,
+          "y": 0,
+          "width": 804,
+          "height": 60,
+          "bottom": 60
+        },
+        "pageContent": {
+          "x": 220,
+          "y": 60,
+          "width": 804,
+          "height": 2566.77,
+          "bottom": 2626.77
+        },
+        "libraryPage": {
+          "x": 244,
+          "y": 92,
+          "width": 756,
+          "height": 2502.77,
+          "bottom": 2594.77
+        },
+        "libraryHeading": {
+          "x": 244,
+          "y": 92,
+          "width": 756,
+          "height": 102.55,
+          "bottom": 194.55
+        },
+        "sourceSwitch": {
+          "x": 844.95,
+          "y": 152.55,
+          "width": 155.05,
+          "height": 42,
+          "bottom": 194.55
+        },
+        "editToolbar": null,
+        "overview": {
+          "x": 244,
+          "y": 218.55,
+          "width": 756,
+          "height": 122.5,
+          "bottom": 341.05
+        },
+        "owner": {
+          "x": 267,
+          "y": 238.55,
+          "width": 193.88,
+          "height": 82.5,
+          "bottom": 321.05
+        },
+        "counts": {
+          "x": 730.02,
+          "y": 258.05,
+          "width": 246.98,
+          "height": 43.5,
+          "bottom": 301.55
+        },
+        "controls": {
+          "x": 244,
+          "y": 359.05,
+          "width": 756,
+          "height": 197,
+          "bottom": 556.05
+        },
+        "search": {
+          "x": 263,
+          "y": 377.05,
+          "width": 718,
+          "height": 59,
+          "bottom": 436.05
+        },
+        "filterGrid": {
+          "x": 263,
+          "y": 448.05,
+          "width": 718,
+          "height": 59,
+          "bottom": 507.05
+        },
+        "filterSummary": {
+          "x": 263,
+          "y": 513.05,
+          "width": 718,
+          "height": 30,
+          "bottom": 543.05
+        },
+        "experiences": {
+          "x": 244,
+          "y": 580.05,
+          "width": 756,
+          "height": 1944.72,
+          "bottom": 2524.77
+        },
+        "firstGroup": {
+          "x": 244,
+          "y": 580.05,
+          "width": 756,
+          "height": 598.38,
+          "bottom": 1178.42
+        },
+        "firstPoint": {
+          "x": 246,
+          "y": 666.05,
+          "width": 752,
+          "height": 168.59,
+          "bottom": 834.64
+        },
+        "secondary": {
+          "x": 244,
+          "y": 2546.77,
+          "width": 756,
+          "height": 48,
+          "bottom": 2594.77
+        },
+        "error": null
+      },
+      "typography": {
+        "pageTitle": {
+          "font-family": "Georgia, \"Times New Roman\", serif",
+          "font-size": "38px",
+          "line-height": "42.56px",
+          "font-weight": "400",
+          "color": "rgb(248, 250, 252)"
+        },
+        "eyebrow": {
+          "font-family": "Arial, Helvetica, sans-serif",
+          "font-size": "10px",
+          "line-height": "15px",
+          "font-weight": "700",
+          "color": "rgb(249, 115, 22)"
+        },
+        "intro": {
+          "font-size": "14px",
+          "line-height": "21px",
+          "color": "rgb(183, 179, 199)"
+        },
+        "profileName": {
+          "font-family": "Georgia, \"Times New Roman\", serif",
+          "font-size": "23px",
+          "line-height": "34.5px",
+          "font-weight": "400"
+        },
+        "metricLabel": {
+          "font-size": "10px",
+          "line-height": "15px",
+          "color": "rgb(183, 179, 199)"
+        },
+        "metricValue": {
+          "font-size": "17px",
+          "line-height": "25.5px",
+          "font-weight": "650"
+        },
+        "groupTitle": {
+          "font-family": "Arial, Helvetica, sans-serif",
+          "font-size": "16px",
+          "line-height": "24px",
+          "font-weight": "650"
+        },
+        "pointText": {
+          "font-size": "12px",
+          "line-height": "18.6px",
+          "color": "rgb(248, 250, 252)"
+        },
+        "pointId": {
+          "font-size": "10px",
+          "line-height": "15px"
+        },
+        "provenance": {
+          "font-size": "10px",
+          "line-height": "15px",
+          "color": "rgb(183, 179, 199)"
+        },
+        "metricStrong": {
+          "font-size": "10px",
+          "line-height": "15px"
+        },
+        "chip": {
+          "font-size": "10px",
+          "line-height": "15px",
+          "border-radius": "0px",
+          "padding": "0px"
+        },
+        "status": {
+          "font-size": "10px",
+          "line-height": "15px",
+          "border-radius": "0px"
+        },
+        "searchInput": {
+          "height": "38px",
+          "border-radius": "5px",
+          "border": "1px solid rgb(81, 74, 97)",
+          "padding": "0px 10px",
+          "font-size": "12px"
+        },
+        "facetSelect": {
+          "height": "38px",
+          "border-radius": "5px",
+          "border": "1px solid rgb(81, 74, 97)",
+          "font-size": "12px"
+        }
+      },
+      "structure": {
+        "pageChildren": [
+          "library-heading",
+          "library-overview",
+          "library-controls",
+          "library-experiences",
+          "library-secondary"
+        ],
+        "headings": [
+          {
+            "level": "h1",
+            "text": "Achievement library"
+          },
+          {
+            "level": "h2",
+            "text": "Jordan Example"
+          },
+          {
+            "level": "h3",
+            "text": "Platform Engineer"
+          },
+          {
+            "level": "h3",
+            "text": "Software Engineer"
+          },
+          {
+            "level": "h3",
+            "text": "QueueBoard"
+          },
+          {
+            "level": "h3",
+            "text": "FieldNotes"
+          }
+        ],
+        "landmarks": [
+          {
+            "tag": "aside",
+            "className": "sidebar",
+            "label": null
+          },
+          {
+            "tag": "nav",
+            "className": "main-navigation",
+            "label": "Main navigation"
+          },
+          {
+            "tag": "header",
+            "className": "topbar",
+            "label": null
+          },
+          {
+            "tag": "nav",
+            "className": "breadcrumbs",
+            "label": "Breadcrumb"
+          },
+          {
+            "tag": "main",
+            "className": "page-content",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "library-overview",
+            "label": "Library summary"
+          },
+          {
+            "tag": "section",
+            "className": "library-controls",
+            "label": "Search and filter library"
+          },
+          {
+            "tag": "section",
+            "className": "experience-group",
+            "label": "Job: Platform Engineer"
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "experience-group",
+            "label": "Job: Software Engineer"
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "experience-group",
+            "label": "Project: QueueBoard"
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "experience-group",
+            "label": "Project: FieldNotes"
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "library-secondary",
+            "label": "Skills and credentials"
+          }
+        ]
+      },
+      "counts": {
+        "experienceGroups": 4,
+        "jobGroups": 2,
+        "projectGroups": 2,
+        "points": 13,
+        "provenanceRows": 13,
+        "metricItems": 2,
+        "facetChips": 64,
+        "tagChips": 38,
+        "skillChips": 26,
+        "enabledPills": 13,
+        "disabledPills": 0,
+        "skillRows": 14,
+        "credentialRows": 2,
+        "filterSelects": 5
+      },
+      "overflowing": []
+    },
+    {
+      "viewport": {
+        "name": "768x1024",
+        "width": 768,
+        "height": 1024
+      },
+      "theme": "light",
+      "surface": "demo",
+      "document": {
+        "scrollWidth": 768,
+        "clientWidth": 768,
+        "scrollHeight": 2935,
+        "horizontalOverflow": false
+      },
+      "tokens": {
+        "--color-canvas": "#f8fafc",
+        "--color-sidebar": "#fff",
+        "--color-surface": "#fff",
+        "--color-surface-alt": "#f1f5f9",
+        "--color-text-primary": "#0f172a",
+        "--color-text-secondary": "#475569",
+        "--color-text-muted": "#64748b",
+        "--color-border": "#e2e8f0",
+        "--color-border-strong": "#cbd5e1",
+        "--color-orange": "#f97316",
+        "--color-orange-subtle": "#fff7ed",
+        "--color-violet": "#7c3aed",
+        "--color-violet-subtle": "#ede9fe",
+        "--color-success": "#10b981",
+        "--color-warning": "#f59e0b",
+        "--color-error": "#ef4444",
+        "--color-info": "#3b82f6",
+        "--color-focus-ring": "#7c3aed"
+      },
+      "geometry": {
+        "sidebar": {
+          "x": 0,
+          "y": 0,
+          "width": 220,
+          "height": 1024,
+          "bottom": 1024
+        },
+        "topbar": {
+          "x": 220,
+          "y": 0,
+          "width": 548,
+          "height": 60,
+          "bottom": 60
+        },
+        "pageContent": {
+          "x": 220,
+          "y": 60,
+          "width": 548,
+          "height": 2875.34,
+          "bottom": 2935.34
+        },
+        "libraryPage": {
+          "x": 244,
+          "y": 92,
+          "width": 500,
+          "height": 2811.34,
+          "bottom": 2903.34
+        },
+        "libraryHeading": {
+          "x": 244,
+          "y": 92,
+          "width": 500,
+          "height": 166.09,
+          "bottom": 258.09
+        },
+        "sourceSwitch": {
+          "x": 588.95,
+          "y": 216.09,
+          "width": 155.05,
+          "height": 42,
+          "bottom": 258.09
+        },
+        "editToolbar": null,
+        "overview": {
+          "x": 244,
+          "y": 282.09,
+          "width": 500,
+          "height": 149,
+          "bottom": 431.09
+        },
+        "owner": {
+          "x": 267,
+          "y": 306.34,
+          "width": 189.09,
+          "height": 100.5,
+          "bottom": 406.84
+        },
+        "counts": {
+          "x": 480.09,
+          "y": 302.09,
+          "width": 240.91,
+          "height": 109,
+          "bottom": 411.09
+        },
+        "controls": {
+          "x": 244,
+          "y": 449.09,
+          "width": 500,
+          "height": 197,
+          "bottom": 646.09
+        },
+        "search": {
+          "x": 263,
+          "y": 467.09,
+          "width": 462,
+          "height": 59,
+          "bottom": 526.09
+        },
+        "filterGrid": {
+          "x": 263,
+          "y": 538.09,
+          "width": 462,
+          "height": 59,
+          "bottom": 597.09
+        },
+        "filterSummary": {
+          "x": 263,
+          "y": 603.09,
+          "width": 462,
+          "height": 30,
+          "bottom": 633.09
+        },
+        "experiences": {
+          "x": 244,
+          "y": 670.09,
+          "width": 500,
+          "height": 2163.25,
+          "bottom": 2833.34
+        },
+        "firstGroup": {
+          "x": 244,
+          "y": 670.09,
+          "width": 500,
+          "height": 654.16,
+          "bottom": 1324.25
+        },
+        "firstPoint": {
+          "x": 246,
+          "y": 756.09,
+          "width": 496,
+          "height": 168.59,
+          "bottom": 924.69
+        },
+        "secondary": {
+          "x": 244,
+          "y": 2855.34,
+          "width": 500,
+          "height": 48,
+          "bottom": 2903.34
+        },
+        "error": null
+      },
+      "typography": {
+        "pageTitle": {
+          "font-family": "Georgia, \"Times New Roman\", serif",
+          "font-size": "38px",
+          "line-height": "42.56px",
+          "font-weight": "400",
+          "color": "rgb(15, 23, 42)"
+        },
+        "eyebrow": {
+          "font-family": "Arial, Helvetica, sans-serif",
+          "font-size": "10px",
+          "line-height": "15px",
+          "font-weight": "700",
+          "color": "rgb(249, 115, 22)"
+        },
+        "intro": {
+          "font-size": "14px",
+          "line-height": "21px",
+          "color": "rgb(71, 85, 105)"
+        },
+        "profileName": {
+          "font-family": "Georgia, \"Times New Roman\", serif",
+          "font-size": "23px",
+          "line-height": "34.5px",
+          "font-weight": "400"
+        },
+        "metricLabel": {
+          "font-size": "10px",
+          "line-height": "15px",
+          "color": "rgb(71, 85, 105)"
+        },
+        "metricValue": {
+          "font-size": "17px",
+          "line-height": "25.5px",
+          "font-weight": "650"
+        },
+        "groupTitle": {
+          "font-family": "Arial, Helvetica, sans-serif",
+          "font-size": "16px",
+          "line-height": "24px",
+          "font-weight": "650"
+        },
+        "pointText": {
+          "font-size": "12px",
+          "line-height": "18.6px",
+          "color": "rgb(15, 23, 42)"
+        },
+        "pointId": {
+          "font-size": "10px",
+          "line-height": "15px"
+        },
+        "provenance": {
+          "font-size": "10px",
+          "line-height": "15px",
+          "color": "rgb(71, 85, 105)"
+        },
+        "metricStrong": {
+          "font-size": "10px",
+          "line-height": "15px"
+        },
+        "chip": {
+          "font-size": "10px",
+          "line-height": "15px",
+          "border-radius": "0px",
+          "padding": "0px"
+        },
+        "status": {
+          "font-size": "10px",
+          "line-height": "15px",
+          "border-radius": "0px"
+        },
+        "searchInput": {
+          "height": "38px",
+          "border-radius": "5px",
+          "border": "1px solid rgb(203, 213, 225)",
+          "padding": "0px 10px",
+          "font-size": "12px"
+        },
+        "facetSelect": {
+          "height": "38px",
+          "border-radius": "5px",
+          "border": "1px solid rgb(203, 213, 225)",
+          "font-size": "12px"
+        }
+      },
+      "structure": {
+        "pageChildren": [
+          "library-heading",
+          "library-overview",
+          "library-controls",
+          "library-experiences",
+          "library-secondary"
+        ],
+        "headings": [
+          {
+            "level": "h1",
+            "text": "Achievement library"
+          },
+          {
+            "level": "h2",
+            "text": "Jordan Example"
+          },
+          {
+            "level": "h3",
+            "text": "Platform Engineer"
+          },
+          {
+            "level": "h3",
+            "text": "Software Engineer"
+          },
+          {
+            "level": "h3",
+            "text": "QueueBoard"
+          },
+          {
+            "level": "h3",
+            "text": "FieldNotes"
+          }
+        ],
+        "landmarks": [
+          {
+            "tag": "aside",
+            "className": "sidebar",
+            "label": null
+          },
+          {
+            "tag": "nav",
+            "className": "main-navigation",
+            "label": "Main navigation"
+          },
+          {
+            "tag": "header",
+            "className": "topbar",
+            "label": null
+          },
+          {
+            "tag": "nav",
+            "className": "breadcrumbs",
+            "label": "Breadcrumb"
+          },
+          {
+            "tag": "main",
+            "className": "page-content",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "library-overview",
+            "label": "Library summary"
+          },
+          {
+            "tag": "section",
+            "className": "library-controls",
+            "label": "Search and filter library"
+          },
+          {
+            "tag": "section",
+            "className": "experience-group",
+            "label": "Job: Platform Engineer"
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "experience-group",
+            "label": "Job: Software Engineer"
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "experience-group",
+            "label": "Project: QueueBoard"
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "experience-group",
+            "label": "Project: FieldNotes"
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "library-secondary",
+            "label": "Skills and credentials"
+          }
+        ]
+      },
+      "counts": {
+        "experienceGroups": 4,
+        "jobGroups": 2,
+        "projectGroups": 2,
+        "points": 13,
+        "provenanceRows": 13,
+        "metricItems": 2,
+        "facetChips": 64,
+        "tagChips": 38,
+        "skillChips": 26,
+        "enabledPills": 13,
+        "disabledPills": 0,
+        "skillRows": 14,
+        "credentialRows": 2,
+        "filterSelects": 5
+      },
+      "overflowing": []
+    },
+    {
+      "viewport": {
+        "name": "768x1024",
+        "width": 768,
+        "height": 1024
+      },
+      "theme": "dark",
+      "surface": "demo",
+      "document": {
+        "scrollWidth": 768,
+        "clientWidth": 768,
+        "scrollHeight": 2935,
+        "horizontalOverflow": false
+      },
+      "tokens": {
+        "--color-canvas": "#171421",
+        "--color-sidebar": "#14111f",
+        "--color-surface": "#211d2e",
+        "--color-surface-alt": "#2a2538",
+        "--color-text-primary": "#f8fafc",
+        "--color-text-secondary": "#b7b3c7",
+        "--color-text-muted": "#a49fb4",
+        "--color-border": "#3a3548",
+        "--color-border-strong": "#514a61",
+        "--color-orange": "#f97316",
+        "--color-orange-subtle": "#442719",
+        "--color-violet": "#7c3aed",
+        "--color-violet-subtle": "#322548",
+        "--color-success": "#34d399",
+        "--color-warning": "#fbbf24",
+        "--color-error": "#f87171",
+        "--color-info": "#60a5fa",
+        "--color-focus-ring": "#a78bfa"
+      },
+      "geometry": {
+        "sidebar": {
+          "x": 0,
+          "y": 0,
+          "width": 220,
+          "height": 1024,
+          "bottom": 1024
+        },
+        "topbar": {
+          "x": 220,
+          "y": 0,
+          "width": 548,
+          "height": 60,
+          "bottom": 60
+        },
+        "pageContent": {
+          "x": 220,
+          "y": 60,
+          "width": 548,
+          "height": 2875.34,
+          "bottom": 2935.34
+        },
+        "libraryPage": {
+          "x": 244,
+          "y": 92,
+          "width": 500,
+          "height": 2811.34,
+          "bottom": 2903.34
+        },
+        "libraryHeading": {
+          "x": 244,
+          "y": 92,
+          "width": 500,
+          "height": 166.09,
+          "bottom": 258.09
+        },
+        "sourceSwitch": {
+          "x": 588.95,
+          "y": 216.09,
+          "width": 155.05,
+          "height": 42,
+          "bottom": 258.09
+        },
+        "editToolbar": null,
+        "overview": {
+          "x": 244,
+          "y": 282.09,
+          "width": 500,
+          "height": 149,
+          "bottom": 431.09
+        },
+        "owner": {
+          "x": 267,
+          "y": 306.34,
+          "width": 189.09,
+          "height": 100.5,
+          "bottom": 406.84
+        },
+        "counts": {
+          "x": 480.09,
+          "y": 302.09,
+          "width": 240.91,
+          "height": 109,
+          "bottom": 411.09
+        },
+        "controls": {
+          "x": 244,
+          "y": 449.09,
+          "width": 500,
+          "height": 197,
+          "bottom": 646.09
+        },
+        "search": {
+          "x": 263,
+          "y": 467.09,
+          "width": 462,
+          "height": 59,
+          "bottom": 526.09
+        },
+        "filterGrid": {
+          "x": 263,
+          "y": 538.09,
+          "width": 462,
+          "height": 59,
+          "bottom": 597.09
+        },
+        "filterSummary": {
+          "x": 263,
+          "y": 603.09,
+          "width": 462,
+          "height": 30,
+          "bottom": 633.09
+        },
+        "experiences": {
+          "x": 244,
+          "y": 670.09,
+          "width": 500,
+          "height": 2163.25,
+          "bottom": 2833.34
+        },
+        "firstGroup": {
+          "x": 244,
+          "y": 670.09,
+          "width": 500,
+          "height": 654.16,
+          "bottom": 1324.25
+        },
+        "firstPoint": {
+          "x": 246,
+          "y": 756.09,
+          "width": 496,
+          "height": 168.59,
+          "bottom": 924.69
+        },
+        "secondary": {
+          "x": 244,
+          "y": 2855.34,
+          "width": 500,
+          "height": 48,
+          "bottom": 2903.34
+        },
+        "error": null
+      },
+      "typography": {
+        "pageTitle": {
+          "font-family": "Georgia, \"Times New Roman\", serif",
+          "font-size": "38px",
+          "line-height": "42.56px",
+          "font-weight": "400",
+          "color": "rgb(248, 250, 252)"
+        },
+        "eyebrow": {
+          "font-family": "Arial, Helvetica, sans-serif",
+          "font-size": "10px",
+          "line-height": "15px",
+          "font-weight": "700",
+          "color": "rgb(249, 115, 22)"
+        },
+        "intro": {
+          "font-size": "14px",
+          "line-height": "21px",
+          "color": "rgb(183, 179, 199)"
+        },
+        "profileName": {
+          "font-family": "Georgia, \"Times New Roman\", serif",
+          "font-size": "23px",
+          "line-height": "34.5px",
+          "font-weight": "400"
+        },
+        "metricLabel": {
+          "font-size": "10px",
+          "line-height": "15px",
+          "color": "rgb(183, 179, 199)"
+        },
+        "metricValue": {
+          "font-size": "17px",
+          "line-height": "25.5px",
+          "font-weight": "650"
+        },
+        "groupTitle": {
+          "font-family": "Arial, Helvetica, sans-serif",
+          "font-size": "16px",
+          "line-height": "24px",
+          "font-weight": "650"
+        },
+        "pointText": {
+          "font-size": "12px",
+          "line-height": "18.6px",
+          "color": "rgb(248, 250, 252)"
+        },
+        "pointId": {
+          "font-size": "10px",
+          "line-height": "15px"
+        },
+        "provenance": {
+          "font-size": "10px",
+          "line-height": "15px",
+          "color": "rgb(183, 179, 199)"
+        },
+        "metricStrong": {
+          "font-size": "10px",
+          "line-height": "15px"
+        },
+        "chip": {
+          "font-size": "10px",
+          "line-height": "15px",
+          "border-radius": "0px",
+          "padding": "0px"
+        },
+        "status": {
+          "font-size": "10px",
+          "line-height": "15px",
+          "border-radius": "0px"
+        },
+        "searchInput": {
+          "height": "38px",
+          "border-radius": "5px",
+          "border": "1px solid rgb(81, 74, 97)",
+          "padding": "0px 10px",
+          "font-size": "12px"
+        },
+        "facetSelect": {
+          "height": "38px",
+          "border-radius": "5px",
+          "border": "1px solid rgb(81, 74, 97)",
+          "font-size": "12px"
+        }
+      },
+      "structure": {
+        "pageChildren": [
+          "library-heading",
+          "library-overview",
+          "library-controls",
+          "library-experiences",
+          "library-secondary"
+        ],
+        "headings": [
+          {
+            "level": "h1",
+            "text": "Achievement library"
+          },
+          {
+            "level": "h2",
+            "text": "Jordan Example"
+          },
+          {
+            "level": "h3",
+            "text": "Platform Engineer"
+          },
+          {
+            "level": "h3",
+            "text": "Software Engineer"
+          },
+          {
+            "level": "h3",
+            "text": "QueueBoard"
+          },
+          {
+            "level": "h3",
+            "text": "FieldNotes"
+          }
+        ],
+        "landmarks": [
+          {
+            "tag": "aside",
+            "className": "sidebar",
+            "label": null
+          },
+          {
+            "tag": "nav",
+            "className": "main-navigation",
+            "label": "Main navigation"
+          },
+          {
+            "tag": "header",
+            "className": "topbar",
+            "label": null
+          },
+          {
+            "tag": "nav",
+            "className": "breadcrumbs",
+            "label": "Breadcrumb"
+          },
+          {
+            "tag": "main",
+            "className": "page-content",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "library-overview",
+            "label": "Library summary"
+          },
+          {
+            "tag": "section",
+            "className": "library-controls",
+            "label": "Search and filter library"
+          },
+          {
+            "tag": "section",
+            "className": "experience-group",
+            "label": "Job: Platform Engineer"
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "experience-group",
+            "label": "Job: Software Engineer"
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "experience-group",
+            "label": "Project: QueueBoard"
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "experience-group",
+            "label": "Project: FieldNotes"
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "library-secondary",
+            "label": "Skills and credentials"
+          }
+        ]
+      },
+      "counts": {
+        "experienceGroups": 4,
+        "jobGroups": 2,
+        "projectGroups": 2,
+        "points": 13,
+        "provenanceRows": 13,
+        "metricItems": 2,
+        "facetChips": 64,
+        "tagChips": 38,
+        "skillChips": 26,
+        "enabledPills": 13,
+        "disabledPills": 0,
+        "skillRows": 14,
+        "credentialRows": 2,
+        "filterSelects": 5
+      },
+      "overflowing": []
+    },
+    {
+      "viewport": {
+        "name": "390x844",
+        "width": 390,
+        "height": 844
+      },
+      "theme": "light",
+      "surface": "demo",
+      "document": {
+        "scrollWidth": 390,
+        "clientWidth": 390,
+        "scrollHeight": 3428,
+        "horizontalOverflow": false
+      },
+      "tokens": {
+        "--color-canvas": "#f8fafc",
+        "--color-sidebar": "#fff",
+        "--color-surface": "#fff",
+        "--color-surface-alt": "#f1f5f9",
+        "--color-text-primary": "#0f172a",
+        "--color-text-secondary": "#475569",
+        "--color-text-muted": "#64748b",
+        "--color-border": "#e2e8f0",
+        "--color-border-strong": "#cbd5e1",
+        "--color-orange": "#f97316",
+        "--color-orange-subtle": "#fff7ed",
+        "--color-violet": "#7c3aed",
+        "--color-violet-subtle": "#ede9fe",
+        "--color-success": "#10b981",
+        "--color-warning": "#f59e0b",
+        "--color-error": "#ef4444",
+        "--color-info": "#3b82f6",
+        "--color-focus-ring": "#7c3aed"
+      },
+      "geometry": {
+        "sidebar": {
+          "x": -292,
+          "y": 0,
+          "width": 280,
+          "height": 844,
+          "bottom": 844
+        },
+        "topbar": {
+          "x": 0,
+          "y": 0,
+          "width": 390,
+          "height": 60,
+          "bottom": 60
+        },
+        "pageContent": {
+          "x": 0,
+          "y": 60,
+          "width": 390,
+          "height": 3368.11,
+          "bottom": 3428.11
+        },
+        "libraryPage": {
+          "x": 16,
+          "y": 84,
+          "width": 358,
+          "height": 3312.11,
+          "bottom": 3396.11
+        },
+        "libraryHeading": {
+          "x": 16,
+          "y": 84,
+          "width": 358,
+          "height": 156.08,
+          "bottom": 240.08
+        },
+        "sourceSwitch": {
+          "x": 16,
+          "y": 198.08,
+          "width": 147.05,
+          "height": 42,
+          "bottom": 240.08
+        },
+        "editToolbar": null,
+        "overview": {
+          "x": 16,
+          "y": 264.08,
+          "width": 358,
+          "height": 176,
+          "bottom": 440.08
+        },
+        "owner": {
+          "x": 33,
+          "y": 281.08,
+          "width": 193.88,
+          "height": 82.5,
+          "bottom": 363.58
+        },
+        "counts": {
+          "x": 33,
+          "y": 379.58,
+          "width": 242.98,
+          "height": 43.5,
+          "bottom": 423.08
+        },
+        "controls": {
+          "x": 16,
+          "y": 458.08,
+          "width": 358,
+          "height": 481,
+          "bottom": 939.08
+        },
+        "search": {
+          "x": 30,
+          "y": 476.08,
+          "width": 330,
+          "height": 59,
+          "bottom": 535.08
+        },
+        "filterGrid": {
+          "x": 30,
+          "y": 547.08,
+          "width": 330,
+          "height": 343,
+          "bottom": 890.08
+        },
+        "filterSummary": {
+          "x": 30,
+          "y": 896.08,
+          "width": 330,
+          "height": 30,
+          "bottom": 926.08
+        },
+        "experiences": {
+          "x": 16,
+          "y": 963.08,
+          "width": 358,
+          "height": 2299.03,
+          "bottom": 3262.11
+        },
+        "firstGroup": {
+          "x": 16,
+          "y": 963.08,
+          "width": 358,
+          "height": 749.34,
+          "bottom": 1712.42
+        },
+        "firstPoint": {
+          "x": 18,
+          "y": 1049.08,
+          "width": 354,
+          "height": 201.19,
+          "bottom": 1250.27
+        },
+        "secondary": {
+          "x": 16,
+          "y": 3284.11,
+          "width": 358,
+          "height": 112,
+          "bottom": 3396.11
+        },
+        "error": null
+      },
+      "typography": {
+        "pageTitle": {
+          "font-family": "Georgia, \"Times New Roman\", serif",
+          "font-size": "34px",
+          "line-height": "38.08px",
+          "font-weight": "400",
+          "color": "rgb(15, 23, 42)"
+        },
+        "eyebrow": {
+          "font-family": "Arial, Helvetica, sans-serif",
+          "font-size": "10px",
+          "line-height": "15px",
+          "font-weight": "700",
+          "color": "rgb(249, 115, 22)"
+        },
+        "intro": {
+          "font-size": "14px",
+          "line-height": "21px",
+          "color": "rgb(71, 85, 105)"
+        },
+        "profileName": {
+          "font-family": "Georgia, \"Times New Roman\", serif",
+          "font-size": "23px",
+          "line-height": "34.5px",
+          "font-weight": "400"
+        },
+        "metricLabel": {
+          "font-size": "10px",
+          "line-height": "15px",
+          "color": "rgb(71, 85, 105)"
+        },
+        "metricValue": {
+          "font-size": "17px",
+          "line-height": "25.5px",
+          "font-weight": "650"
+        },
+        "groupTitle": {
+          "font-family": "Arial, Helvetica, sans-serif",
+          "font-size": "16px",
+          "line-height": "24px",
+          "font-weight": "650"
+        },
+        "pointText": {
+          "font-size": "12px",
+          "line-height": "18.6px",
+          "color": "rgb(15, 23, 42)"
+        },
+        "pointId": {
+          "font-size": "10px",
+          "line-height": "15px"
+        },
+        "provenance": {
+          "font-size": "10px",
+          "line-height": "15px",
+          "color": "rgb(71, 85, 105)"
+        },
+        "metricStrong": {
+          "font-size": "10px",
+          "line-height": "15px"
+        },
+        "chip": {
+          "font-size": "10px",
+          "line-height": "15px",
+          "border-radius": "0px",
+          "padding": "0px"
+        },
+        "status": {
+          "font-size": "10px",
+          "line-height": "15px",
+          "border-radius": "0px"
+        },
+        "searchInput": {
+          "height": "38px",
+          "border-radius": "5px",
+          "border": "1px solid rgb(203, 213, 225)",
+          "padding": "0px 10px",
+          "font-size": "12px"
+        },
+        "facetSelect": {
+          "height": "38px",
+          "border-radius": "5px",
+          "border": "1px solid rgb(203, 213, 225)",
+          "font-size": "12px"
+        }
+      },
+      "structure": {
+        "pageChildren": [
+          "library-heading",
+          "library-overview",
+          "library-controls",
+          "library-experiences",
+          "library-secondary"
+        ],
+        "headings": [
+          {
+            "level": "h1",
+            "text": "Achievement library"
+          },
+          {
+            "level": "h2",
+            "text": "Jordan Example"
+          },
+          {
+            "level": "h3",
+            "text": "Platform Engineer"
+          },
+          {
+            "level": "h3",
+            "text": "Software Engineer"
+          },
+          {
+            "level": "h3",
+            "text": "QueueBoard"
+          },
+          {
+            "level": "h3",
+            "text": "FieldNotes"
+          }
+        ],
+        "landmarks": [
+          {
+            "tag": "aside",
+            "className": "sidebar",
+            "label": null
+          },
+          {
+            "tag": "nav",
+            "className": "main-navigation",
+            "label": "Main navigation"
+          },
+          {
+            "tag": "header",
+            "className": "topbar",
+            "label": null
+          },
+          {
+            "tag": "nav",
+            "className": "breadcrumbs",
+            "label": "Breadcrumb"
+          },
+          {
+            "tag": "main",
+            "className": "page-content",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "library-overview",
+            "label": "Library summary"
+          },
+          {
+            "tag": "section",
+            "className": "library-controls",
+            "label": "Search and filter library"
+          },
+          {
+            "tag": "section",
+            "className": "experience-group",
+            "label": "Job: Platform Engineer"
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "experience-group",
+            "label": "Job: Software Engineer"
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "experience-group",
+            "label": "Project: QueueBoard"
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "experience-group",
+            "label": "Project: FieldNotes"
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "library-secondary",
+            "label": "Skills and credentials"
+          }
+        ]
+      },
+      "counts": {
+        "experienceGroups": 4,
+        "jobGroups": 2,
+        "projectGroups": 2,
+        "points": 13,
+        "provenanceRows": 13,
+        "metricItems": 2,
+        "facetChips": 64,
+        "tagChips": 38,
+        "skillChips": 26,
+        "enabledPills": 13,
+        "disabledPills": 0,
+        "skillRows": 14,
+        "credentialRows": 2,
+        "filterSelects": 5
+      },
+      "overflowing": []
+    },
+    {
+      "viewport": {
+        "name": "390x844",
+        "width": 390,
+        "height": 844
+      },
+      "theme": "dark",
+      "surface": "demo",
+      "document": {
+        "scrollWidth": 390,
+        "clientWidth": 390,
+        "scrollHeight": 3428,
+        "horizontalOverflow": false
+      },
+      "tokens": {
+        "--color-canvas": "#171421",
+        "--color-sidebar": "#14111f",
+        "--color-surface": "#211d2e",
+        "--color-surface-alt": "#2a2538",
+        "--color-text-primary": "#f8fafc",
+        "--color-text-secondary": "#b7b3c7",
+        "--color-text-muted": "#a49fb4",
+        "--color-border": "#3a3548",
+        "--color-border-strong": "#514a61",
+        "--color-orange": "#f97316",
+        "--color-orange-subtle": "#442719",
+        "--color-violet": "#7c3aed",
+        "--color-violet-subtle": "#322548",
+        "--color-success": "#34d399",
+        "--color-warning": "#fbbf24",
+        "--color-error": "#f87171",
+        "--color-info": "#60a5fa",
+        "--color-focus-ring": "#a78bfa"
+      },
+      "geometry": {
+        "sidebar": {
+          "x": -292,
+          "y": 0,
+          "width": 280,
+          "height": 844,
+          "bottom": 844
+        },
+        "topbar": {
+          "x": 0,
+          "y": 0,
+          "width": 390,
+          "height": 60,
+          "bottom": 60
+        },
+        "pageContent": {
+          "x": 0,
+          "y": 60,
+          "width": 390,
+          "height": 3368.11,
+          "bottom": 3428.11
+        },
+        "libraryPage": {
+          "x": 16,
+          "y": 84,
+          "width": 358,
+          "height": 3312.11,
+          "bottom": 3396.11
+        },
+        "libraryHeading": {
+          "x": 16,
+          "y": 84,
+          "width": 358,
+          "height": 156.08,
+          "bottom": 240.08
+        },
+        "sourceSwitch": {
+          "x": 16,
+          "y": 198.08,
+          "width": 147.05,
+          "height": 42,
+          "bottom": 240.08
+        },
+        "editToolbar": null,
+        "overview": {
+          "x": 16,
+          "y": 264.08,
+          "width": 358,
+          "height": 176,
+          "bottom": 440.08
+        },
+        "owner": {
+          "x": 33,
+          "y": 281.08,
+          "width": 193.88,
+          "height": 82.5,
+          "bottom": 363.58
+        },
+        "counts": {
+          "x": 33,
+          "y": 379.58,
+          "width": 242.98,
+          "height": 43.5,
+          "bottom": 423.08
+        },
+        "controls": {
+          "x": 16,
+          "y": 458.08,
+          "width": 358,
+          "height": 481,
+          "bottom": 939.08
+        },
+        "search": {
+          "x": 30,
+          "y": 476.08,
+          "width": 330,
+          "height": 59,
+          "bottom": 535.08
+        },
+        "filterGrid": {
+          "x": 30,
+          "y": 547.08,
+          "width": 330,
+          "height": 343,
+          "bottom": 890.08
+        },
+        "filterSummary": {
+          "x": 30,
+          "y": 896.08,
+          "width": 330,
+          "height": 30,
+          "bottom": 926.08
+        },
+        "experiences": {
+          "x": 16,
+          "y": 963.08,
+          "width": 358,
+          "height": 2299.03,
+          "bottom": 3262.11
+        },
+        "firstGroup": {
+          "x": 16,
+          "y": 963.08,
+          "width": 358,
+          "height": 749.34,
+          "bottom": 1712.42
+        },
+        "firstPoint": {
+          "x": 18,
+          "y": 1049.08,
+          "width": 354,
+          "height": 201.19,
+          "bottom": 1250.27
+        },
+        "secondary": {
+          "x": 16,
+          "y": 3284.11,
+          "width": 358,
+          "height": 112,
+          "bottom": 3396.11
+        },
+        "error": null
+      },
+      "typography": {
+        "pageTitle": {
+          "font-family": "Georgia, \"Times New Roman\", serif",
+          "font-size": "34px",
+          "line-height": "38.08px",
+          "font-weight": "400",
+          "color": "rgb(248, 250, 252)"
+        },
+        "eyebrow": {
+          "font-family": "Arial, Helvetica, sans-serif",
+          "font-size": "10px",
+          "line-height": "15px",
+          "font-weight": "700",
+          "color": "rgb(249, 115, 22)"
+        },
+        "intro": {
+          "font-size": "14px",
+          "line-height": "21px",
+          "color": "rgb(183, 179, 199)"
+        },
+        "profileName": {
+          "font-family": "Georgia, \"Times New Roman\", serif",
+          "font-size": "23px",
+          "line-height": "34.5px",
+          "font-weight": "400"
+        },
+        "metricLabel": {
+          "font-size": "10px",
+          "line-height": "15px",
+          "color": "rgb(183, 179, 199)"
+        },
+        "metricValue": {
+          "font-size": "17px",
+          "line-height": "25.5px",
+          "font-weight": "650"
+        },
+        "groupTitle": {
+          "font-family": "Arial, Helvetica, sans-serif",
+          "font-size": "16px",
+          "line-height": "24px",
+          "font-weight": "650"
+        },
+        "pointText": {
+          "font-size": "12px",
+          "line-height": "18.6px",
+          "color": "rgb(248, 250, 252)"
+        },
+        "pointId": {
+          "font-size": "10px",
+          "line-height": "15px"
+        },
+        "provenance": {
+          "font-size": "10px",
+          "line-height": "15px",
+          "color": "rgb(183, 179, 199)"
+        },
+        "metricStrong": {
+          "font-size": "10px",
+          "line-height": "15px"
+        },
+        "chip": {
+          "font-size": "10px",
+          "line-height": "15px",
+          "border-radius": "0px",
+          "padding": "0px"
+        },
+        "status": {
+          "font-size": "10px",
+          "line-height": "15px",
+          "border-radius": "0px"
+        },
+        "searchInput": {
+          "height": "38px",
+          "border-radius": "5px",
+          "border": "1px solid rgb(81, 74, 97)",
+          "padding": "0px 10px",
+          "font-size": "12px"
+        },
+        "facetSelect": {
+          "height": "38px",
+          "border-radius": "5px",
+          "border": "1px solid rgb(81, 74, 97)",
+          "font-size": "12px"
+        }
+      },
+      "structure": {
+        "pageChildren": [
+          "library-heading",
+          "library-overview",
+          "library-controls",
+          "library-experiences",
+          "library-secondary"
+        ],
+        "headings": [
+          {
+            "level": "h1",
+            "text": "Achievement library"
+          },
+          {
+            "level": "h2",
+            "text": "Jordan Example"
+          },
+          {
+            "level": "h3",
+            "text": "Platform Engineer"
+          },
+          {
+            "level": "h3",
+            "text": "Software Engineer"
+          },
+          {
+            "level": "h3",
+            "text": "QueueBoard"
+          },
+          {
+            "level": "h3",
+            "text": "FieldNotes"
+          }
+        ],
+        "landmarks": [
+          {
+            "tag": "aside",
+            "className": "sidebar",
+            "label": null
+          },
+          {
+            "tag": "nav",
+            "className": "main-navigation",
+            "label": "Main navigation"
+          },
+          {
+            "tag": "header",
+            "className": "topbar",
+            "label": null
+          },
+          {
+            "tag": "nav",
+            "className": "breadcrumbs",
+            "label": "Breadcrumb"
+          },
+          {
+            "tag": "main",
+            "className": "page-content",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "library-overview",
+            "label": "Library summary"
+          },
+          {
+            "tag": "section",
+            "className": "library-controls",
+            "label": "Search and filter library"
+          },
+          {
+            "tag": "section",
+            "className": "experience-group",
+            "label": "Job: Platform Engineer"
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "experience-group",
+            "label": "Job: Software Engineer"
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "experience-group",
+            "label": "Project: QueueBoard"
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "experience-group",
+            "label": "Project: FieldNotes"
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "library-secondary",
+            "label": "Skills and credentials"
+          }
+        ]
+      },
+      "counts": {
+        "experienceGroups": 4,
+        "jobGroups": 2,
+        "projectGroups": 2,
+        "points": 13,
+        "provenanceRows": 13,
+        "metricItems": 2,
+        "facetChips": 64,
+        "tagChips": 38,
+        "skillChips": 26,
+        "enabledPills": 13,
+        "disabledPills": 0,
+        "skillRows": 14,
+        "credentialRows": 2,
+        "filterSelects": 5
+      },
+      "overflowing": []
+    },
+    {
+      "viewport": {
+        "name": "320x740",
+        "width": 320,
+        "height": 740
+      },
+      "theme": "light",
+      "surface": "demo",
+      "document": {
+        "scrollWidth": 320,
+        "clientWidth": 320,
+        "scrollHeight": 3865,
+        "horizontalOverflow": false
+      },
+      "tokens": {
+        "--color-canvas": "#f8fafc",
+        "--color-sidebar": "#fff",
+        "--color-surface": "#fff",
+        "--color-surface-alt": "#f1f5f9",
+        "--color-text-primary": "#0f172a",
+        "--color-text-secondary": "#475569",
+        "--color-text-muted": "#64748b",
+        "--color-border": "#e2e8f0",
+        "--color-border-strong": "#cbd5e1",
+        "--color-orange": "#f97316",
+        "--color-orange-subtle": "#fff7ed",
+        "--color-violet": "#7c3aed",
+        "--color-violet-subtle": "#ede9fe",
+        "--color-success": "#10b981",
+        "--color-warning": "#f59e0b",
+        "--color-error": "#ef4444",
+        "--color-info": "#3b82f6",
+        "--color-focus-ring": "#7c3aed"
+      },
+      "geometry": {
+        "sidebar": {
+          "x": -284,
+          "y": 0,
+          "width": 272,
+          "height": 740,
+          "bottom": 740
+        },
+        "topbar": {
+          "x": 0,
+          "y": 0,
+          "width": 320,
+          "height": 111,
+          "bottom": 111
+        },
+        "pageContent": {
+          "x": 0,
+          "y": 111,
+          "width": 320,
+          "height": 3754.16,
+          "bottom": 3865.16
+        },
+        "libraryPage": {
+          "x": 16,
+          "y": 135,
+          "width": 288,
+          "height": 3698.16,
+          "bottom": 3833.16
+        },
+        "libraryHeading": {
+          "x": 16,
+          "y": 135,
+          "width": 288,
+          "height": 215.16,
+          "bottom": 350.16
+        },
+        "sourceSwitch": {
+          "x": 16,
+          "y": 308.16,
+          "width": 147.05,
+          "height": 42,
+          "bottom": 350.16
+        },
+        "editToolbar": null,
+        "overview": {
+          "x": 16,
+          "y": 374.16,
+          "width": 288,
+          "height": 176,
+          "bottom": 550.16
+        },
+        "owner": {
+          "x": 33,
+          "y": 391.16,
+          "width": 193.88,
+          "height": 82.5,
+          "bottom": 473.66
+        },
+        "counts": {
+          "x": 33,
+          "y": 489.66,
+          "width": 242.98,
+          "height": 43.5,
+          "bottom": 533.16
+        },
+        "controls": {
+          "x": 16,
+          "y": 568.16,
+          "width": 288,
+          "height": 481,
+          "bottom": 1049.16
+        },
+        "search": {
+          "x": 30,
+          "y": 586.16,
+          "width": 260,
+          "height": 59,
+          "bottom": 645.16
+        },
+        "filterGrid": {
+          "x": 30,
+          "y": 657.16,
+          "width": 260,
+          "height": 343,
+          "bottom": 1000.16
+        },
+        "filterSummary": {
+          "x": 30,
+          "y": 1006.16,
+          "width": 260,
+          "height": 30,
+          "bottom": 1036.16
+        },
+        "experiences": {
+          "x": 16,
+          "y": 1073.16,
+          "width": 288,
+          "height": 2626,
+          "bottom": 3699.16
+        },
+        "firstGroup": {
+          "x": 16,
+          "y": 1073.16,
+          "width": 288,
+          "height": 811.94,
+          "bottom": 1885.09
+        },
+        "firstPoint": {
+          "x": 18,
+          "y": 1159.16,
+          "width": 284,
+          "height": 223.19,
+          "bottom": 1382.34
+        },
+        "secondary": {
+          "x": 16,
+          "y": 3721.16,
+          "width": 288,
+          "height": 112,
+          "bottom": 3833.16
+        },
+        "error": null
+      },
+      "typography": {
+        "pageTitle": {
+          "font-family": "Georgia, \"Times New Roman\", serif",
+          "font-size": "34px",
+          "line-height": "38.08px",
+          "font-weight": "400",
+          "color": "rgb(15, 23, 42)"
+        },
+        "eyebrow": {
+          "font-family": "Arial, Helvetica, sans-serif",
+          "font-size": "10px",
+          "line-height": "15px",
+          "font-weight": "700",
+          "color": "rgb(249, 115, 22)"
+        },
+        "intro": {
+          "font-size": "14px",
+          "line-height": "21px",
+          "color": "rgb(71, 85, 105)"
+        },
+        "profileName": {
+          "font-family": "Georgia, \"Times New Roman\", serif",
+          "font-size": "23px",
+          "line-height": "34.5px",
+          "font-weight": "400"
+        },
+        "metricLabel": {
+          "font-size": "10px",
+          "line-height": "15px",
+          "color": "rgb(71, 85, 105)"
+        },
+        "metricValue": {
+          "font-size": "17px",
+          "line-height": "25.5px",
+          "font-weight": "650"
+        },
+        "groupTitle": {
+          "font-family": "Arial, Helvetica, sans-serif",
+          "font-size": "16px",
+          "line-height": "24px",
+          "font-weight": "650"
+        },
+        "pointText": {
+          "font-size": "12px",
+          "line-height": "18.6px",
+          "color": "rgb(15, 23, 42)"
+        },
+        "pointId": {
+          "font-size": "10px",
+          "line-height": "15px"
+        },
+        "provenance": {
+          "font-size": "10px",
+          "line-height": "15px",
+          "color": "rgb(71, 85, 105)"
+        },
+        "metricStrong": {
+          "font-size": "10px",
+          "line-height": "15px"
+        },
+        "chip": {
+          "font-size": "10px",
+          "line-height": "15px",
+          "border-radius": "0px",
+          "padding": "0px"
+        },
+        "status": {
+          "font-size": "10px",
+          "line-height": "15px",
+          "border-radius": "0px"
+        },
+        "searchInput": {
+          "height": "38px",
+          "border-radius": "5px",
+          "border": "1px solid rgb(203, 213, 225)",
+          "padding": "0px 10px",
+          "font-size": "12px"
+        },
+        "facetSelect": {
+          "height": "38px",
+          "border-radius": "5px",
+          "border": "1px solid rgb(203, 213, 225)",
+          "font-size": "12px"
+        }
+      },
+      "structure": {
+        "pageChildren": [
+          "library-heading",
+          "library-overview",
+          "library-controls",
+          "library-experiences",
+          "library-secondary"
+        ],
+        "headings": [
+          {
+            "level": "h1",
+            "text": "Achievement library"
+          },
+          {
+            "level": "h2",
+            "text": "Jordan Example"
+          },
+          {
+            "level": "h3",
+            "text": "Platform Engineer"
+          },
+          {
+            "level": "h3",
+            "text": "Software Engineer"
+          },
+          {
+            "level": "h3",
+            "text": "QueueBoard"
+          },
+          {
+            "level": "h3",
+            "text": "FieldNotes"
+          }
+        ],
+        "landmarks": [
+          {
+            "tag": "aside",
+            "className": "sidebar",
+            "label": null
+          },
+          {
+            "tag": "nav",
+            "className": "main-navigation",
+            "label": "Main navigation"
+          },
+          {
+            "tag": "header",
+            "className": "topbar",
+            "label": null
+          },
+          {
+            "tag": "nav",
+            "className": "breadcrumbs",
+            "label": "Breadcrumb"
+          },
+          {
+            "tag": "main",
+            "className": "page-content",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "library-overview",
+            "label": "Library summary"
+          },
+          {
+            "tag": "section",
+            "className": "library-controls",
+            "label": "Search and filter library"
+          },
+          {
+            "tag": "section",
+            "className": "experience-group",
+            "label": "Job: Platform Engineer"
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "experience-group",
+            "label": "Job: Software Engineer"
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "experience-group",
+            "label": "Project: QueueBoard"
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "experience-group",
+            "label": "Project: FieldNotes"
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "library-secondary",
+            "label": "Skills and credentials"
+          }
+        ]
+      },
+      "counts": {
+        "experienceGroups": 4,
+        "jobGroups": 2,
+        "projectGroups": 2,
+        "points": 13,
+        "provenanceRows": 13,
+        "metricItems": 2,
+        "facetChips": 64,
+        "tagChips": 38,
+        "skillChips": 26,
+        "enabledPills": 13,
+        "disabledPills": 0,
+        "skillRows": 14,
+        "credentialRows": 2,
+        "filterSelects": 5
+      },
+      "overflowing": []
+    },
+    {
+      "viewport": {
+        "name": "320x740",
+        "width": 320,
+        "height": 740
+      },
+      "theme": "dark",
+      "surface": "demo",
+      "document": {
+        "scrollWidth": 320,
+        "clientWidth": 320,
+        "scrollHeight": 3865,
+        "horizontalOverflow": false
+      },
+      "tokens": {
+        "--color-canvas": "#171421",
+        "--color-sidebar": "#14111f",
+        "--color-surface": "#211d2e",
+        "--color-surface-alt": "#2a2538",
+        "--color-text-primary": "#f8fafc",
+        "--color-text-secondary": "#b7b3c7",
+        "--color-text-muted": "#a49fb4",
+        "--color-border": "#3a3548",
+        "--color-border-strong": "#514a61",
+        "--color-orange": "#f97316",
+        "--color-orange-subtle": "#442719",
+        "--color-violet": "#7c3aed",
+        "--color-violet-subtle": "#322548",
+        "--color-success": "#34d399",
+        "--color-warning": "#fbbf24",
+        "--color-error": "#f87171",
+        "--color-info": "#60a5fa",
+        "--color-focus-ring": "#a78bfa"
+      },
+      "geometry": {
+        "sidebar": {
+          "x": -284,
+          "y": 0,
+          "width": 272,
+          "height": 740,
+          "bottom": 740
+        },
+        "topbar": {
+          "x": 0,
+          "y": 0,
+          "width": 320,
+          "height": 111,
+          "bottom": 111
+        },
+        "pageContent": {
+          "x": 0,
+          "y": 111,
+          "width": 320,
+          "height": 3754.16,
+          "bottom": 3865.16
+        },
+        "libraryPage": {
+          "x": 16,
+          "y": 135,
+          "width": 288,
+          "height": 3698.16,
+          "bottom": 3833.16
+        },
+        "libraryHeading": {
+          "x": 16,
+          "y": 135,
+          "width": 288,
+          "height": 215.16,
+          "bottom": 350.16
+        },
+        "sourceSwitch": {
+          "x": 16,
+          "y": 308.16,
+          "width": 147.05,
+          "height": 42,
+          "bottom": 350.16
+        },
+        "editToolbar": null,
+        "overview": {
+          "x": 16,
+          "y": 374.16,
+          "width": 288,
+          "height": 176,
+          "bottom": 550.16
+        },
+        "owner": {
+          "x": 33,
+          "y": 391.16,
+          "width": 193.88,
+          "height": 82.5,
+          "bottom": 473.66
+        },
+        "counts": {
+          "x": 33,
+          "y": 489.66,
+          "width": 242.98,
+          "height": 43.5,
+          "bottom": 533.16
+        },
+        "controls": {
+          "x": 16,
+          "y": 568.16,
+          "width": 288,
+          "height": 481,
+          "bottom": 1049.16
+        },
+        "search": {
+          "x": 30,
+          "y": 586.16,
+          "width": 260,
+          "height": 59,
+          "bottom": 645.16
+        },
+        "filterGrid": {
+          "x": 30,
+          "y": 657.16,
+          "width": 260,
+          "height": 343,
+          "bottom": 1000.16
+        },
+        "filterSummary": {
+          "x": 30,
+          "y": 1006.16,
+          "width": 260,
+          "height": 30,
+          "bottom": 1036.16
+        },
+        "experiences": {
+          "x": 16,
+          "y": 1073.16,
+          "width": 288,
+          "height": 2626,
+          "bottom": 3699.16
+        },
+        "firstGroup": {
+          "x": 16,
+          "y": 1073.16,
+          "width": 288,
+          "height": 811.94,
+          "bottom": 1885.09
+        },
+        "firstPoint": {
+          "x": 18,
+          "y": 1159.16,
+          "width": 284,
+          "height": 223.19,
+          "bottom": 1382.34
+        },
+        "secondary": {
+          "x": 16,
+          "y": 3721.16,
+          "width": 288,
+          "height": 112,
+          "bottom": 3833.16
+        },
+        "error": null
+      },
+      "typography": {
+        "pageTitle": {
+          "font-family": "Georgia, \"Times New Roman\", serif",
+          "font-size": "34px",
+          "line-height": "38.08px",
+          "font-weight": "400",
+          "color": "rgb(248, 250, 252)"
+        },
+        "eyebrow": {
+          "font-family": "Arial, Helvetica, sans-serif",
+          "font-size": "10px",
+          "line-height": "15px",
+          "font-weight": "700",
+          "color": "rgb(249, 115, 22)"
+        },
+        "intro": {
+          "font-size": "14px",
+          "line-height": "21px",
+          "color": "rgb(183, 179, 199)"
+        },
+        "profileName": {
+          "font-family": "Georgia, \"Times New Roman\", serif",
+          "font-size": "23px",
+          "line-height": "34.5px",
+          "font-weight": "400"
+        },
+        "metricLabel": {
+          "font-size": "10px",
+          "line-height": "15px",
+          "color": "rgb(183, 179, 199)"
+        },
+        "metricValue": {
+          "font-size": "17px",
+          "line-height": "25.5px",
+          "font-weight": "650"
+        },
+        "groupTitle": {
+          "font-family": "Arial, Helvetica, sans-serif",
+          "font-size": "16px",
+          "line-height": "24px",
+          "font-weight": "650"
+        },
+        "pointText": {
+          "font-size": "12px",
+          "line-height": "18.6px",
+          "color": "rgb(248, 250, 252)"
+        },
+        "pointId": {
+          "font-size": "10px",
+          "line-height": "15px"
+        },
+        "provenance": {
+          "font-size": "10px",
+          "line-height": "15px",
+          "color": "rgb(183, 179, 199)"
+        },
+        "metricStrong": {
+          "font-size": "10px",
+          "line-height": "15px"
+        },
+        "chip": {
+          "font-size": "10px",
+          "line-height": "15px",
+          "border-radius": "0px",
+          "padding": "0px"
+        },
+        "status": {
+          "font-size": "10px",
+          "line-height": "15px",
+          "border-radius": "0px"
+        },
+        "searchInput": {
+          "height": "38px",
+          "border-radius": "5px",
+          "border": "1px solid rgb(81, 74, 97)",
+          "padding": "0px 10px",
+          "font-size": "12px"
+        },
+        "facetSelect": {
+          "height": "38px",
+          "border-radius": "5px",
+          "border": "1px solid rgb(81, 74, 97)",
+          "font-size": "12px"
+        }
+      },
+      "structure": {
+        "pageChildren": [
+          "library-heading",
+          "library-overview",
+          "library-controls",
+          "library-experiences",
+          "library-secondary"
+        ],
+        "headings": [
+          {
+            "level": "h1",
+            "text": "Achievement library"
+          },
+          {
+            "level": "h2",
+            "text": "Jordan Example"
+          },
+          {
+            "level": "h3",
+            "text": "Platform Engineer"
+          },
+          {
+            "level": "h3",
+            "text": "Software Engineer"
+          },
+          {
+            "level": "h3",
+            "text": "QueueBoard"
+          },
+          {
+            "level": "h3",
+            "text": "FieldNotes"
+          }
+        ],
+        "landmarks": [
+          {
+            "tag": "aside",
+            "className": "sidebar",
+            "label": null
+          },
+          {
+            "tag": "nav",
+            "className": "main-navigation",
+            "label": "Main navigation"
+          },
+          {
+            "tag": "header",
+            "className": "topbar",
+            "label": null
+          },
+          {
+            "tag": "nav",
+            "className": "breadcrumbs",
+            "label": "Breadcrumb"
+          },
+          {
+            "tag": "main",
+            "className": "page-content",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "library-overview",
+            "label": "Library summary"
+          },
+          {
+            "tag": "section",
+            "className": "library-controls",
+            "label": "Search and filter library"
+          },
+          {
+            "tag": "section",
+            "className": "experience-group",
+            "label": "Job: Platform Engineer"
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "experience-group",
+            "label": "Job: Software Engineer"
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "experience-group",
+            "label": "Project: QueueBoard"
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "experience-group",
+            "label": "Project: FieldNotes"
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "library-secondary",
+            "label": "Skills and credentials"
+          }
+        ]
+      },
+      "counts": {
+        "experienceGroups": 4,
+        "jobGroups": 2,
+        "projectGroups": 2,
+        "points": 13,
+        "provenanceRows": 13,
+        "metricItems": 2,
+        "facetChips": 64,
+        "tagChips": 38,
+        "skillChips": 26,
+        "enabledPills": 13,
+        "disabledPills": 0,
+        "skillRows": 14,
+        "credentialRows": 2,
+        "filterSelects": 5
+      },
+      "overflowing": []
+    },
+    {
+      "viewport": {
+        "name": "1440x900",
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "surface": "personal-error",
+      "document": {
+        "scrollWidth": 1440,
+        "clientWidth": 1440,
+        "scrollHeight": 900,
+        "horizontalOverflow": false
+      },
+      "tokens": {
+        "--color-canvas": "#f8fafc",
+        "--color-sidebar": "#fff",
+        "--color-surface": "#fff",
+        "--color-surface-alt": "#f1f5f9",
+        "--color-text-primary": "#0f172a",
+        "--color-text-secondary": "#475569",
+        "--color-text-muted": "#64748b",
+        "--color-border": "#e2e8f0",
+        "--color-border-strong": "#cbd5e1",
+        "--color-orange": "#f97316",
+        "--color-orange-subtle": "#fff7ed",
+        "--color-violet": "#7c3aed",
+        "--color-violet-subtle": "#ede9fe",
+        "--color-success": "#10b981",
+        "--color-warning": "#f59e0b",
+        "--color-error": "#ef4444",
+        "--color-info": "#3b82f6",
+        "--color-focus-ring": "#7c3aed"
+      },
+      "geometry": {
+        "sidebar": {
+          "x": 0,
+          "y": 0,
+          "width": 260,
+          "height": 900,
+          "bottom": 900
+        },
+        "topbar": {
+          "x": 260,
+          "y": 0,
+          "width": 1180,
+          "height": 60,
+          "bottom": 60
+        },
+        "pageContent": {
+          "x": 260,
+          "y": 60,
+          "width": 1180,
+          "height": 308.42,
+          "bottom": 368.42
+        },
+        "libraryPage": null,
+        "libraryHeading": null,
+        "sourceSwitch": null,
+        "editToolbar": null,
+        "overview": null,
+        "owner": null,
+        "counts": null,
+        "controls": null,
+        "search": null,
+        "filterGrid": null,
+        "filterSummary": null,
+        "experiences": null,
+        "firstGroup": null,
+        "firstPoint": null,
+        "secondary": null,
+        "error": {
+          "x": 470,
+          "y": 122,
+          "width": 760,
+          "height": 184.42,
+          "bottom": 306.42
+        }
+      },
+      "typography": {
+        "pageTitle": null,
+        "eyebrow": null,
+        "intro": null,
+        "profileName": null,
+        "metricLabel": null,
+        "metricValue": null,
+        "groupTitle": null,
+        "pointText": null,
+        "pointId": null,
+        "provenance": null,
+        "metricStrong": null,
+        "chip": null,
+        "status": null,
+        "searchInput": null,
+        "facetSelect": null
+      },
+      "structure": {
+        "pageChildren": [],
+        "headings": [
+          {
+            "level": "h1",
+            "text": "Could not load your library."
+          }
+        ],
+        "landmarks": [
+          {
+            "tag": "aside",
+            "className": "sidebar",
+            "label": null
+          },
+          {
+            "tag": "nav",
+            "className": "main-navigation",
+            "label": "Main navigation"
+          },
+          {
+            "tag": "header",
+            "className": "topbar",
+            "label": null
+          },
+          {
+            "tag": "nav",
+            "className": "breadcrumbs",
+            "label": "Breadcrumb"
+          },
+          {
+            "tag": "main",
+            "className": "page-content",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "library-error",
+            "label": null
+          }
+        ]
+      },
+      "counts": {
+        "experienceGroups": 0,
+        "jobGroups": 0,
+        "projectGroups": 0,
+        "points": 0,
+        "provenanceRows": 0,
+        "metricItems": 0,
+        "facetChips": 0,
+        "tagChips": 0,
+        "skillChips": 0,
+        "enabledPills": 0,
+        "disabledPills": 0,
+        "skillRows": 0,
+        "credentialRows": 0,
+        "filterSelects": 0
+      },
+      "overflowing": []
+    },
+    {
+      "viewport": {
+        "name": "1440x900",
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "dark",
+      "surface": "personal-error",
+      "document": {
+        "scrollWidth": 1440,
+        "clientWidth": 1440,
+        "scrollHeight": 900,
+        "horizontalOverflow": false
+      },
+      "tokens": {
+        "--color-canvas": "#171421",
+        "--color-sidebar": "#14111f",
+        "--color-surface": "#211d2e",
+        "--color-surface-alt": "#2a2538",
+        "--color-text-primary": "#f8fafc",
+        "--color-text-secondary": "#b7b3c7",
+        "--color-text-muted": "#a49fb4",
+        "--color-border": "#3a3548",
+        "--color-border-strong": "#514a61",
+        "--color-orange": "#f97316",
+        "--color-orange-subtle": "#442719",
+        "--color-violet": "#7c3aed",
+        "--color-violet-subtle": "#322548",
+        "--color-success": "#34d399",
+        "--color-warning": "#fbbf24",
+        "--color-error": "#f87171",
+        "--color-info": "#60a5fa",
+        "--color-focus-ring": "#a78bfa"
+      },
+      "geometry": {
+        "sidebar": {
+          "x": 0,
+          "y": 0,
+          "width": 260,
+          "height": 900,
+          "bottom": 900
+        },
+        "topbar": {
+          "x": 260,
+          "y": 0,
+          "width": 1180,
+          "height": 60,
+          "bottom": 60
+        },
+        "pageContent": {
+          "x": 260,
+          "y": 60,
+          "width": 1180,
+          "height": 308.42,
+          "bottom": 368.42
+        },
+        "libraryPage": null,
+        "libraryHeading": null,
+        "sourceSwitch": null,
+        "editToolbar": null,
+        "overview": null,
+        "owner": null,
+        "counts": null,
+        "controls": null,
+        "search": null,
+        "filterGrid": null,
+        "filterSummary": null,
+        "experiences": null,
+        "firstGroup": null,
+        "firstPoint": null,
+        "secondary": null,
+        "error": {
+          "x": 470,
+          "y": 122,
+          "width": 760,
+          "height": 184.42,
+          "bottom": 306.42
+        }
+      },
+      "typography": {
+        "pageTitle": null,
+        "eyebrow": null,
+        "intro": null,
+        "profileName": null,
+        "metricLabel": null,
+        "metricValue": null,
+        "groupTitle": null,
+        "pointText": null,
+        "pointId": null,
+        "provenance": null,
+        "metricStrong": null,
+        "chip": null,
+        "status": null,
+        "searchInput": null,
+        "facetSelect": null
+      },
+      "structure": {
+        "pageChildren": [],
+        "headings": [
+          {
+            "level": "h1",
+            "text": "Could not load your library."
+          }
+        ],
+        "landmarks": [
+          {
+            "tag": "aside",
+            "className": "sidebar",
+            "label": null
+          },
+          {
+            "tag": "nav",
+            "className": "main-navigation",
+            "label": "Main navigation"
+          },
+          {
+            "tag": "header",
+            "className": "topbar",
+            "label": null
+          },
+          {
+            "tag": "nav",
+            "className": "breadcrumbs",
+            "label": "Breadcrumb"
+          },
+          {
+            "tag": "main",
+            "className": "page-content",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "library-error",
+            "label": null
+          }
+        ]
+      },
+      "counts": {
+        "experienceGroups": 0,
+        "jobGroups": 0,
+        "projectGroups": 0,
+        "points": 0,
+        "provenanceRows": 0,
+        "metricItems": 0,
+        "facetChips": 0,
+        "tagChips": 0,
+        "skillChips": 0,
+        "enabledPills": 0,
+        "disabledPills": 0,
+        "skillRows": 0,
+        "credentialRows": 0,
+        "filterSelects": 0
+      },
+      "overflowing": []
+    },
+    {
+      "viewport": {
+        "name": "1440x900",
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "surface": "personal",
+      "document": {
+        "scrollWidth": 1440,
+        "clientWidth": 1440,
+        "scrollHeight": 2692,
+        "horizontalOverflow": false
+      },
+      "tokens": {
+        "--color-canvas": "#f8fafc",
+        "--color-sidebar": "#fff",
+        "--color-surface": "#fff",
+        "--color-surface-alt": "#f1f5f9",
+        "--color-text-primary": "#0f172a",
+        "--color-text-secondary": "#475569",
+        "--color-text-muted": "#64748b",
+        "--color-border": "#e2e8f0",
+        "--color-border-strong": "#cbd5e1",
+        "--color-orange": "#f97316",
+        "--color-orange-subtle": "#fff7ed",
+        "--color-violet": "#7c3aed",
+        "--color-violet-subtle": "#ede9fe",
+        "--color-success": "#10b981",
+        "--color-warning": "#f59e0b",
+        "--color-error": "#ef4444",
+        "--color-info": "#3b82f6",
+        "--color-focus-ring": "#7c3aed"
+      },
+      "geometry": {
+        "sidebar": {
+          "x": 0,
+          "y": 0,
+          "width": 260,
+          "height": 900,
+          "bottom": 900
+        },
+        "topbar": {
+          "x": 260,
+          "y": 0,
+          "width": 1180,
+          "height": 60,
+          "bottom": 60
+        },
+        "pageContent": {
+          "x": 260,
+          "y": 60,
+          "width": 1180,
+          "height": 2632.27,
+          "bottom": 2692.27
+        },
+        "libraryPage": {
+          "x": 292,
+          "y": 92,
+          "width": 1116,
+          "height": 2568.27,
+          "bottom": 2660.27
+        },
+        "libraryHeading": {
+          "x": 292,
+          "y": 92,
+          "width": 1116,
+          "height": 102.55,
+          "bottom": 194.55
+        },
+        "sourceSwitch": {
+          "x": 1253.61,
+          "y": 152.55,
+          "width": 154.39,
+          "height": 42,
+          "bottom": 194.55
+        },
+        "editToolbar": {
+          "x": 292,
+          "y": 208.55,
+          "width": 1116,
+          "height": 42,
+          "bottom": 250.55
+        },
+        "overview": {
+          "x": 292,
+          "y": 264.55,
+          "width": 1116,
+          "height": 122.5,
+          "bottom": 387.05
+        },
+        "owner": {
+          "x": 315,
+          "y": 284.55,
+          "width": 193.88,
+          "height": 82.5,
+          "bottom": 367.05
+        },
+        "counts": {
+          "x": 1138.02,
+          "y": 304.05,
+          "width": 246.98,
+          "height": 43.5,
+          "bottom": 347.55
+        },
+        "controls": {
+          "x": 292,
+          "y": 405.05,
+          "width": 1116,
+          "height": 197,
+          "bottom": 602.05
+        },
+        "search": {
+          "x": 311,
+          "y": 423.05,
+          "width": 1078,
+          "height": 59,
+          "bottom": 482.05
+        },
+        "filterGrid": {
+          "x": 311,
+          "y": 494.05,
+          "width": 1078,
+          "height": 59,
+          "bottom": 553.05
+        },
+        "filterSummary": {
+          "x": 311,
+          "y": 559.05,
+          "width": 1078,
+          "height": 30,
+          "bottom": 589.05
+        },
+        "experiences": {
+          "x": 292,
+          "y": 626.05,
+          "width": 1116,
+          "height": 1964.22,
+          "bottom": 2590.27
+        },
+        "firstGroup": {
+          "x": 292,
+          "y": 626.05,
+          "width": 1116,
+          "height": 604.38,
+          "bottom": 1230.42
+        },
+        "firstPoint": {
+          "x": 294,
+          "y": 712.05,
+          "width": 1112,
+          "height": 170.09,
+          "bottom": 882.14
+        },
+        "secondary": {
+          "x": 292,
+          "y": 2612.27,
+          "width": 1116,
+          "height": 48,
+          "bottom": 2660.27
+        },
+        "error": null
+      },
+      "typography": {
+        "pageTitle": {
+          "font-family": "Georgia, \"Times New Roman\", serif",
+          "font-size": "38px",
+          "line-height": "42.56px",
+          "font-weight": "400",
+          "color": "rgb(15, 23, 42)"
+        },
+        "eyebrow": {
+          "font-family": "Arial, Helvetica, sans-serif",
+          "font-size": "10px",
+          "line-height": "15px",
+          "font-weight": "700",
+          "color": "rgb(249, 115, 22)"
+        },
+        "intro": {
+          "font-size": "14px",
+          "line-height": "21px",
+          "color": "rgb(71, 85, 105)"
+        },
+        "profileName": {
+          "font-family": "Georgia, \"Times New Roman\", serif",
+          "font-size": "23px",
+          "line-height": "34.5px",
+          "font-weight": "400"
+        },
+        "metricLabel": {
+          "font-size": "10px",
+          "line-height": "15px",
+          "color": "rgb(71, 85, 105)"
+        },
+        "metricValue": {
+          "font-size": "17px",
+          "line-height": "25.5px",
+          "font-weight": "650"
+        },
+        "groupTitle": {
+          "font-family": "Arial, Helvetica, sans-serif",
+          "font-size": "16px",
+          "line-height": "24px",
+          "font-weight": "650"
+        },
+        "pointText": {
+          "font-size": "12px",
+          "line-height": "18.6px",
+          "color": "rgb(15, 23, 42)"
+        },
+        "pointId": {
+          "font-size": "10px",
+          "line-height": "15px"
+        },
+        "provenance": {
+          "font-size": "10px",
+          "line-height": "15px",
+          "color": "rgb(71, 85, 105)"
+        },
+        "metricStrong": {
+          "font-size": "10px",
+          "line-height": "15px"
+        },
+        "chip": {
+          "font-size": "10px",
+          "line-height": "15px",
+          "border-radius": "0px",
+          "padding": "0px"
+        },
+        "status": {
+          "font-size": "10px",
+          "line-height": "15px",
+          "border-radius": "0px"
+        },
+        "searchInput": {
+          "height": "38px",
+          "border-radius": "5px",
+          "border": "1px solid rgb(203, 213, 225)",
+          "padding": "0px 10px",
+          "font-size": "12px"
+        },
+        "facetSelect": {
+          "height": "38px",
+          "border-radius": "5px",
+          "border": "1px solid rgb(203, 213, 225)",
+          "font-size": "12px"
+        }
+      },
+      "structure": {
+        "pageChildren": [
+          "library-heading",
+          "library-edit-toolbar",
+          "library-overview",
+          "library-controls",
+          "library-experiences",
+          "library-secondary"
+        ],
+        "headings": [
+          {
+            "level": "h1",
+            "text": "Achievement library"
+          },
+          {
+            "level": "h2",
+            "text": "Jordan Example"
+          },
+          {
+            "level": "h3",
+            "text": "Platform Engineer"
+          },
+          {
+            "level": "h3",
+            "text": "Software Engineer"
+          },
+          {
+            "level": "h3",
+            "text": "QueueBoard"
+          },
+          {
+            "level": "h3",
+            "text": "FieldNotes"
+          }
+        ],
+        "landmarks": [
+          {
+            "tag": "aside",
+            "className": "sidebar",
+            "label": null
+          },
+          {
+            "tag": "nav",
+            "className": "main-navigation",
+            "label": "Main navigation"
+          },
+          {
+            "tag": "header",
+            "className": "topbar",
+            "label": null
+          },
+          {
+            "tag": "nav",
+            "className": "breadcrumbs",
+            "label": "Breadcrumb"
+          },
+          {
+            "tag": "main",
+            "className": "page-content",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "library-overview",
+            "label": "Library summary"
+          },
+          {
+            "tag": "section",
+            "className": "library-controls",
+            "label": "Search and filter library"
+          },
+          {
+            "tag": "section",
+            "className": "experience-group",
+            "label": "Job: Platform Engineer"
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "experience-group",
+            "label": "Job: Software Engineer"
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "experience-group",
+            "label": "Project: QueueBoard"
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "experience-group",
+            "label": "Project: FieldNotes"
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "library-secondary",
+            "label": "Skills and credentials"
+          }
+        ]
+      },
+      "counts": {
+        "experienceGroups": 4,
+        "jobGroups": 2,
+        "projectGroups": 2,
+        "points": 13,
+        "provenanceRows": 13,
+        "metricItems": 2,
+        "facetChips": 64,
+        "tagChips": 38,
+        "skillChips": 26,
+        "enabledPills": 13,
+        "disabledPills": 0,
+        "skillRows": 14,
+        "credentialRows": 2,
+        "filterSelects": 5
+      },
+      "overflowing": []
+    },
+    {
+      "viewport": {
+        "name": "1440x900",
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "dark",
+      "surface": "personal",
+      "document": {
+        "scrollWidth": 1440,
+        "clientWidth": 1440,
+        "scrollHeight": 2692,
+        "horizontalOverflow": false
+      },
+      "tokens": {
+        "--color-canvas": "#171421",
+        "--color-sidebar": "#14111f",
+        "--color-surface": "#211d2e",
+        "--color-surface-alt": "#2a2538",
+        "--color-text-primary": "#f8fafc",
+        "--color-text-secondary": "#b7b3c7",
+        "--color-text-muted": "#a49fb4",
+        "--color-border": "#3a3548",
+        "--color-border-strong": "#514a61",
+        "--color-orange": "#f97316",
+        "--color-orange-subtle": "#442719",
+        "--color-violet": "#7c3aed",
+        "--color-violet-subtle": "#322548",
+        "--color-success": "#34d399",
+        "--color-warning": "#fbbf24",
+        "--color-error": "#f87171",
+        "--color-info": "#60a5fa",
+        "--color-focus-ring": "#a78bfa"
+      },
+      "geometry": {
+        "sidebar": {
+          "x": 0,
+          "y": 0,
+          "width": 260,
+          "height": 900,
+          "bottom": 900
+        },
+        "topbar": {
+          "x": 260,
+          "y": 0,
+          "width": 1180,
+          "height": 60,
+          "bottom": 60
+        },
+        "pageContent": {
+          "x": 260,
+          "y": 60,
+          "width": 1180,
+          "height": 2632.27,
+          "bottom": 2692.27
+        },
+        "libraryPage": {
+          "x": 292,
+          "y": 92,
+          "width": 1116,
+          "height": 2568.27,
+          "bottom": 2660.27
+        },
+        "libraryHeading": {
+          "x": 292,
+          "y": 92,
+          "width": 1116,
+          "height": 102.55,
+          "bottom": 194.55
+        },
+        "sourceSwitch": {
+          "x": 1253.61,
+          "y": 152.55,
+          "width": 154.39,
+          "height": 42,
+          "bottom": 194.55
+        },
+        "editToolbar": {
+          "x": 292,
+          "y": 208.55,
+          "width": 1116,
+          "height": 42,
+          "bottom": 250.55
+        },
+        "overview": {
+          "x": 292,
+          "y": 264.55,
+          "width": 1116,
+          "height": 122.5,
+          "bottom": 387.05
+        },
+        "owner": {
+          "x": 315,
+          "y": 284.55,
+          "width": 193.88,
+          "height": 82.5,
+          "bottom": 367.05
+        },
+        "counts": {
+          "x": 1138.02,
+          "y": 304.05,
+          "width": 246.98,
+          "height": 43.5,
+          "bottom": 347.55
+        },
+        "controls": {
+          "x": 292,
+          "y": 405.05,
+          "width": 1116,
+          "height": 197,
+          "bottom": 602.05
+        },
+        "search": {
+          "x": 311,
+          "y": 423.05,
+          "width": 1078,
+          "height": 59,
+          "bottom": 482.05
+        },
+        "filterGrid": {
+          "x": 311,
+          "y": 494.05,
+          "width": 1078,
+          "height": 59,
+          "bottom": 553.05
+        },
+        "filterSummary": {
+          "x": 311,
+          "y": 559.05,
+          "width": 1078,
+          "height": 30,
+          "bottom": 589.05
+        },
+        "experiences": {
+          "x": 292,
+          "y": 626.05,
+          "width": 1116,
+          "height": 1964.22,
+          "bottom": 2590.27
+        },
+        "firstGroup": {
+          "x": 292,
+          "y": 626.05,
+          "width": 1116,
+          "height": 604.38,
+          "bottom": 1230.42
+        },
+        "firstPoint": {
+          "x": 294,
+          "y": 712.05,
+          "width": 1112,
+          "height": 170.09,
+          "bottom": 882.14
+        },
+        "secondary": {
+          "x": 292,
+          "y": 2612.27,
+          "width": 1116,
+          "height": 48,
+          "bottom": 2660.27
+        },
+        "error": null
+      },
+      "typography": {
+        "pageTitle": {
+          "font-family": "Georgia, \"Times New Roman\", serif",
+          "font-size": "38px",
+          "line-height": "42.56px",
+          "font-weight": "400",
+          "color": "rgb(248, 250, 252)"
+        },
+        "eyebrow": {
+          "font-family": "Arial, Helvetica, sans-serif",
+          "font-size": "10px",
+          "line-height": "15px",
+          "font-weight": "700",
+          "color": "rgb(249, 115, 22)"
+        },
+        "intro": {
+          "font-size": "14px",
+          "line-height": "21px",
+          "color": "rgb(183, 179, 199)"
+        },
+        "profileName": {
+          "font-family": "Georgia, \"Times New Roman\", serif",
+          "font-size": "23px",
+          "line-height": "34.5px",
+          "font-weight": "400"
+        },
+        "metricLabel": {
+          "font-size": "10px",
+          "line-height": "15px",
+          "color": "rgb(183, 179, 199)"
+        },
+        "metricValue": {
+          "font-size": "17px",
+          "line-height": "25.5px",
+          "font-weight": "650"
+        },
+        "groupTitle": {
+          "font-family": "Arial, Helvetica, sans-serif",
+          "font-size": "16px",
+          "line-height": "24px",
+          "font-weight": "650"
+        },
+        "pointText": {
+          "font-size": "12px",
+          "line-height": "18.6px",
+          "color": "rgb(248, 250, 252)"
+        },
+        "pointId": {
+          "font-size": "10px",
+          "line-height": "15px"
+        },
+        "provenance": {
+          "font-size": "10px",
+          "line-height": "15px",
+          "color": "rgb(183, 179, 199)"
+        },
+        "metricStrong": {
+          "font-size": "10px",
+          "line-height": "15px"
+        },
+        "chip": {
+          "font-size": "10px",
+          "line-height": "15px",
+          "border-radius": "0px",
+          "padding": "0px"
+        },
+        "status": {
+          "font-size": "10px",
+          "line-height": "15px",
+          "border-radius": "0px"
+        },
+        "searchInput": {
+          "height": "38px",
+          "border-radius": "5px",
+          "border": "1px solid rgb(81, 74, 97)",
+          "padding": "0px 10px",
+          "font-size": "12px"
+        },
+        "facetSelect": {
+          "height": "38px",
+          "border-radius": "5px",
+          "border": "1px solid rgb(81, 74, 97)",
+          "font-size": "12px"
+        }
+      },
+      "structure": {
+        "pageChildren": [
+          "library-heading",
+          "library-edit-toolbar",
+          "library-overview",
+          "library-controls",
+          "library-experiences",
+          "library-secondary"
+        ],
+        "headings": [
+          {
+            "level": "h1",
+            "text": "Achievement library"
+          },
+          {
+            "level": "h2",
+            "text": "Jordan Example"
+          },
+          {
+            "level": "h3",
+            "text": "Platform Engineer"
+          },
+          {
+            "level": "h3",
+            "text": "Software Engineer"
+          },
+          {
+            "level": "h3",
+            "text": "QueueBoard"
+          },
+          {
+            "level": "h3",
+            "text": "FieldNotes"
+          }
+        ],
+        "landmarks": [
+          {
+            "tag": "aside",
+            "className": "sidebar",
+            "label": null
+          },
+          {
+            "tag": "nav",
+            "className": "main-navigation",
+            "label": "Main navigation"
+          },
+          {
+            "tag": "header",
+            "className": "topbar",
+            "label": null
+          },
+          {
+            "tag": "nav",
+            "className": "breadcrumbs",
+            "label": "Breadcrumb"
+          },
+          {
+            "tag": "main",
+            "className": "page-content",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "library-overview",
+            "label": "Library summary"
+          },
+          {
+            "tag": "section",
+            "className": "library-controls",
+            "label": "Search and filter library"
+          },
+          {
+            "tag": "section",
+            "className": "experience-group",
+            "label": "Job: Platform Engineer"
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "experience-group",
+            "label": "Job: Software Engineer"
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "experience-group",
+            "label": "Project: QueueBoard"
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "experience-group",
+            "label": "Project: FieldNotes"
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "library-secondary",
+            "label": "Skills and credentials"
+          }
+        ]
+      },
+      "counts": {
+        "experienceGroups": 4,
+        "jobGroups": 2,
+        "projectGroups": 2,
+        "points": 13,
+        "provenanceRows": 13,
+        "metricItems": 2,
+        "facetChips": 64,
+        "tagChips": 38,
+        "skillChips": 26,
+        "enabledPills": 13,
+        "disabledPills": 0,
+        "skillRows": 14,
+        "credentialRows": 2,
+        "filterSelects": 5
+      },
+      "overflowing": []
+    },
+    {
+      "viewport": {
+        "name": "1152x720",
+        "width": 1152,
+        "height": 720
+      },
+      "theme": "light",
+      "surface": "demo",
+      "zoom": "125%",
+      "document": {
+        "scrollWidth": 1152,
+        "clientWidth": 1152,
+        "scrollHeight": 2627,
+        "horizontalOverflow": false
+      },
+      "tokens": {
+        "--color-canvas": "#f8fafc",
+        "--color-sidebar": "#fff",
+        "--color-surface": "#fff",
+        "--color-surface-alt": "#f1f5f9",
+        "--color-text-primary": "#0f172a",
+        "--color-text-secondary": "#475569",
+        "--color-text-muted": "#64748b",
+        "--color-border": "#e2e8f0",
+        "--color-border-strong": "#cbd5e1",
+        "--color-orange": "#f97316",
+        "--color-orange-subtle": "#fff7ed",
+        "--color-violet": "#7c3aed",
+        "--color-violet-subtle": "#ede9fe",
+        "--color-success": "#10b981",
+        "--color-warning": "#f59e0b",
+        "--color-error": "#ef4444",
+        "--color-info": "#3b82f6",
+        "--color-focus-ring": "#7c3aed"
+      },
+      "geometry": {
+        "sidebar": {
+          "x": 0,
+          "y": 0,
+          "width": 260,
+          "height": 720,
+          "bottom": 720
+        },
+        "topbar": {
+          "x": 260,
+          "y": 0,
+          "width": 892,
+          "height": 60,
+          "bottom": 60
+        },
+        "pageContent": {
+          "x": 260,
+          "y": 60,
+          "width": 892,
+          "height": 2566.77,
+          "bottom": 2626.77
+        },
+        "libraryPage": {
+          "x": 292,
+          "y": 92,
+          "width": 828,
+          "height": 2502.77,
+          "bottom": 2594.77
+        },
+        "libraryHeading": {
+          "x": 292,
+          "y": 92,
+          "width": 828,
+          "height": 102.55,
+          "bottom": 194.55
+        },
+        "sourceSwitch": {
+          "x": 964.95,
+          "y": 152.55,
+          "width": 155.05,
+          "height": 42,
+          "bottom": 194.55
+        },
+        "editToolbar": null,
+        "overview": {
+          "x": 292,
+          "y": 218.55,
+          "width": 828,
+          "height": 122.5,
+          "bottom": 341.05
+        },
+        "owner": {
+          "x": 315,
+          "y": 238.55,
+          "width": 193.88,
+          "height": 82.5,
+          "bottom": 321.05
+        },
+        "counts": {
+          "x": 850.02,
+          "y": 258.05,
+          "width": 246.98,
+          "height": 43.5,
+          "bottom": 301.55
+        },
+        "controls": {
+          "x": 292,
+          "y": 359.05,
+          "width": 828,
+          "height": 197,
+          "bottom": 556.05
+        },
+        "search": {
+          "x": 311,
+          "y": 377.05,
+          "width": 790,
+          "height": 59,
+          "bottom": 436.05
+        },
+        "filterGrid": {
+          "x": 311,
+          "y": 448.05,
+          "width": 790,
+          "height": 59,
+          "bottom": 507.05
+        },
+        "filterSummary": {
+          "x": 311,
+          "y": 513.05,
+          "width": 790,
+          "height": 30,
+          "bottom": 543.05
+        },
+        "experiences": {
+          "x": 292,
+          "y": 580.05,
+          "width": 828,
+          "height": 1944.72,
+          "bottom": 2524.77
+        },
+        "firstGroup": {
+          "x": 292,
+          "y": 580.05,
+          "width": 828,
+          "height": 598.38,
+          "bottom": 1178.42
+        },
+        "firstPoint": {
+          "x": 294,
+          "y": 666.05,
+          "width": 824,
+          "height": 168.59,
+          "bottom": 834.64
+        },
+        "secondary": {
+          "x": 292,
+          "y": 2546.77,
+          "width": 828,
+          "height": 48,
+          "bottom": 2594.77
+        },
+        "error": null
+      },
+      "typography": {
+        "pageTitle": {
+          "font-family": "Georgia, \"Times New Roman\", serif",
+          "font-size": "38px",
+          "line-height": "42.56px",
+          "font-weight": "400",
+          "color": "rgb(15, 23, 42)"
+        },
+        "eyebrow": {
+          "font-family": "Arial, Helvetica, sans-serif",
+          "font-size": "10px",
+          "line-height": "15px",
+          "font-weight": "700",
+          "color": "rgb(249, 115, 22)"
+        },
+        "intro": {
+          "font-size": "14px",
+          "line-height": "21px",
+          "color": "rgb(71, 85, 105)"
+        },
+        "profileName": {
+          "font-family": "Georgia, \"Times New Roman\", serif",
+          "font-size": "23px",
+          "line-height": "34.5px",
+          "font-weight": "400"
+        },
+        "metricLabel": {
+          "font-size": "10px",
+          "line-height": "15px",
+          "color": "rgb(71, 85, 105)"
+        },
+        "metricValue": {
+          "font-size": "17px",
+          "line-height": "25.5px",
+          "font-weight": "650"
+        },
+        "groupTitle": {
+          "font-family": "Arial, Helvetica, sans-serif",
+          "font-size": "16px",
+          "line-height": "24px",
+          "font-weight": "650"
+        },
+        "pointText": {
+          "font-size": "12px",
+          "line-height": "18.6px",
+          "color": "rgb(15, 23, 42)"
+        },
+        "pointId": {
+          "font-size": "10px",
+          "line-height": "15px"
+        },
+        "provenance": {
+          "font-size": "10px",
+          "line-height": "15px",
+          "color": "rgb(71, 85, 105)"
+        },
+        "metricStrong": {
+          "font-size": "10px",
+          "line-height": "15px"
+        },
+        "chip": {
+          "font-size": "10px",
+          "line-height": "15px",
+          "border-radius": "0px",
+          "padding": "0px"
+        },
+        "status": {
+          "font-size": "10px",
+          "line-height": "15px",
+          "border-radius": "0px"
+        },
+        "searchInput": {
+          "height": "38px",
+          "border-radius": "5px",
+          "border": "1px solid rgb(203, 213, 225)",
+          "padding": "0px 10px",
+          "font-size": "12px"
+        },
+        "facetSelect": {
+          "height": "38px",
+          "border-radius": "5px",
+          "border": "1px solid rgb(203, 213, 225)",
+          "font-size": "12px"
+        }
+      },
+      "structure": {
+        "pageChildren": [
+          "library-heading",
+          "library-overview",
+          "library-controls",
+          "library-experiences",
+          "library-secondary"
+        ],
+        "headings": [
+          {
+            "level": "h1",
+            "text": "Achievement library"
+          },
+          {
+            "level": "h2",
+            "text": "Jordan Example"
+          },
+          {
+            "level": "h3",
+            "text": "Platform Engineer"
+          },
+          {
+            "level": "h3",
+            "text": "Software Engineer"
+          },
+          {
+            "level": "h3",
+            "text": "QueueBoard"
+          },
+          {
+            "level": "h3",
+            "text": "FieldNotes"
+          }
+        ],
+        "landmarks": [
+          {
+            "tag": "aside",
+            "className": "sidebar",
+            "label": null
+          },
+          {
+            "tag": "nav",
+            "className": "main-navigation",
+            "label": "Main navigation"
+          },
+          {
+            "tag": "header",
+            "className": "topbar",
+            "label": null
+          },
+          {
+            "tag": "nav",
+            "className": "breadcrumbs",
+            "label": "Breadcrumb"
+          },
+          {
+            "tag": "main",
+            "className": "page-content",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "library-overview",
+            "label": "Library summary"
+          },
+          {
+            "tag": "section",
+            "className": "library-controls",
+            "label": "Search and filter library"
+          },
+          {
+            "tag": "section",
+            "className": "experience-group",
+            "label": "Job: Platform Engineer"
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "experience-group",
+            "label": "Job: Software Engineer"
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "experience-group",
+            "label": "Project: QueueBoard"
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "experience-group",
+            "label": "Project: FieldNotes"
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "library-secondary",
+            "label": "Skills and credentials"
+          }
+        ]
+      },
+      "counts": {
+        "experienceGroups": 4,
+        "jobGroups": 2,
+        "projectGroups": 2,
+        "points": 13,
+        "provenanceRows": 13,
+        "metricItems": 2,
+        "facetChips": 64,
+        "tagChips": 38,
+        "skillChips": 26,
+        "enabledPills": 13,
+        "disabledPills": 0,
+        "skillRows": 14,
+        "credentialRows": 2,
+        "filterSelects": 5
+      },
+      "overflowing": []
+    },
+    {
+      "viewport": {
+        "name": "1800x1125",
+        "width": 1800,
+        "height": 1125
+      },
+      "theme": "light",
+      "surface": "demo",
+      "zoom": "80%",
+      "document": {
+        "scrollWidth": 1800,
+        "clientWidth": 1800,
+        "scrollHeight": 2627,
+        "horizontalOverflow": false
+      },
+      "tokens": {
+        "--color-canvas": "#f8fafc",
+        "--color-sidebar": "#fff",
+        "--color-surface": "#fff",
+        "--color-surface-alt": "#f1f5f9",
+        "--color-text-primary": "#0f172a",
+        "--color-text-secondary": "#475569",
+        "--color-text-muted": "#64748b",
+        "--color-border": "#e2e8f0",
+        "--color-border-strong": "#cbd5e1",
+        "--color-orange": "#f97316",
+        "--color-orange-subtle": "#fff7ed",
+        "--color-violet": "#7c3aed",
+        "--color-violet-subtle": "#ede9fe",
+        "--color-success": "#10b981",
+        "--color-warning": "#f59e0b",
+        "--color-error": "#ef4444",
+        "--color-info": "#3b82f6",
+        "--color-focus-ring": "#7c3aed"
+      },
+      "geometry": {
+        "sidebar": {
+          "x": 0,
+          "y": 0,
+          "width": 260,
+          "height": 1125,
+          "bottom": 1125
+        },
+        "topbar": {
+          "x": 260,
+          "y": 0,
+          "width": 1540,
+          "height": 60,
+          "bottom": 60
+        },
+        "pageContent": {
+          "x": 310,
+          "y": 60,
+          "width": 1440,
+          "height": 2566.77,
+          "bottom": 2626.77
+        },
+        "libraryPage": {
+          "x": 470,
+          "y": 92,
+          "width": 1120,
+          "height": 2502.77,
+          "bottom": 2594.77
+        },
+        "libraryHeading": {
+          "x": 470,
+          "y": 92,
+          "width": 1120,
+          "height": 102.55,
+          "bottom": 194.55
+        },
+        "sourceSwitch": {
+          "x": 1434.95,
+          "y": 152.55,
+          "width": 155.05,
+          "height": 42,
+          "bottom": 194.55
+        },
+        "editToolbar": null,
+        "overview": {
+          "x": 470,
+          "y": 218.55,
+          "width": 1120,
+          "height": 122.5,
+          "bottom": 341.05
+        },
+        "owner": {
+          "x": 493,
+          "y": 238.55,
+          "width": 193.88,
+          "height": 82.5,
+          "bottom": 321.05
+        },
+        "counts": {
+          "x": 1320.02,
+          "y": 258.05,
+          "width": 246.98,
+          "height": 43.5,
+          "bottom": 301.55
+        },
+        "controls": {
+          "x": 470,
+          "y": 359.05,
+          "width": 1120,
+          "height": 197,
+          "bottom": 556.05
+        },
+        "search": {
+          "x": 489,
+          "y": 377.05,
+          "width": 1082,
+          "height": 59,
+          "bottom": 436.05
+        },
+        "filterGrid": {
+          "x": 489,
+          "y": 448.05,
+          "width": 1082,
+          "height": 59,
+          "bottom": 507.05
+        },
+        "filterSummary": {
+          "x": 489,
+          "y": 513.05,
+          "width": 1082,
+          "height": 30,
+          "bottom": 543.05
+        },
+        "experiences": {
+          "x": 470,
+          "y": 580.05,
+          "width": 1120,
+          "height": 1944.72,
+          "bottom": 2524.77
+        },
+        "firstGroup": {
+          "x": 470,
+          "y": 580.05,
+          "width": 1120,
+          "height": 598.38,
+          "bottom": 1178.42
+        },
+        "firstPoint": {
+          "x": 472,
+          "y": 666.05,
+          "width": 1116,
+          "height": 168.59,
+          "bottom": 834.64
+        },
+        "secondary": {
+          "x": 470,
+          "y": 2546.77,
+          "width": 1120,
+          "height": 48,
+          "bottom": 2594.77
+        },
+        "error": null
+      },
+      "typography": {
+        "pageTitle": {
+          "font-family": "Georgia, \"Times New Roman\", serif",
+          "font-size": "38px",
+          "line-height": "42.56px",
+          "font-weight": "400",
+          "color": "rgb(15, 23, 42)"
+        },
+        "eyebrow": {
+          "font-family": "Arial, Helvetica, sans-serif",
+          "font-size": "10px",
+          "line-height": "15px",
+          "font-weight": "700",
+          "color": "rgb(249, 115, 22)"
+        },
+        "intro": {
+          "font-size": "14px",
+          "line-height": "21px",
+          "color": "rgb(71, 85, 105)"
+        },
+        "profileName": {
+          "font-family": "Georgia, \"Times New Roman\", serif",
+          "font-size": "23px",
+          "line-height": "34.5px",
+          "font-weight": "400"
+        },
+        "metricLabel": {
+          "font-size": "10px",
+          "line-height": "15px",
+          "color": "rgb(71, 85, 105)"
+        },
+        "metricValue": {
+          "font-size": "17px",
+          "line-height": "25.5px",
+          "font-weight": "650"
+        },
+        "groupTitle": {
+          "font-family": "Arial, Helvetica, sans-serif",
+          "font-size": "16px",
+          "line-height": "24px",
+          "font-weight": "650"
+        },
+        "pointText": {
+          "font-size": "12px",
+          "line-height": "18.6px",
+          "color": "rgb(15, 23, 42)"
+        },
+        "pointId": {
+          "font-size": "10px",
+          "line-height": "15px"
+        },
+        "provenance": {
+          "font-size": "10px",
+          "line-height": "15px",
+          "color": "rgb(71, 85, 105)"
+        },
+        "metricStrong": {
+          "font-size": "10px",
+          "line-height": "15px"
+        },
+        "chip": {
+          "font-size": "10px",
+          "line-height": "15px",
+          "border-radius": "0px",
+          "padding": "0px"
+        },
+        "status": {
+          "font-size": "10px",
+          "line-height": "15px",
+          "border-radius": "0px"
+        },
+        "searchInput": {
+          "height": "38px",
+          "border-radius": "5px",
+          "border": "1px solid rgb(203, 213, 225)",
+          "padding": "0px 10px",
+          "font-size": "12px"
+        },
+        "facetSelect": {
+          "height": "38px",
+          "border-radius": "5px",
+          "border": "1px solid rgb(203, 213, 225)",
+          "font-size": "12px"
+        }
+      },
+      "structure": {
+        "pageChildren": [
+          "library-heading",
+          "library-overview",
+          "library-controls",
+          "library-experiences",
+          "library-secondary"
+        ],
+        "headings": [
+          {
+            "level": "h1",
+            "text": "Achievement library"
+          },
+          {
+            "level": "h2",
+            "text": "Jordan Example"
+          },
+          {
+            "level": "h3",
+            "text": "Platform Engineer"
+          },
+          {
+            "level": "h3",
+            "text": "Software Engineer"
+          },
+          {
+            "level": "h3",
+            "text": "QueueBoard"
+          },
+          {
+            "level": "h3",
+            "text": "FieldNotes"
+          }
+        ],
+        "landmarks": [
+          {
+            "tag": "aside",
+            "className": "sidebar",
+            "label": null
+          },
+          {
+            "tag": "nav",
+            "className": "main-navigation",
+            "label": "Main navigation"
+          },
+          {
+            "tag": "header",
+            "className": "topbar",
+            "label": null
+          },
+          {
+            "tag": "nav",
+            "className": "breadcrumbs",
+            "label": "Breadcrumb"
+          },
+          {
+            "tag": "main",
+            "className": "page-content",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "library-overview",
+            "label": "Library summary"
+          },
+          {
+            "tag": "section",
+            "className": "library-controls",
+            "label": "Search and filter library"
+          },
+          {
+            "tag": "section",
+            "className": "experience-group",
+            "label": "Job: Platform Engineer"
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "experience-group",
+            "label": "Job: Software Engineer"
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "experience-group",
+            "label": "Project: QueueBoard"
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "experience-group",
+            "label": "Project: FieldNotes"
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "article",
+            "className": "library-point",
+            "label": null
+          },
+          {
+            "tag": "section",
+            "className": "library-secondary",
+            "label": "Skills and credentials"
+          }
+        ]
+      },
+      "counts": {
+        "experienceGroups": 4,
+        "jobGroups": 2,
+        "projectGroups": 2,
+        "points": 13,
+        "provenanceRows": 13,
+        "metricItems": 2,
+        "facetChips": 64,
+        "tagChips": 38,
+        "skillChips": 26,
+        "enabledPills": 13,
+        "disabledPills": 0,
+        "skillRows": 14,
+        "credentialRows": 2,
+        "filterSelects": 5
+      },
+      "overflowing": []
+    }
+  ]
+}
