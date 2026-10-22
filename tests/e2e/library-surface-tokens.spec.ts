@@ -51,7 +51,10 @@ type SurfaceStyle = {
   paddingLeft: string;
 };
 
-async function readSurface(page: Page, selector: string): Promise<SurfaceStyle> {
+async function readSurface(
+  page: Page,
+  selector: string,
+): Promise<SurfaceStyle> {
   const surface = page.locator(selector).first();
 
   return surface.evaluate((element) => {

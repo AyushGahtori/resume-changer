@@ -36,9 +36,14 @@ describe("library summary counts", () => {
   it("counts the achievement points of jobs and projects together", () => {
     const counts = getLibraryMetricCounts({
       ...library,
-      jobs: [{ ...library.jobs[0], points: library.jobs[0].points.slice(0, 2) }],
+      jobs: [
+        { ...library.jobs[0], points: library.jobs[0].points.slice(0, 2) },
+      ],
       projects: [
-        { ...library.projects[0], points: library.projects[0].points.slice(0, 1) },
+        {
+          ...library.projects[0],
+          points: library.projects[0].points.slice(0, 1),
+        },
       ],
     });
 

@@ -2,9 +2,12 @@
 
 import { useEffect, useMemo, useRef } from "react";
 import CategoryNavigation from "@/components/library/category-navigation";
-import type {
-  FilteredLibrary,
-  LibraryFilters,
+import {
+  formatLibraryResultCount,
+  LIBRARY_SORT_OPTIONS,
+  type FilteredLibrary,
+  type LibraryFilters,
+  type LibrarySort,
 } from "@/lib/data/achievement-search";
 import type { ResumeLibrary, Skill } from "@/lib/schemas/resume-data";
 
@@ -18,6 +21,8 @@ type Props = {
     key: Key,
     value: LibraryFilters[Key],
   ) => void;
+  sort: LibrarySort;
+  onSortChange: (sort: LibrarySort) => void;
   onReset: () => void;
 };
 
@@ -35,6 +40,8 @@ export default function SearchWorkbench({
   options,
   hasFilters,
   onFilterChange,
+  sort,
+  onSortChange,
   onReset,
 }: Props) {
   const workbenchRef = useRef<HTMLElement | null>(null);
@@ -104,88 +111,108 @@ export default function SearchWorkbench({
         />
       </label>
 
-      <div className="library-filter-grid">
-        <label>
-          <span className="visually-hidden">Job or project</span>
+      <div className="library-filter-row">
+        <div className="library-filter-grid">
+          <label>
+            <span className="visually-hidden">Job or project</span>
+            <select
+              onChange={(event) =>
+                onFilterChange("experienceId", event.target.value)
+              }
+              value={filters.experienceId}
+            >
+              <option value="">All experience</option>
+              {library.jobs.map((job) => (
+                <option key={job.id} value={`job:${job.id}`}>
+                  {job.title} · {job.company}
+                </option>
+              ))}
+              {library.projects.map((project) => (
+                <option key={project.id} value={`project:${project.id}`}>
+                  {project.name}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label>
+            <span className="visually-hidden">Point source</span>
+            <select
+              onChange={(event) =>
+                onFilterChange("sourceType", event.target.value)
+              }
+              value={filters.sourceType}
+            >
+              <option value="">All sources</option>
+              {sourceTypes.map((type) => (
+                <option key={type} value={type}>
+                  {type}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label>
+            <span className="visually-hidden">Point status</span>
+            <select
+              onChange={(event) =>
+                onFilterChange(
+                  "status",
+                  event.target.value as LibraryFilters["status"],
+                )
+              }
+              value={filters.status}
+            >
+              <option value="all">All statuses</option>
+              <option value="enabled">Enabled</option>
+              <option value="disabled">Disabled</option>
+            </select>
+          </label>
+
+          <label>
+            <span className="visually-hidden">Linked skill</span>
+            <select
+              onChange={(event) =>
+                onFilterChange("skillId", event.target.value)
+              }
+              value={filters.skillId}
+            >
+              <option value="">All skills</option>
+              {options.skills.map((skill) => (
+                <option key={skill.id} value={skill.id}>
+                  {skill.name}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label>
+            <span className="visually-hidden">Tag</span>
+            <select
+              onChange={(event) => onFilterChange("tag", event.target.value)}
+              value={filters.tag}
+            >
+              <option value="">All tags</option>
+              {options.tags.map((tag) => (
+                <option key={tag} value={tag}>
+                  {tag}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <label className="library-sort">
+          <span>Sort</span>
           <select
+            aria-label="Sort"
             onChange={(event) =>
-              onFilterChange("experienceId", event.target.value)
+              onSortChange(event.target.value as LibrarySort)
             }
-            value={filters.experienceId}
+            value={sort}
           >
-            <option value="">All experience</option>
-            {library.jobs.map((job) => (
-              <option key={job.id} value={`job:${job.id}`}>
-                {job.title} · {job.company}
-              </option>
-            ))}
-            {library.projects.map((project) => (
-              <option key={project.id} value={`project:${project.id}`}>
-                {project.name}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label>
-          <span className="visually-hidden">Point source</span>
-          <select
-            onChange={(event) =>
-              onFilterChange("sourceType", event.target.value)
-            }
-            value={filters.sourceType}
-          >
-            <option value="">All sources</option>
-            {sourceTypes.map((type) => (
-              <option key={type} value={type}>
-                {type}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label>
-          <span className="visually-hidden">Point status</span>
-          <select
-            onChange={(event) =>
-              onFilterChange(
-                "status",
-                event.target.value as LibraryFilters["status"],
-              )
-            }
-            value={filters.status}
-          >
-            <option value="all">All statuses</option>
-            <option value="enabled">Enabled</option>
-            <option value="disabled">Disabled</option>
-          </select>
-        </label>
-
-        <label>
-          <span className="visually-hidden">Linked skill</span>
-          <select
-            onChange={(event) => onFilterChange("skillId", event.target.value)}
-            value={filters.skillId}
-          >
-            <option value="">All skills</option>
-            {options.skills.map((skill) => (
-              <option key={skill.id} value={skill.id}>
-                {skill.name}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label>
-          <span className="visually-hidden">Tag</span>
-          <select
-            onChange={(event) => onFilterChange("tag", event.target.value)}
-            value={filters.tag}
-          >
-            <option value="">All tags</option>
-            {options.tags.map((tag) => (
-              <option key={tag} value={tag}>
-                {tag}
+            {LIBRARY_SORT_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
               </option>
             ))}
           </select>
@@ -196,8 +223,10 @@ export default function SearchWorkbench({
         <CategoryNavigation />
         <div className="library-filter-summary" aria-live="polite">
           <span className="library-result-count">
-            {result.visiblePointCount} of {result.totalPointCount} achievement
-            points
+            {formatLibraryResultCount(
+              result.visiblePointCount,
+              result.totalPointCount,
+            )}
           </span>
           {hasFilters && (
             <button className="text-action" onClick={onReset} type="button">

@@ -70,7 +70,10 @@ test("keeps the search, the filters, and the result summary in order", async ({
   );
 
   expect(workbenchOrder[0]).toContain("library-search");
-  expect(workbenchOrder[1]).toContain("library-filter-grid");
+  expect(workbenchOrder[1]).toContain("library-filter-row");
+  await expect(
+    page.locator(".library-filter-row .library-filter-grid"),
+  ).toBeVisible();
   expect(workbenchOrder[2]).toContain("library-workbench-footer");
   await expect(
     page.getByRole("navigation", { name: "Library sections" }),
@@ -301,16 +304,13 @@ test("reports the matching result count while the query changes", async ({
     "polite",
   );
 
-  const initial = await count.textContent();
-  const [, visible, total] = (initial ?? "").match(/(\d+) of (\d+)/) ?? [];
-  expect(Number(visible)).toBe(Number(total));
+  await expect(count).toHaveText("13 results");
 
   await page
     .getByRole("searchbox", { name: "Search library" })
     .fill("no matching library content");
-  await expect(count).not.toHaveText(initial ?? "");
-  await expect(count).toContainText("of " + total + " achievement points");
+  await expect(count).toHaveText("0 results of 13");
 
   await page.getByRole("button", { name: "Reset filters" }).click();
-  await expect(count).toHaveText(initial ?? "");
+  await expect(count).toHaveText("13 results");
 });

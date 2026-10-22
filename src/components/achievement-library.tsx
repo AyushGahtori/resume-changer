@@ -13,9 +13,12 @@ import {
   LIBRARY_SECTION_IDS,
 } from "@/components/library/category-navigation";
 import {
+  DEFAULT_LIBRARY_SORT,
   EMPTY_LIBRARY_FILTERS,
   filterAchievementLibrary,
   getLibraryFilterOptions,
+  sortFilteredLibrary,
+  type LibrarySort,
   type LibraryFilters,
 } from "@/lib/data/achievement-search";
 import { LIBRARY_ACTIONS } from "@/lib/ui/library-actions";
@@ -191,6 +194,7 @@ function ExperienceGroup({
 export default function AchievementLibrary({ library, source }: Props) {
   const router = useRouter();
   const [filters, setFilters] = useState<LibraryFilters>(EMPTY_LIBRARY_FILTERS);
+  const [sort, setSort] = useState<LibrarySort>(DEFAULT_LIBRARY_SORT);
   const [editor, setEditor] = useState<EditorState>(null);
   const [creating, setCreating] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
@@ -203,9 +207,13 @@ export default function AchievementLibrary({ library, source }: Props) {
   const canvasTriggerRef = useRef<HTMLElement | null>(null);
   const detailedEntryRef = useRef<HTMLButtonElement>(null);
   const addAchievementRef = useRef<HTMLButtonElement>(null);
-  const result = useMemo(
+  const filtered = useMemo(
     () => filterAchievementLibrary(library, filters),
     [filters, library],
+  );
+  const result = useMemo(
+    () => sortFilteredLibrary(filtered, sort),
+    [filtered, sort],
   );
   const options = useMemo(() => getLibraryFilterOptions(library), [library]);
   const hasFilters = Object.entries(filters).some(([key, value]) =>
@@ -308,7 +316,10 @@ export default function AchievementLibrary({ library, source }: Props) {
               </nav>
               {source === "demo" && (
                 <span className="library-source-note">
-                  <Lock aria-hidden="true" className="library-source-note-icon" />
+                  <Lock
+                    aria-hidden="true"
+                    className="library-source-note-icon"
+                  />
                   Read-only
                 </span>
               )}
@@ -394,6 +405,8 @@ export default function AchievementLibrary({ library, source }: Props) {
         onReset={() => setFilters(EMPTY_LIBRARY_FILTERS)}
         options={options}
         result={result}
+        sort={sort}
+        onSortChange={setSort}
       />
 
       <div className="library-content" id={LIBRARY_CONTENT_ID}>

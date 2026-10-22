@@ -473,7 +473,6 @@ async function focusWithKeyboard(page: Page, target: Locator) {
   throw new Error("The control never received keyboard focus.");
 }
 
-
 test("offers both creation actions on the personal route only", async ({
   page,
 }) => {

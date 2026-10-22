@@ -149,9 +149,9 @@ test("shows one library title with the eyebrow, supporting line, and breadcrumb"
 
   const breadcrumb = page.getByRole("navigation", { name: "Breadcrumb" });
   await expect(breadcrumb).toContainText("Workspace");
-  await expect(
-    breadcrumb.locator('[aria-current="page"]'),
-  ).toHaveText("Achievement library");
+  await expect(breadcrumb.locator('[aria-current="page"]')).toHaveText(
+    "Achievement library",
+  );
 
   // The poster headline and the shell brand are not part of the page header.
   await expect(page.getByText("Achievement Library UI Kit")).toHaveCount(0);
@@ -162,9 +162,7 @@ test("keeps the header type scale, spacing, and alignment in both themes", async
   page,
 }) => {
   for (const theme of ["light", "dark"] as const) {
-    const currentTheme = await page
-      .locator("html")
-      .getAttribute("data-theme");
+    const currentTheme = await page.locator("html").getAttribute("data-theme");
     if (currentTheme !== theme) {
       await page
         .getByRole("button", { name: "Switch to " + theme + " mode" })

@@ -84,12 +84,15 @@ test("wraps the filter row before it can crowd the page", async ({ page }) => {
       ).size;
     });
 
-    // A wide viewport keeps the five facets on one row; a narrow one
-    // wraps them instead of squeezing them.
-    if (width >= STICKY_WIDTH) {
+    // The desktop reference keeps the five facets on one row at 1440px.
+    // The sort control shares that row, so the facets wrap at narrower
+    // desktop widths instead of being squeezed into unreadable controls.
+    if (width === 1440) {
       expect(rows).toBe(1);
     } else {
       expect(rows).toBeGreaterThan(1);
     }
+
+    await expect(page.getByLabel("Sort")).toBeVisible();
   }
 });
