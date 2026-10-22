@@ -1,3 +1,4 @@
+[error] No parser could be inferred for file "C:\Users\Ayush\.codex\worktrees\achievement-pr-audit\re_changer\test-results\remote-format-pr80-1.txt".
 import { expect, test } from "@playwright/test";
 import { waitForAnimationsToSettle } from "../helpers/animations";
 
@@ -246,3 +247,4 @@ test("keeps the library destination in the mobile navigation drawer", async ({
   expect(drawerStyles.backgroundColor).toBe(libraryActiveRow.light.background);
   expect(drawerStyles.color).toBe(libraryActiveRow.light.color);
 });
+
