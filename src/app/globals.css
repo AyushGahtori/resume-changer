@@ -3074,8 +3074,7 @@ a:focus-visible {
   font-size: 12px;
 }
 
-.text-action,
-.facet-chip {
+.text-action {
   padding: 0;
   border: 0;
   background: transparent;
@@ -3084,8 +3083,7 @@ a:focus-visible {
   font-size: 11px;
   text-align: left;
 }
-.text-action:hover,
-.facet-chip:hover {
+.text-action:hover {
   text-decoration: underline;
 }
 
@@ -3094,8 +3092,7 @@ a:focus-visible {
  * button family, so every control on the library surface announces focus
  * the same way.
  */
-.text-action:focus-visible,
-.facet-chip:focus-visible {
+.text-action:focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
@@ -3516,20 +3513,60 @@ a:focus-visible {
 .point-facets {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: var(--space-8);
   margin: 0;
 }
+
+/* Tags and linked skills stay distinct in shape, wording and color. */
 .facet-chip {
-  padding: 3px 9px;
-  border: var(--border-default);
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  min-height: 26px;
+  padding: 0 var(--space-8);
+  border: 1px solid transparent;
   border-radius: var(--radius-full);
-  background: var(--surface-soft);
-  color: var(--accent-hover);
+  font-size: 11px;
+  line-height: 1.3;
+  text-align: left;
   cursor: pointer;
-  font-size: var(--type-label-size);
+  overflow-wrap: anywhere;
+}
+.facet-chip.is-tag {
+  background: var(--color-orange-subtle);
+  border-color: color-mix(in srgb, var(--color-orange-strong) 32%, transparent);
+  color: var(--color-orange-strong);
 }
 .facet-chip.is-skill {
-  color: var(--teal);
+  background: var(--color-violet-subtle);
+  border-color: color-mix(in srgb, var(--color-violet-strong) 32%, transparent);
+  color: var(--color-violet-strong);
+}
+.facet-chip.is-tag:hover {
+  border-color: var(--color-orange-strong);
+}
+.facet-chip.is-skill:hover {
+  border-color: var(--color-violet-strong);
+}
+.facet-chip.is-more {
+  background: var(--color-surface-alt);
+  border-color: var(--color-border);
+  color: var(--color-text-secondary);
+}
+.facet-chip.is-more:hover {
+  background: var(--color-surface-hover);
+  border-color: var(--color-border-strong);
+}
+.facet-chip[aria-pressed="true"],
+.facet-chip[aria-pressed="true"]:hover {
+  background: var(--color-violet);
+  border-color: var(--color-violet);
+  color: var(--color-text-inverse);
+}
+.facet-chip:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
 }
 
 .library-empty,

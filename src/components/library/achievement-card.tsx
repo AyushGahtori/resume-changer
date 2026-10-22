@@ -1,5 +1,11 @@
+import { useMemo, useState } from "react";
 import { Briefcase, Check, CircleSlash, Folder } from "lucide-react";
 import PointMetrics from "@/components/library/point-metrics";
+import {
+  buildPointChips,
+  getVisiblePointChips,
+  MAX_VISIBLE_POINT_CHIPS,
+} from "@/lib/ui/point-chips";
 import type { AchievementPoint, Skill } from "@/lib/schemas/resume-data";
 
 type Props = {
@@ -23,6 +29,8 @@ type Props = {
   context?: string;
   onTag?: (tag: string) => void;
   onSkill?: (skillId: string) => void;
+  activeTag: string;
+  activeSkillId: string;
   onEdit?: () => void;
 };
 
@@ -47,14 +55,29 @@ export default function AchievementCard({
   context,
   onTag,
   onSkill,
+  activeTag,
+  activeSkillId,
   onEdit,
 }: Props) {
   const Icon = CATEGORY_ICON[kind];
   const StatusIcon = point.enabled ? Check : CircleSlash;
   const headingId = `achievement-${point.id}`;
-  const linkedSkills = point.skillIds
-    .map((skillId) => skills.find((skill) => skill.id === skillId))
-    .filter((skill): skill is Skill => Boolean(skill));
+  const [chipsExpanded, setChipsExpanded] = useState(false);
+  const chips = useMemo(() => buildPointChips(point, skills), [point, skills]);
+  const activeChipIds = new Set(
+    chips
+      .filter(
+        (chip) =>
+          (chip.kind === "tag" && chip.value === activeTag) ||
+          (chip.kind === "skill" && chip.value === activeSkillId),
+      )
+      .map((chip) => chip.id),
+  );
+  const { visible: visibleChips, hiddenCount } = getVisiblePointChips(
+    chips,
+    chipsExpanded,
+    activeChipIds,
+  );
 
   return (
     <article className="library-point" aria-labelledby={headingId}>
@@ -92,28 +115,49 @@ export default function AchievementCard({
         <PointMetrics metrics={point.metrics} />
       ) : null}
 
-      {point.tags.length > 0 || linkedSkills.length > 0 ? (
+      {chips.length > 0 ? (
         <div className="point-facets">
-          {point.tags.map((tag) => (
+          {visibleChips.map((chip) => (
             <button
-              className="facet-chip"
-              key={tag}
-              onClick={() => onTag?.(tag)}
+              aria-label={
+                chip.kind === "tag"
+                  ? `Filter by #${chip.label}`
+                  : `Filter by skill ${chip.label}`
+              }
+              aria-pressed={activeChipIds.has(chip.id)}
+              className={`facet-chip is-${chip.kind}`}
+              key={chip.id}
+              onClick={() =>
+                chip.kind === "tag"
+                  ? onTag?.(chip.value)
+                  : onSkill?.(chip.value)
+              }
               type="button"
             >
-              #{tag}
+              {chip.kind === "tag" ? `#${chip.label}` : chip.label}
             </button>
           ))}
-          {linkedSkills.map((skill) => (
+          {hiddenCount > 0 ? (
             <button
-              className="facet-chip is-skill"
-              key={skill.id}
-              onClick={() => onSkill?.(skill.id)}
+              aria-expanded={false}
+              aria-label={`+${hiddenCount} more filters`}
+              className="facet-chip is-more"
+              onClick={() => setChipsExpanded(true)}
               type="button"
             >
-              {skill.name}
+              +{hiddenCount}
             </button>
-          ))}
+          ) : null}
+          {chipsExpanded && chips.length > MAX_VISIBLE_POINT_CHIPS ? (
+            <button
+              aria-expanded={true}
+              className="facet-chip is-more"
+              onClick={() => setChipsExpanded(false)}
+              type="button"
+            >
+              Show less
+            </button>
+          ) : null}
         </div>
       ) : null}
 

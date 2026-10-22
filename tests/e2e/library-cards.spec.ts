@@ -176,12 +176,55 @@ function libraryWithMetrics(metrics: SyntheticPoint["metrics"]): ResumeLibrary {
   return library;
 }
 
+function libraryWithChips(
+  tags: string[],
+  skillIds: string[] = [],
+): ResumeLibrary {
+  const library = syntheticLibrary();
+  for (const job of library.jobs) {
+    for (const point of job.points) {
+      point.tags = [];
+      point.skillIds = [];
+    }
+  }
+  for (const project of library.projects) {
+    for (const point of project.points) {
+      point.tags = [];
+      point.skillIds = [];
+    }
+  }
+  library.jobs[0].points[0].tags = tags;
+  library.jobs[0].points[0].skillIds = skillIds;
+  return library;
+}
+
 async function writePersonalLibrary(library: ResumeLibrary) {
   await mkdir(join(libraryRoot, "data"), { recursive: true });
   await writeFile(personalLibraryPath, JSON.stringify(library), "utf8");
 }
 
 const cards = (page: Page) => page.locator("article.library-point");
+
+function relativeLuminance(color: string) {
+  const [red, green, blue] = color
+    .match(/[\d.]+/g)!
+    .map(Number)
+    .map((value) => {
+      const channel = value / 255;
+      return channel <= 0.04045
+        ? channel / 12.92
+        : ((channel + 0.055) / 1.055) ** 2.4;
+    });
+  return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+}
+
+function contrastRatio(foreground: string, background: string) {
+  const first = relativeLuminance(foreground);
+  const second = relativeLuminance(background);
+  const lighter = Math.max(first, second);
+  const darker = Math.min(first, second);
+  return (lighter + 0.05) / (darker + 0.05);
+}
 
 test.beforeEach(async () => {
   await libraryGuard.capture();
@@ -785,4 +828,236 @@ test("keeps long metric text inside the card", async ({ page }) => {
   await expect(page.locator(".point-metric-number").first()).toHaveText(
     "1234567890123456789",
   );
+});
+
+test("renders tags and linked skills as distinct, duplicate-free chips", async ({
+  page,
+}) => {
+  await writePersonalLibrary(
+    libraryWithChips(
+      ["backend", "backend", "api-design", "api-design"],
+      ["skill-card-synthetic"],
+    ),
+  );
+  await page.goto("/library");
+
+  const card = cards(page).first();
+  await expect(card.locator(".facet-chip.is-tag")).toHaveCount(2);
+  await expect(card.locator(".facet-chip.is-skill")).toHaveCount(1);
+  await expect(
+    card.getByRole("button", { name: "Filter by #backend" }),
+  ).toBeVisible();
+  await expect(
+    card.getByRole("button", { name: "Filter by skill Synthetic Skill" }),
+  ).toBeVisible();
+  await expect(card.getByText("skill-card-synthetic")).toHaveCount(0);
+});
+
+test("filters by tag and exposes the selected chip state", async ({ page }) => {
+  await writePersonalLibrary(libraryWithChips(["only-this-point"], []));
+  await page.goto("/library");
+
+  const card = cards(page).first();
+  const chip = card.getByRole("button", { name: "Filter by #only-this-point" });
+  await chip.click();
+
+  await expect(page.getByLabel("Tag")).toHaveValue("only-this-point");
+  await expect(page.locator(".library-result-count")).toContainText(
+    "1 result of",
+  );
+  await expect(chip).toHaveAttribute("aria-pressed", "true");
+});
+
+test("filters by a linked skill and supports keyboard activation", async ({
+  page,
+}) => {
+  await writePersonalLibrary(libraryWithChips([], ["skill-card-synthetic"]));
+  await page.goto("/library");
+
+  const card = cards(page).first();
+  const chip = card.getByRole("button", {
+    name: "Filter by skill Synthetic Skill",
+  });
+  await chip.focus();
+  await chip.press("Enter");
+
+  await expect(page.getByLabel("Linked skill")).toHaveValue(
+    "skill-card-synthetic",
+  );
+  await expect(page.locator(".library-result-count")).toContainText(
+    "1 result of",
+  );
+  await expect(chip).toHaveAttribute("aria-pressed", "true");
+});
+
+test("reveals all overflow chips and can collapse them again", async ({
+  page,
+}) => {
+  const tags = [
+    "backend",
+    "api-design",
+    "cloud",
+    "operations",
+    "platform",
+    "observability",
+    "release-engineering",
+    "backend",
+  ];
+  await writePersonalLibrary(libraryWithChips(tags, ["skill-card-synthetic"]));
+  await page.goto("/library");
+
+  const card = cards(page).first();
+  const visibleChips = card.locator(".facet-chip:not(.is-more)");
+  const more = card.locator(".facet-chip.is-more");
+  await expect(visibleChips).toHaveCount(6);
+  await expect(more).toHaveText("+2");
+  await expect(more).toHaveAttribute("aria-expanded", "false");
+  await expect(
+    card.getByRole("button", { name: "Filter by #release-engineering" }),
+  ).toHaveCount(0);
+
+  await more.click();
+  await expect(visibleChips).toHaveCount(8);
+  await expect(
+    card.getByRole("button", { name: "Filter by #release-engineering" }),
+  ).toBeVisible();
+  await expect(
+    card.getByRole("button", { name: "Filter by #backend" }),
+  ).toHaveCount(1);
+  await expect(more).toHaveText("Show less");
+  await expect(more).toHaveAttribute("aria-expanded", "true");
+
+  await more.click();
+  await expect(visibleChips).toHaveCount(6);
+  await expect(more).toHaveText("+2");
+});
+
+test("keeps an active filtered chip visible when it exceeds the collapsed limit", async ({
+  page,
+}) => {
+  const tags = Array.from({ length: 7 }, (_, index) => `tag-${index}`);
+  await writePersonalLibrary(libraryWithChips(tags, ["skill-card-synthetic"]));
+  await page.goto("/library");
+  await page.getByRole("combobox", { name: "Tag" }).selectOption("tag-6");
+
+  const card = cards(page).first();
+  const selected = card.getByRole("button", { name: "Filter by #tag-6" });
+  await expect(selected).toBeVisible();
+  await expect(selected).toHaveAttribute("aria-pressed", "true");
+  await expect(card.locator(".facet-chip.is-more")).toHaveText("+1");
+});
+
+test("wraps a long tag label at 320px without horizontal overflow", async ({
+  page,
+}) => {
+  const longTag = "service-boundary-" + "very-long-label-".repeat(5);
+  await writePersonalLibrary(libraryWithChips([longTag]));
+  await page.setViewportSize({ width: 320, height: 800 });
+  await page.goto("/library");
+
+  const chip = cards(page)
+    .first()
+    .getByRole("button", {
+      name: `Filter by #${longTag}`,
+    });
+  await expect(chip).toContainText(longTag);
+  const dimensions = await page.evaluate(() => ({
+    documentWidth: document.documentElement.scrollWidth,
+    viewportWidth: document.documentElement.clientWidth,
+  }));
+  expect(dimensions.documentWidth).toBeLessThanOrEqual(
+    dimensions.viewportWidth,
+  );
+});
+
+test("keeps card chips interactive and free of remove/delete actions", async ({
+  page,
+}) => {
+  await writePersonalLibrary(
+    libraryWithChips(["actionable"], ["skill-card-synthetic"]),
+  );
+  await page.goto("/library");
+
+  const card = cards(page).first();
+  await expect(card.getByRole("button", { name: /remove/i })).toHaveCount(0);
+  await expect(card.getByRole("button", { name: /delete/i })).toHaveCount(0);
+  await expect(card.locator(".point-facets button")).toHaveCount(2);
+});
+
+test("uses compact tag and skill chips with comfortable keyboard targets", async ({
+  page,
+}) => {
+  await writePersonalLibrary(
+    libraryWithChips(["backend"], ["skill-card-synthetic"]),
+  );
+  await page.goto("/library");
+
+  const card = cards(page).first();
+  const metrics = await card
+    .locator(".facet-chip.is-tag")
+    .evaluate((element) => {
+      const style = getComputedStyle(element);
+      return {
+        height: element.getBoundingClientRect().height,
+        radius: parseFloat(style.borderTopLeftRadius),
+        fontSize: parseFloat(style.fontSize),
+        paddingLeft: parseFloat(style.paddingLeft),
+        paddingRight: parseFloat(style.paddingRight),
+      };
+    });
+  expect(metrics.height).toBeGreaterThanOrEqual(24);
+  expect(metrics.height).toBeLessThanOrEqual(30);
+  expect(metrics.radius).toBeGreaterThanOrEqual(metrics.height / 2);
+  expect(metrics.fontSize).toBeGreaterThanOrEqual(11);
+  expect(metrics.fontSize).toBeLessThanOrEqual(12);
+  expect(metrics.paddingLeft).toBeCloseTo(8, 0);
+  expect(metrics.paddingRight).toBeCloseTo(8, 0);
+
+  const gap = await card.locator(".point-facets").evaluate((row) => {
+    const chips = row.querySelectorAll(".facet-chip");
+    const first = chips[0].getBoundingClientRect();
+    const second = chips[1].getBoundingClientRect();
+    return second.left - first.right;
+  });
+  expect(gap).toBeGreaterThanOrEqual(6);
+  expect(gap).toBeLessThanOrEqual(8);
+});
+
+test("keeps chip text readable in both themes", async ({ page }) => {
+  await writePersonalLibrary(
+    libraryWithChips(["backend"], ["skill-card-synthetic"]),
+  );
+  await page.goto("/library");
+
+  const card = cards(page).first();
+  const readColors = () =>
+    card.evaluate((element) => {
+      const tag = element.querySelector(".facet-chip.is-tag")!;
+      const skill = element.querySelector(".facet-chip.is-skill")!;
+      return {
+        tagBackground: getComputedStyle(tag).backgroundColor,
+        tagText: getComputedStyle(tag).color,
+        skillBackground: getComputedStyle(skill).backgroundColor,
+        skillText: getComputedStyle(skill).color,
+      };
+    });
+
+  const light = await readColors();
+  expect(
+    contrastRatio(light.tagText, light.tagBackground),
+  ).toBeGreaterThanOrEqual(4.5);
+  expect(
+    contrastRatio(light.skillText, light.skillBackground),
+  ).toBeGreaterThanOrEqual(4.5);
+
+  await page.getByRole("button", { name: "Switch to dark mode" }).click();
+  await page.waitForTimeout(350);
+  const dark = await readColors();
+  expect(
+    contrastRatio(dark.tagText, dark.tagBackground),
+  ).toBeGreaterThanOrEqual(4.5);
+  expect(
+    contrastRatio(dark.skillText, dark.skillBackground),
+  ).toBeGreaterThanOrEqual(4.5);
+  expect(dark.tagBackground).not.toBe(dark.skillBackground);
 });

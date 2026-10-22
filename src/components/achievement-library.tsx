@@ -90,6 +90,8 @@ function ExperienceGroup({
   onSkill,
   onEdit,
   onToggle,
+  activeTag,
+  activeSkillId,
 }: {
   item: (Job | Project) & { points: AchievementPoint[] };
   kind: GroupKind;
@@ -99,6 +101,8 @@ function ExperienceGroup({
   onSkill: (skillId: string) => void;
   onEdit?: (point: AchievementPoint) => void;
   onToggle: (key: string) => void;
+  activeTag: string;
+  activeSkillId: string;
 }) {
   const isJob = kind === "job";
   const job = isJob ? (item as Job) : null;
@@ -163,6 +167,8 @@ function ExperienceGroup({
         {item.points.map((point) => (
           <AchievementCard
             key={point.id}
+            activeSkillId={activeSkillId}
+            activeTag={activeTag}
             kind={kind}
             onEdit={onEdit ? () => onEdit(point) : undefined}
             onSkill={onSkill}
@@ -422,6 +428,8 @@ export default function AchievementLibrary({ library, source }: Props) {
               <div className="library-section-body">
                 {result.jobs.map((job) => (
                   <ExperienceGroup
+                    activeSkillId={filters.skillId}
+                    activeTag={filters.tag}
                     collapsed={collapsedGroups.has(groupKey("job", job.id))}
                     item={job}
                     key={job.id}
@@ -463,6 +471,8 @@ export default function AchievementLibrary({ library, source }: Props) {
               <div className="library-section-body">
                 {result.projects.map((project) => (
                   <ExperienceGroup
+                    activeSkillId={filters.skillId}
+                    activeTag={filters.tag}
                     collapsed={collapsedGroups.has(
                       groupKey("project", project.id),
                     )}

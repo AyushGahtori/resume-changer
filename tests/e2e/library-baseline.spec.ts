@@ -92,18 +92,20 @@ test.describe("achievement library baseline", () => {
     await expect(point.locator(".point-metrics")).toContainText(
       "Throughput improvement",
     );
-    await expect(point.locator(".point-metrics")).toContainText("28 %");
+    await expect(point.locator(".point-metrics")).toContainText("28%");
     await expect(point.locator(".point-metrics")).toContainText(
       "Synthetic benchmark scenario",
     );
     await expect(
-      point.getByRole("button", { name: "#system-design" }),
+      point.getByRole("button", { name: "Filter by #system-design" }),
     ).toBeVisible();
     await expect(
-      point.getByRole("button", { name: "System Design" }),
+      point.getByRole("button", { name: "Filter by skill System Design" }),
     ).toBeVisible();
 
-    await point.getByRole("button", { name: "System Design" }).click();
+    await point
+      .getByRole("button", { name: "Filter by skill System Design" })
+      .click();
     await expect(page.getByLabel("Linked skill")).toHaveValue(
       "skill-system-design",
     );
