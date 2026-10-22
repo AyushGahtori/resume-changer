@@ -114,4 +114,3 @@ test("uses the Quora JD to generate expected LaTeX from three selected points", 
     "quora-manual-generation.tex",
   );
 });
-
