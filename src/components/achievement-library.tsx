@@ -11,6 +11,11 @@ import {
   getLibraryFilterOptions,
   type LibraryFilters,
 } from "@/lib/data/achievement-search";
+import {
+  buildPointChips,
+  getVisiblePointChips,
+  MAX_VISIBLE_POINT_CHIPS,
+} from "@/lib/ui/point-chips";
 import type {
   AchievementPoint,
   Job,
@@ -38,14 +43,34 @@ function PointRow({
   onTag,
   onSkill,
   onEdit,
+  activeTag,
+  activeSkillId,
 }: {
   point: AchievementPoint;
   library: ResumeLibrary;
   onTag: (tag: string) => void;
   onSkill: (skillId: string) => void;
   onEdit?: () => void;
+  activeTag: string;
+  activeSkillId: string;
 }) {
-  const skillsById = new Map(library.skills.map((skill) => [skill.id, skill]));
+  const [expanded, setExpanded] = useState(false);
+  const chips = useMemo(
+    () => buildPointChips(point, library.skills),
+    [point, library.skills],
+  );
+  const activeChipId = chips.find(
+    (chip) =>
+      (chip.kind === "tag" && chip.value === activeTag) ||
+      (chip.kind === "skill" && chip.value === activeSkillId),
+  )?.id;
+  /**
+   * A chip that carries the active filter is always shown, even when it
+   * would sit behind the `+N` disclosure, so the reader can see why the
+   * card is part of the result set.
+   */
+  const isExpanded = expanded || Boolean(activeChipId);
+  const { visible, hiddenCount } = getVisiblePointChips(chips, isExpanded);
   return (
     <article className="library-point">
       <div className="library-point-heading">
@@ -83,31 +108,47 @@ function PointRow({
           ))}
         </ul>
       )}
-      {(point.tags.length > 0 || point.skillIds.length > 0) && (
+      {chips.length > 0 && (
         <div className="point-facets">
-          {point.tags.map((tag) => (
+          {visible.map((chip) => (
             <button
-              className="facet-chip"
-              key={tag}
-              onClick={() => onTag(tag)}
+              aria-label={
+                chip.kind === "tag"
+                  ? `Filter by #${chip.label}`
+                  : `Filter by skill ${chip.label}`
+              }
+              aria-pressed={chip.id === activeChipId}
+              className={`facet-chip is-${chip.kind}`}
+              key={chip.id}
+              onClick={() =>
+                chip.kind === "tag" ? onTag(chip.value) : onSkill(chip.value)
+              }
               type="button"
             >
-              #{tag}
+              {chip.kind === "tag" ? `#${chip.label}` : chip.label}
             </button>
           ))}
-          {point.skillIds.map((id) => {
-            const skill = skillsById.get(id);
-            return skill ? (
-              <button
-                className="facet-chip is-skill"
-                key={id}
-                onClick={() => onSkill(id)}
-                type="button"
-              >
-                {skill.name}
-              </button>
-            ) : null;
-          })}
+          {hiddenCount > 0 && (
+            <button
+              aria-expanded={false}
+              aria-label={`+${hiddenCount} more filters`}
+              className="facet-chip is-more"
+              onClick={() => setExpanded(true)}
+              type="button"
+            >
+              +{hiddenCount}
+            </button>
+          )}
+          {expanded && chips.length > MAX_VISIBLE_POINT_CHIPS && (
+            <button
+              aria-expanded={true}
+              className="facet-chip is-more"
+              onClick={() => setExpanded(false)}
+              type="button"
+            >
+              Show less
+            </button>
+          )}
         </div>
       )}
     </article>
@@ -121,6 +162,8 @@ function ExperienceGroup({
   onTag,
   onSkill,
   onEdit,
+  activeTag,
+  activeSkillId,
 }: {
   item: (Job | Project) & { points: AchievementPoint[] };
   kind: "job" | "project";
@@ -128,6 +171,8 @@ function ExperienceGroup({
   onTag: (tag: string) => void;
   onSkill: (skillId: string) => void;
   onEdit?: (point: AchievementPoint) => void;
+  activeTag: string;
+  activeSkillId: string;
 }) {
   const isJob = kind === "job";
   const job = isJob ? (item as Job) : null;
@@ -157,6 +202,8 @@ function ExperienceGroup({
       {item.points.map((point) => (
         <PointRow
           key={point.id}
+          activeSkillId={activeSkillId}
+          activeTag={activeTag}
           library={library}
           onSkill={onSkill}
           onTag={onTag}
@@ -443,6 +490,8 @@ export default function AchievementLibrary({ library, source }: Props) {
         <div className="library-experiences">
           {result.jobs.map((job) => (
             <ExperienceGroup
+              activeSkillId={filters.skillId}
+              activeTag={filters.tag}
               item={job}
               key={job.id}
               kind="job"
@@ -458,6 +507,8 @@ export default function AchievementLibrary({ library, source }: Props) {
           ))}
           {result.projects.map((project) => (
             <ExperienceGroup
+              activeSkillId={filters.skillId}
+              activeTag={filters.tag}
               item={project}
               key={project.id}
               kind="project"

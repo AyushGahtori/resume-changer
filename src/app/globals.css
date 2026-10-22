@@ -2238,8 +2238,7 @@ a:focus-visible {
   font-size: 11px;
 }
 
-.text-action,
-.facet-chip {
+.text-action {
   padding: 0;
   border: 0;
   background: transparent;
@@ -2248,8 +2247,7 @@ a:focus-visible {
   font-size: 11px;
   text-align: left;
 }
-.text-action:hover,
-.facet-chip:hover {
+.text-action:hover {
   text-decoration: underline;
 }
 
@@ -2358,15 +2356,66 @@ a:focus-visible {
 .point-facets {
   display: flex;
   flex-wrap: wrap;
-  gap: 7px 12px;
-  margin-top: 8px;
+  align-items: center;
+  gap: var(--space-8);
+  margin-top: var(--space-8);
 }
+
+/*
+ * Achievement-card chips. A tag uses a soft orange tint and a linked skill a
+ * soft violet tint, so the two families stay apart. The chip shape, the `#`
+ * prefix on tags, and the accessible name carry the same distinction, so the
+ * difference never rests on color alone. A selected chip fills with violet
+ * and reports `aria-pressed`.
+ */
 .facet-chip {
-  color: var(--accent);
-  font-size: 10px;
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  min-height: 26px;
+  padding: 0 var(--space-8);
+  border: 1px solid transparent;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  line-height: 1.3;
+  text-align: left;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+.facet-chip.is-tag {
+  background: var(--color-orange-subtle);
+  border-color: color-mix(in srgb, var(--color-orange-strong) 32%, transparent);
+  color: var(--color-orange-strong);
 }
 .facet-chip.is-skill {
-  color: var(--teal);
+  background: var(--color-violet-subtle);
+  border-color: color-mix(in srgb, var(--color-violet-strong) 32%, transparent);
+  color: var(--color-violet-strong);
+}
+.facet-chip.is-tag:hover {
+  border-color: var(--color-orange-strong);
+}
+.facet-chip.is-skill:hover {
+  border-color: var(--color-violet-strong);
+}
+.facet-chip.is-more {
+  background: var(--color-surface-alt);
+  border-color: var(--color-border);
+  color: var(--color-text-secondary);
+}
+.facet-chip.is-more:hover {
+  background: var(--color-surface-hover);
+  border-color: var(--color-border-strong);
+}
+.facet-chip[aria-pressed="true"],
+.facet-chip[aria-pressed="true"]:hover {
+  background: var(--color-violet);
+  border-color: var(--color-violet);
+  color: var(--color-text-inverse);
+}
+.facet-chip:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
 }
 
 .library-empty,
