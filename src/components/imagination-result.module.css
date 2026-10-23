@@ -1,0 +1,207 @@
+.result {
+  display: grid;
+  gap: var(--space-12);
+  min-width: 0;
+  padding: var(--space-16);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.heading {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.heading h2 {
+  min-width: 0;
+  flex: 1;
+  margin: 0;
+  color: var(--ink);
+  font-size: var(--type-card-heading-size);
+  line-height: var(--type-card-heading-line-height);
+  font-weight: 650;
+}
+
+.headingIcon {
+  flex: 0 0 auto;
+  color: var(--imagination);
+}
+
+.measuredBadge {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border: 1px solid color-mix(in srgb, var(--teal) 32%, var(--line));
+  border-radius: 999px;
+  background: var(--teal-soft);
+  color: var(--teal);
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.editorLabel {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-8);
+  color: var(--ink);
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+  font-weight: 600;
+}
+
+.editor {
+  width: 100%;
+  min-width: 0;
+  min-height: 128px;
+  resize: vertical;
+  padding: var(--space-12);
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: var(--surface-soft);
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--type-body-size);
+  line-height: 1.55;
+}
+
+.editor:focus-visible,
+.actionButton:focus-visible,
+.useButton:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.editor[readonly] {
+  opacity: 0.82;
+}
+
+.stateMessage,
+.loadingMessage,
+.errorMessage,
+.warning,
+.copyFeedback {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-8);
+  margin: 0;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
+}
+
+.stateMessage,
+.warning,
+.copyFeedback {
+  color: var(--muted);
+}
+
+.stateMessage {
+  padding: var(--space-12);
+  border: 1px dashed var(--line-strong);
+  border-radius: 6px;
+  background: var(--surface-soft);
+}
+
+.loadingMessage {
+  align-items: center;
+  color: var(--imagination-hover);
+}
+
+.spinner {
+  flex: 0 0 auto;
+  animation: imagination-result-spin 1.2s linear infinite;
+}
+
+.errorMessage {
+  padding: var(--space-12);
+  border: 1px solid color-mix(in srgb, var(--danger) 35%, var(--line));
+  border-radius: 6px;
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.errorMessage svg {
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
+.warning {
+  padding: var(--space-8) var(--space-12);
+  border-left: 2px solid var(--line-strong);
+  color: var(--muted);
+  font-size: var(--type-helper-size);
+  line-height: var(--type-helper-line-height);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.actionButton,
+.useButton {
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px var(--space-12);
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.actionButton:hover:not(:disabled) {
+  background: var(--surface-hover);
+}
+
+.useButton {
+  margin-right: auto;
+  border-color: var(--action-violet-surface);
+  background: var(--action-violet-surface);
+  color: var(--action-violet-label);
+}
+
+.useButton:hover:not(:disabled) {
+  border-color: var(--action-violet-surface-hover);
+  background: var(--action-violet-surface-hover);
+  color: var(--action-violet-label);
+}
+
+.actionButton:disabled,
+.useButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.copyFeedback {
+  font-size: var(--type-helper-size);
+  line-height: var(--type-helper-line-height);
+}
+
+@keyframes imagination-result-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+  }
+}
