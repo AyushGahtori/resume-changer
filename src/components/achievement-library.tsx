@@ -15,7 +15,6 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 import AchievementPointEditor from "@/components/achievement-point-editor";
 import type { ParentOption } from "@/components/achievement-point-editor";
-import AchievementImagination from "@/components/achievement-imagination";
 import AchievementCard from "@/components/library/achievement-card";
 import ProfileSummary from "@/components/library/profile-summary";
 import LibrarySectionHeader from "@/components/library/library-section-header";
@@ -206,7 +205,6 @@ export default function AchievementLibrary({ library, source }: Props) {
   const [filters, setFilters] = useState<LibraryFilters>(EMPTY_LIBRARY_FILTERS);
   const [sort, setSort] = useState<LibrarySort>(DEFAULT_LIBRARY_SORT);
   const [editor, setEditor] = useState<EditorState>(null);
-  const [creating, setCreating] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
   const [collapsedGroups, setCollapsedGroups] = useState<ReadonlySet<string>>(
     () => new Set<string>(),
@@ -217,9 +215,7 @@ export default function AchievementLibrary({ library, source }: Props) {
   const DetailedEntryIcon = detailedEntryAction.icon;
   const editorTriggerRef = useRef<HTMLElement | null>(null);
   const pendingEditorFocusRef = useRef<HTMLElement | null>(null);
-  const canvasTriggerRef = useRef<HTMLElement | null>(null);
   const detailedEntryRef = useRef<HTMLButtonElement>(null);
-  const addAchievementRef = useRef<HTMLButtonElement>(null);
   const filtered = useMemo(
     () => filterAchievementLibrary(library, filters),
     [filters, library],
@@ -272,19 +268,6 @@ export default function AchievementLibrary({ library, source }: Props) {
     editorTriggerRef.current = trigger;
     setEditor(next);
   }
-
-  function openCanvas(trigger: HTMLElement | null) {
-    setSaveMessage("");
-    canvasTriggerRef.current = trigger;
-    setCreating(true);
-  }
-
-  useEffect(() => {
-    if (creating) return;
-    const trigger = canvasTriggerRef.current;
-    canvasTriggerRef.current = null;
-    trigger?.focus();
-  }, [creating]);
 
   useEffect(() => {
     if (editor) return;
@@ -378,9 +361,10 @@ export default function AchievementLibrary({ library, source }: Props) {
                   </button>
                   <button
                     className="ui-button ui-button--primary library-action library-action--primary"
-                    disabled={creating}
-                    onClick={() => openCanvas(addAchievementRef.current)}
-                    ref={addAchievementRef}
+                    onClick={() => {
+                      setSaveMessage("");
+                      router.push("/library/imagination");
+                    }}
                     type="button"
                   >
                     <AddIcon
@@ -409,20 +393,6 @@ export default function AchievementLibrary({ library, source }: Props) {
           skills={library.skills}
         />
       )}
-      {creating && (
-        <AchievementImagination
-          library={library}
-          source={source}
-          operation="create"
-          allowResume={false}
-          onClose={() => setCreating(false)}
-          onAccept={() => {
-            setSaveMessage("Saved to your local library.");
-            router.refresh();
-          }}
-        />
-      )}
-
       <SearchWorkbench
         filters={filters}
         hasFilters={hasFilters}
