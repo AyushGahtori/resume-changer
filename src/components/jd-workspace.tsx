@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import type { AnalysisState } from "@/components/home/job-analysis-panel";
+import { ATSAnalysisPreview } from "@/components/home/ats-analysis-preview";
 import {
   Asterisk,
   ArrowUpRight,
@@ -32,29 +34,6 @@ import PasteFromUrl from "@/components/home/paste-from-url";
 import { ROLE_FIELDS } from "@/lib/ui/role-fields";
 
 type SaveState = "loading" | "saving" | "saved" | "error" | "idle";
-type AnalysisState = "idle" | "loading" | "success" | "error";
-
-const ANALYSIS_SECTIONS: Array<{
-  key: keyof Pick<
-    JobAnalysisResult,
-    | "requiredQualifications"
-    | "preferredQualifications"
-    | "responsibilities"
-    | "toolsAndPlatforms"
-    | "domainConcepts"
-    | "atsTerms"
-    | "inferredContext"
-  >;
-  title: string;
-}> = [
-  { key: "requiredQualifications", title: "Explicit requirements" },
-  { key: "preferredQualifications", title: "Preferred qualifications" },
-  { key: "responsibilities", title: "Responsibilities" },
-  { key: "toolsAndPlatforms", title: "Tools and platforms" },
-  { key: "domainConcepts", title: "Domain concepts" },
-  { key: "atsTerms", title: "Relevant ATS terms" },
-  { key: "inferredContext", title: "Inferred context, not requirements" },
-];
 
 export default function JDWorkspace({
   pasteFromUrlAvailable = false,
@@ -73,6 +52,37 @@ export default function JDWorkspace({
   const [analysisError, setAnalysisError] = useState("");
   const [analysisCacheSaved, setAnalysisCacheSaved] = useState(false);
   const analysisRequest = useRef<AbortController | null>(null);
+  const autosaveTimeout = useRef<number | null>(null);
+  const draftChanged = useRef(false);
+
+  function focusField(field: "jobDescription" | "jobUrl") {
+    const input = document.getElementById(
+      field === "jobDescription" ? "job-description" : "job-url",
+    );
+    window.requestAnimationFrame(() => {
+      if (input?.isConnected) input.focus();
+    });
+  }
+
+  // Storage access itself can throw, before the storage helpers can catch it.
+  function localStorageOrUnavailable(): Storage {
+    try {
+      return window.localStorage;
+    } catch {
+      return {
+        getItem() {
+          throw new Error("Local storage unavailable");
+        },
+        setItem() {
+          throw new Error("Local storage unavailable");
+        },
+        removeItem() {
+          throw new Error("Local storage unavailable");
+        },
+      } as unknown as Storage;
+    }
+  }
+
   const [metricsAnnouncement, setMetricsAnnouncement] = useState("");
   const characterCount = draft.jobDescription.length;
   const tokenCount = estimateTokenCount(draft.jobDescription);
@@ -93,38 +103,52 @@ export default function JDWorkspace({
   }, [characterCount, tokenCount, isOverLimit, isReady]);
 
   useEffect(() => {
-    const result = readDraft(window.localStorage);
+    const result = readDraft(localStorageOrUnavailable());
     setDraft(result.draft);
     setRestoreMessage(
       result.state === "invalid"
         ? "The saved draft could not be restored. A new draft can be saved."
         : result.state === "unavailable"
           ? "Local storage is unavailable in this browser."
-          : "",
+          : result.state === "restored"
+            ? "Your saved draft was restored from this device."
+            : "",
     );
     setIsReady(true);
-    setSaveState(result.state === "restored" ? "saved" : "idle");
+    setSaveState(
+      result.state === "unavailable"
+        ? "error"
+        : result.state === "restored"
+          ? "saved"
+          : "idle",
+    );
   }, []);
 
   useEffect(() => {
-    if (!isReady) return;
+    if (!isReady || !draftChanged.current) return;
 
     setSaveState("saving");
-    const timeoutId = window.setTimeout(() => {
+    autosaveTimeout.current = window.setTimeout(() => {
       const hasDraftContent = Object.values(draft).some(
         (value) => typeof value === "string" && value.trim().length > 0,
       );
       const saved = hasDraftContent
-        ? writeDraft(window.localStorage, draft)
-        : clearDraft(window.localStorage);
+        ? writeDraft(localStorageOrUnavailable(), draft)
+        : clearDraft(localStorageOrUnavailable());
       setSaveState(saved ? (hasDraftContent ? "saved" : "idle") : "error");
+      autosaveTimeout.current = null;
     }, 350);
 
-    return () => window.clearTimeout(timeoutId);
+    return () => {
+      if (autosaveTimeout.current !== null)
+        window.clearTimeout(autosaveTimeout.current);
+    };
   }, [draft, isReady]);
 
   function updateField(field: keyof DraftFields, value: string) {
-    clearJobAnalysisCache(window.localStorage);
+    draftChanged.current = true;
+    setRestoreMessage("");
+    clearJobAnalysisCache(localStorageOrUnavailable());
     setAnalysisCacheSaved(false);
     analysisRequest.current?.abort();
     analysisRequest.current = null;
@@ -147,6 +171,7 @@ export default function JDWorkspace({
       }));
       setAnalysisError("Check the job description and try again.");
       setAnalysisState("error");
+      focusField("jobDescription");
       return;
     }
 
@@ -183,7 +208,11 @@ export default function JDWorkspace({
         );
       }
       setAnalysisCacheSaved(
-        writeJobAnalysisCache(window.localStorage, draft, result.analysis),
+        writeJobAnalysisCache(
+          localStorageOrUnavailable(),
+          draft,
+          result.analysis,
+        ),
       );
       setAnalysis(result.analysis);
       setAnalysisState("success");
@@ -211,10 +240,13 @@ export default function JDWorkspace({
     if (Object.keys(nextErrors).length > 0) {
       setSaveFeedbackError(true);
       setSaveFeedback("Fix the highlighted fields before saving.");
+      focusField(nextErrors.jobDescription ? "jobDescription" : "jobUrl");
       return;
     }
 
-    const saved = writeDraft(window.localStorage, draft);
+    if (autosaveTimeout.current !== null)
+      window.clearTimeout(autosaveTimeout.current);
+    const saved = writeDraft(localStorageOrUnavailable(), draft);
     setSaveState(saved ? "saved" : "error");
     setSaveFeedbackError(!saved);
     setSaveFeedback(
@@ -225,14 +257,17 @@ export default function JDWorkspace({
   }
 
   function handleClear() {
-    clearJobAnalysisCache(window.localStorage);
+    if (autosaveTimeout.current !== null)
+      window.clearTimeout(autosaveTimeout.current);
+    draftChanged.current = false;
+    clearJobAnalysisCache(localStorageOrUnavailable());
     setAnalysisCacheSaved(false);
     analysisRequest.current?.abort();
     analysisRequest.current = null;
     setAnalysis(null);
     setAnalysisError("");
     setAnalysisState("idle");
-    const cleared = clearDraft(window.localStorage);
+    const cleared = clearDraft(localStorageOrUnavailable());
     setDraft(EMPTY_DRAFT);
     setErrors({});
     setRestoreMessage("");
@@ -248,12 +283,23 @@ export default function JDWorkspace({
     saveState === "loading"
       ? "Loading draft"
       : saveState === "saving"
-        ? "Saving locally"
+        ? "Saving..."
         : saveState === "saved"
-          ? "Saved locally"
+          ? "Saved on this device"
           : saveState === "error"
             ? "Could not save locally"
             : "No saved draft";
+
+  /*
+   * A local write is pending only while the debounced save is queued. The
+   * explicit Save action writes synchronously, so it never shows a spinner
+   * for work that has already finished.
+   */
+  const hasDraftContent = Object.values(draft).some(
+    (value) => typeof value === "string" && value.trim().length > 0,
+  );
+  const isSaving = saveState === "saving" && hasDraftContent;
+  const isAnalyzing = analysisState === "loading";
 
   return (
     <section className="jd-page" aria-labelledby="page-title">
@@ -268,238 +314,199 @@ export default function JDWorkspace({
             ATS-optimized resume.
           </p>
         </div>
-        <div className="draft-state" role="status" aria-live="polite">
-          <span className={`draft-dot draft-${saveState}`} aria-hidden="true" />
-          {saveMessage}
-        </div>
       </div>
 
       {restoreMessage && (
         <p className="storage-notice" role="status">
+          <span aria-hidden="true">ⓘ</span>
           {restoreMessage}
         </p>
       )}
 
-      <form
-        aria-labelledby="role-details-title"
-        className="jd-form"
-        onSubmit={handleSubmit}
-        noValidate
-      >
-        <div className="form-topline">
-          <div>
-            <h2 id="role-details-title">Role details</h2>
-            <p>Target position</p>
-          </div>
-          <span className="optional-label">LINK OPTIONAL</span>
-        </div>
-
-        <div className="metadata-fields">
-          {ROLE_FIELDS.map((descriptor) => (
-            <RoleDetailField
-              descriptor={descriptor}
-              error={errors[descriptor.field]}
-              key={descriptor.field}
-              onChange={(value) => updateField(descriptor.field, value)}
-              value={draft[descriptor.field]}
-            />
-          ))}
-        </div>
-
-        <div className="form-divider" />
-
-        <div className="description-heading">
-          <label htmlFor="job-description">Job description</label>
-          <span className="required-label">REQUIRED</span>
-        </div>
-        <p className="description-helper" id="jd-helper">
-          Paste the job description from the company&apos;s career page.
-        </p>
-        <textarea
-          aria-describedby={
-            descriptionError
-              ? "jd-helper jd-error jd-count"
-              : "jd-helper jd-count"
-          }
-          aria-invalid={Boolean(descriptionError)}
-          disabled={!isReady}
-          id="job-description"
-          name="jobDescription"
-          onChange={(event) =>
-            updateField("jobDescription", event.target.value)
-          }
-          placeholder="Paste the job description"
-          rows={7}
-          spellCheck="false"
-          value={draft.jobDescription}
-        />
-        {descriptionError && (
-          <p className="field-error jd-error" id="jd-error" role="alert">
-            <CircleAlert aria-hidden="true" size={14} />
-            <span>{descriptionError}</span>
-          </p>
-        )}
-
-        <div className="form-footer">
-          <div className="input-metrics" id="jd-count">
-            <span className={isOverLimit ? "metric-over-limit" : undefined}>
-              {characterCount.toLocaleString()} /{" "}
-              {MAX_JD_CHARACTERS.toLocaleString()} characters
-            </span>
-            <span className="token-metric">
-              <span aria-hidden="true" className="metric-separator">
-                {"\u00b7"}
-              </span>
-              <span>~{tokenCount.toLocaleString()} tokens</span>
-            </span>
-            <span
-              className="metrics-announcement"
-              aria-live="polite"
-              aria-atomic="true"
-            >
-              {metricsAnnouncement}
-            </span>
-          </div>
-          <PasteFromUrl
-            available={pasteFromUrlAvailable}
-            jobUrl={draft.jobUrl}
-            onExtracted={handleExtractedJobDescription}
-          />
-          <div className="form-actions">
-            <button
-              className="home-action-button home-action-button--ghost"
-              onClick={handleClear}
-              type="button"
-            >
-              Clear draft
-            </button>
-            <button
-              aria-busy={analysisState === "loading"}
-              className="home-action-button home-action-button--secondary analyze-button"
-              disabled={!isReady || analysisState === "loading"}
-              onClick={handleAnalyze}
-              type="button"
-            >
-              {analysisState === "loading" ? (
-                <>
-                  <LoaderCircle
-                    aria-hidden="true"
-                    className="home-action-spinner"
-                    size={18}
-                  />
-                  <span>Analyzing...</span>
-                </>
-              ) : (
-                <>
-                  <Sparkles aria-hidden="true" size={18} />
-                  <span>
-                    {analysisState === "error"
-                      ? "Retry analysis"
-                      : "Analyze job description"}
-                  </span>
-                </>
-              )}
-            </button>
-            <button
-              className="home-action-button home-action-button--primary"
-              disabled={!isReady}
-              type="submit"
-            >
-              <span>Save draft</span>
-              <ArrowUpRight aria-hidden="true" size={18} />
-            </button>
-          </div>
-        </div>
-        {saveFeedback && (
-          <p
-            className={`form-save-feedback${saveFeedbackError ? " is-error" : ""}`}
-            role="status"
-          >
-            {saveFeedback}
-          </p>
-        )}
-      </form>
-
-      {analysisState === "loading" && (
-        <section className="jd-analysis" aria-live="polite" role="status">
-          <p>Analyzing the job description...</p>
-        </section>
-      )}
-      {analysisState === "error" && (
-        <section
-          className="jd-analysis jd-analysis-error"
-          aria-live="polite"
-          role="status"
+      <div className="jd-work-grid">
+        <form
+          aria-labelledby="role-details-title"
+          className="jd-form"
+          onSubmit={handleSubmit}
+          noValidate
         >
-          <p>{analysisError}</p>
-          <span>Your draft is unchanged. You can retry the analysis.</span>
-        </section>
-      )}
-      {analysisState === "success" && analysis && (
-        <section className="jd-analysis" aria-labelledby="analysis-title">
-          <div className="jd-analysis-heading">
+          <div className="form-topline">
             <div>
-              <h2 id="analysis-title">Job description analysis</h2>
-              <p>Review what the AI extracted before continuing.</p>
+              <h2 id="role-details-title">Role details</h2>
+              <p>Target position</p>
             </div>
-            <button
-              className="clear-button"
-              onClick={handleAnalyze}
-              type="button"
-            >
-              Reanalyze
-            </button>
+            <span className="optional-label">LINK OPTIONAL</span>
           </div>
-          {!analysisCacheSaved && (
-            <p className="analysis-cache-notice" role="status">
-              This analysis could not be saved in this browser. Resume builder
-              recommendations may require analyzing the job again.
+
+          <div className="metadata-fields">
+            {ROLE_FIELDS.map((descriptor) => (
+              <RoleDetailField
+                descriptor={descriptor}
+                error={errors[descriptor.field]}
+                key={descriptor.field}
+                onChange={(value) => updateField(descriptor.field, value)}
+                value={draft[descriptor.field]}
+              />
+            ))}
+          </div>
+
+          <div className="form-divider" />
+
+          <div className="description-heading">
+            <label htmlFor="job-description">Job description</label>
+            <span className="required-label">REQUIRED</span>
+          </div>
+          <p className="description-helper" id="jd-helper">
+            Paste the job description from the company&apos;s career page.
+          </p>
+          <textarea
+            aria-describedby={
+              descriptionError
+                ? "jd-helper jd-error jd-count"
+                : "jd-helper jd-count"
+            }
+            aria-invalid={Boolean(descriptionError)}
+            disabled={!isReady}
+            required
+            id="job-description"
+            name="jobDescription"
+            onChange={(event) =>
+              updateField("jobDescription", event.target.value)
+            }
+            placeholder="Paste the job description"
+            rows={7}
+            spellCheck="false"
+            value={draft.jobDescription}
+          />
+          {descriptionError && (
+            <p className="field-error jd-error" id="jd-error" role="alert">
+              <CircleAlert aria-hidden="true" size={14} />
+              <span>{descriptionError}</span>
             </p>
           )}
-          <div className="analysis-role">
-            <div>
-              <span>Target title</span>
-              <strong>{analysis.targetTitle}</strong>
+
+          <div className="form-footer">
+            <div className="input-metrics" id="jd-count">
+              <span className={isOverLimit ? "metric-over-limit" : undefined}>
+                {characterCount.toLocaleString()} /{" "}
+                {MAX_JD_CHARACTERS.toLocaleString()} characters
+              </span>
+              <span className="token-metric">
+                <span aria-hidden="true" className="metric-separator">
+                  {"\u00b7"}
+                </span>
+                <span>~{tokenCount.toLocaleString()} tokens</span>
+              </span>
+              <span
+                className="metrics-announcement"
+                aria-live="polite"
+                aria-atomic="true"
+              >
+                {metricsAnnouncement}
+              </span>
             </div>
-            <div>
-              <span>Seniority</span>
-              <strong>{analysis.seniority}</strong>
-            </div>
-          </div>
-          <div className="analysis-grid">
-            {ANALYSIS_SECTIONS.map(({ key, title }) => (
-              <section className="analysis-section" key={key}>
-                <h3>{title}</h3>
-                {analysis[key].length > 0 ? (
-                  <ul>
-                    {analysis[key].map((item) => (
-                      <li key={item}>{item}</li>
-                    ))}
-                  </ul>
+            <PasteFromUrl
+              available={pasteFromUrlAvailable}
+              jobUrl={draft.jobUrl}
+              onExtracted={handleExtractedJobDescription}
+            />
+            <div className="form-actions">
+              <button
+                className="home-action-button home-action-button--ghost"
+                disabled={!isReady}
+                onClick={handleClear}
+                type="button"
+              >
+                Clear draft
+              </button>
+              <button
+                aria-busy={isAnalyzing}
+                className="home-action-button home-action-button--secondary analyze-button"
+                disabled={!isReady || isAnalyzing}
+                onClick={handleAnalyze}
+                type="button"
+              >
+                {isAnalyzing ? (
+                  <>
+                    <span className="home-action-icon">
+                      <LoaderCircle
+                        aria-hidden="true"
+                        className="home-action-spinner"
+                        size={16}
+                      />
+                    </span>
+                    <span>Analyzing...</span>
+                  </>
                 ) : (
-                  <p>None identified</p>
+                  <>
+                    <span className="home-action-icon">
+                      <Sparkles aria-hidden="true" size={16} />
+                    </span>
+                    <span>
+                      {analysisState === "error"
+                        ? "Retry analysis"
+                        : "Analyze job description"}
+                    </span>
+                  </>
                 )}
-              </section>
-            ))}
-            <section className="analysis-section">
-              <h3>Synonyms and equivalent terms</h3>
-              {analysis.terminology.length > 0 ? (
-                <ul>
-                  {analysis.terminology.map(({ term, alternatives }) => (
-                    <li key={term}>
-                      <strong>{term}</strong>
-                      {alternatives.length > 0 &&
-                        `: ${alternatives.join(", ")}`}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p>None identified</p>
-              )}
-            </section>
+              </button>
+              <button
+                aria-busy={isSaving}
+                className="home-action-button home-action-button--primary"
+                disabled={!isReady}
+                type="submit"
+              >
+                {isSaving ? (
+                  <>
+                    <span className="home-action-icon">
+                      <LoaderCircle
+                        aria-hidden="true"
+                        className="home-action-spinner"
+                        size={16}
+                      />
+                    </span>
+                    <span>Saving...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Save draft</span>
+                    <span className="home-action-icon">
+                      <ArrowUpRight aria-hidden="true" size={18} />
+                    </span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
-        </section>
-      )}
+          <div
+            className={`draft-state is-${saveState}`}
+            role="status"
+            aria-live="polite"
+          >
+            <span
+              className={`draft-dot draft-${saveState}`}
+              aria-hidden="true"
+            />
+            {saveMessage}
+          </div>
+          {saveFeedback && (
+            <p
+              className={`form-save-feedback${saveFeedbackError ? " is-error" : ""}`}
+              role="status"
+            >
+              {saveFeedback}
+            </p>
+          )}
+        </form>
+
+        <ATSAnalysisPreview
+          state={analysisState}
+          analysis={analysis}
+          error={analysisError}
+          cacheSaved={analysisCacheSaved}
+          onAnalyze={handleAnalyze}
+        />
+      </div>
 
       <div className="workspace-note">
         <span className="note-mark" aria-hidden="true">

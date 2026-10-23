@@ -29,17 +29,22 @@ for (const theme of ["light", "dark"] as const) {
     }, testInfo) => {
       await page.setViewportSize(viewport);
       await page.goto("/");
-      // Use the actual theme control so this test does not depend on its storage contract.
+      const editor = page.getByRole("textbox", {
+        name: "Job description",
+        exact: true,
+      });
+      // Wait for client restoration and theme initialization before toggling.
+      await expect(editor).toBeEnabled();
+      await expect(page.locator("html")).toHaveAttribute(
+        "data-theme",
+        /^(light|dark)$/,
+      );
       if ((await page.locator("html").getAttribute("data-theme")) !== theme) {
         await page
           .getByRole("button", { name: `Switch to ${theme} mode` })
           .click();
       }
-      const editor = page.getByRole("textbox", {
-        name: "Job description",
-        exact: true,
-      });
-      await expect(editor).toBeEnabled();
+      await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
       await expect(editor).toHaveValue("");
       await editor.screenshot({ path: testInfo.outputPath("default.png") });
       await editor.fill(description);
@@ -101,7 +106,7 @@ for (const theme of ["light", "dark"] as const) {
         );
       });
       for (const ratio of contrast) expect(ratio).toBeGreaterThanOrEqual(4.5);
-      expect(geometry.height).toBe(190);
+      expect(geometry.height).toBe(240);
       expect(geometry.width).toBeCloseTo(geometry.parentWidth, 0);
       expect(geometry).toMatchObject({
         fontSize: "14px",
@@ -123,9 +128,8 @@ for (const theme of ["light", "dark"] as const) {
       await editor.screenshot({ path: testInfo.outputPath("textarea.png") });
       await editor.focus();
       await expect(editor).toBeFocused();
-      await expect
-        .poll(() => editor.evaluate((el) => getComputedStyle(el).boxShadow))
-        .toContain("2px");
+      await expect(editor).toHaveCSS("outline-width", "2px");
+      await expect(editor).toHaveCSS("outline-style", "solid");
       await page.screenshot({
         path: testInfo.outputPath("focus.png"),
         fullPage: true,
@@ -134,30 +138,27 @@ for (const theme of ["light", "dark"] as const) {
       expect(await editor.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
       await expect(editor).toHaveValue(description);
 
-      // Exercise native vertical resizing on layouts that permit it.
-      if (viewport.width <= 1100) {
-        expect(geometry.resize).toBe("vertical");
-        const bounds = (await editor.boundingBox())!;
-        await page.mouse.move(
-          bounds.x + bounds.width - 3,
-          bounds.y + bounds.height - 3,
-        );
-        await page.mouse.down();
-        await page.mouse.move(
-          bounds.x + bounds.width + 50,
-          bounds.y + bounds.height + 50,
-        );
-        await page.mouse.up();
-        // A newly visible page scrollbar can reduce available width.
-        expect((await editor.boundingBox())!.width).toBeLessThanOrEqual(
-          bounds.width,
-        );
-        expect((await editor.boundingBox())!.height).toBeGreaterThan(
-          bounds.height,
-        );
-      } else {
-        expect(geometry.resize).toBe("none");
-      }
+      // The fluid preview grid keeps native vertical resizing at every width.
+      expect(geometry.resize).toBe("vertical");
+      await editor.scrollIntoViewIfNeeded();
+      await editor.evaluate((element) => {
+        const roomBelow =
+          window.innerHeight - element.getBoundingClientRect().bottom;
+        if (roomBelow < 60) window.scrollBy(0, 60 - roomBelow);
+      });
+      const bounds = (await editor.boundingBox())!;
+      const resizeX = bounds.x + bounds.width - 3;
+      await page.mouse.move(resizeX, bounds.y + bounds.height - 3);
+      await page.mouse.down();
+      await page.mouse.move(resizeX, bounds.y + bounds.height + 45);
+      await page.mouse.up();
+      // A newly visible page scrollbar can reduce available width.
+      expect((await editor.boundingBox())!.width).toBeLessThanOrEqual(
+        bounds.width,
+      );
+      expect((await editor.boundingBox())!.height).toBeGreaterThan(
+        bounds.height,
+      );
       await editor.fill("");
       await page
         .getByRole("button", { name: "Save draft", exact: true })
@@ -171,9 +172,9 @@ for (const theme of ["light", "dark"] as const) {
           .getByRole("alert")
           .filter({ hasText: "Enter a job description before saving." }),
       ).toContainText("Enter a job description before saving.");
-      expect(
-        await editor.evaluate((el) => getComputedStyle(el).borderColor),
-      ).not.toBe(geometry.border);
+      await expect
+        .poll(() => editor.evaluate((el) => getComputedStyle(el).borderColor))
+        .not.toBe(geometry.border);
       await page.screenshot({
         path: testInfo.outputPath("error.png"),
         fullPage: true,

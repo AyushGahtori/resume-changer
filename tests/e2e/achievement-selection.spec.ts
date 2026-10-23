@@ -77,7 +77,9 @@ test("analyzes a saved JD, retries point suggestions, and allows grounded overri
   await page
     .getByRole("textbox", { name: "Job description", exact: true })
     .fill(jobDescription);
-  await expect(page.locator(".draft-state")).toContainText("Saved locally");
+  await expect(page.locator(".draft-state")).toContainText(
+    "Saved on this device",
+  );
 
   await page.route("**/api/ai/analyze-job-description", async (route) => {
     await route.fulfill({
