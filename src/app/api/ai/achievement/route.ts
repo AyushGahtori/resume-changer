@@ -4,6 +4,7 @@ import { loadResumeLibrary } from "@/lib/data/loaders";
 import { createAiProvider } from "@/lib/ai/provider-factory";
 import { AiProviderError } from "@/lib/ai/provider";
 import {
+  AchievementWritingModeSchema,
   AchievementWritingResultSchema,
   validateWritingFacts,
   type AchievementWritingInput,
@@ -32,6 +33,7 @@ const RequestSchema = z
     skillIds: z.array(StableIdSchema).max(10),
     draftText: z.string().max(8000),
     instruction: z.string().trim().min(1).max(2000),
+    writingMode: AchievementWritingModeSchema.optional(),
     targetLines: z.number().int().min(1).max(8).optional(),
   })
   .strict();
@@ -54,6 +56,16 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   const data = parsed.data;
+  if (data.operation === "create" && data.instruction.length > 500)
+    return NextResponse.json(
+      { error: "Keep the writing instruction to 500 characters or fewer." },
+      { status: 400 },
+    );
+  if (data.operation !== "create" && data.writingMode)
+    return NextResponse.json(
+      { error: "Writing modes are available for create requests only." },
+      { status: 400 },
+    );
   if (
     data.sources.length + data.skillIds.length > 10 ||
     new Set(data.sources.map((source) => source.id)).size !==
@@ -153,6 +165,7 @@ export async function POST(request: Request) {
       skills: skillNames as string[],
       draftText: data.draftText,
       instruction: data.instruction,
+      ...(data.writingMode ? { writingMode: data.writingMode } : {}),
       destination: `${destination.title} · ${destination.subtitle}`,
       targetLines: data.targetLines,
     };

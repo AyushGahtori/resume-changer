@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  ACHIEVEMENT_WRITING_MODES,
+  ACHIEVEMENT_WRITING_MODE_DIRECTIVES,
+  AchievementWritingInputSchema,
   numericClaims,
   validateWritingFacts,
   type AchievementWritingInput,
@@ -63,5 +66,46 @@ describe("focused achievement prompts and response contracts", () => {
     expect(
       validateWritingFacts(input, { text: "```25% for 1,000 users```" }),
     ).toContain("formatting");
+  });
+
+  it("maps each allowlisted create mode to a distinct server directive", () => {
+    const prompts = ACHIEVEMENT_WRITING_MODES.map(
+      (writingMode) =>
+        buildAiPrompt("achievementCreate", {
+          ...input,
+          instruction: "Keep the supported facts.",
+          writingMode,
+        }).prompt,
+    );
+    const directives = ACHIEVEMENT_WRITING_MODES.map(
+      (writingMode) => ACHIEVEMENT_WRITING_MODE_DIRECTIVES[writingMode],
+    );
+
+    expect(new Set(directives).size).toBe(6);
+    expect(new Set(prompts).size).toBe(6);
+    for (const [index, writingMode] of ACHIEVEMENT_WRITING_MODES.entries()) {
+      expect(prompts[index]).toContain(
+        ACHIEVEMENT_WRITING_MODE_DIRECTIVES[writingMode],
+      );
+      expect(prompts[index]).toContain(
+        '"instruction":"Keep the supported facts."',
+      );
+      expect(prompts[index]).not.toContain(`"writingMode":"${writingMode}"`);
+    }
+  });
+
+  it("rejects unrecognized modes while preserving the shared edit/merge instruction limit", () => {
+    expect(
+      AchievementWritingInputSchema.safeParse({
+        ...input,
+        writingMode: "invent-a-mode",
+      }).success,
+    ).toBe(false);
+    expect(
+      AchievementWritingInputSchema.safeParse({
+        ...input,
+        instruction: "x".repeat(501),
+      }).success,
+    ).toBe(true);
   });
 });
