@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { LIBRARY_ACTIONS } from "@/lib/ui/library-actions";
 import type {
   AchievementPoint,
   AchievementSource,
@@ -62,6 +63,12 @@ export default function AchievementPointEditor({
   );
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const closeAction = LIBRARY_ACTIONS["close-editor"];
+  const addMetricAction = LIBRARY_ACTIONS["add-metric"];
+  const removeMetricAction = LIBRARY_ACTIONS["remove-metric"];
+  const CloseIcon = closeAction.icon;
+  const AddMetricIcon = addMetricAction.icon;
+  const RemoveMetricIcon = removeMetricAction.icon;
 
   function toggleSkill(id: string) {
     setSkillIds((current) =>
@@ -152,13 +159,17 @@ export default function AchievementPointEditor({
           <h2>{isEditing ? "Edit achievement" : "Add achievement"}</h2>
         </div>
         <button
-          aria-label="Cancel editing"
+          aria-label={closeAction.label}
           className="icon-button"
           onClick={onCancel}
-          title="Cancel editing"
+          title={closeAction.label}
           type="button"
         >
-          ×
+          <CloseIcon
+            aria-hidden="true"
+            size={closeAction.iconSize}
+            strokeWidth={2}
+          />
         </button>
       </div>
 
@@ -271,7 +282,7 @@ export default function AchievementPointEditor({
         <div className="metric-editor-heading">
           <h3>Metrics</h3>
           <button
-            className="text-action"
+            className="ui-button ui-button--tertiary ui-button--compact"
             onClick={() =>
               setMetrics((current) => [
                 ...current,
@@ -285,7 +296,12 @@ export default function AchievementPointEditor({
             }
             type="button"
           >
-            Add metric
+            <AddMetricIcon
+              aria-hidden="true"
+              size={addMetricAction.iconSize}
+              strokeWidth={2}
+            />
+            {addMetricAction.label}
           </button>
         </div>
         {metrics.map((metric, index) => (
@@ -345,7 +361,7 @@ export default function AchievementPointEditor({
               />
             </label>
             <button
-              className="text-action metric-remove"
+              className="ui-button ui-button--tertiary ui-button--compact metric-remove"
               onClick={() =>
                 setMetrics((current) =>
                   current.filter((_, metricIndex) => metricIndex !== index),
@@ -353,7 +369,12 @@ export default function AchievementPointEditor({
               }
               type="button"
             >
-              Remove metric
+              <RemoveMetricIcon
+                aria-hidden="true"
+                size={removeMetricAction.iconSize}
+                strokeWidth={2}
+              />
+              {removeMetricAction.label}
             </button>
           </fieldset>
         ))}
@@ -374,10 +395,18 @@ export default function AchievementPointEditor({
         </p>
       )}
       <div className="editor-actions">
-        <button className="clear-button" onClick={onCancel} type="button">
+        <button
+          className="ui-button ui-button--secondary"
+          onClick={onCancel}
+          type="button"
+        >
           Cancel
         </button>
-        <button className="primary-button" disabled={saving} type="submit">
+        <button
+          className="ui-button ui-button--primary"
+          disabled={saving}
+          type="submit"
+        >
           {saving ? "Saving…" : "Save achievement"}
         </button>
       </div>

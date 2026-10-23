@@ -1425,6 +1425,120 @@ h1 {
   }
 }
 
+/*
+ * Shared button and icon conventions.
+ *
+ * The Achievement Library surface and any other route that needs a
+ * consistent action control use this family instead of one-off button
+ * rules. `primary` is the single orange action on a surface, `secondary` is
+ * a bordered neutral control, and `tertiary` is the low-emphasis inline
+ * action. Icons are decorative: the visible label stays the only accessible
+ * name, so the icon never changes what a control is announced as.
+ *
+ * The orange fill keeps the shared `--color-text-on-orange` ink rather than
+ * white. White on the shared orange only reaches 2.8:1, which fails WCAG AA
+ * for body text, while the ink reaches 6.2:1 in light mode and 6.6:1 in
+ * dark mode. The hover pair uses the darker orange with white text, which
+ * is the AA-safe combination the app already uses.
+ */
+.ui-button {
+  display: inline-flex;
+  min-width: 0;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-8);
+  padding: 0 var(--space-16);
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+  text-align: center;
+  white-space: nowrap;
+  transition:
+    border-color 120ms ease,
+    background-color 120ms ease,
+    color 120ms ease,
+    transform 100ms ease;
+}
+
+.ui-button svg {
+  flex: 0 0 auto;
+}
+
+.ui-button:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.ui-button:active:not(:disabled) {
+  transform: scale(0.98);
+  transition-duration: 100ms;
+}
+
+.ui-button:disabled {
+  cursor: not-allowed;
+}
+
+.ui-button--compact {
+  min-height: 40px;
+  padding: 0 var(--space-12);
+  font-size: 13px;
+}
+
+.ui-button--primary {
+  border-color: var(--color-orange);
+  background: var(--color-orange);
+  color: var(--color-text-on-orange);
+}
+
+.ui-button--primary:hover:not(:disabled) {
+  border-color: var(--color-orange-strong);
+  background: var(--color-orange-strong);
+  color: var(--color-text-on-orange-hover);
+}
+
+.ui-button--primary:disabled {
+  border-color: var(--color-border);
+  background: var(--color-surface-alt);
+  color: var(--color-text-muted);
+}
+
+.ui-button--secondary {
+  border-color: var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+}
+
+.ui-button--secondary:hover:not(:disabled) {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface-alt);
+}
+
+.ui-button--tertiary {
+  border-color: var(--color-border);
+  background: transparent;
+  color: var(--color-text-secondary);
+}
+
+.ui-button--tertiary:hover:not(:disabled) {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface-alt);
+  color: var(--color-text-primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-button {
+    transition: none;
+  }
+
+  .ui-button:active:not(:disabled) {
+    transform: none;
+  }
+}
+
 button:focus-visible,
 a:focus-visible {
   outline: var(--focus-outline);
@@ -2794,6 +2908,17 @@ a:focus-visible {
   text-decoration: underline;
 }
 
+/*
+ * The inline text tier shares the shared focus ring with the bordered
+ * button family, so every control on the library surface announces focus
+ * the same way.
+ */
+.text-action:focus-visible,
+.facet-chip:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
 .library-experiences {
   margin-top: var(--space-24);
 }
@@ -3058,18 +3183,48 @@ a:focus-visible {
   font-weight: 600;
 }
 
+/*
+ * The icon-only tier of the shared control family. It shares the border,
+ * radius, focus ring, and disabled treatment of `.ui-button` so an icon
+ * control reads as the same family as the labelled buttons next to it.
+ */
 .icon-button {
   display: grid;
-  width: 34px;
-  height: 34px;
+  width: 40px;
+  height: 40px;
   place-items: center;
+  padding: 0;
   border: var(--border-default);
   border-radius: var(--radius-control);
   background: var(--surface);
   color: var(--muted);
   cursor: pointer;
-  font-size: 21px;
   line-height: 1;
+  transition:
+    border-color 120ms ease,
+    background-color 120ms ease,
+    color 120ms ease;
+}
+
+.icon-button:hover {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface-alt);
+  color: var(--color-text-primary);
+}
+
+.icon-button:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.icon-button:disabled {
+  cursor: not-allowed;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .icon-button {
+    transition: none;
+  }
 }
 
 .editor-grid {
