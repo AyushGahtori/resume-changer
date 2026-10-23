@@ -142,6 +142,8 @@ html {
   --shadow: 0 14px 40px rgb(32 44 37 / 5%);
   --type-page-title-size: 40px;
   --type-page-title-line-height: 48px;
+  --type-page-title-mobile-size: 32px;
+  --type-page-title-mobile-line-height: 40px;
   --type-section-heading-size: 24px;
   --type-section-heading-line-height: 32px;
   --type-card-heading-size: 16px;
@@ -150,6 +152,10 @@ html {
   --type-field-label-line-height: 20px;
   --type-body-size: 14px;
   --type-body-line-height: 20px;
+  --type-body-large-size: 16px;
+  --type-body-large-line-height: 24px;
+  --type-label-size: 12px;
+  --type-label-line-height: 16px;
   --type-helper-size: 12px;
   --type-helper-line-height: 16px;
   --type-caption-size: 12px;
@@ -482,6 +488,12 @@ a {
 
 .nav-link.is-active .nav-icon {
   color: var(--color-nav-active-text);
+}
+
+.app-frame.is-generate-route {
+  --color-nav-active-surface: var(--accent-soft);
+  --color-nav-active-text: var(--accent-hover);
+  --color-nav-active-border: transparent;
 }
 
 .app-frame.is-library-route {
@@ -4975,58 +4987,182 @@ a:focus-visible {
 }
 
 .generation-heading h1 {
-  font-size: 38px;
+  font-size: var(--type-page-title-size);
+  line-height: var(--type-page-title-line-height);
 }
 
+.generation-heading .eyebrow {
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+}
+
+.generation-heading .page-intro {
+  font-size: var(--type-body-large-size);
+  line-height: var(--type-body-large-line-height);
+}
+
+/*
+ * The job context card states the job the user is applying for. It is a
+ * neutral bordered surface: a small uppercase label, the role as the
+ * prominent line, and the company and the description length as secondary
+ * text. Only what the restored draft actually holds is shown, and a long
+ * value wraps instead of stretching the card.
+ */
 .generation-draft {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 16px;
-  padding: 13px 16px;
+  padding: 12px 16px;
+  border: 1px solid var(--line);
   border-left: 2px solid var(--teal);
   background: var(--surface-soft);
   color: var(--muted);
-  font-size: 11px;
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line-height);
 }
 
-.generation-draft > div {
+.generation-draft-details {
   display: flex;
   min-width: 0;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 6px 14px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.generation-draft-source {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 14px;
+}
+
+/*
+ * The builder's source choice is a two-option segmented control. The loaded
+ * source is the one that carries the current-page marker, and it also gets
+ * the tinted segment, so the current value is never carried by color alone.
+ */
+.builder-source-switch {
+  display: inline-flex;
+  flex: 0 0 auto;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+}
+
+.builder-source-switch a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 72px;
+  padding: 5px 12px;
+  border-radius: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 550;
+  line-height: 1.5;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.builder-source-switch a:hover {
+  background: var(--surface-soft);
+  color: var(--ink);
+}
+
+.builder-source-switch a[aria-current="page"] {
+  background: var(--surface-hover);
+  color: var(--ink);
+  font-weight: 650;
+}
+
+/*
+ * The pressed state is one step further than the hover state, so a pointer
+ * press is readable on both segments.
+ */
+.builder-source-switch a:not([aria-current="page"]):active {
+  background: var(--surface-hover);
+  color: var(--ink);
+}
+
+.builder-source-switch a[aria-current="page"]:active {
+  background: var(--line);
+  color: var(--ink);
 }
 
 .generation-draft p {
   margin: 0;
 }
 
-.generation-draft strong {
-  color: var(--ink);
-  font-size: 12px;
+.generation-draft-context {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
 }
 
-.generation-draft a,
+.generation-draft-role {
+  color: var(--ink);
+  font-size: var(--type-card-heading-size);
+  font-weight: 600;
+  line-height: var(--type-card-heading-line-height);
+  overflow-wrap: anywhere;
+}
+
+.generation-draft-role.is-empty {
+  color: var(--quiet);
+  font-size: var(--type-body-size);
+  font-weight: 400;
+  line-height: var(--type-body-line-height);
+}
+
+.generation-draft-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 14px;
+  color: var(--muted);
+}
+
+.generation-draft-meta span {
+  overflow-wrap: anywhere;
+}
+
+.generation-draft-count {
+  font-variant-numeric: tabular-nums;
+}
+
+.generation-draft-note {
+  color: var(--muted);
+}
+
+/*
+ * The job context links keep the accent color. The source choice is a
+ * control rather than a link in a sentence, so it is left out on purpose.
+ */
+.generation-draft-details a,
+.generation-draft-source > a,
 .generation-error a {
   color: var(--teal);
 }
 
 .generation-label {
-  flex: 0 0 100%;
   margin: 0;
   color: var(--quiet);
-  font-size: 9px;
-  font-weight: 700;
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+  font-weight: 600;
+  letter-spacing: 0;
 }
 
 .generation-notice,
 .generation-error-message {
   margin: 0 0 12px;
   color: var(--muted);
-  font-size: 11px;
-  line-height: 1.5;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
 }
 
 .generation-error-message {
@@ -5043,6 +5179,13 @@ a:focus-visible {
   gap: 22px;
 }
 
+/* The preview keeps a stable pane beside the editing column on wide screens. */
+@media (min-width: 1101px) {
+  .generation-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(430px, 1.1fr);
+  }
+}
+
 .generation-selection,
 .generation-preview {
   min-width: 0;
@@ -5052,8 +5195,29 @@ a:focus-visible {
   background: var(--surface);
 }
 
+#resume-editing:focus {
+  outline: none;
+}
+
+#resume-editing:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* The return path only applies when the preview sits below the editor. */
+.preview-return-link {
+  display: none;
+  margin-top: 7px;
+  color: var(--imagination);
+  font-size: 10px;
+  font-weight: 650;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 .generation-section-heading {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
@@ -5062,20 +5226,24 @@ a:focus-visible {
 
 .generation-section-heading h2 {
   margin: 0;
-  font-size: 15px;
-  font-weight: 650;
+  font-size: var(--type-section-heading-size);
+  line-height: var(--type-section-heading-line-height);
+  font-weight: 600;
 }
 
 .generation-section-heading p {
   margin: 5px 0 0;
   color: var(--muted);
-  font-size: 10px;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
+  font-variant-numeric: tabular-nums;
 }
 
 .generation-selection-actions,
 .generation-output-actions {
   display: flex;
-  flex: 0 0 auto;
+  flex: 0 1 auto;
+  max-width: 100%;
   gap: 7px;
 }
 
@@ -5106,13 +5274,15 @@ a:focus-visible {
   background: transparent;
   color: var(--muted);
   cursor: pointer;
-  font-size: 10px;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
 }
 
 .generation-output-tabs button[aria-selected="true"] {
   background: var(--surface);
   color: var(--ink);
   box-shadow: 0 0 0 1px var(--line);
+  font-weight: 650;
 }
 
 .generation-output-tabs button:disabled {
@@ -5121,7 +5291,7 @@ a:focus-visible {
 }
 
 .generation-selection-actions button,
-.generation-output-actions button {
+.generation-output-actions > button {
   min-height: 30px;
   padding: 0 9px;
   border: 1px solid var(--line);
@@ -5129,11 +5299,12 @@ a:focus-visible {
   background: var(--surface);
   color: var(--muted);
   cursor: pointer;
-  font-size: 10px;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
 }
 
 .generation-selection-actions button:hover,
-.generation-output-actions button:hover {
+.generation-output-actions > button:hover {
   border-color: var(--line-strong);
   background: var(--surface-hover);
   color: var(--ink);
@@ -5143,7 +5314,7 @@ a:focus-visible {
   border-color: color-mix(in srgb, var(--imagination) 45%, var(--line));
   background: var(--imagination-soft);
   color: var(--imagination-hover);
-  font-weight: 650;
+  font-weight: 600;
 }
 
 .generation-selection-actions .generation-ai-button:hover:not(:disabled) {
@@ -5157,14 +5328,78 @@ a:focus-visible {
   opacity: 0.55;
 }
 
-.selection-analysis-notice {
+/*
+ * The job analysis block states what the builder knows about the analyzed
+ * job description. It never implies an analysis that does not exist.
+ */
+.selection-analysis {
   margin: 0 0 12px;
-  color: var(--muted);
-  font-size: 10px;
-  line-height: 1.5;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-soft);
 }
 
-.selection-analysis-notice a {
+.selection-analysis-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.selection-analysis-heading h3 {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.selection-analysis-heading p {
+  margin: 3px 0 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.selection-analysis-state {
+  flex: 0 0 auto;
+  padding: 2px 7px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--quiet);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.selection-analysis-state.is-ready {
+  border-color: color-mix(in srgb, var(--color-success) 45%, transparent);
+  background: var(--teal-soft);
+  color: var(--teal);
+}
+
+.selection-analysis-state.is-loading {
+  border-color: color-mix(in srgb, var(--color-info) 45%, transparent);
+  background: color-mix(in srgb, var(--color-info) 10%, var(--surface));
+  color: var(--color-info-strong);
+}
+
+.selection-analysis-state.is-error {
+  border-color: color-mix(in srgb, var(--color-error) 45%, transparent);
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.selection-analysis-detail {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
+}
+
+.selection-analysis-detail a {
   color: var(--accent-hover);
 }
 
@@ -5185,15 +5420,16 @@ a:focus-visible {
 .selection-coverage h4,
 .selection-skill-recommendations h4 {
   margin: 0;
-  font-size: 11px;
-  font-weight: 650;
+  font-size: var(--type-card-heading-size);
+  line-height: var(--type-card-heading-line-height);
+  font-weight: 600;
 }
 
 .selection-recommendation-heading p {
   margin: 4px 0 0;
   color: var(--muted);
-  font-size: 10px;
-  line-height: 1.45;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
 }
 
 .selection-recommendation-heading button {
@@ -5205,15 +5441,16 @@ a:focus-visible {
   background: var(--surface);
   color: var(--muted);
   cursor: pointer;
-  font-size: 9px;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
 }
 
 .selection-budget,
 .selection-fallback-notice {
   margin: 7px 0 0;
   color: var(--muted);
-  font-size: 9px;
-  line-height: 1.45;
+  font-size: var(--type-helper-size);
+  line-height: var(--type-helper-line-height);
 }
 
 .selection-fallback-notice {
@@ -5231,9 +5468,32 @@ a:focus-visible {
   gap: 8px;
 }
 
-.selection-coverage-heading strong {
+.selection-coverage-source {
+  margin: var(--space-4) 0 0;
+  color: var(--quiet);
+  font-size: var(--type-helper-size);
+  line-height: var(--type-helper-line-height);
+}
+
+.selection-coverage-count {
   color: var(--teal);
-  font-size: 9px;
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.selection-coverage-denominator,
+.selection-coverage-breakdown {
+  margin: var(--space-4) 0 0;
+  color: var(--muted);
+  font-size: var(--type-helper-size);
+  line-height: var(--type-helper-line-height);
+}
+
+.selection-coverage-breakdown {
+  color: var(--quiet);
 }
 
 .selection-coverage progress {
@@ -5251,8 +5511,9 @@ a:focus-visible {
 .coverage-category h5 {
   margin: 0;
   color: var(--ink);
-  font-size: 9px;
-  font-weight: 650;
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+  font-weight: 600;
 }
 
 .selection-coverage ul {
@@ -5265,8 +5526,8 @@ a:focus-visible {
 
 .selection-coverage li {
   color: var(--muted);
-  font-size: 9px;
-  line-height: 1.45;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
 }
 
 .selection-coverage details {
@@ -5275,32 +5536,55 @@ a:focus-visible {
 
 .selection-coverage summary {
   display: grid;
-  grid-template-columns: 76px minmax(0, 1fr);
+  grid-template-columns: 96px minmax(0, 1fr);
   gap: 7px;
   cursor: pointer;
 }
 
 .selection-coverage details p {
-  margin: 4px 0 0 83px;
+  margin: 4px 0 0 103px;
   color: var(--ink);
   overflow-wrap: anywhere;
 }
 
 .coverage-status {
-  color: var(--accent-hover);
-  font-size: 8px;
-  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  color: var(--quiet);
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+  font-weight: 600;
+  letter-spacing: 0;
   text-transform: uppercase;
 }
 
-.coverage-status.is-covered {
+.coverage-status-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+
+.coverage-status.is-supported {
   color: var(--teal);
+}
+
+.coverage-status.is-partial {
+  color: var(--color-warning-strong);
+}
+
+.coverage-status.is-uncertain {
+  color: var(--color-info-strong);
+}
+
+.coverage-status.is-missing {
+  color: var(--quiet);
 }
 
 .selection-coverage > p {
   margin: 5px 0 0;
   color: var(--muted);
-  font-size: 9px;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
 }
 
 .selection-skill-recommendations {
@@ -5315,14 +5599,15 @@ a:focus-visible {
   align-items: start;
   gap: 7px;
   color: var(--ink);
-  font-size: 9px;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
 }
 
 .selection-skill-option input {
   width: 13px;
   height: 13px;
   margin: 1px 0 0;
-  accent-color: var(--accent);
+  accent-color: var(--imagination);
 }
 
 .selection-skill-option span,
@@ -5335,8 +5620,8 @@ a:focus-visible {
 .selection-skill-option small {
   margin-top: 3px;
   color: var(--muted);
-  font-size: 8px;
-  line-height: 1.4;
+  font-size: var(--type-helper-size);
+  line-height: var(--type-helper-line-height);
 }
 
 .guided-tailor-review {
@@ -5360,8 +5645,9 @@ a:focus-visible {
 .guided-tailor-proposal h4 {
   margin: 0;
   color: var(--ink);
-  font-size: 11px;
-  font-weight: 650;
+  font-size: var(--type-card-heading-size);
+  line-height: var(--type-card-heading-line-height);
+  font-weight: 600;
 }
 
 .guided-tailor-heading p,
@@ -5369,15 +5655,17 @@ a:focus-visible {
 .guided-tailor-proposal p {
   margin: 4px 0 0;
   color: var(--muted);
-  font-size: 9px;
-  line-height: 1.5;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
 }
 
 .guided-tailor-count {
   flex: 0 0 auto;
   color: var(--accent-hover);
-  font-size: 9px;
-  font-weight: 650;
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
 .guided-tailor-actions {
@@ -5394,7 +5682,8 @@ a:focus-visible {
   background: var(--surface);
   color: var(--ink);
   cursor: pointer;
-  font-size: 9px;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
 }
 
 .guided-tailor-actions button:disabled {
@@ -5409,8 +5698,8 @@ a:focus-visible {
 .auto-tailor-status {
   margin: 8px 0 12px;
   color: var(--muted);
-  font-size: 10px;
-  line-height: 1.5;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
 }
 
 .draft-handoff {
@@ -5418,13 +5707,13 @@ a:focus-visible {
   border-top: 1px solid var(--line);
   padding-top: 8px;
   color: var(--muted);
-  font-size: 9px;
-  line-height: 1.5;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
 }
 
 .draft-handoff summary {
   color: var(--ink);
-  font-weight: 650;
+  font-weight: 600;
   cursor: pointer;
 }
 
@@ -5450,7 +5739,10 @@ a:focus-visible {
 
 .draft-handoff li strong {
   color: var(--accent-hover);
-  font-size: 8px;
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+  font-weight: 600;
+  letter-spacing: 0;
   text-transform: uppercase;
 }
 
@@ -5474,7 +5766,9 @@ a:focus-visible {
 .draft-evidence-suggestions h4 {
   margin: 0;
   color: var(--ink);
-  font-size: 10px;
+  font-size: var(--type-card-heading-size);
+  line-height: var(--type-card-heading-line-height);
+  font-weight: 600;
 }
 
 .draft-evidence-suggestions > p,
@@ -5482,8 +5776,8 @@ a:focus-visible {
 .draft-evidence-suggestions small {
   margin: 0;
   color: var(--muted);
-  font-size: 9px;
-  line-height: 1.5;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
   overflow-wrap: anywhere;
 }
 
@@ -5499,7 +5793,9 @@ a:focus-visible {
 
 .draft-evidence-suggestions article > strong {
   color: var(--ink);
-  font-size: 9px;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
+  font-weight: 600;
 }
 
 .draft-evidence-suggestions select {
@@ -5511,7 +5807,8 @@ a:focus-visible {
   background: var(--surface);
   color: var(--ink);
   font: inherit;
-  font-size: 9px;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
 }
 
 .guided-tailor-proposals {
@@ -5544,8 +5841,10 @@ a:focus-visible {
   display: block;
   margin-bottom: 4px;
   color: var(--accent-hover);
-  font-size: 8px;
-  font-weight: 700;
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+  font-weight: 600;
+  letter-spacing: 0;
   text-transform: uppercase;
 }
 
@@ -5565,8 +5864,8 @@ a:focus-visible {
   background: var(--surface-soft);
   color: var(--ink);
   font: inherit;
-  font-size: 9px;
-  line-height: 1.5;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
   resize: vertical;
 }
 
@@ -5576,11 +5875,12 @@ a:focus-visible {
   flex-wrap: wrap;
   gap: 4px 8px;
   color: var(--muted);
-  font-size: 8px;
+  font-size: var(--type-helper-size);
+  line-height: var(--type-helper-line-height);
 }
 
 .guided-tailor-terms > span {
-  font-weight: 650;
+  font-weight: 600;
 }
 
 .guided-tailor-terms ul {
@@ -5604,7 +5904,8 @@ a:focus-visible {
   align-items: flex-start;
   gap: 6px;
   color: var(--ink);
-  font-size: 9px;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
   font-weight: 600;
   cursor: pointer;
 }
@@ -5613,7 +5914,7 @@ a:focus-visible {
   width: 13px;
   height: 13px;
   margin: 0;
-  accent-color: var(--accent);
+  accent-color: var(--imagination);
 }
 
 .generation-output-actions .generation-compile-button {
@@ -5628,9 +5929,104 @@ a:focus-visible {
   color: var(--accent-contrast);
 }
 
+/*
+ * The search and the experience filter over the achievement list.
+ *
+ * The board keeps the magnifier, the native select and the quiet reset on
+ * one row; they wrap into a stack on a narrow screen.
+ */
+.generation-selection-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.generation-search-field {
+  display: flex;
+  flex: 1 1 160px;
+  min-width: 0;
+  align-items: center;
+  gap: 7px;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--muted);
+}
+
+.generation-search-field input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--ink);
+  font-size: 12px;
+}
+
+.generation-search-field:focus-within {
+  border-color: var(--focus);
+  outline: 2px solid var(--color-violet);
+  outline-offset: 1px;
+}
+
+.generation-experience-filter {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 200px;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 12px;
+}
+
+.generation-experience-filter:focus-visible {
+  border-color: var(--focus);
+  outline: 2px solid var(--color-violet);
+  outline-offset: 1px;
+}
+
+.generation-filter-reset {
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.generation-filter-reset:hover {
+  border-color: var(--line-strong);
+  background: var(--surface-hover);
+  color: var(--ink);
+}
+
+.generation-filter-count {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.generation-no-matches {
+  margin: 0;
+  padding: 16px 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
 .generation-groups {
   display: grid;
-  gap: 14px;
+  gap: 12px;
   max-height: min(58vh, 620px);
   overflow: auto;
   padding-right: 4px;
@@ -5675,23 +6071,28 @@ a:focus-visible {
   align-items: baseline;
   flex-wrap: wrap;
   gap: 4px 8px;
-  padding: 0 0 7px;
+  padding: 0 0 6px;
 }
 
 .generation-group legend span {
-  color: var(--accent-hover);
-  font-size: 8px;
-  font-weight: 700;
+  color: var(--accent);
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+  font-weight: 600;
+  letter-spacing: 0;
 }
 
 .generation-group legend strong {
   color: var(--ink);
-  font-size: 11px;
+  font-size: var(--type-card-heading-size);
+  line-height: var(--type-card-heading-line-height);
+  font-weight: 600;
 }
 
 .generation-group legend small {
   color: var(--muted);
-  font-size: 10px;
+  font-size: var(--type-helper-size);
+  line-height: var(--type-helper-line-height);
 }
 
 .generation-points {
@@ -5707,18 +6108,19 @@ a:focus-visible {
   border-bottom: 1px solid var(--line);
   color: var(--ink);
   cursor: pointer;
-  font-size: 11px;
-  line-height: 1.5;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
 }
 
 .generation-point input {
   width: 14px;
   height: 14px;
   margin: 1px 0 0;
-  accent-color: var(--teal);
+  accent-color: var(--imagination);
 }
 
 .generation-point span {
+  min-width: 0;
   overflow-wrap: anywhere;
 }
 
@@ -5726,8 +6128,8 @@ a:focus-visible {
   display: block;
   margin-top: 4px;
   color: var(--muted);
-  font-size: 9px;
-  line-height: 1.4;
+  font-size: var(--type-helper-size);
+  line-height: var(--type-helper-line-height);
 }
 
 .generation-preview {
@@ -5736,36 +6138,133 @@ a:focus-visible {
 }
 
 .generation-preview-empty {
-  display: grid;
+  display: flex;
   min-height: 260px;
-  place-items: center;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 20px;
   border: 1px dashed var(--line-strong);
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
   text-align: center;
 }
 
 .generation-preview-empty p {
   margin: 0;
-  padding: 20px;
+  padding: 0;
+}
+
+.generation-preview-empty-icon {
+  color: var(--muted);
+}
+
+.generation-preview-empty-icon.is-spinning {
+  animation: preview-status-spin 900ms linear infinite;
+}
+
+@keyframes preview-status-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .generation-metadata {
   margin: 0 0 9px;
   color: var(--muted);
-  font-size: 10px;
+  font-size: var(--type-helper-size);
+  line-height: var(--type-helper-line-height);
 }
 
 .generation-origin {
-  margin: 0 0 10px;
-  padding: 9px 11px;
+  margin-bottom: 10px;
+}
+
+/*
+ * Status banners carry an icon, a message, and a semantic tone. The tone is
+ * only a second signal: every banner repeats its meaning in words, so the
+ * message stays readable without the color.
+ */
+.status-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 10px;
   border: 1px solid var(--line);
-  border-left: 3px solid var(--teal);
   border-radius: 5px;
-  background: var(--surface-soft);
   color: var(--ink);
-  font-size: 11px;
-  line-height: 1.5;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
+}
+
+.status-banner-icon {
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+
+.status-banner-body {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.status-banner-body > p {
+  margin: 0;
+}
+
+.status-banner--info {
+  border-color: color-mix(in srgb, var(--color-info) 34%, var(--line));
+  background: color-mix(in srgb, var(--color-info) 9%, var(--surface));
+}
+
+.status-banner--info .status-banner-icon {
+  color: var(--color-info-strong);
+}
+
+.status-banner--success {
+  border-color: color-mix(in srgb, var(--color-success) 34%, var(--line));
+  background: var(--color-success-subtle);
+}
+
+.status-banner--success .status-banner-icon {
+  color: var(--color-success-strong);
+}
+
+.status-banner--caution {
+  border-color: color-mix(in srgb, var(--color-warning) 34%, var(--line));
+  background: var(--color-warning-subtle);
+}
+
+.status-banner--caution .status-banner-icon {
+  color: var(--color-warning-strong);
+}
+
+.status-banner--error {
+  border-color: color-mix(in srgb, var(--color-error) 34%, var(--line));
+  background: var(--color-error-subtle);
+}
+
+.status-banner--error .status-banner-icon {
+  color: var(--color-error-strong);
+}
+
+.status-banner .generation-metadata {
+  margin: 0;
+  color: inherit;
+}
+
+.generation-metadata-notice {
+  margin-bottom: 9px;
+}
+
+.preview-status {
+  margin-bottom: 10px;
+}
+
+.preview-status-detail {
+  color: var(--muted);
+  font-size: 10px;
 }
 
 .latex-preview {
@@ -5779,8 +6278,8 @@ a:focus-visible {
   background: var(--surface-soft);
   color: var(--ink);
   font-family: "Cascadia Code", Consolas, monospace;
-  font-size: 10px;
-  line-height: 1.55;
+  font-size: var(--type-helper-size);
+  line-height: var(--type-helper-line-height);
   tab-size: 2;
   white-space: pre;
   scrollbar-color: var(--accent) var(--surface-soft);
@@ -5798,11 +6297,35 @@ a:focus-visible {
 
 .generation-error-message summary {
   cursor: pointer;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
+  font-weight: 600;
+}
+
+.generation-error-message pre {
+  max-height: 220px;
+  overflow: auto;
+  margin: 8px 0 0;
+  color: var(--ink);
+  font-family: "Cascadia Code", Consolas, monospace;
+  font-size: var(--type-helper-size);
+  line-height: var(--type-helper-line-height);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.status-banner details {
+  margin-top: 8px;
+  color: var(--ink);
+}
+
+.status-banner summary {
+  cursor: pointer;
   font-size: 10px;
   font-weight: 650;
 }
 
-.generation-error-message pre {
+.status-banner pre {
   max-height: 220px;
   overflow: auto;
   margin: 8px 0 0;
@@ -5830,24 +6353,30 @@ a:focus-visible {
 
 .pdf-preview-toolbar {
   display: flex;
-  min-height: 42px;
+  min-height: 38px;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 5px 9px;
+  gap: 8px 12px;
+  padding: 4px 10px;
   border-bottom: 1px solid var(--line);
   background: var(--surface);
 }
 
 .pdf-preview-toolbar button {
-  min-height: 29px;
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   padding: 0 9px;
   border: 1px solid var(--line);
   border-radius: 4px;
   background: var(--surface);
   color: var(--ink);
   cursor: pointer;
-  font-size: 10px;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
 }
 
 .pdf-preview-toolbar button:hover:not(:disabled) {
@@ -5860,19 +6389,45 @@ a:focus-visible {
   opacity: 0.45;
 }
 
+/* Icon-only controls keep a square footprint so the row never shifts. */
+.pdf-preview-toolbar .pdf-toolbar-icon {
+  width: 28px;
+  min-width: 28px;
+  padding: 0;
+}
+
+.pdf-preview-toolbar .pdf-toolbar-action {
+  white-space: nowrap;
+}
+
 .pdf-zoom-control {
   display: inline-flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
   color: var(--muted);
-  font-size: 10px;
+  font-size: var(--type-helper-size);
+  line-height: var(--type-helper-line-height);
   font-variant-numeric: tabular-nums;
 }
 
-.pdf-zoom-control button {
-  width: 30px;
-  padding: 0;
-  font-size: 16px;
+.pdf-zoom-value {
+  min-width: 56px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.pdf-toolbar-divider {
+  width: 1px;
+  height: 16px;
+  background: var(--line);
+}
+
+.pdf-preview-toolbar .pdf-fit-button {
+  width: auto;
+  padding: 0 8px;
+  font-size: 9px;
+  white-space: nowrap;
 }
 
 .pdf-preview-frame {
@@ -5903,7 +6458,8 @@ a:focus-visible {
   padding-top: 15px;
   border-top: 1px solid var(--line);
   color: var(--muted);
-  font-size: 10px;
+  font-size: var(--type-helper-size);
+  line-height: var(--type-helper-line-height);
 }
 
 .generation-error {
@@ -5913,13 +6469,14 @@ a:focus-visible {
 }
 
 .generation-error h1 {
-  font-size: 34px;
+  font-size: var(--type-page-title-size);
+  line-height: var(--type-page-title-line-height);
 }
 
 .generation-error > p:not(.eyebrow) {
   color: var(--muted);
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--type-body-large-size);
+  line-height: var(--type-body-large-line-height);
 }
 
 @media (max-width: 1100px) {
@@ -5930,6 +6487,10 @@ a:focus-visible {
   .generation-preview {
     position: static;
   }
+
+  .preview-return-link {
+    display: inline-block;
+  }
 }
 
 @media (max-width: 700px) {
@@ -5938,12 +6499,18 @@ a:focus-visible {
   }
 
   .generation-heading h1 {
-    font-size: 34px;
+    font-size: var(--type-page-title-mobile-size);
+    line-height: var(--type-page-title-mobile-line-height);
   }
 
   .generation-draft {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .generation-draft-source {
+    width: 100%;
+    flex-wrap: wrap;
   }
 
   .generation-selection,
@@ -5974,15 +6541,33 @@ a:focus-visible {
     min-height: 360px;
   }
 
+  /* The viewer toolbar wraps instead of overflowing on narrow screens. */
+  .pdf-preview-toolbar {
+    gap: 8px;
+  }
+
+  .pdf-zoom-control {
+    gap: 8px;
+  }
+
+  .pdf-zoom-value {
+    min-width: 48px;
+  }
+
   .generation-groups {
     max-height: 65vh;
+  }
+
+  .generation-search-field {
+    flex-basis: 100%;
   }
 
   .latex-preview {
     min-height: 260px;
     max-height: 60vh;
     padding: 11px;
-    font-size: 9px;
+    font-size: var(--type-helper-size);
+    line-height: var(--type-helper-line-height);
   }
 
   .generation-footer {

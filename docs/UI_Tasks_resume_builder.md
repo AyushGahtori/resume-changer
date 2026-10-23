@@ -286,11 +286,11 @@ Reference files: docs/ui-images/resume-builder/builder-overview-light-dark.png, 
 
 **Files:** Inspect src/app/generate/page.tsx, src/components/resume-generator.tsx, src/components/resume-studio.tsx, src/components/workspace-shell.tsx, src/app/studio.css, src/app/globals.css, and relevant generation/selection/preview tests. Add no visual component here.
 
-- [ ] Record the current job-context route, source value, draft restore, selection, AI consent/fallback, generation, review, history, compile, download, and error behavior.
-- [ ] Capture current light/dark screenshots at 1440x900, 1024x768, 768x1024, 390x844, and 320x740 using synthetic data only.
-- [ ] Map every board control to its current handler, derived data, or unsupported status; identify controls that must be omitted rather than faked.
-- [ ] Record current section order, viewer states, empty states, API calls, keyboard behavior, and any product data omitted by the board.
-- [ ] Run existing focused builder tests before visual work and keep their assertions as regression coverage.
+- [x] Record the current job-context route, source value, draft restore, selection, AI consent/fallback, generation, review, history, compile, download, and error behavior.
+- [x] Capture current light/dark screenshots at 1440x900, 1024x768, 768x1024, 390x844, and 320x740 using synthetic data only.
+- [x] Map every board control to its current handler, derived data, or unsupported status; identify controls that must be omitted rather than faked.
+- [x] Record current section order, viewer states, empty states, API calls, keyboard behavior, and any product data omitted by the board.
+- [x] Run existing focused builder tests before visual work and keep their assertions as regression coverage.
 
 **Acceptance:** A concise inventory and before screenshots exist; no production behavior, data contract, or app styling changes are made.
 
@@ -308,11 +308,11 @@ Reference file: docs/ui-images/resume-builder/ui-kit-color-palette.png
 
 **Files:** src/app/globals.css and shared token tests if the project has a token contract. Update other UI plans only as part of an explicitly coordinated design-system decision.
 
-- [ ] Use or map the printed orange, violet, accent, background, surface, text, border, and semantic status values from the token table above.
-- [ ] Reconcile differences with existing app-wide/home/library values in one shared place; do not add builder-only duplicate tokens.
-- [ ] Preserve current dark theme values where the board has no exact dark hex; treat new dark shades as estimates and verify contrast.
-- [ ] Keep orange for the main resume action, violet for AI/selected/focus emphasis, and success/warning/error for truthful state only.
-- [ ] Add a focused token test only if tokens are represented in a testable structured source.
+- [x] Use or map the printed orange, violet, accent, background, surface, text, border, and semantic status values from the token table above.
+- [x] Reconcile differences with existing app-wide/home/library values in one shared place; do not add builder-only duplicate tokens.
+- [x] Preserve current dark theme values where the board has no exact dark hex; treat new dark shades as estimates and verify contrast.
+- [x] Keep orange for the main resume action, violet for AI/selected/focus emphasis, and success/warning/error for truthful state only.
+- [x] Add a focused token test only if tokens are represented in a testable structured source.
 
 **Acceptance:** Builder controls use the agreed shared tokens in both themes; no private builder palette or unexplained app-wide color fork is introduced.
 
@@ -332,11 +332,11 @@ Reference files: docs/ui-images/resume-builder/ui-kit-typography.png, docs/ui-im
 
 **Files:** src/app/globals.css and component styles only where existing typography is not already tokenized; add computed-style checks to a focused UI test where useful.
 
-- [ ] Preserve Georgia/Times for current serif headings and Arial/Helvetica for operational UI. Do not load Playfair Display/Inter or change remote font dependencies.
-- [ ] Define/reuse responsive sizes: page title near 40/48 desktop and 32/40 mobile; section 24/32; card title 16-20/24; body 14-16/20-24; labels/meta 12/16.
-- [ ] Use semibold labels/headings, regular explanatory text, and stable tabular counts where the app already uses numeric comparisons.
-- [ ] Keep letter spacing at zero; do not use viewport-scaled font sizes or shrink text to fit.
-- [ ] Check long company names, job titles, skill labels, counts, and validation copy wrap without clipping in both themes.
+- [x] Preserve Georgia/Times for current serif headings and Arial/Helvetica for operational UI. Do not load Playfair Display/Inter or change remote font dependencies.
+- [x] Define/reuse responsive sizes: page title near 40/48 desktop and 32/40 mobile; section 24/32; card title 16-20/24; body 14-16/20-24; labels/meta 12/16.
+- [x] Use semibold labels/headings, regular explanatory text, and stable tabular counts where the app already uses numeric comparisons.
+- [x] Keep letter spacing at zero; do not use viewport-scaled font sizes or shrink text to fit.
+- [x] Check long company names, job titles, skill labels, counts, and validation copy wrap without clipping in both themes.
 
 **Acceptance:** Product hierarchy follows the board while retaining the existing fonts and readable line lengths at supported widths.
 

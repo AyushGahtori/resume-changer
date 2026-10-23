@@ -1,8 +1,25 @@
 "use client";
 
 import Link from "next/link";
+import { Search } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { CSSProperties, FormEvent } from "react";
+import type { CSSProperties, FormEvent, KeyboardEvent, ReactNode } from "react";
+import {
+  CircleAlert,
+  CircleCheck,
+  CircleDashed,
+  CircleHelp,
+  CircleMinus,
+  CircleX,
+  FileText,
+  Info,
+  LoaderCircle,
+  Maximize2,
+  Minimize2,
+  Minus,
+  Plus,
+  TriangleAlert,
+} from "lucide-react";
 import {
   EMPTY_DRAFT,
   readDraft,
@@ -22,10 +39,28 @@ import {
   buildProfileEvidence,
 } from "@/lib/ai/evidence";
 import { assessRequirementCoverage } from "@/lib/ai/requirement-coverage";
+import type { CoverageStatus } from "@/lib/ai/requirement-coverage";
+import {
+  coverageStatusLabel,
+  coverageStatusTone,
+  describeCoverageDenominator,
+  describeCoverageSource,
+  jobAnalysisStateMessage,
+  resolveJobAnalysisState,
+  summarizeCoverage,
+} from "@/lib/generation/coverage-presentation";
 import { createJobContextId } from "@/lib/ai/job-context";
 import { readJobAnalysisCache } from "@/lib/jd-analysis-cache";
 import { createResumeFilename } from "@/lib/generation/resume-filename";
+import {
+  describeCompiledPdf,
+  readPageCount,
+} from "@/lib/generation/preview-metadata";
 import { createResumeExportPackage } from "@/lib/generation/export-package";
+import {
+  countSelectionPoints,
+  filterSelectionGroups,
+} from "@/lib/generation/selection-filter";
 import ResumeStudio from "./resume-studio";
 import { parseStudioSession } from "@/lib/generation/studio-session";
 import { getGenerationOriginNotice } from "@/lib/generation/generation-origin";
@@ -56,6 +91,52 @@ type CompileErrorResponse = {
   code?: string;
   diagnostics?: string;
 };
+
+type StatusTone = "info" | "success" | "caution" | "error";
+
+const STATUS_ICONS = {
+  info: Info,
+  success: CircleCheck,
+  caution: TriangleAlert,
+  error: CircleAlert,
+} as const;
+
+/**
+ * A status banner carries an icon, a message, and a semantic tone. The tone
+ * is only a second signal: every banner repeats its meaning in words, so the
+ * message stays readable without the color.
+ */
+function StatusBanner({
+  tone,
+  role,
+  className = "",
+  children,
+}: {
+  tone: StatusTone;
+  role: "status" | "alert";
+  className?: string;
+  children: ReactNode;
+}) {
+  const Icon = STATUS_ICONS[tone];
+
+  return (
+    <div
+      className={`status-banner status-banner--${tone}${
+        className ? ` ${className}` : ""
+      }`}
+      role={role}
+    >
+      <Icon
+        aria-hidden="true"
+        className="status-banner-icon"
+        size={14}
+        strokeWidth={2}
+      />
+      <div className="status-banner-body">{children}</div>
+    </div>
+  );
+}
+
 function getPointGroups(library: ResumeLibrary): PointGroup[] {
   return [
     ...library.jobs.map((job) => ({
@@ -169,12 +250,34 @@ async function postWithFallbackConsent(
   return result;
 }
 
+function CoverageStatusIcon({ status }: { status: CoverageStatus }) {
+  const icon =
+    status === "supported" ? (
+      <CircleCheck size={11} />
+    ) : status === "partial" ? (
+      <CircleDashed size={11} />
+    ) : status === "uncertain" ? (
+      <CircleHelp size={11} />
+    ) : status === "evidence-not-selected" ? (
+      <CircleMinus size={11} />
+    ) : (
+      <CircleX size={11} />
+    );
+  return (
+    <span aria-hidden="true" className="coverage-status-icon">
+      {icon}
+    </span>
+  );
+}
+
 export default function ResumeGenerator({ library, source }: Props) {
   const [studioSession, setStudioSession] = useState(0);
   const [draft, setDraft] = useState<JobDescriptionDraft>(EMPTY_DRAFT);
   const [draftReady, setDraftReady] = useState(false);
   const [draftNotice, setDraftNotice] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [pointQuery, setPointQuery] = useState("");
+  const [experienceFilter, setExperienceFilter] = useState("");
   const [selectedSkillIds, setSelectedSkillIds] = useState<string[] | null>(
     null,
   );
@@ -212,6 +315,7 @@ export default function ResumeGenerator({ library, source }: Props) {
     null,
   );
   const [compileStatus, setCompileStatus] = useState("");
+  const [viewerNotice, setViewerNotice] = useState("");
   const [historyNotice, setHistoryNotice] = useState("");
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [outputView, setOutputView] = useState<"latex" | "pdf">("latex");
@@ -223,11 +327,53 @@ export default function ResumeGenerator({ library, source }: Props) {
   const selectionAbortRef = useRef<AbortController | null>(null);
   const tailoringAbortRef = useRef<AbortController | null>(null);
   const pdfViewportRef = useRef<HTMLDivElement>(null);
+  const latexTabRef = useRef<HTMLButtonElement>(null);
+  const pdfTabRef = useRef<HTMLButtonElement>(null);
   const groups = useMemo(() => getPointGroups(library), [library]);
   const enabledIds = useMemo(
     () => groups.flatMap((group) => group.points.map((point) => point.id)),
     [groups],
   );
+  /*
+   * The search and the experience filter only change what the list shows.
+   * The selected set stays untouched, so looking for evidence never
+   * deselects it.
+   */
+  const visibleGroups = useMemo(
+    () =>
+      filterSelectionGroups(groups, {
+        query: pointQuery,
+        experienceId: experienceFilter,
+      }),
+    [groups, pointQuery, experienceFilter],
+  );
+  const visiblePointCount = useMemo(
+    () => countSelectionPoints(visibleGroups),
+    [visibleGroups],
+  );
+  const hasPointFilter = pointQuery.trim() !== "" || experienceFilter !== "";
+  /*
+   * The experience filter names every group of the library. The company or
+   * the role is only added when two groups share a title, so the closed
+   * select stays short without hiding a difference.
+   */
+  const experienceOptions = useMemo(() => {
+    const titleCounts = new Map<string, number>();
+    for (const group of groups) {
+      titleCounts.set(group.title, (titleCounts.get(group.title) ?? 0) + 1);
+    }
+    return groups.map((group) => {
+      const kind = group.kind === "JOB" ? "Job" : "Project";
+      const shared = (titleCounts.get(group.title) ?? 0) > 1;
+      return {
+        id: group.id,
+        label:
+          shared && group.subtitle
+            ? `${kind}: ${group.title} · ${group.subtitle}`
+            : `${kind}: ${group.title}`,
+      };
+    });
+  }, [groups]);
   const pointById = useMemo(
     () =>
       new Map(
@@ -402,6 +548,11 @@ export default function ResumeGenerator({ library, source }: Props) {
     setResult(null);
     setCopyMessage("");
     setRequestError("");
+  }
+
+  function resetPointFilters() {
+    setPointQuery("");
+    setExperienceFilter("");
   }
 
   function clearSelection() {
@@ -939,6 +1090,7 @@ export default function ResumeGenerator({ library, source }: Props) {
     setIsCompiling(true);
     setCompileError(null);
     setCompileStatus("");
+    setViewerNotice("");
 
     try {
       const requestBody = { latex: target.latex };
@@ -961,7 +1113,7 @@ export default function ResumeGenerator({ library, source }: Props) {
 
       if (
         !response.headers.get("Content-Type")?.includes("application/pdf") ||
-        response.headers.get("X-PDF-Pages") !== "1"
+        readPageCount(response.headers.get("X-PDF-Pages")) !== 1
       ) {
         setCompileError({
           error: "The server returned an unverified PDF. Try compiling again.",
@@ -981,6 +1133,7 @@ export default function ResumeGenerator({ library, source }: Props) {
       }
       if (controller.signal.aborted) return false;
 
+      const pageCount = readPageCount(response.headers.get("X-PDF-Pages"));
       setPdfUrl(URL.createObjectURL(pdf));
       const bytes = new Uint8Array(await pdf.arrayBuffer());
       let binary = "";
@@ -992,7 +1145,7 @@ export default function ResumeGenerator({ library, source }: Props) {
       setPdfBase64(compiledPdfBase64);
       await persistGeneration(target, "compiled", compiledPdfBase64);
       setOutputView("pdf");
-      setCompileStatus("PDF ready · 1 page.");
+      setCompileStatus(describeCompiledPdf({ pageCount }));
       return true;
     } catch {
       if (!controller.signal.aborted) {
@@ -1021,10 +1174,40 @@ export default function ResumeGenerator({ library, source }: Props) {
         await viewport.requestFullscreen();
       }
     } catch {
-      setCompileError({
-        error: "Full-screen preview is unavailable in this browser.",
-      });
+      setViewerNotice("Full-screen preview is unavailable in this browser.");
     }
+  }
+
+  /**
+   * The LaTeX and PDF tabs follow the ARIA tabs pattern: arrow keys move
+   * between the available formats, Home and End jump to the first and last
+   * one, and the tab list keeps a single tab stop. Formats that are not
+   * ready, such as a PDF that has not been compiled yet, are skipped.
+   */
+  function handleOutputTabKeyDown(event: KeyboardEvent<HTMLButtonElement>) {
+    const available: ("latex" | "pdf")[] = pdfUrl
+      ? ["latex", "pdf"]
+      : ["latex"];
+    const current = available.indexOf(outputView);
+    if (current === -1) return;
+
+    let next = current;
+    if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+      next = (current + 1) % available.length;
+    } else if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+      next = (current - 1 + available.length) % available.length;
+    } else if (event.key === "Home") {
+      next = 0;
+    } else if (event.key === "End") {
+      next = available.length - 1;
+    } else {
+      return;
+    }
+
+    event.preventDefault();
+    const target = available[next];
+    setOutputView(target);
+    (target === "pdf" ? pdfTabRef.current : latexTabRef.current)?.focus();
   }
 
   function downloadPdf() {
@@ -1111,7 +1294,7 @@ export default function ResumeGenerator({ library, source }: Props) {
   }
   const currentCoverage = useMemo(
     () =>
-      analysis && recommendation
+      analysis
         ? assessRequirementCoverage(
             {
               jobDescription: draft.jobDescription,
@@ -1125,14 +1308,7 @@ export default function ResumeGenerator({ library, source }: Props) {
             { renderedSkillIds: selectedSkillIds ?? undefined },
           )
         : null,
-    [
-      analysis,
-      recommendation,
-      draft.jobDescription,
-      library,
-      selectedIds,
-      selectedSkillIds,
-    ],
+    [analysis, draft.jobDescription, library, selectedIds, selectedSkillIds],
   );
   const finalCoverage = result?.metadata.finalCoverage;
   const coverageItems = (
@@ -1169,9 +1345,20 @@ export default function ResumeGenerator({ library, source }: Props) {
   const coveredCount = coverageItems.filter(
     (item) => item.status === "supported",
   ).length;
-  const partialCount = coverageItems.filter(
-    (item) => item.status === "partial" || item.status === "uncertain",
-  ).length;
+  const coverageSummary = summarizeCoverage(coverageItems);
+  const coverageSource = describeCoverageSource({
+    targetTitle: analysis?.targetTitle,
+    seniority: analysis?.seniority,
+    roleTitle: draft.roleTitle,
+    company: draft.company,
+  });
+  const jobAnalysisState = resolveJobAnalysisState({
+    draftReady,
+    hasJobDescription,
+    isAnalyzing: isRecommending,
+    hasError: Boolean(selectionError),
+    analysis,
+  });
   const visibleProposals =
     tailoring?.proposals.filter((proposal) =>
       selectedIds.includes(proposal.achievementId),
@@ -1196,12 +1383,27 @@ export default function ResumeGenerator({ library, source }: Props) {
     result?.metadata.generatedBullets?.length ??
     result?.metadata.selectedAchievementIds.length ??
     0;
+  const omittedSkillCount = result
+    ? Math.max(0, requestedSkillCount - result.metadata.renderedSkillIds.length)
+    : 0;
   const hasRecommendationEdits =
     JSON.stringify([...selectedIds].sort()) !==
       JSON.stringify([...recommendedIds].sort()) ||
     recommendedSkillIds.some(
       (id) => selectedSkillIds !== null && !selectedSkillIds.includes(id),
     );
+  /**
+   * The compile control stays a single utility action: it creates the first
+   * PDF, recompiles the current LaTeX once one exists, and reports the
+   * pending state while the compiler runs.
+   */
+  const compileActionLabel = isCompiling
+    ? pdfUrl
+      ? "Compiling…"
+      : "Creating PDF…"
+    : pdfUrl
+      ? "Recompile"
+      : "Create PDF";
 
   return (
     <section className="generation-page" aria-labelledby="page-title">
@@ -1219,47 +1421,66 @@ export default function ResumeGenerator({ library, source }: Props) {
               : "Choose the experience you want to include, then review the LaTeX."}
           </p>
         </div>
-        <nav className="library-source-switch" aria-label="Resume data source">
-          <Link
-            aria-current={source === "personal" ? "page" : undefined}
-            href="/generate"
-          >
-            My data
-          </Link>
-          <Link
-            aria-current={source === "demo" ? "page" : undefined}
-            href="/generate?source=demo"
-          >
-            Demo data
-          </Link>
-        </nav>
       </div>
 
-      <div className="generation-draft" aria-live="polite">
-        <div>
+      <div className="generation-draft">
+        <div className="generation-draft-details" aria-live="polite">
           <p className="generation-label">JOB DESCRIPTION</p>
           {!draftReady ? (
-            <p>Loading saved job details…</p>
+            <p className="generation-draft-note">Loading saved job details…</p>
           ) : hasJobDescription ? (
-            <>
-              <strong>{draft.roleTitle || "Target role not specified"}</strong>
-              {draft.company && <span>{draft.company}</span>}
-              <span>
-                {draft.jobDescription.length.toLocaleString()} description
-                characters
-              </span>
-            </>
+            <div className="generation-draft-context">
+              {draft.roleTitle ? (
+                <p className="generation-draft-role">{draft.roleTitle}</p>
+              ) : (
+                <p className="generation-draft-role is-empty">
+                  Role not specified
+                </p>
+              )}
+              <p className="generation-draft-meta">
+                {draft.company && <span>{draft.company}</span>}
+                <span className="generation-draft-count">
+                  {draft.jobDescription.length.toLocaleString()} description
+                  characters
+                </span>
+              </p>
+            </div>
           ) : (
-            <p>
+            <p className="generation-draft-note">
               No saved job description. <Link href="/">Add job details</Link>
             </p>
           )}
         </div>
-        {safeJobUrl && (
-          <a href={safeJobUrl} rel="noreferrer" target="_blank">
-            Open job link
-          </a>
-        )}
+        {/*
+         * The source choice decides which library the builder loads, so it
+         * sits with the job context it applies to instead of floating in the
+         * page heading. Each segment is a real link to its own route, and
+         * the loaded one carries the current-page marker.
+         */}
+        <div className="generation-draft-source">
+          <nav
+            className="builder-source-switch"
+            aria-label="Resume data source"
+          >
+            <Link
+              aria-current={source === "personal" ? "page" : undefined}
+              href="/generate"
+            >
+              My data
+            </Link>
+            <Link
+              aria-current={source === "demo" ? "page" : undefined}
+              href="/generate?source=demo"
+            >
+              Demo data
+            </Link>
+          </nav>
+          {safeJobUrl && (
+            <a href={safeJobUrl} rel="noreferrer" target="_blank">
+              Open job link
+            </a>
+          )}
+        </div>
       </div>
       {draftNotice && (
         <p className="generation-notice" role="status">
@@ -1331,6 +1552,8 @@ export default function ResumeGenerator({ library, source }: Props) {
         >
           <section
             className="generation-selection"
+            id="resume-editing"
+            tabIndex={-1}
             aria-label={
               result ? "Resume editing workspace" : "Choose achievements"
             }
@@ -1430,13 +1653,48 @@ export default function ResumeGenerator({ library, source }: Props) {
                   </p>
                 )}
 
-                {!analysis && draftReady && hasJobDescription && (
-                  <p className="selection-analysis-notice">
-                    Analyze this job description on the{" "}
-                    <Link href="/">Job description</Link> page before requesting
-                    AI recommendations.
-                  </p>
-                )}
+                <section
+                  className="selection-analysis"
+                  aria-label="Job analysis"
+                >
+                  <div className="selection-analysis-heading">
+                    <div>
+                      <h3>Job analysis</h3>
+                      <p>{coverageSource}</p>
+                    </div>
+                    <span
+                      className={`selection-analysis-state is-${jobAnalysisState}`}
+                    >
+                      {jobAnalysisState === "ready"
+                        ? "Analyzed"
+                        : jobAnalysisState === "loading"
+                          ? "Analyzing…"
+                          : jobAnalysisState === "error"
+                            ? "Unavailable"
+                            : jobAnalysisState === "empty"
+                              ? "No requirements"
+                              : "Not analyzed"}
+                    </span>
+                  </div>
+                  {jobAnalysisState === "ready" ? (
+                    <p className="selection-analysis-detail">
+                      {coverageSummary.total} requirement
+                      {coverageSummary.total === 1 ? "" : "s"} extracted from
+                      this job description. Requirement coverage below shows how
+                      the selected evidence supports each one.
+                    </p>
+                  ) : (
+                    <p className="selection-analysis-detail">
+                      {jobAnalysisStateMessage(jobAnalysisState)}
+                    </p>
+                  )}
+                  {jobAnalysisState === "absent" && hasJobDescription && (
+                    <p className="selection-analysis-detail">
+                      <Link href="/">Analyze this job description</Link> before
+                      requesting AI recommendations.
+                    </p>
+                  )}
+                </section>
                 {selectionError && (
                   <p className="generation-error-message" role="alert">
                     {selectionError}
@@ -1480,19 +1738,33 @@ export default function ResumeGenerator({ library, source }: Props) {
                     )}
                     <div className="selection-coverage">
                       <div className="selection-coverage-heading">
-                        <h4>Requirement coverage</h4>
-                        <strong>
-                          {coveredCount} / {coverageItems.length} supported
-                          {partialCount ? ` · ${partialCount} partial` : ""}
+                        <div>
+                          <h4>Requirement coverage</h4>
+                          <p className="selection-coverage-source">
+                            {coverageSource}
+                          </p>
+                        </div>
+                        <strong className="selection-coverage-count">
+                          {coverageSummary.headline}
                         </strong>
                       </div>
                       {coverageItems.length ? (
                         <>
                           <progress
-                            aria-label="Requirements covered by selected achievements"
-                            max={coverageItems.length}
+                            aria-label="Requirements covered by selected achievements, out of the job requirements analyzed from this job description"
+                            max={coverageSummary.total}
                             value={coveredCount}
                           />
+                          <p className="selection-coverage-denominator">
+                            {describeCoverageDenominator(coverageSummary.total)}
+                          </p>
+                          {coverageSummary.breakdowns.length > 0 && (
+                            <p className="selection-coverage-breakdown">
+                              {coverageSummary.breakdowns
+                                .map((tally) => `${tally.count} ${tally.label}`)
+                                .join(" · ")}
+                            </p>
+                          )}
                           {[
                             ...new Set(
                               coverageItems.map((item) => item.category),
@@ -1504,17 +1776,12 @@ export default function ResumeGenerator({ library, source }: Props) {
                                 {coverageItems
                                   .filter((item) => item.category === category)
                                   .map((item) => {
-                                    const status =
-                                      item.status === "supported"
-                                        ? "Covered"
-                                        : item.status === "partial"
-                                          ? "Partial support"
-                                          : item.status === "uncertain"
-                                            ? "Needs confirmation"
-                                            : item.status ===
-                                                "evidence-not-selected"
-                                              ? "Not selected"
-                                              : "No match found";
+                                    const tone = coverageStatusTone(
+                                      item.status,
+                                    );
+                                    const status = coverageStatusLabel(
+                                      item.status,
+                                    );
                                     const evidenceIds = item.selectedEvidenceIds
                                       .length
                                       ? item.selectedEvidenceIds
@@ -1524,12 +1791,11 @@ export default function ResumeGenerator({ library, source }: Props) {
                                         <details>
                                           <summary>
                                             <span
-                                              className={
-                                                status === "Covered"
-                                                  ? "coverage-status is-covered"
-                                                  : "coverage-status"
-                                              }
+                                              className={`coverage-status is-${tone}`}
                                             >
+                                              <CoverageStatusIcon
+                                                status={item.status}
+                                              />
                                               {status}
                                             </span>
                                             <span>{item.requirement}</span>
@@ -1558,9 +1824,9 @@ export default function ResumeGenerator({ library, source }: Props) {
                           ))}
                         </>
                       ) : (
-                        <p>
-                          No explicit requirements or responsibilities were
-                          extracted.
+                        <p className="selection-coverage-denominator">
+                          The job analysis did not extract any requirements or
+                          responsibilities from this job description.
                         </p>
                       )}
                     </div>
@@ -2045,6 +2311,7 @@ export default function ResumeGenerator({ library, source }: Props) {
                 source={source}
                 generation={result}
                 hasPdf={Boolean(pdfUrl)}
+                isCompiling={isCompiling}
                 analysis={analysis}
                 recommendedSkillIds={recommendedSkillIds}
                 qualityNotes={tailoring?.qualityNotes}
@@ -2071,19 +2338,70 @@ export default function ResumeGenerator({ library, source }: Props) {
                   setOutputView("pdf");
                   setCompileError(null);
                   setCompileStatus(
-                    `PDF ready · 1 page${generation.metadata.layout ? ` · ${Math.round(generation.metadata.layout.utilization * 100)}% page fill` : ""}.`,
+                    describeCompiledPdf({
+                      pageCount: generation.metadata.layout?.pageCount ?? null,
+                      utilization:
+                        generation.metadata.layout?.utilization ?? null,
+                    }),
                   );
                 }}
               />
             )}
+            {(!result || showGenerationSettings) && groups.length > 0 && (
+              <div className="generation-selection-filters">
+                <div className="generation-search-field">
+                  <Search aria-hidden="true" size={14} strokeWidth={2} />
+                  <input
+                    aria-label="Search achievements"
+                    onChange={(event) => setPointQuery(event.target.value)}
+                    placeholder="Search achievements…"
+                    type="search"
+                    value={pointQuery}
+                  />
+                </div>
+                <select
+                  aria-label="Filter by experience"
+                  className="generation-experience-filter"
+                  onChange={(event) => setExperienceFilter(event.target.value)}
+                  value={experienceFilter}
+                >
+                  <option value="">All experiences</option>
+                  {experienceOptions.map((option) => (
+                    <option key={option.id} value={option.id}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                {hasPointFilter && (
+                  <button
+                    className="generation-filter-reset"
+                    onClick={resetPointFilters}
+                    type="button"
+                  >
+                    Reset filters
+                  </button>
+                )}
+                {hasPointFilter && (
+                  <p className="generation-filter-count" role="status">
+                    {visiblePointCount} of {enabledIds.length} achievements
+                    match
+                  </p>
+                )}
+              </div>
+            )}
+
             {(!result || showGenerationSettings) &&
               (groups.length === 0 ? (
                 <p className="generation-empty" role="status">
                   This library has no enabled achievement points.
                 </p>
+              ) : visibleGroups.length === 0 ? (
+                <p className="generation-no-matches" role="status">
+                  No achievements match this search.
+                </p>
               ) : (
                 <div className="generation-groups">
-                  {groups.map((group) => (
+                  {visibleGroups.map((group) => (
                     <fieldset className="generation-group" key={group.id}>
                       <legend>
                         <span>{group.kind}</span>
@@ -2094,7 +2412,7 @@ export default function ResumeGenerator({ library, source }: Props) {
                         {group.points.map((point) => (
                           <label className="generation-point" key={point.id}>
                             <input
-                              aria-label={`Select achievement ${point.id}`}
+                              aria-label={`Select achievement ${point.id}: ${point.text}`}
                               checked={selectedIds.includes(point.id)}
                               disabled={
                                 isRecommending || isTailoring || isAutoTailoring
@@ -2191,6 +2509,9 @@ export default function ResumeGenerator({ library, source }: Props) {
                     ? "Compiled from your generated LaTeX"
                     : "Generated from your selected points"}
                 </p>
+                <a className="preview-return-link" href="#resume-editing">
+                  Back to editing
+                </a>
               </div>
               {result && (
                 <div className="generation-output-actions">
@@ -2201,48 +2522,69 @@ export default function ResumeGenerator({ library, source }: Props) {
                   >
                     <button
                       id="resume-output-tab-latex"
+                      ref={latexTabRef}
                       aria-selected={outputView === "latex"}
                       aria-controls="resume-output-panel"
                       onClick={() => setOutputView("latex")}
+                      onKeyDown={handleOutputTabKeyDown}
                       role="tab"
+                      tabIndex={outputView === "latex" ? 0 : -1}
                       type="button"
                     >
                       LaTeX
                     </button>
                     <button
                       id="resume-output-tab-pdf"
+                      ref={pdfTabRef}
                       aria-selected={outputView === "pdf"}
                       aria-controls="resume-output-panel"
                       disabled={!pdfUrl}
                       onClick={() => setOutputView("pdf")}
+                      onKeyDown={handleOutputTabKeyDown}
                       role="tab"
+                      title={
+                        pdfUrl
+                          ? "Show the compiled PDF"
+                          : "Compile the PDF to preview it here"
+                      }
+                      tabIndex={outputView === "pdf" ? 0 : -1}
                       type="button"
                     >
                       PDF
                     </button>
                   </div>
-                  {outputView === "pdf" && pdfUrl ? (
-                    <>
-                      <button
-                        aria-label="Download PDF"
-                        onClick={downloadPdf}
-                        title="Download PDF"
-                        type="button"
-                      >
-                        Download PDF
-                      </button>
-                      <button
-                        onClick={() => compilePdf()}
-                        disabled={isCompiling}
-                        type="button"
-                      >
-                        {isCompiling ? "Compiling…" : "Recompile"}
-                      </button>
-                    </>
-                  ) : (
+                  <button
+                    aria-describedby={
+                      pdfUrl ? undefined : "generation-pdf-availability"
+                    }
+                    aria-label="Download PDF"
+                    className="generation-action generation-action-download"
+                    disabled={!pdfUrl || isCompiling}
+                    onClick={downloadPdf}
+                    title={
+                      pdfUrl
+                        ? "Download the compiled PDF"
+                        : "Compile the PDF to enable this download"
+                    }
+                    type="button"
+                  >
+                    Download PDF
+                  </button>
+                  <button
+                    aria-busy={isCompiling}
+                    className="generation-action generation-action-compile"
+                    disabled={isCompiling || isGenerating}
+                    onClick={() => compilePdf()}
+                    title="Compile the current generated LaTeX into a PDF"
+                    type="button"
+                  >
+                    {compileActionLabel}
+                  </button>
+                  {outputView === "latex" && (
                     <>
                       <button
                         aria-label="Copy LaTeX"
+                        className="generation-action generation-action-utility"
                         onClick={copyLatex}
                         title="Copy LaTeX"
                         type="button"
@@ -2251,48 +2593,63 @@ export default function ResumeGenerator({ library, source }: Props) {
                       </button>
                       <button
                         aria-label="Download LaTeX file"
+                        className="generation-action generation-action-utility"
                         onClick={downloadLatex}
                         title="Download LaTeX file"
                         type="button"
                       >
                         Download LaTeX
                       </button>
-                      <button
-                        className="primary-button generation-compile-button"
-                        disabled={isCompiling || isGenerating}
-                        onClick={() => compilePdf()}
-                        type="button"
-                      >
-                        {isCompiling ? "Creating PDF…" : "Create PDF"}
-                      </button>
                     </>
                   )}
-                  {result && (
-                    <button
-                      aria-label="Download export package"
-                      onClick={downloadExportPackage}
-                      title="Download LaTeX, PDF when available, and generation metadata"
-                      type="button"
-                    >
-                      Export package
-                    </button>
-                  )}
+                  <button
+                    aria-label="Download export package"
+                    className="generation-action generation-action-utility"
+                    disabled={isCompiling}
+                    onClick={downloadExportPackage}
+                    title={
+                      isCompiling
+                        ? "Wait for the current compile to finish."
+                        : "Download LaTeX, PDF when available, and generation metadata"
+                    }
+                    type="button"
+                  >
+                    Export package
+                  </button>
                 </div>
               )}
             </div>
 
-            {requestError && (
-              <p className="generation-error-message" role="alert">
-                {requestError}
+            {result && !pdfUrl && (
+              <p
+                className="generation-action-hint"
+                id="generation-pdf-availability"
+              >
+                {isCompiling
+                  ? "Compiling your generated LaTeX into a PDF…"
+                  : "No compiled PDF yet. Choose “Create PDF” to compile your generated LaTeX; the PDF download and the PDF inside the export package stay unavailable until it succeeds."}
               </p>
             )}
+
             {copyMessage && (
               <p className="generation-notice" role="status">
                 {copyMessage}
               </p>
             )}
-            {compileError && (
-              <div className="generation-error-message" role="alert">
+            {requestError ? (
+              <StatusBanner
+                tone="error"
+                role="alert"
+                className="preview-status"
+              >
+                <p>{requestError}</p>
+              </StatusBanner>
+            ) : compileError ? (
+              <StatusBanner
+                tone="error"
+                role="alert"
+                className="preview-status"
+              >
                 <p>{compileError.error}</p>
                 {compileError.diagnostics && (
                   <details>
@@ -2300,12 +2657,38 @@ export default function ResumeGenerator({ library, source }: Props) {
                     <pre>{compileError.diagnostics}</pre>
                   </details>
                 )}
-              </div>
-            )}
-            {compileStatus && (
-              <p className="generation-notice" role="status">
-                {compileStatus}
-              </p>
+              </StatusBanner>
+            ) : isCompiling ? (
+              <StatusBanner
+                tone="info"
+                role="status"
+                className="preview-status"
+              >
+                <p>Compiling the PDF…</p>
+                <p className="preview-status-detail">
+                  The document is being prepared from your generated LaTeX. This
+                  may take a few seconds.
+                </p>
+              </StatusBanner>
+            ) : result ? (
+              <StatusBanner
+                tone="success"
+                role="status"
+                className="preview-status"
+              >
+                {outputView === "pdf" && pdfUrl
+                  ? compileStatus || "PDF ready."
+                  : "LaTeX ready."}
+              </StatusBanner>
+            ) : null}
+            {viewerNotice && (
+              <StatusBanner
+                tone="caution"
+                role="status"
+                className="preview-status"
+              >
+                {viewerNotice}
+              </StatusBanner>
             )}
             {result ? (
               <div
@@ -2314,42 +2697,66 @@ export default function ResumeGenerator({ library, source }: Props) {
                 id="resume-output-panel"
                 aria-labelledby={`resume-output-tab-${outputView}`}
               >
-                <p
-                  className="generation-origin"
+                <div
+                  className="status-banner status-banner--info generation-origin"
                   role="status"
                   aria-label="Generation method"
                 >
-                  {getGenerationOriginNotice(
-                    result.metadata.tailoringMode,
-                    tailoring?.mode,
-                  )}
-                </p>
-                <p className="generation-metadata" role="status">
-                  Generated{" "}
-                  {new Date(result.metadata.generatedAt).toLocaleString()} ·{" "}
-                  {renderedAchievementCount} achievement
-                  {renderedAchievementCount === 1 ? "" : "s"}
-                  {" · "}
-                  {result.metadata.renderedSkillIds.length} skills shown
-                  {requestedSkillCount >
-                    result.metadata.renderedSkillIds.length && (
-                    <>
+                  <Info
+                    aria-hidden="true"
+                    className="status-banner-icon"
+                    size={14}
+                    strokeWidth={2}
+                  />
+                  <div className="status-banner-body">
+                    {getGenerationOriginNotice(
+                      result.metadata.tailoringMode,
+                      tailoring?.mode,
+                    )}
+                  </div>
+                </div>
+                {omittedSkillCount > 0 ? (
+                  <StatusBanner
+                    tone="caution"
+                    role="status"
+                    className="generation-metadata-notice"
+                  >
+                    <p className="generation-metadata">
+                      Generated{" "}
+                      {new Date(result.metadata.generatedAt).toLocaleString()} ·{" "}
+                      {renderedAchievementCount} achievement
+                      {renderedAchievementCount === 1 ? "" : "s"}
                       {" · "}
-                      {requestedSkillCount -
-                        result.metadata.renderedSkillIds.length}{" "}
-                      omitted to keep two rows
-                    </>
-                  )}
-                </p>
+                      {result.metadata.renderedSkillIds.length} skills shown
+                      {" · "}
+                      {omittedSkillCount} omitted to keep two rows
+                    </p>
+                  </StatusBanner>
+                ) : (
+                  <p className="generation-metadata">
+                    Generated{" "}
+                    {new Date(result.metadata.generatedAt).toLocaleString()} ·{" "}
+                    {renderedAchievementCount} achievement
+                    {renderedAchievementCount === 1 ? "" : "s"}
+                    {" · "}
+                    {result.metadata.renderedSkillIds.length} skills shown
+                  </p>
+                )}
                 {outputView === "pdf" && pdfUrl ? (
                   <div className="pdf-preview-workspace">
                     <div className="pdf-preview-viewport" ref={pdfViewportRef}>
-                      <div className="pdf-preview-toolbar">
+                      <div
+                        className="pdf-preview-toolbar"
+                        role="group"
+                        aria-label="PDF viewer controls"
+                      >
                         <div
                           className="pdf-zoom-control"
+                          role="group"
                           aria-label="PDF zoom controls"
                         >
                           <button
+                            className="pdf-toolbar-icon"
                             aria-label="Zoom out"
                             disabled={pdfZoom <= 50}
                             onClick={() => {
@@ -2359,9 +2766,13 @@ export default function ResumeGenerator({ library, source }: Props) {
                             title="Zoom out"
                             type="button"
                           >
-                            −
+                            <Minus
+                              aria-hidden="true"
+                              size={14}
+                              strokeWidth={2}
+                            />
                           </button>
-                          <span aria-live="polite">
+                          <span className="pdf-zoom-value" aria-live="polite">
                             {pdfFit
                               ? pdfFit === "width"
                                 ? "Fit width"
@@ -2369,6 +2780,7 @@ export default function ResumeGenerator({ library, source }: Props) {
                               : `${pdfZoom}%`}
                           </span>
                           <button
+                            className="pdf-toolbar-icon"
                             aria-label="Zoom in"
                             disabled={pdfZoom >= 200}
                             onClick={() => {
@@ -2378,13 +2790,22 @@ export default function ResumeGenerator({ library, source }: Props) {
                             title="Zoom in"
                             type="button"
                           >
-                            +
+                            <Plus
+                              aria-hidden="true"
+                              size={14}
+                              strokeWidth={2}
+                            />
                           </button>
+                          <span
+                            className="pdf-toolbar-divider"
+                            aria-hidden="true"
+                          />
                           <button
                             type="button"
                             className="pdf-fit-button"
                             aria-pressed={pdfFit === "width"}
                             onClick={() => setPdfFit("width")}
+                            title="Fit the full page width to the preview"
                           >
                             Fit width
                           </button>
@@ -2393,16 +2814,13 @@ export default function ResumeGenerator({ library, source }: Props) {
                             className="pdf-fit-button"
                             aria-pressed={pdfFit === "page"}
                             onClick={() => setPdfFit("page")}
+                            title="Fit the whole page inside the preview"
                           >
                             Fit page
                           </button>
                         </div>
                         <button
-                          aria-label={
-                            isPdfFullscreen
-                              ? "Exit full screen"
-                              : "Open full screen"
-                          }
+                          className="pdf-toolbar-action"
                           onClick={togglePdfFullscreen}
                           title={
                             isPdfFullscreen
@@ -2411,7 +2829,24 @@ export default function ResumeGenerator({ library, source }: Props) {
                           }
                           type="button"
                         >
-                          {isPdfFullscreen ? "Exit full screen" : "Full screen"}
+                          {isPdfFullscreen ? (
+                            <Minimize2
+                              aria-hidden="true"
+                              size={14}
+                              strokeWidth={2}
+                            />
+                          ) : (
+                            <Maximize2
+                              aria-hidden="true"
+                              size={14}
+                              strokeWidth={2}
+                            />
+                          )}
+                          <span>
+                            {isPdfFullscreen
+                              ? "Exit full screen"
+                              : "Open full screen"}
+                          </span>
                         </button>
                       </div>
                       <iframe
@@ -2432,8 +2867,34 @@ export default function ResumeGenerator({ library, source }: Props) {
                 )}
               </div>
             ) : (
-              <div className="generation-preview-empty" role="status">
-                <p>Your generated LaTeX will appear here.</p>
+              <div
+                className="generation-preview-empty"
+                role={isGenerating ? "status" : undefined}
+              >
+                {isGenerating ? (
+                  <>
+                    <LoaderCircle
+                      aria-hidden="true"
+                      className="generation-preview-empty-icon is-spinning"
+                      size={20}
+                      strokeWidth={2}
+                    />
+                    <p>Generating your resume…</p>
+                    <p className="preview-status-detail">
+                      Your LaTeX will appear here as soon as it is ready.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <FileText
+                      aria-hidden="true"
+                      className="generation-preview-empty-icon"
+                      size={20}
+                      strokeWidth={1.75}
+                    />
+                    <p>Your generated LaTeX will appear here.</p>
+                  </>
+                )}
               </div>
             )}
           </section>

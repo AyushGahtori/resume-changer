@@ -21,11 +21,12 @@ import type { ReactNode } from "react";
 const THEME_STORAGE_KEY = "resume-changer.theme.v1";
 
 const LIBRARY_ROUTE = "/library";
+const GENERATION_ROUTE = "/generate";
 
 const navigation = [
   { href: "/", label: "Job description", icon: "description" },
   { href: LIBRARY_ROUTE, label: "Achievement library", icon: "library" },
-  { href: "/generate", label: "Resume builder", icon: "resume" },
+  { href: GENERATION_ROUTE, label: "Resume builder", icon: "resume" },
   { href: "/history", label: "History", icon: "history" },
   { href: "/settings", label: "Settings", icon: "settings" },
 ] as const;
@@ -235,6 +236,7 @@ export default function WorkspaceShell({ children }: { children: ReactNode }) {
     pathname === "/" && "jd-workspace-frame",
     pathname === LIBRARY_ROUTE && "library-workspace-frame",
     pathname === LIBRARY_ROUTE && "is-library-route",
+    pathname === GENERATION_ROUTE && "is-generate-route",
     !isMobile && isSidebarCollapsed && "is-sidebar-collapsed",
     isMobile && isMobileNavigationOpen && "is-mobile-nav-open",
   ]
