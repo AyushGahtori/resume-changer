@@ -2,6 +2,11 @@
 import { useMemo, useState } from "react";
 import { groupSkillsForReview } from "@/lib/generation/review-draft";
 import {
+  resolveSkillReviewState,
+  skillReviewStateBadge,
+  skillReviewStateDescription,
+} from "@/lib/generation/review-inclusion";
+import {
   placeSkills,
   type SkillMeasurements,
 } from "@/lib/generation/skill-layout";
@@ -155,7 +160,7 @@ export default function StudioSkills({
                 / {skills.length}
               </small>
             </summary>
-            <div className="studio-chip-list">
+            <div className="studio-skill-grid">
               {skills.map((skill) => {
                 const selected = selectedIds.includes(skill.id);
                 const included = currentIds.includes(skill.id);
@@ -163,48 +168,68 @@ export default function StudioSkills({
                 const unsupported = measurements?.unsupportedSkillIds?.includes(
                   skill.id,
                 );
-                const status = selected
-                  ? included
-                    ? "Included"
-                    : "+ Add"
-                  : included
-                    ? "− Remove"
-                    : unsupported
-                      ? "Unavailable"
-                      : fits
-                        ? "Available"
-                        : "Cannot fit";
+                const state = resolveSkillReviewState({
+                  selected,
+                  inCurrentResume: included,
+                  fits: Boolean(fits),
+                  unsupported: Boolean(unsupported),
+                });
+                const badge = skillReviewStateBadge(state);
+                const description = skillReviewStateDescription(
+                  state,
+                  recommendedIds.includes(skill.id),
+                );
                 const title = unsupported
                   ? "This skill could not be measured with the resume font. Try again after checking its supported characters."
                   : !fits && measurements
                     ? `${skill.name} needs about ${Math.ceil(measurements.widths[skill.id])} pt plus a separator. Neither row can accommodate it while retaining all selected skills. Remove a skill to free space.`
                     : `${selected ? "Remove" : "Add"} ${skill.name} ${selected ? "from" : "to"} the working draft`;
+                const stateId = `studio-skill-state-${skill.id}`;
                 return (
-                  <button
-                    type="button"
+                  <label
+                    className={`studio-skill-option is-${state}`}
                     key={skill.id}
-                    aria-label={`${selected ? "Remove" : "Add"} ${skill.name} ${selected ? "from" : "to"} resume skills`}
-                    aria-pressed={selected}
-                    disabled={!fits}
                     title={title}
-                    className={included ? "is-current" : ""}
-                    onClick={() =>
-                      onChange(
-                        selected
-                          ? selectedIds.filter((id) => id !== skill.id)
-                          : [...selectedIds, skill.id],
-                      )
-                    }
                   >
-                    <span>
-                      {selected ? "✓ " : ""}
+                    <input
+                      type="checkbox"
+                      checked={selected}
+                      disabled={!fits}
+                      aria-label={skill.name}
+                      aria-describedby={description ? stateId : undefined}
+                      onChange={() =>
+                        onChange(
+                          selected
+                            ? selectedIds.filter((id) => id !== skill.id)
+                            : [...selectedIds, skill.id],
+                        )
+                      }
+                    />
+                    <span className="studio-skill-option-name">
                       {skill.name}
                     </span>
-                    <small>
-                      {recommendedIds.includes(skill.id) ? "✦ " : ""}
-                      {status}
-                    </small>
-                  </button>
+                    {recommendedIds.includes(skill.id) && (
+                      <span
+                        className="studio-skill-option-recommended"
+                        aria-hidden="true"
+                      >
+                        ✦
+                      </span>
+                    )}
+                    {badge ? (
+                      <span
+                        className="studio-skill-option-state"
+                        aria-hidden="true"
+                      >
+                        {badge}
+                      </span>
+                    ) : null}
+                    {description ? (
+                      <span className="studio-visually-hidden" id={stateId}>
+                        {description}
+                      </span>
+                    ) : null}
+                  </label>
                 );
               })}
             </div>

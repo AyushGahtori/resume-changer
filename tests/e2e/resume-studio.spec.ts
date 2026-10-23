@@ -31,15 +31,13 @@ test("disables additions that cannot fit and re-enables them when space is freed
   await page.getByRole("button", { name: "Restore editing session" }).click();
   await page.getByRole("button", { name: "Skills", exact: true }).click();
   await page.getByLabel("Search skills").fill("Python");
-  const python = page.getByRole("button", {
-    name: "Add Python to resume skills",
-  });
+  const python = page.getByRole("checkbox", { name: "Python", exact: true });
   await expect(python).toBeDisabled();
   for (let index = 0; index < 12 && (await python.isDisabled()); index++) {
     await page.getByLabel("Search skills").fill("");
     await page.getByRole("button", { name: "Included", exact: true }).click();
     await page
-      .locator('.studio-chip-list button[aria-pressed="true"]')
+      .locator('.studio-skill-grid input[type="checkbox"]:checked')
       .first()
       .click();
     await page.getByRole("button", { name: "All", exact: true }).click();
@@ -47,9 +45,7 @@ test("disables additions that cannot fit and re-enables them when space is freed
   }
   await expect(python).toBeEnabled();
   await python.click();
-  await expect(
-    page.getByRole("button", { name: "Remove Python from resume skills" }),
-  ).toHaveAttribute("aria-pressed", "true");
+  await expect(python).toBeChecked();
 });
 
 test("applies skills independently and commits a new PDF only after success", async ({
@@ -64,9 +60,7 @@ test("applies skills independently and commits a new PDF only after success", as
     page.getByText("Measured using the LaTeX template.", { exact: false }),
   ).toBeVisible();
   await page.getByLabel("Search skills").fill("Python");
-  await page
-    .getByRole("button", { name: "Add Python to resume skills" })
-    .click();
+  await page.getByRole("checkbox", { name: "Python", exact: true }).click();
   await expect(page.getByTitle("Generated resume PDF")).toHaveAttribute(
     "src",
     oldPdf!,
@@ -89,6 +83,11 @@ test("applies skills independently and commits a new PDF only after success", as
     "src",
     oldPdf!,
   );
+  // The page count and the page fill come from the applied document's own
+  // layout analysis, not from a fixed sentence.
+  await expect(
+    page.getByText("PDF ready · 1 page · 94% page fill."),
+  ).toBeVisible();
 });
 
 test("manual edits can be cancelled, staged, undone, redone, and retained after a failed apply", async ({
@@ -579,4 +578,115 @@ test("keeps the studio and creation sheet usable on mobile and supports keyboard
     .screenshot({ path: test.info().outputPath("studio-mobile-canvas.png") });
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog")).toHaveCount(0);
+});
+
+test("maps the review inclusion controls to real draft values", async ({
+  page,
+}) => {
+  await openStudio(page);
+
+  // Skill inclusion is a checkbox grid whose accessible name is the skill
+  // itself, so the control is not renamed as it is toggled.
+  await page.getByRole("button", { name: "Skills", exact: true }).click();
+  const skills = page.getByRole("region", { name: "Skills manager" });
+  const badge = skills.locator(".studio-badge");
+  const before = Number((await badge.innerText()).split(" ")[0]);
+  const python = page.getByRole("checkbox", { name: "Python", exact: true });
+  await expect(python).not.toBeChecked();
+  await python.check();
+  await expect(python).toBeChecked();
+  await expect(badge).toHaveText(`${before + 1} selected`);
+
+  // Section inclusion is grouped and reports how many sections are included.
+  await page
+    .getByRole("button", { name: "Education & credentials", exact: true })
+    .click();
+  const sections = page.getByRole("group", { name: "Sections to include" });
+  await expect(sections).toBeVisible();
+  await expect(sections.getByText("4 of 4 sections included")).toBeVisible();
+  await page.getByLabel("Include credentials").uncheck();
+  await expect(sections.getByText("3 of 4 sections included")).toBeVisible();
+  await expect(page.getByLabel("Include credentials")).not.toBeChecked();
+
+  // The draft is persisted, so a refresh restores the same inclusion state.
+  await page.reload();
+  await page.getByRole("button", { name: "Restore editing session" }).click();
+  await page
+    .getByRole("button", { name: "Restore draft", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Education & credentials", exact: true })
+    .click();
+  await expect(page.getByLabel("Include credentials")).not.toBeChecked();
+  await expect(
+    page.getByRole("group", { name: "Sections to include" }),
+  ).toContainText("3 of 4 sections included");
+  await page.getByRole("button", { name: "Skills", exact: true }).click();
+  await expect(
+    page.getByRole("checkbox", { name: "Python", exact: true }),
+  ).toBeChecked();
+
+  // Applying sends the real draft values, not a display-only state.
+  const requestPromise = page.waitForRequest((request) =>
+    request.url().endsWith("/api/resume/edit"),
+  );
+  await page.getByRole("button", { name: "Apply changes →" }).click();
+  const body = (await requestPromise).postDataJSON();
+  expect(body.document.sectionOrder).not.toContain("credentials");
+  expect(body.document.skillIds).toContain("skill-python");
+});
+
+test("rejects a skill selection that cannot fit the two template rows", async ({
+  page,
+}) => {
+  await openStudio(page);
+  // Constrain the measured template so the current selection overflows.
+  await page.route("**/api/resume/skills?*", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        ...studioMeasurements,
+        widths: Object.fromEntries(
+          studioLibrary.skills.map((skill) => [skill.id, 40]),
+        ),
+        labelWidths: [0, 0],
+        lineWidth: 100,
+      }),
+    }),
+  );
+  await page.route("**/api/resume/edit", (route) =>
+    route.fulfill({
+      status: 422,
+      contentType: "application/json",
+      body: JSON.stringify({
+        error:
+          "These skills cannot fit in two template rows. Remove a skill before applying. Your current PDF is unchanged.",
+      }),
+    }),
+  );
+  await page.reload();
+  await page.getByRole("button", { name: "Restore editing session" }).click();
+  await page.getByRole("button", { name: "Skills", exact: true }).click();
+  const skills = page.getByRole("region", { name: "Skills manager" });
+  await expect(
+    skills.getByText("The selected skills exceed two rows."),
+  ).toBeVisible();
+
+  // Removing a skill is a real draft change, and the overflow is reported.
+  await page.getByRole("button", { name: "Included", exact: true }).click();
+  await skills
+    .locator('.studio-skill-grid input[type="checkbox"]:checked')
+    .first()
+    .click();
+  await page.getByRole("button", { name: "All", exact: true }).click();
+  await expect(skills.getByText("No fit").first()).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Apply changes →" }),
+  ).toBeEnabled();
+
+  await page.getByRole("button", { name: "Apply changes →" }).click();
+  await expect(page.locator(".studio-error")).toContainText(
+    "cannot fit in two template rows",
+  );
 });

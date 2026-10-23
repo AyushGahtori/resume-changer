@@ -5175,6 +5175,13 @@ a:focus-visible {
   gap: 22px;
 }
 
+/* The preview keeps a stable pane beside the editing column on wide screens. */
+@media (min-width: 1101px) {
+  .generation-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(430px, 1.1fr);
+  }
+}
+
 .generation-selection,
 .generation-preview {
   min-width: 0;
@@ -5182,6 +5189,26 @@ a:focus-visible {
   border: 1px solid var(--line);
   border-radius: 7px;
   background: var(--surface);
+}
+
+#resume-editing:focus {
+  outline: none;
+}
+
+#resume-editing:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* The return path only applies when the preview sits below the editor. */
+.preview-return-link {
+  display: none;
+  margin-top: 7px;
+  color: var(--imagination);
+  font-size: 10px;
+  font-weight: 650;
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .generation-section-heading {
@@ -5296,14 +5323,78 @@ a:focus-visible {
   opacity: 0.55;
 }
 
-.selection-analysis-notice {
+/*
+ * The job analysis block states what the builder knows about the analyzed
+ * job description. It never implies an analysis that does not exist.
+ */
+.selection-analysis {
   margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-soft);
+}
+
+.selection-analysis-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.selection-analysis-heading h3 {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.selection-analysis-heading p {
+  margin: 3px 0 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.selection-analysis-state {
+  flex: 0 0 auto;
+  padding: 2px 7px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--quiet);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.selection-analysis-state.is-ready {
+  border-color: color-mix(in srgb, var(--color-success) 45%, transparent);
+  background: var(--teal-soft);
+  color: var(--teal);
+}
+
+.selection-analysis-state.is-loading {
+  border-color: color-mix(in srgb, var(--color-info) 45%, transparent);
+  background: color-mix(in srgb, var(--color-info) 10%, var(--surface));
+  color: var(--color-info-strong);
+}
+
+.selection-analysis-state.is-error {
+  border-color: color-mix(in srgb, var(--color-error) 45%, transparent);
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.selection-analysis-detail {
+  margin: 6px 0 0;
   color: var(--muted);
   font-size: var(--type-body-size);
   line-height: var(--type-body-line-height);
 }
 
-.selection-analysis-notice a {
+.selection-analysis-detail a {
   color: var(--accent-hover);
 }
 
@@ -5372,12 +5463,32 @@ a:focus-visible {
   gap: 8px;
 }
 
-.selection-coverage-heading strong {
+.selection-coverage-source {
+  margin: var(--space-4) 0 0;
+  color: var(--quiet);
+  font-size: var(--type-helper-size);
+  line-height: var(--type-helper-line-height);
+}
+
+.selection-coverage-count {
   color: var(--teal);
   font-size: var(--type-label-size);
   line-height: var(--type-label-line-height);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.selection-coverage-denominator,
+.selection-coverage-breakdown {
+  margin: var(--space-4) 0 0;
+  color: var(--muted);
+  font-size: var(--type-helper-size);
+  line-height: var(--type-helper-line-height);
+}
+
+.selection-coverage-breakdown {
+  color: var(--quiet);
 }
 
 .selection-coverage progress {
@@ -5420,19 +5531,22 @@ a:focus-visible {
 
 .selection-coverage summary {
   display: grid;
-  grid-template-columns: 76px minmax(0, 1fr);
+  grid-template-columns: 96px minmax(0, 1fr);
   gap: 7px;
   cursor: pointer;
 }
 
 .selection-coverage details p {
-  margin: 4px 0 0 83px;
+  margin: 4px 0 0 103px;
   color: var(--ink);
   overflow-wrap: anywhere;
 }
 
 .coverage-status {
-  color: var(--accent-hover);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  color: var(--quiet);
   font-size: var(--type-label-size);
   line-height: var(--type-label-line-height);
   font-weight: 600;
@@ -5440,8 +5554,25 @@ a:focus-visible {
   text-transform: uppercase;
 }
 
-.coverage-status.is-covered {
+.coverage-status-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+
+.coverage-status.is-supported {
   color: var(--teal);
+}
+
+.coverage-status.is-partial {
+  color: var(--color-warning-strong);
+}
+
+.coverage-status.is-uncertain {
+  color: var(--color-info-strong);
+}
+
+.coverage-status.is-missing {
+  color: var(--quiet);
 }
 
 .selection-coverage > p {
@@ -6202,6 +6333,10 @@ a:focus-visible {
 
   .generation-preview {
     position: static;
+  }
+
+  .preview-return-link {
+    display: inline-block;
   }
 }
 

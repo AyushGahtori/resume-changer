@@ -5,6 +5,13 @@ import { Search } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, FormEvent } from "react";
 import {
+  CircleCheck,
+  CircleDashed,
+  CircleHelp,
+  CircleMinus,
+  CircleX,
+} from "lucide-react";
+import {
   EMPTY_DRAFT,
   readDraft,
   type JobDescriptionDraft,
@@ -23,9 +30,23 @@ import {
   buildProfileEvidence,
 } from "@/lib/ai/evidence";
 import { assessRequirementCoverage } from "@/lib/ai/requirement-coverage";
+import type { CoverageStatus } from "@/lib/ai/requirement-coverage";
+import {
+  coverageStatusLabel,
+  coverageStatusTone,
+  describeCoverageDenominator,
+  describeCoverageSource,
+  jobAnalysisStateMessage,
+  resolveJobAnalysisState,
+  summarizeCoverage,
+} from "@/lib/generation/coverage-presentation";
 import { createJobContextId } from "@/lib/ai/job-context";
 import { readJobAnalysisCache } from "@/lib/jd-analysis-cache";
 import { createResumeFilename } from "@/lib/generation/resume-filename";
+import {
+  describeCompiledPdf,
+  readPageCount,
+} from "@/lib/generation/preview-metadata";
 import { createResumeExportPackage } from "@/lib/generation/export-package";
 import {
   countSelectionPoints,
@@ -172,6 +193,26 @@ async function postWithFallbackConsent(
     }
   }
   return result;
+}
+
+function CoverageStatusIcon({ status }: { status: CoverageStatus }) {
+  const icon =
+    status === "supported" ? (
+      <CircleCheck size={11} />
+    ) : status === "partial" ? (
+      <CircleDashed size={11} />
+    ) : status === "uncertain" ? (
+      <CircleHelp size={11} />
+    ) : status === "evidence-not-selected" ? (
+      <CircleMinus size={11} />
+    ) : (
+      <CircleX size={11} />
+    );
+  return (
+    <span aria-hidden="true" className="coverage-status-icon">
+      {icon}
+    </span>
+  );
 }
 
 export default function ResumeGenerator({ library, source }: Props) {
@@ -1013,7 +1054,7 @@ export default function ResumeGenerator({ library, source }: Props) {
 
       if (
         !response.headers.get("Content-Type")?.includes("application/pdf") ||
-        response.headers.get("X-PDF-Pages") !== "1"
+        readPageCount(response.headers.get("X-PDF-Pages")) !== 1
       ) {
         setCompileError({
           error: "The server returned an unverified PDF. Try compiling again.",
@@ -1033,6 +1074,7 @@ export default function ResumeGenerator({ library, source }: Props) {
       }
       if (controller.signal.aborted) return false;
 
+      const pageCount = readPageCount(response.headers.get("X-PDF-Pages"));
       setPdfUrl(URL.createObjectURL(pdf));
       const bytes = new Uint8Array(await pdf.arrayBuffer());
       let binary = "";
@@ -1044,7 +1086,7 @@ export default function ResumeGenerator({ library, source }: Props) {
       setPdfBase64(compiledPdfBase64);
       await persistGeneration(target, "compiled", compiledPdfBase64);
       setOutputView("pdf");
-      setCompileStatus("PDF ready · 1 page.");
+      setCompileStatus(describeCompiledPdf({ pageCount }));
       return true;
     } catch {
       if (!controller.signal.aborted) {
@@ -1163,7 +1205,7 @@ export default function ResumeGenerator({ library, source }: Props) {
   }
   const currentCoverage = useMemo(
     () =>
-      analysis && recommendation
+      analysis
         ? assessRequirementCoverage(
             {
               jobDescription: draft.jobDescription,
@@ -1177,14 +1219,7 @@ export default function ResumeGenerator({ library, source }: Props) {
             { renderedSkillIds: selectedSkillIds ?? undefined },
           )
         : null,
-    [
-      analysis,
-      recommendation,
-      draft.jobDescription,
-      library,
-      selectedIds,
-      selectedSkillIds,
-    ],
+    [analysis, draft.jobDescription, library, selectedIds, selectedSkillIds],
   );
   const finalCoverage = result?.metadata.finalCoverage;
   const coverageItems = (
@@ -1221,9 +1256,20 @@ export default function ResumeGenerator({ library, source }: Props) {
   const coveredCount = coverageItems.filter(
     (item) => item.status === "supported",
   ).length;
-  const partialCount = coverageItems.filter(
-    (item) => item.status === "partial" || item.status === "uncertain",
-  ).length;
+  const coverageSummary = summarizeCoverage(coverageItems);
+  const coverageSource = describeCoverageSource({
+    targetTitle: analysis?.targetTitle,
+    seniority: analysis?.seniority,
+    roleTitle: draft.roleTitle,
+    company: draft.company,
+  });
+  const jobAnalysisState = resolveJobAnalysisState({
+    draftReady,
+    hasJobDescription,
+    isAnalyzing: isRecommending,
+    hasError: Boolean(selectionError),
+    analysis,
+  });
   const visibleProposals =
     tailoring?.proposals.filter((proposal) =>
       selectedIds.includes(proposal.achievementId),
@@ -1402,6 +1448,8 @@ export default function ResumeGenerator({ library, source }: Props) {
         >
           <section
             className="generation-selection"
+            id="resume-editing"
+            tabIndex={-1}
             aria-label={
               result ? "Resume editing workspace" : "Choose achievements"
             }
@@ -1501,13 +1549,48 @@ export default function ResumeGenerator({ library, source }: Props) {
                   </p>
                 )}
 
-                {!analysis && draftReady && hasJobDescription && (
-                  <p className="selection-analysis-notice">
-                    Analyze this job description on the{" "}
-                    <Link href="/">Job description</Link> page before requesting
-                    AI recommendations.
-                  </p>
-                )}
+                <section
+                  className="selection-analysis"
+                  aria-label="Job analysis"
+                >
+                  <div className="selection-analysis-heading">
+                    <div>
+                      <h3>Job analysis</h3>
+                      <p>{coverageSource}</p>
+                    </div>
+                    <span
+                      className={`selection-analysis-state is-${jobAnalysisState}`}
+                    >
+                      {jobAnalysisState === "ready"
+                        ? "Analyzed"
+                        : jobAnalysisState === "loading"
+                          ? "Analyzing…"
+                          : jobAnalysisState === "error"
+                            ? "Unavailable"
+                            : jobAnalysisState === "empty"
+                              ? "No requirements"
+                              : "Not analyzed"}
+                    </span>
+                  </div>
+                  {jobAnalysisState === "ready" ? (
+                    <p className="selection-analysis-detail">
+                      {coverageSummary.total} requirement
+                      {coverageSummary.total === 1 ? "" : "s"} extracted from
+                      this job description. Requirement coverage below shows how
+                      the selected evidence supports each one.
+                    </p>
+                  ) : (
+                    <p className="selection-analysis-detail">
+                      {jobAnalysisStateMessage(jobAnalysisState)}
+                    </p>
+                  )}
+                  {jobAnalysisState === "absent" && hasJobDescription && (
+                    <p className="selection-analysis-detail">
+                      <Link href="/">Analyze this job description</Link> before
+                      requesting AI recommendations.
+                    </p>
+                  )}
+                </section>
                 {selectionError && (
                   <p className="generation-error-message" role="alert">
                     {selectionError}
@@ -1551,19 +1634,33 @@ export default function ResumeGenerator({ library, source }: Props) {
                     )}
                     <div className="selection-coverage">
                       <div className="selection-coverage-heading">
-                        <h4>Requirement coverage</h4>
-                        <strong>
-                          {coveredCount} / {coverageItems.length} supported
-                          {partialCount ? ` · ${partialCount} partial` : ""}
+                        <div>
+                          <h4>Requirement coverage</h4>
+                          <p className="selection-coverage-source">
+                            {coverageSource}
+                          </p>
+                        </div>
+                        <strong className="selection-coverage-count">
+                          {coverageSummary.headline}
                         </strong>
                       </div>
                       {coverageItems.length ? (
                         <>
                           <progress
-                            aria-label="Requirements covered by selected achievements"
-                            max={coverageItems.length}
+                            aria-label="Requirements covered by selected achievements, out of the job requirements analyzed from this job description"
+                            max={coverageSummary.total}
                             value={coveredCount}
                           />
+                          <p className="selection-coverage-denominator">
+                            {describeCoverageDenominator(coverageSummary.total)}
+                          </p>
+                          {coverageSummary.breakdowns.length > 0 && (
+                            <p className="selection-coverage-breakdown">
+                              {coverageSummary.breakdowns
+                                .map((tally) => `${tally.count} ${tally.label}`)
+                                .join(" · ")}
+                            </p>
+                          )}
                           {[
                             ...new Set(
                               coverageItems.map((item) => item.category),
@@ -1575,17 +1672,12 @@ export default function ResumeGenerator({ library, source }: Props) {
                                 {coverageItems
                                   .filter((item) => item.category === category)
                                   .map((item) => {
-                                    const status =
-                                      item.status === "supported"
-                                        ? "Covered"
-                                        : item.status === "partial"
-                                          ? "Partial support"
-                                          : item.status === "uncertain"
-                                            ? "Needs confirmation"
-                                            : item.status ===
-                                                "evidence-not-selected"
-                                              ? "Not selected"
-                                              : "No match found";
+                                    const tone = coverageStatusTone(
+                                      item.status,
+                                    );
+                                    const status = coverageStatusLabel(
+                                      item.status,
+                                    );
                                     const evidenceIds = item.selectedEvidenceIds
                                       .length
                                       ? item.selectedEvidenceIds
@@ -1595,12 +1687,11 @@ export default function ResumeGenerator({ library, source }: Props) {
                                         <details>
                                           <summary>
                                             <span
-                                              className={
-                                                status === "Covered"
-                                                  ? "coverage-status is-covered"
-                                                  : "coverage-status"
-                                              }
+                                              className={`coverage-status is-${tone}`}
                                             >
+                                              <CoverageStatusIcon
+                                                status={item.status}
+                                              />
                                               {status}
                                             </span>
                                             <span>{item.requirement}</span>
@@ -1629,9 +1720,9 @@ export default function ResumeGenerator({ library, source }: Props) {
                           ))}
                         </>
                       ) : (
-                        <p>
-                          No explicit requirements or responsibilities were
-                          extracted.
+                        <p className="selection-coverage-denominator">
+                          The job analysis did not extract any requirements or
+                          responsibilities from this job description.
                         </p>
                       )}
                     </div>
@@ -2142,7 +2233,11 @@ export default function ResumeGenerator({ library, source }: Props) {
                   setOutputView("pdf");
                   setCompileError(null);
                   setCompileStatus(
-                    `PDF ready · 1 page${generation.metadata.layout ? ` · ${Math.round(generation.metadata.layout.utilization * 100)}% page fill` : ""}.`,
+                    describeCompiledPdf({
+                      pageCount: generation.metadata.layout?.pageCount ?? null,
+                      utilization:
+                        generation.metadata.layout?.utilization ?? null,
+                    }),
                   );
                 }}
               />
@@ -2309,6 +2404,9 @@ export default function ResumeGenerator({ library, source }: Props) {
                     ? "Compiled from your generated LaTeX"
                     : "Generated from your selected points"}
                 </p>
+                <a className="preview-return-link" href="#resume-editing">
+                  Back to editing
+                </a>
               </div>
               {result && (
                 <div className="generation-output-actions">

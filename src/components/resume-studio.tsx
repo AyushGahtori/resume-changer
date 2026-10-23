@@ -12,6 +12,11 @@ import { useRouter } from "next/navigation";
 import StudioDialog from "./studio-dialog";
 import StudioSkills from "./studio-skills";
 import {
+  describeSectionInclusion,
+  REVIEW_SECTIONS,
+  sectionToggleLabel,
+} from "@/lib/generation/review-inclusion";
+import {
   documentFromGeneration,
   draftChangeCount,
   mergeDraftBullets,
@@ -973,32 +978,38 @@ export default function ResumeStudio({
                   <p>Choose which sections appear in this resume.</p>
                 </div>
               </div>
-              {(
-                ["projects", "education", "credentials", "skills"] as const
-              ).map((section) => (
-                <label className="studio-section-toggle" key={section}>
-                  <input
-                    type="checkbox"
-                    checked={document.sectionOrder.includes(section)}
-                    onChange={(event) =>
-                      change(`Toggle ${section}`, {
-                        ...document,
-                        sectionOrder: event.target.checked
-                          ? [...document.sectionOrder, section]
-                          : document.sectionOrder.filter(
-                              (item) => item !== section,
-                            ),
-                      })
-                    }
-                  />
-                  Include{" "}
-                  {section === "credentials"
-                    ? "credentials"
-                    : section === "projects"
-                      ? "Projects section"
-                      : section}
-                </label>
-              ))}
+              <fieldset className="studio-section-toggles">
+                <legend>Sections to include</legend>
+                <p className="studio-section-toggle-count">
+                  {describeSectionInclusion(
+                    REVIEW_SECTIONS.filter((section) =>
+                      document.sectionOrder.includes(section),
+                    ).length,
+                    REVIEW_SECTIONS.length,
+                  )}
+                </p>
+                <div className="studio-section-toggle-list">
+                  {REVIEW_SECTIONS.map((section) => (
+                    <label className="studio-section-toggle" key={section}>
+                      <input
+                        type="checkbox"
+                        checked={document.sectionOrder.includes(section)}
+                        onChange={(event) =>
+                          change(`Toggle ${section}`, {
+                            ...document,
+                            sectionOrder: event.target.checked
+                              ? [...document.sectionOrder, section]
+                              : document.sectionOrder.filter(
+                                  (item) => item !== section,
+                                ),
+                          })
+                        }
+                      />
+                      {sectionToggleLabel(section)}
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
               {library.profile.education.map((education) => (
                 <article className="studio-record" key={education.id}>
                   <strong>
