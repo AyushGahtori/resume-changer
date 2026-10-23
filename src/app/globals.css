@@ -2960,6 +2960,10 @@ a:focus-visible {
   color: var(--ink);
   font-size: 12px;
 }
+.library-filter-grid select[data-active="true"] {
+  border-color: var(--focus);
+  background: var(--imagination-soft);
+}
 
 /*
  * Keep the border on the complete search control so the icon, input, and

@@ -149,6 +149,7 @@ export default function SearchWorkbench({
                 onFilterChange("experienceId", event.target.value)
               }
               value={filters.experienceId}
+              data-active={filters.experienceId ? "true" : undefined}
             >
               <option value="">All experience</option>
               {library.jobs.map((job) => (
@@ -171,6 +172,7 @@ export default function SearchWorkbench({
                 onFilterChange("sourceType", event.target.value)
               }
               value={filters.sourceType}
+              data-active={filters.sourceType ? "true" : undefined}
             >
               <option value="">All sources</option>
               {sourceTypes.map((type) => (
@@ -191,6 +193,7 @@ export default function SearchWorkbench({
                 )
               }
               value={filters.status}
+              data-active={filters.status !== "all" ? "true" : undefined}
             >
               <option value="all">All statuses</option>
               <option value="enabled">Enabled</option>
@@ -205,6 +208,7 @@ export default function SearchWorkbench({
                 onFilterChange("skillId", event.target.value)
               }
               value={filters.skillId}
+              data-active={filters.skillId ? "true" : undefined}
             >
               <option value="">All skills</option>
               {options.skills.map((skill) => (
@@ -220,6 +224,7 @@ export default function SearchWorkbench({
             <select
               onChange={(event) => onFilterChange("tag", event.target.value)}
               value={filters.tag}
+              data-active={filters.tag ? "true" : undefined}
             >
               <option value="">All tags</option>
               {options.tags.map((tag) => (

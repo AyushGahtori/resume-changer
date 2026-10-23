@@ -575,11 +575,11 @@ Reference files: `docs/ui-images/achievement-library/search-workbench-light-dark
 
 **Files:** Extract `src/components/library/search-workbench.tsx` only if justified; integrate existing `LibraryFilters` state; style in shared CSS; add `tests/e2e/library-search.spec.ts` and `tests/e2e/library-responsive.spec.ts`.
 
-- [ ] Place search, filter controls, category navigation, sort, and result summary in a predictable order below the profile summary.
-- [ ] Make the workbench sticky only after confirming the shared header offset; keep it below the topbar, provide an opaque theme-aware surface, and use a border rather than a strong shadow.
-- [ ] Do not let sticky content cover focused inputs, dropdown options, category headings, or browser anchor targets; apply `scroll-margin-top` to destination sections.
-- [ ] On mobile, either keep a compact search row sticky and allow filter controls to wrap/scroll accessibly, or disable sticky behavior when it crowds content; preserve all controls.
-- [ ] Test scroll position, focus visibility, filter dropdown stacking, theme, and no horizontal page overflow at 320/390/768/1024/1440px.
+- [x] Place search, filter controls, category navigation, sort, and result summary in a predictable order below the profile summary.
+- [x] Make the workbench sticky only after confirming the shared header offset; keep it below the topbar, provide an opaque theme-aware surface, and use a border rather than a strong shadow.
+- [x] Do not let sticky content cover focused inputs, dropdown options, category headings, or browser anchor targets; apply `scroll-margin-top` to destination sections.
+- [x] On mobile, either keep a compact search row sticky and allow filter controls to wrap/scroll accessibly, or disable sticky behavior when it crowds content; preserve all controls.
+- [x] Test scroll position, focus visibility, filter dropdown stacking, theme, and no horizontal page overflow at 320/390/768/1024/1440px.
 
 **Acceptance:** Search/filter controls remain discoverable during long-page browsing without blocking content or keyboard focus.
 
@@ -620,12 +620,12 @@ Reference files: `docs/ui-images/achievement-library/search-workbench-light-dark
 
 **Files:** Search workbench/library component, `src/lib/data/achievement-search.ts` only for required reusable pure behavior, `tests/unit/data/achievement-search.test.ts`, and `tests/e2e/library-filters.spec.ts`.
 
-- [ ] Preserve current facets: Job or project (`All experience`), Point source (`All sources`), Point status (`All statuses`), Linked skill (`All skills`), and Tag (`All tags`).
-- [ ] Generate choices from the loaded library and preserve stable labels/order; do not show fabricated skills/tags or empty nonfunctional dropdowns.
-- [ ] Keep all filters combinable with the query; result count and visible groups update together.
-- [ ] Preserve the `Reset filters` behavior and use an explicit reset action only when at least one filter/query differs from default.
-- [ ] Keep native select semantics or implement a fully keyboard-accessible listbox; do not hide native focus/option behavior with CSS-only faux menus.
-- [ ] Test each facet, cross-facet combination, empty options, disabled source controls when appropriate, reset, and long labels on mobile.
+- [x] Preserve current facets: Job or project (`All experience`), Point source (`All sources`), Point status (`All statuses`), Linked skill (`All skills`), and Tag (`All tags`).
+- [x] Generate choices from the loaded library and preserve stable labels/order; do not show fabricated skills/tags or empty nonfunctional dropdowns.
+- [x] Keep all filters combinable with the query; result count and visible groups update together.
+- [x] Preserve the `Reset filters` behavior and use an explicit reset action only when at least one filter/query differs from default.
+- [x] Keep native select semantics or implement a fully keyboard-accessible listbox; do not hide native focus/option behavior with CSS-only faux menus.
+- [x] Test each facet, cross-facet combination, empty options, disabled source controls when appropriate, reset, and long labels on mobile.
 
 **Acceptance:** Filters match existing `LibraryFilters` behavior, remain accessible, and cannot silently show stale counts or result sections.
 
