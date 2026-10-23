@@ -98,6 +98,36 @@ describe("POST /api/library/points", () => {
     );
   });
 
+  it("persists reviewed text, selected skills, and source attribution", async () => {
+    const library = await readLibrary();
+    const parentId = library.jobs[0].id;
+    const reviewedText =
+      "Reviewed wording is the only text sent to the library writer.";
+    const sourceAchievementIds = ["achievement-cloud-deployment-platform"];
+    const skillIds = ["skill-automation"];
+    const point = {
+      ...newPoint("achievement-reviewed-canvas-entry"),
+      text: reviewedText,
+      skillIds,
+      source: {
+        type: "direct-user" as const,
+        label: "Reviewed in Imagination Canvas",
+        reference: JSON.stringify({ sourceAchievementIds, skillIds }),
+      },
+    };
+
+    const response = await post({ parentType: "job", parentId, point });
+
+    expect(response.status).toBe(201);
+    const saved = await readLibrary();
+    const persisted = saved.jobs
+      .find((item) => item.id === parentId)!
+      .points.find((item) => item.id === point.id)!;
+    expect(persisted.text).toBe(reviewedText);
+    expect(persisted.skillIds).toEqual(skillIds);
+    expect(persisted.source).toEqual(point.source);
+  });
+
   it("adds an achievement to a project", async () => {
     const library = await readLibrary();
     const parentId = library.projects[0].id;
