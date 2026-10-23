@@ -2,24 +2,46 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
-import { ChevronDown } from "lucide-react";
+import {
+  Award,
+  Box,
+  Briefcase,
+  BriefcaseBusiness,
+  ChevronDown,
+  ChartNoAxesColumn,
+  FolderKanban,
+  Lock,
+} from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import AchievementPointEditor from "@/components/achievement-point-editor";
+import type { ParentOption } from "@/components/achievement-point-editor";
 import AchievementImagination from "@/components/achievement-imagination";
+import AchievementCard from "@/components/library/achievement-card";
 import ProfileSummary from "@/components/library/profile-summary";
+import LibrarySectionHeader from "@/components/library/library-section-header";
 import SearchWorkbench from "@/components/library/search-workbench";
+import {
+  LibraryEmptyState,
+  LibraryReadOnlyNotice,
+} from "@/components/library/library-states";
 import {
   LIBRARY_CONTENT_ID,
   LIBRARY_SECTION_IDS,
 } from "@/components/library/category-navigation";
 import {
+  DEFAULT_LIBRARY_SORT,
   EMPTY_LIBRARY_FILTERS,
   filterAchievementLibrary,
   getLibraryFilterOptions,
+  sortFilteredLibrary,
+  type LibrarySort,
   type LibraryFilters,
 } from "@/lib/data/achievement-search";
+import {
+  formatExperienceRange,
+  type ExperienceRange,
+} from "@/lib/data/experience-dates";
 import { LIBRARY_ACTIONS } from "@/lib/ui/library-actions";
-import { countLabel } from "@/lib/ui/library-labels";
 import type {
   AchievementPoint,
   Job,
@@ -31,184 +53,188 @@ import type { ResumeDataSource } from "@/lib/data/loaders";
 type Props = { library: ResumeLibrary; source: ResumeDataSource };
 type EditorState =
   { mode: "create" } | { mode: "edit"; point: AchievementPoint } | null;
+type EditorHandlers = { onCancel: () => void; onSaved: () => void };
+type InlineEditorState = {
+  pointId: string;
+  parents: ParentOption[];
+  handlers: EditorHandlers;
+};
 
-function dateRange(start?: string, end?: string | null) {
-  if (!start) return "";
-  const format = (value: string) => {
-    const [year, month] = value.split("-");
-    return `${month}/${year}`;
-  };
-  return `${format(start)} – ${end ? format(end) : "Present"}`;
+type GroupKind = "job" | "project";
+
+function groupKey(kind: GroupKind, id: string) {
+  return kind + "-" + id;
 }
 
-function PointRow({
-  point,
-  library,
-  onTag,
-  onSkill,
-  onEdit,
-}: {
-  point: AchievementPoint;
-  library: ResumeLibrary;
-  onTag: (tag: string) => void;
-  onSkill: (skillId: string) => void;
-  onEdit?: () => void;
-}) {
-  const skillsById = new Map(library.skills.map((skill) => [skill.id, skill]));
-  const editAction = LIBRARY_ACTIONS["edit-point"];
-  const EditIcon = editAction.icon;
-  return (
-    <article className="library-point">
-      <div className="library-point-heading">
-        <code>{point.id}</code>
-        <div className="point-row-actions">
-          <span
-            className={`point-status ${point.enabled ? "is-enabled" : "is-disabled"}`}
-          >
-            {point.enabled ? "Enabled" : "Disabled"}
-          </span>
-          {onEdit && (
-            <button
-              className="ui-button ui-button--tertiary ui-button--compact"
-              onClick={onEdit}
-              type="button"
-            >
-              <EditIcon
-                aria-hidden="true"
-                size={editAction.iconSize}
-                strokeWidth={2}
-              />
-              {editAction.label}
-            </button>
-          )}
-        </div>
-      </div>
-      <p className="library-point-text">{point.text}</p>
-      <p className="point-provenance">
-        Source: <strong>{point.source.type}</strong>
-        {point.source.label ? ` · ${point.source.label}` : ""}
-        {point.source.reference ? ` · ${point.source.reference}` : ""}
-      </p>
-      {point.metrics.length > 0 && (
-        <ul className="point-metrics" aria-label="Achievement metrics">
-          {point.metrics.map((metric) => (
-            <li key={metric.id}>
-              <strong>
-                {metric.label}: {metric.value}
-                {metric.unit ? ` ${metric.unit}` : ""}
-              </strong>
-              <span>{metric.evidence}</span>
-              {metric.context && <span>{metric.context}</span>}
-            </li>
-          ))}
-        </ul>
-      )}
-      {(point.tags.length > 0 || point.skillIds.length > 0) && (
-        <div className="point-facets">
-          {point.tags.map((tag) => (
-            <button
-              className="facet-chip"
-              key={tag}
-              onClick={() => onTag(tag)}
-              type="button"
-            >
-              #{tag}
-            </button>
-          ))}
-          {point.skillIds.map((id) => {
-            const skill = skillsById.get(id);
-            return skill ? (
-              <button
-                className="facet-chip is-skill"
-                key={id}
-                onClick={() => onSkill(id)}
-                type="button"
-              >
-                {skill.name}
-              </button>
-            ) : null;
-          })}
-        </div>
-      )}
-    </article>
-  );
+function RangeText({ range }: { range: ExperienceRange }) {
+  if (range.start && range.end) {
+    return (
+      <>
+        <time dateTime={range.start.value}>{range.start.label}</time>
+        {" – "}
+        <time dateTime={range.end.value}>{range.end.label}</time>
+      </>
+    );
+  }
+  if (range.start && range.present) {
+    return (
+      <>
+        <time dateTime={range.start.value}>{range.start.label}</time>
+        {" – Present"}
+      </>
+    );
+  }
+  if (range.start) {
+    return <time dateTime={range.start.value}>{range.start.label}</time>;
+  }
+  if (range.end) {
+    return <time dateTime={range.end.value}>{range.end.label}</time>;
+  }
+  return <>Present</>;
 }
-
 function ExperienceGroup({
   item,
   kind,
   library,
+  collapsed,
   onTag,
   onSkill,
   onEdit,
+  onToggle,
+  activeTag,
+  activeSkillId,
+  editor,
+  parents,
 }: {
   item: (Job | Project) & { points: AchievementPoint[] };
-  kind: "job" | "project";
+  kind: GroupKind;
   library: ResumeLibrary;
+  collapsed: boolean;
   onTag: (tag: string) => void;
   onSkill: (skillId: string) => void;
-  onEdit?: (point: AchievementPoint) => void;
+  onEdit?: (point: AchievementPoint, trigger: HTMLButtonElement) => void;
+  onToggle: (key: string) => void;
+  activeTag: string;
+  activeSkillId: string;
+  editor?: InlineEditorState;
+  parents: ParentOption[];
 }) {
   const isJob = kind === "job";
   const job = isJob ? (item as Job) : null;
   const project = isJob ? null : (item as Project);
   const title = job?.title ?? project?.name ?? "";
   const organization = job?.company ?? project?.role;
+  const range = formatExperienceRange(
+    job ? job.startDate : project?.startDate,
+    job ? job.endDate : project?.endDate,
+  );
+  const key = groupKey(kind, item.id);
+  const panelId = "library-group-panel-" + key;
+  const titleId = "library-group-title-" + key;
+  const expanded = !collapsed;
+  const GroupIcon = isJob ? Briefcase : FolderKanban;
 
   return (
     <section
       className="experience-group"
-      aria-label={`${isJob ? "Job" : "Project"}: ${title}`}
+      aria-label={(isJob ? "Job: " : "Project: ") + title}
     >
-      <div className="experience-heading">
-        <div>
-          <p className="experience-kind">{isJob ? "JOB" : "PROJECT"}</p>
-          <h3>{title}</h3>
-          {organization && (
-            <p className="experience-subtitle">{organization}</p>
+      <h3 aria-labelledby={titleId} className="experience-heading">
+        <button
+          aria-controls={panelId}
+          aria-expanded={expanded}
+          className="experience-toggle"
+          onClick={() => onToggle(key)}
+          type="button"
+        >
+          <span
+            aria-hidden="true"
+            className={"experience-icon-tile is-" + kind}
+          >
+            <GroupIcon size={18} />
+          </span>
+          <span className="experience-heading-text">
+            <span className="experience-kind">{isJob ? "JOB" : "PROJECT"}</span>
+            <span className="experience-title" id={titleId}>
+              {title}
+            </span>
+            {organization && (
+              <span className="experience-subtitle">{organization}</span>
+            )}
+          </span>
+          <span className="experience-count">
+            {item.points.length} achievement
+            {item.points.length === 1 ? "" : "s"}
+          </span>
+          {range && (
+            <span className="experience-dates">
+              <RangeText range={range} />
+            </span>
           )}
-        </div>
-        <span className="experience-dates">
-          {job
-            ? dateRange(job.startDate, job.endDate)
-            : dateRange(project?.startDate, project?.endDate)}
-        </span>
+          <ChevronDown
+            aria-hidden="true"
+            className="experience-chevron"
+            size={16}
+          />
+        </button>
+      </h3>
+      <div className="experience-panel" hidden={!expanded} id={panelId}>
+        {item.points.map((point) => (
+          <AchievementCard
+            key={point.id}
+            activeSkillId={activeSkillId}
+            activeTag={activeTag}
+            editor={
+              editor?.pointId === point.id
+                ? { ...editor.handlers, parents }
+                : undefined
+            }
+            kind={kind}
+            onEdit={onEdit ? (trigger) => onEdit(point, trigger) : undefined}
+            onSkill={onSkill}
+            onTag={onTag}
+            point={point}
+            skills={library.skills}
+          />
+        ))}
       </div>
-      {item.points.map((point) => (
-        <PointRow
-          key={point.id}
-          library={library}
-          onSkill={onSkill}
-          onTag={onTag}
-          onEdit={onEdit ? () => onEdit(point) : undefined}
-          point={point}
-        />
-      ))}
     </section>
   );
 }
-
 export default function AchievementLibrary({ library, source }: Props) {
   const router = useRouter();
   const [filters, setFilters] = useState<LibraryFilters>(EMPTY_LIBRARY_FILTERS);
+  const [sort, setSort] = useState<LibrarySort>(DEFAULT_LIBRARY_SORT);
   const [editor, setEditor] = useState<EditorState>(null);
   const [creating, setCreating] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
+  const [collapsedGroups, setCollapsedGroups] = useState<ReadonlySet<string>>(
+    () => new Set<string>(),
+  );
   const addAction = LIBRARY_ACTIONS["add-achievement"];
   const detailedEntryAction = LIBRARY_ACTIONS["detailed-entry"];
   const AddIcon = addAction.icon;
   const DetailedEntryIcon = detailedEntryAction.icon;
-  const result = useMemo(
+  const editorTriggerRef = useRef<HTMLElement | null>(null);
+  const pendingEditorFocusRef = useRef<HTMLElement | null>(null);
+  const canvasTriggerRef = useRef<HTMLElement | null>(null);
+  const detailedEntryRef = useRef<HTMLButtonElement>(null);
+  const addAchievementRef = useRef<HTMLButtonElement>(null);
+  const filtered = useMemo(
     () => filterAchievementLibrary(library, filters),
     [filters, library],
+  );
+  const result = useMemo(
+    () => sortFilteredLibrary(filtered, sort),
+    [filtered, sort],
   );
   const options = useMemo(() => getLibraryFilterOptions(library), [library]);
   const hasFilters = Object.entries(filters).some(([key, value]) =>
     key === "status" ? value !== "all" : value !== "",
   );
-  const sourceLabel =
-    source === "demo" ? "Fictional demo data" : "My resume data";
   const canEdit = source === "personal";
+  const hasNoData = result.totalPointCount === 0;
+  const hasNoMatches = !hasNoData && result.visiblePointCount === 0;
   const parentOptions = [
     ...library.jobs.map((job) => ({
       id: job.id,
@@ -221,15 +247,6 @@ export default function AchievementLibrary({ library, source }: Props) {
       type: "project" as const,
     })),
   ];
-  const jobPointCount = result.jobs.reduce(
-    (count, job) => count + job.points.length,
-    0,
-  );
-  const projectPointCount = result.projects.reduce(
-    (count, project) => count + project.points.length,
-    0,
-  );
-
   function updateFilter<Key extends keyof LibraryFilters>(
     key: Key,
     value: LibraryFilters[Key],
@@ -237,90 +254,157 @@ export default function AchievementLibrary({ library, source }: Props) {
     setFilters((current) => ({ ...current, [key]: value }));
   }
 
-  function openEditor(point?: AchievementPoint) {
-    setSaveMessage("");
-    setEditor(point ? { mode: "edit", point } : { mode: "create" });
+  function toggleGroup(key: string) {
+    setCollapsedGroups((current) => {
+      const next = new Set(current);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
   }
+
+  /*
+   * Capture the action that opened each flow so keyboard focus can return to
+   * the same control once the form or canvas has closed.
+   */
+  function openEditor(next: EditorState, trigger: HTMLElement | null) {
+    setSaveMessage("");
+    editorTriggerRef.current = trigger;
+    setEditor(next);
+  }
+
+  function openCanvas(trigger: HTMLElement | null) {
+    setSaveMessage("");
+    canvasTriggerRef.current = trigger;
+    setCreating(true);
+  }
+
+  useEffect(() => {
+    if (creating) return;
+    const trigger = canvasTriggerRef.current;
+    canvasTriggerRef.current = null;
+    trigger?.focus();
+  }, [creating]);
+
+  useEffect(() => {
+    if (editor) return;
+    const trigger = pendingEditorFocusRef.current;
+    pendingEditorFocusRef.current = null;
+    trigger?.focus();
+  }, [editor]);
+
+  function closeEditor() {
+    setEditor(null);
+    pendingEditorFocusRef.current = editorTriggerRef.current;
+    editorTriggerRef.current = null;
+  }
+
+  function saveEditor() {
+    closeEditor();
+    setSaveMessage("Saved to your local library.");
+    router.refresh();
+  }
+
+  const inlineEditor: InlineEditorState | undefined =
+    editor?.mode === "edit"
+      ? {
+          pointId: editor.point.id,
+          parents: parentOptions,
+          handlers: { onCancel: closeEditor, onSaved: saveEditor },
+        }
+      : undefined;
 
   return (
     <div className="library-page">
       <header className="library-page-header">
-        <div className="library-heading page-heading-row">
-          <div>
+        <div className="library-heading">
+          <div className="library-heading-copy">
             <p className="eyebrow">YOUR EXPERIENCE</p>
             <h1>Achievement library</h1>
             <p className="page-intro">
               Browse the resume information saved in this workspace.
             </p>
           </div>
-          <div
-            className="library-source-switch"
-            aria-label="Library data source"
-          >
-            <Link
-              aria-current={source === "personal" ? "page" : undefined}
-              href="/library"
-            >
-              My data
-            </Link>
-            <Link
-              aria-current={source === "demo" ? "page" : undefined}
-              href="/library?source=demo"
-            >
-              Demo data
-            </Link>
+          <div className="library-header-controls">
+            <div className="library-source-controls">
+              <nav
+                className="library-source-switch"
+                aria-label="Library data source"
+              >
+                <Link
+                  aria-current={source === "personal" ? "page" : undefined}
+                  href="/library"
+                >
+                  My data
+                </Link>
+                <Link
+                  aria-current={source === "demo" ? "page" : undefined}
+                  href="/library?source=demo"
+                >
+                  Demo data
+                </Link>
+              </nav>
+              {source === "demo" && (
+                <span className="library-source-note">
+                  <Lock
+                    aria-hidden="true"
+                    className="library-source-note-icon"
+                  />
+                  Read-only
+                </span>
+              )}
+            </div>
+            {canEdit && (
+              <div className="library-edit-toolbar">
+                <span className="library-edit-status" role="status">
+                  {saveMessage}
+                </span>
+                <div className="library-edit-actions">
+                  <button
+                    className="ui-button ui-button--secondary library-action library-action--secondary"
+                    disabled={editor !== null}
+                    onClick={() =>
+                      openEditor({ mode: "create" }, detailedEntryRef.current)
+                    }
+                    ref={detailedEntryRef}
+                    type="button"
+                  >
+                    <DetailedEntryIcon
+                      aria-hidden="true"
+                      size={detailedEntryAction.iconSize}
+                      strokeWidth={2}
+                    />
+                    {detailedEntryAction.label}
+                  </button>
+                  <button
+                    className="ui-button ui-button--primary library-action library-action--primary"
+                    disabled={creating}
+                    onClick={() => openCanvas(addAchievementRef.current)}
+                    ref={addAchievementRef}
+                    type="button"
+                  >
+                    <AddIcon
+                      aria-hidden="true"
+                      size={addAction.iconSize}
+                      strokeWidth={2}
+                    />
+                    {addAction.label}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
-
-        {canEdit && (
-          <div className="library-edit-toolbar">
-            <span>{saveMessage}</span>
-            <button
-              className="ui-button ui-button--secondary"
-              type="button"
-              onClick={() => {
-                setSaveMessage("");
-                setEditor({ mode: "create" });
-              }}
-            >
-              <DetailedEntryIcon
-                aria-hidden="true"
-                size={detailedEntryAction.iconSize}
-                strokeWidth={2}
-              />
-              {detailedEntryAction.label}
-            </button>
-            <button
-              className="ui-button ui-button--primary"
-              onClick={() => {
-                setSaveMessage("");
-                setCreating(true);
-              }}
-              type="button"
-            >
-              <AddIcon
-                aria-hidden="true"
-                size={addAction.iconSize}
-                strokeWidth={2}
-              />
-              {addAction.label}
-            </button>
-          </div>
-        )}
       </header>
+      {!canEdit ? <LibraryReadOnlyNotice /> : null}
+      <ProfileSummary library={library} source={source} />
 
-      <ProfileSummary library={library} sourceLabel={sourceLabel} />
-
-      {editor && (
+      {editor?.mode === "create" && (
         <AchievementPointEditor
-          key={editor.mode === "edit" ? editor.point.id : "new-achievement"}
-          initialPoint={editor.mode === "edit" ? editor.point : undefined}
-          onCancel={() => setEditor(null)}
-          onSaved={() => {
-            setEditor(null);
-            setSaveMessage("Saved to your local library.");
-            router.refresh();
-          }}
+          key="new-achievement"
+          focusFirstField
+          onCancel={closeEditor}
+          onSaved={saveEditor}
           parents={parentOptions}
           skills={library.skills}
         />
@@ -347,120 +431,152 @@ export default function AchievementLibrary({ library, source }: Props) {
         onReset={() => setFilters(EMPTY_LIBRARY_FILTERS)}
         options={options}
         result={result}
+        sort={sort}
+        onSortChange={setSort}
       />
 
       <div className="library-content" id={LIBRARY_CONTENT_ID}>
-        {result.visiblePointCount === 0 && (
-          <p className="library-empty" role="status">
-            No achievement points match these filters.
-          </p>
-        )}
+        {hasNoData ? (
+          <LibraryEmptyState
+            onAdd={
+              canEdit
+                ? () =>
+                    openEditor(
+                      { mode: "create" },
+                      detailedEntryRef.current ?? document.body,
+                    )
+                : undefined
+            }
+            totalPointCount={result.totalPointCount}
+            variant="no-data"
+          />
+        ) : hasNoMatches ? (
+          <LibraryEmptyState
+            onReset={() => setFilters(EMPTY_LIBRARY_FILTERS)}
+            totalPointCount={result.totalPointCount}
+            variant="no-matches"
+          />
+        ) : null}
 
-        <section
-          aria-labelledby={`${LIBRARY_SECTION_IDS.jobs}-heading`}
-          className="library-section"
-          id={LIBRARY_SECTION_IDS.jobs}
-        >
-          <div className="library-section-header">
-            <h2
-              className="library-section-heading"
-              id={`${LIBRARY_SECTION_IDS.jobs}-heading`}
-            >
-              Jobs
-            </h2>
-            <span className="library-section-count">
-              {countLabel(jobPointCount, "achievement", "achievements")}
-            </span>
-          </div>
-          <div className="library-section-body">
-            {result.jobs.length ? (
-              result.jobs.map((job) => (
-                <ExperienceGroup
-                  item={job}
-                  key={job.id}
-                  kind="job"
-                  library={library}
-                  onSkill={(id) => updateFilter("skillId", id)}
-                  onTag={(tag) => updateFilter("tag", tag)}
-                  onEdit={canEdit ? (point) => openEditor(point) : undefined}
-                />
-              ))
-            ) : (
-              <p className="secondary-empty">No jobs match this search.</p>
-            )}
-          </div>
-        </section>
-
-        <section
-          aria-labelledby={`${LIBRARY_SECTION_IDS.projects}-heading`}
-          className="library-section"
-          id={LIBRARY_SECTION_IDS.projects}
-        >
-          <div className="library-section-header">
-            <h2
-              className="library-section-heading"
-              id={`${LIBRARY_SECTION_IDS.projects}-heading`}
-            >
-              Projects
-            </h2>
-            <span className="library-section-count">
-              {countLabel(projectPointCount, "achievement", "achievements")}
-            </span>
-          </div>
-          <div className="library-section-body">
-            {result.projects.length ? (
-              result.projects.map((project) => (
-                <ExperienceGroup
-                  item={project}
-                  key={project.id}
-                  kind="project"
-                  library={library}
-                  onSkill={(id) => updateFilter("skillId", id)}
-                  onTag={(tag) => updateFilter("tag", tag)}
-                  onEdit={canEdit ? (point) => openEditor(point) : undefined}
-                />
-              ))
-            ) : (
-              <p className="secondary-empty">No projects match this search.</p>
-            )}
-          </div>
-        </section>
-
-        <section
-          aria-labelledby={`${LIBRARY_SECTION_IDS.skills}-heading`}
-          className="library-section"
-          id={LIBRARY_SECTION_IDS.skills}
-        >
-          <div className="library-section-header">
-            <h2
-              className="library-section-heading"
-              id={`${LIBRARY_SECTION_IDS.skills}-heading`}
-            >
-              Skills
-            </h2>
-            <span className="library-section-count">
-              {countLabel(result.skills.length, "skill", "skills")}
-            </span>
-          </div>
-          <div className="library-section-body">
-            {result.skills.length ? (
-              <details
-                className="library-detail"
-                open={Boolean(filters.query || filters.skillId)}
-              >
-                <summary>
-                  <span className="library-detail-label is-closed">
-                    Show {countLabel(result.skills.length, "skill", "skills")}
-                  </span>
-                  <span className="library-detail-label is-open">
-                    Hide {countLabel(result.skills.length, "skill", "skills")}
-                  </span>
-                  <ChevronDown
-                    aria-hidden="true"
-                    className="library-detail-chevron"
-                    size={16}
+        <div className="library-sections">
+          <section
+            aria-labelledby="library-section-jobs"
+            className="library-section"
+            id={LIBRARY_SECTION_IDS.jobs}
+          >
+            <div className="library-section-header">
+              <LibrarySectionHeader
+                count={result.jobs.length}
+                icon={<BriefcaseBusiness size={18} />}
+                title="Jobs"
+                titleId="library-section-jobs"
+                tone="jobs"
+              />
+            </div>
+            <div className="library-section-body">
+              {result.jobs.length > 0 ? (
+                result.jobs.map((job) => (
+                  <ExperienceGroup
+                    activeSkillId={filters.skillId}
+                    activeTag={filters.tag}
+                    collapsed={collapsedGroups.has(groupKey("job", job.id))}
+                    editor={inlineEditor}
+                    item={job}
+                    key={job.id}
+                    kind="job"
+                    library={library}
+                    parents={parentOptions}
+                    onSkill={(id) => updateFilter("skillId", id)}
+                    onTag={(tag) => updateFilter("tag", tag)}
+                    onToggle={toggleGroup}
+                    onEdit={
+                      canEdit
+                        ? (point, trigger) =>
+                            openEditor({ mode: "edit", point }, trigger)
+                        : undefined
+                    }
                   />
-                </summary>
+                ))
+              ) : (
+                <p className="secondary-empty">
+                  {library.jobs.length === 0
+                    ? "No jobs saved in this library."
+                    : "No jobs match the current filters."}
+                </p>
+              )}
+            </div>
+          </section>
+
+          <section
+            aria-labelledby="library-section-projects"
+            className="library-section"
+            id={LIBRARY_SECTION_IDS.projects}
+          >
+            <div className="library-section-header">
+              <LibrarySectionHeader
+                count={result.projects.length}
+                icon={<Box size={18} />}
+                title="Projects"
+                titleId="library-section-projects"
+                tone="projects"
+              />
+            </div>
+            <div className="library-section-body">
+              {result.projects.length > 0 ? (
+                result.projects.map((project) => (
+                  <ExperienceGroup
+                    activeSkillId={filters.skillId}
+                    activeTag={filters.tag}
+                    collapsed={collapsedGroups.has(
+                      groupKey("project", project.id),
+                    )}
+                    editor={inlineEditor}
+                    item={project}
+                    key={project.id}
+                    kind="project"
+                    library={library}
+                    parents={parentOptions}
+                    onSkill={(id) => updateFilter("skillId", id)}
+                    onTag={(tag) => updateFilter("tag", tag)}
+                    onToggle={toggleGroup}
+                    onEdit={
+                      canEdit
+                        ? (point, trigger) =>
+                            openEditor({ mode: "edit", point }, trigger)
+                        : undefined
+                    }
+                  />
+                ))
+              ) : (
+                <p className="secondary-empty">
+                  {library.projects.length === 0
+                    ? "No projects saved in this library."
+                    : "No projects match the current filters."}
+                </p>
+              )}
+            </div>
+          </section>
+
+          <div
+            aria-label="Skills and credentials"
+            className="library-secondary"
+            role="region"
+          >
+            <details
+              className="library-detail library-section"
+              id={LIBRARY_SECTION_IDS.skills}
+              open={Boolean(filters.query || filters.skillId)}
+            >
+              <summary className="library-section-header">
+                <LibrarySectionHeader
+                  count={result.skills.length}
+                  icon={<ChartNoAxesColumn size={18} />}
+                  title="Skills"
+                  titleId="library-section-skills"
+                  tone="skills"
+                />
+              </summary>
+              {result.skills.length ? (
                 <ul className="skill-list">
                   {result.skills.map((skill) => (
                     <li key={skill.id}>
@@ -482,59 +598,30 @@ export default function AchievementLibrary({ library, source }: Props) {
                     </li>
                   ))}
                 </ul>
-              </details>
-            ) : (
-              <p className="secondary-empty">No skills match this search.</p>
-            )}
-          </div>
-        </section>
-
-        <section
-          aria-labelledby={`${LIBRARY_SECTION_IDS.credentials}-heading`}
-          className="library-section"
-          id={LIBRARY_SECTION_IDS.credentials}
-        >
-          <div className="library-section-header">
-            <h2
-              className="library-section-heading"
-              id={`${LIBRARY_SECTION_IDS.credentials}-heading`}
-            >
-              Credentials
-            </h2>
-            <span className="library-section-count">
-              {countLabel(
-                result.credentials.length,
-                "credential",
-                "credentials",
+              ) : (
+                <p className="secondary-empty">
+                  {library.skills.length === 0
+                    ? "No skills saved in this library."
+                    : "No skills match this search."}
+                </p>
               )}
-            </span>
-          </div>
-          <div className="library-section-body">
-            {result.credentials.length ? (
-              <details className="library-detail" open={Boolean(filters.query)}>
-                <summary>
-                  <span className="library-detail-label is-closed">
-                    Show{" "}
-                    {countLabel(
-                      result.credentials.length,
-                      "credential",
-                      "credentials",
-                    )}
-                  </span>
-                  <span className="library-detail-label is-open">
-                    Hide{" "}
-                    {countLabel(
-                      result.credentials.length,
-                      "credential",
-                      "credentials",
-                    )}
-                  </span>
-                  <ChevronDown
-                    aria-hidden="true"
-                    className="library-detail-chevron"
-                    size={16}
-                  />
-                </summary>
+            </details>
+
+            <details
+              className="library-detail library-section"
+              id={LIBRARY_SECTION_IDS.credentials}
+              open={Boolean(filters.query)}
+            >
+              <summary className="library-section-header">
+                <LibrarySectionHeader
+                  count={result.credentials.length}
+                  icon={<Award size={18} />}
+                  title="Credentials"
+                  titleId="library-section-credentials"
+                  tone="credentials"
+                />
+              </summary>
+              {result.credentials.length ? (
                 <ul className="credential-list">
                   {result.credentials.map((credential) => (
                     <li key={credential.id}>
@@ -545,14 +632,16 @@ export default function AchievementLibrary({ library, source }: Props) {
                     </li>
                   ))}
                 </ul>
-              </details>
-            ) : (
-              <p className="secondary-empty">
-                No credentials match this search.
-              </p>
-            )}
+              ) : (
+                <p className="secondary-empty">
+                  {library.credentials.length === 0
+                    ? "No credentials saved in this library."
+                    : "No credentials match this search."}
+                </p>
+              )}
+            </details>
           </div>
-        </section>
+        </div>
       </div>
     </div>
   );

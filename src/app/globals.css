@@ -1,6 +1,10 @@
 @import "tailwindcss";
 @import "./studio.css";
 
+html {
+  scroll-padding-top: calc(var(--library-sticky-space, 0px) + 12px);
+}
+
 /*
  * Shared design tokens.
  *
@@ -15,6 +19,11 @@
 :root {
   color-scheme: light;
   --color-canvas: #f8fafc;
+  --library-topbar-height: 0px;
+  --library-workbench-height: 0px;
+  --library-sticky-space: calc(
+    var(--library-topbar-height) + var(--library-workbench-height)
+  );
   --color-sidebar: #fafbfd;
   --color-surface: #ffffff;
   --color-surface-alt: #f1f5f9;
@@ -47,6 +56,9 @@
   --color-info: #3b82f6;
   --color-info-strong: #1d4ed8;
   --color-focus-ring: #7c3aed;
+  --color-nav-active-surface: var(--color-orange-subtle);
+  --color-nav-active-text: var(--color-orange-strong);
+  --color-nav-active-border: transparent;
 
   /*
    * Home action-bar state tokens. Each variant carries an explicit
@@ -91,6 +103,18 @@
   --color-category-points: #f59e0b;
   --color-category-skills: #10b981;
   --color-category-credentials: #4f46e5;
+
+  /*
+   * Category label colors. The identifier hue above is a fill and an icon
+   * color; on a light surface it is too light to carry text. These darker
+   * steps of the same hues carry a category label and still clear 4.5:1 on
+   * the surface and on the tinted metric tile.
+   */
+  --color-category-job-text: #b23c0c;
+  --color-category-project-text: #6d28d9;
+  --color-category-points-text: #8f5206;
+  --color-category-skills-text: #076b4d;
+  --color-category-credentials-text: #4f46e5;
 
   /* Compatibility aliases keep existing app and studio styles theme-aware. */
   --canvas: var(--color-canvas);
@@ -142,6 +166,9 @@
   --type-metadata-line-height: 16px;
   --type-metric-value-size: 26px;
   --type-metric-value-line-height: 32px;
+  /* Board metric value range for quantified achievement outcomes. */
+  --type-card-metric-value-size: 20px;
+  --type-card-metric-value-line-height: 24px;
   --space-4: 4px;
   --space-8: 8px;
   --space-12: 12px;
@@ -213,6 +240,9 @@
   --color-info: #60a5fa;
   --color-info-strong: #60a5fa;
   --color-focus-ring: #a78bfa;
+  --color-nav-active-surface: var(--color-violet-subtle);
+  --color-nav-active-text: var(--color-violet-light);
+  --color-nav-active-border: transparent;
 
   /*
    * Dark action-bar states. Dark surfaces rely on a visible border and a
@@ -247,6 +277,17 @@
   --color-category-points: #fbbf24;
   --color-category-skills: #34d399;
   --color-category-credentials: #818cf8;
+
+  /*
+   * Dark category label colors. The dark identifier hues are already light
+   * enough to carry text, so these match them and stay distinct from the
+   * light-theme steps above.
+   */
+  --color-category-job-text: #fdba74;
+  --color-category-project-text: #a78bfa;
+  --color-category-points-text: #fbbf24;
+  --color-category-skills-text: #34d399;
+  --color-category-credentials-text: #818cf8;
 
   --canvas: var(--color-canvas);
   --sidebar: var(--color-sidebar);
@@ -433,22 +474,27 @@ a {
 }
 
 .nav-link.is-active {
-  background: var(--accent-soft);
-  color: var(--accent-hover);
+  background: var(--color-nav-active-surface);
+  border-color: var(--color-nav-active-border);
+  color: var(--color-nav-active-text);
   font-weight: 600;
 }
 
 .nav-link.is-active .nav-icon {
-  color: var(--accent-hover);
+  color: var(--color-nav-active-text);
 }
 
-:root[data-theme="dark"] .nav-link.is-active {
-  background: var(--imagination-soft);
-  color: var(--color-violet-light);
+.app-frame.is-library-route {
+  --color-nav-active-surface: #fff7ed;
+  --color-nav-active-text: #c2410c;
+  --color-nav-active-border: #fed7aa;
 }
 
-:root[data-theme="dark"] .nav-link.is-active .nav-icon {
-  color: var(--color-violet-light);
+/* The library board uses a warm active destination treatment in dark mode. */
+:root[data-theme="dark"] .app-frame.is-library-route {
+  --color-nav-active-surface: #2a1f17;
+  --color-nav-active-text: #ff8a3d;
+  --color-nav-active-border: #4f3122;
 }
 
 .nav-icon {
@@ -1545,276 +1591,6 @@ a:focus-visible {
   outline-offset: 2px;
 }
 
-/* ---------------------------------------------------------------------------
-   Achievement Library type scale.
-
-   The library consumes the shared type tokens above instead of a second
-   palette or a second font stack. Georgia/Times stays on the page title and
-   the profile name; Arial/Helvetica stays on every operational label, control,
-   and piece of metadata. Sizes follow the library board's hierarchy - page
-   title 40/48 (32/40 on mobile), section 24/32, profile name 30/38,
-   experience title 18/24, body 14/20, label and metadata 12/16, micro-label
-   11/14 - with no viewport-scaled sizes and no letter-spacing tricks.
-   --------------------------------------------------------------------------- */
-.library-page {
-  letter-spacing: 0;
-}
-
-.library-page .library-heading h1 {
-  max-width: 100%;
-  font-size: var(--type-page-title-size);
-  line-height: var(--type-page-title-line-height);
-  overflow-wrap: anywhere;
-  text-wrap: balance;
-}
-
-.library-page .eyebrow {
-  font-size: var(--type-caption-size);
-  line-height: var(--type-caption-line-height);
-  font-weight: 600;
-}
-
-.library-page .page-intro {
-  font-size: var(--type-body-size);
-  line-height: var(--type-body-line-height);
-}
-
-.library-page .library-source-switch a {
-  font-size: var(--type-label-size);
-  line-height: var(--type-label-line-height);
-}
-
-.library-page .source-indicator {
-  font-size: var(--type-label-size);
-  line-height: var(--type-label-line-height);
-  font-weight: 600;
-  letter-spacing: 0;
-}
-
-.library-page .library-owner h2 {
-  font-size: var(--type-profile-name-size);
-  line-height: var(--type-profile-name-line-height);
-  overflow-wrap: anywhere;
-}
-
-.library-page .library-owner p {
-  font-size: var(--type-body-size);
-  line-height: var(--type-body-line-height);
-}
-
-.library-page .library-counts dt {
-  font-size: var(--type-label-size);
-  line-height: var(--type-label-line-height);
-  font-weight: 600;
-}
-
-.library-page .library-counts dd {
-  font-size: var(--type-metric-value-size);
-  line-height: var(--type-metric-value-line-height);
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  overflow-wrap: anywhere;
-}
-
-.library-page .library-search > span,
-.library-page .library-filter-grid label > span {
-  font-size: var(--type-label-size);
-  line-height: var(--type-label-line-height);
-  font-weight: 600;
-}
-
-.library-page .library-search input,
-.library-page .library-filter-grid select {
-  font-size: var(--type-body-size);
-  line-height: var(--type-body-line-height);
-}
-
-.library-page .library-filter-summary {
-  font-size: var(--type-body-size);
-  line-height: var(--type-body-line-height);
-  font-variant-numeric: tabular-nums;
-}
-
-.library-page .text-action {
-  font-size: var(--type-label-size);
-  line-height: var(--type-label-line-height);
-  font-weight: 600;
-}
-
-.library-page .experience-kind {
-  font-size: var(--type-micro-label-size);
-  line-height: var(--type-micro-label-line-height);
-  font-weight: 700;
-  letter-spacing: 0;
-}
-
-.library-page .experience-heading h3 {
-  font-size: var(--type-experience-title-size);
-  line-height: var(--type-experience-title-line-height);
-  font-weight: 600;
-  overflow-wrap: anywhere;
-}
-
-.library-page .experience-subtitle,
-.library-page .experience-dates {
-  font-size: var(--type-metadata-size);
-  line-height: var(--type-metadata-line-height);
-}
-
-.library-page .library-point-heading code {
-  color: var(--muted);
-  font-size: var(--type-metadata-size);
-  line-height: var(--type-metadata-line-height);
-}
-
-.library-page .point-status {
-  font-size: var(--type-label-size);
-  line-height: var(--type-label-line-height);
-  font-weight: 600;
-}
-
-.library-page .library-point-text {
-  font-size: var(--type-body-size);
-  line-height: var(--type-body-line-height);
-  overflow-wrap: anywhere;
-}
-
-.library-page .point-provenance {
-  font-size: var(--type-metadata-size);
-  line-height: var(--type-metadata-line-height);
-}
-
-.library-page .point-metrics li {
-  font-size: var(--type-metadata-size);
-  line-height: var(--type-metadata-line-height);
-}
-
-.library-page .point-metrics strong {
-  font-size: var(--type-body-size);
-  line-height: var(--type-body-line-height);
-}
-
-.library-page .point-metrics span {
-  font-size: var(--type-metadata-size);
-  line-height: var(--type-metadata-line-height);
-}
-
-.library-page .facet-chip {
-  max-width: 100%;
-  font-size: var(--type-label-size);
-  line-height: var(--type-label-line-height);
-  overflow-wrap: anywhere;
-}
-
-.library-page .library-detail summary {
-  font-size: var(--type-section-heading-size);
-  line-height: var(--type-section-heading-line-height);
-  overflow-wrap: anywhere;
-}
-
-.library-page .library-detail summary span {
-  font-size: var(--type-label-size);
-  line-height: var(--type-label-line-height);
-  font-variant-numeric: tabular-nums;
-}
-
-.library-page .skill-list li,
-.library-page .credential-list li {
-  font-size: var(--type-body-size);
-  line-height: var(--type-body-line-height);
-}
-
-.library-page .skill-list li > div span,
-.library-page .credential-list li > span {
-  font-size: var(--type-metadata-size);
-  line-height: var(--type-metadata-line-height);
-}
-
-.library-page .skill-listed,
-.library-page .skill-unlisted {
-  font-size: var(--type-label-size);
-  line-height: var(--type-label-line-height);
-}
-
-.library-page .library-empty,
-.library-page .secondary-empty {
-  font-size: var(--type-body-size);
-  line-height: var(--type-body-line-height);
-}
-
-/* The detailed-entry editor shares the library page, so it uses the same
-   type roles as the rest of the workspace. */
-.library-page .point-editor-heading h2 {
-  font-size: var(--type-experience-title-size);
-  line-height: var(--type-experience-title-line-height);
-}
-
-.library-page .point-editor-heading .eyebrow {
-  font-size: var(--type-micro-label-size);
-  line-height: var(--type-micro-label-line-height);
-}
-
-.library-page .editor-field > span {
-  font-size: var(--type-label-size);
-  line-height: var(--type-label-line-height);
-}
-
-.library-page .editor-field input,
-.library-page .editor-field select,
-.library-page .editor-field textarea {
-  font-size: var(--type-body-size);
-  line-height: var(--type-body-line-height);
-}
-
-.library-page .metric-editor-heading h3 {
-  font-size: var(--type-card-heading-size);
-  line-height: var(--type-card-heading-line-height);
-}
-
-.library-page .metric-fields legend {
-  font-size: var(--type-label-size);
-  line-height: var(--type-label-line-height);
-}
-
-.library-page .editor-enabled {
-  font-size: var(--type-body-size);
-  line-height: var(--type-body-line-height);
-}
-
-.library-page .editor-error {
-  font-size: var(--type-helper-size);
-  line-height: var(--type-helper-line-height);
-}
-
-.library-page .library-edit-toolbar > span {
-  font-size: var(--type-helper-size);
-  line-height: var(--type-helper-line-height);
-}
-
-/* The load-failure state is the library route's own page, so it carries the
-   same title and body type as the library screen. */
-.library-error h1 {
-  font-size: var(--type-page-title-size);
-  line-height: var(--type-page-title-line-height);
-  overflow-wrap: anywhere;
-}
-
-.library-error .eyebrow {
-  font-size: var(--type-caption-size);
-  line-height: var(--type-caption-line-height);
-  font-weight: 600;
-}
-
-.library-error > p:not(.eyebrow) {
-  font-size: var(--type-body-size);
-  line-height: var(--type-body-line-height);
-}
-
-.library-switch-link {
-  font-size: var(--type-body-size);
-  line-height: var(--type-body-line-height);
-}
-
 .workspace-note {
   display: flex;
   align-items: center;
@@ -1857,8 +1633,7 @@ a:focus-visible {
   display: block;
   margin-top: 6px;
   color: var(--muted);
-  font-size: var(--type-label-size);
-  line-height: var(--type-label-line-height);
+  font-size: 12px;
 }
 
 .jd-analysis-heading {
@@ -2752,51 +2527,177 @@ a:focus-visible {
   background: var(--danger-soft);
 }
 
+/* The library header is a compact page context block: an eyebrow, one
+   serif title, and a supporting line on the left, with the source and
+   creation controls grouped on the right. */
 .library-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-24);
   margin-bottom: var(--space-24);
 }
 
+.library-heading-copy {
+  min-width: 0;
+}
+
+.library-heading .eyebrow {
+  margin: 0 0 var(--space-8);
+  color: var(--color-orange-strong);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line-height);
+  font-weight: 600;
+}
+
 .library-heading h1 {
-  font-size: 38px;
+  max-width: 100%;
+  font-size: var(--type-page-title-size);
+  line-height: var(--type-page-title-line-height);
+  font-weight: 700;
+  text-wrap: balance;
+}
+
+.library-heading .page-intro {
+  max-width: 680px;
+  margin: var(--space-12) 0 0;
+  color: var(--color-text-secondary);
+  font-size: 16px;
+  line-height: 24px;
+  text-wrap: balance;
+}
+
+.library-header-controls {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-12);
+}
+
+.library-source-controls {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-12);
 }
 
 .library-source-switch {
   display: inline-flex;
   flex: 0 0 auto;
-  gap: var(--space-4);
-  padding: var(--space-4);
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
   border: var(--border-default);
   border-radius: var(--radius-control);
-  background: var(--surface);
+  background: var(--color-surface-alt);
 }
 
 .library-source-switch a {
-  padding: var(--space-8) var(--space-12);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  padding: 0 var(--space-12);
+  border: 1px solid transparent;
   border-radius: var(--radius-xs);
-  color: var(--muted);
-  font-size: 12px;
+  color: var(--color-text-muted);
+  font-size: var(--type-helper-size);
+  line-height: var(--type-helper-line-height);
+  font-weight: 600;
   text-decoration: none;
+  white-space: nowrap;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease;
+}
+
+.library-source-switch a:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text-secondary);
+}
+
+.library-source-switch a:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
 }
 
 .library-source-switch a[aria-current="page"] {
-  background: var(--surface-hover);
-  color: var(--ink);
+  background: var(--color-surface);
+  border-color: var(--color-border-strong);
+  color: var(--color-text-primary);
   font-weight: 650;
-}
-
-.library-overview {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-24);
-  padding: var(--space-24);
-  border: var(--border-default);
-  border-radius: var(--radius-card);
-  background: var(--surface);
-  /* The summary is the one major light surface that earns a faint lift. */
   box-shadow: var(--shadow-xs);
 }
 
+.library-source-switch a:not([aria-current="page"]):active {
+  background: var(--color-border);
+  color: var(--color-text-primary);
+}
+
+.library-source-switch a[aria-current="page"]:active {
+  background: var(--color-surface-alt);
+  color: var(--color-text-primary);
+}
+
+.library-source-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-surface-alt);
+  color: var(--color-text-secondary);
+  font-size: var(--type-micro-label-size);
+  line-height: var(--type-micro-label-line-height);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.library-source-note-icon {
+  width: 12px;
+  height: 12px;
+  flex: 0 0 auto;
+}
+
+:root[data-theme="dark"] .library-source-switch {
+  background: var(--color-surface);
+}
+
+:root[data-theme="dark"] .library-source-switch a:hover {
+  background: var(--color-surface-alt);
+}
+
+:root[data-theme="dark"] .library-source-switch a[aria-current="page"] {
+  background: var(--color-surface-hover);
+  border-color: var(--color-border-strong);
+  color: var(--color-text-primary);
+  box-shadow: none;
+}
+
+:root[data-theme="dark"]
+  .library-source-switch
+  a:not([aria-current="page"]):active {
+  background: var(--color-border);
+}
+
+:root[data-theme="dark"] .library-source-switch a[aria-current="page"]:active {
+  background: var(--color-surface-alt);
+}
+
+:root[data-theme="dark"] .library-source-note {
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+}
+
+/*
+ * The saved-output label in generation history remains separate from the
+ * library summary's own source label.
+ */
 .source-indicator {
   display: inline-block;
   margin-bottom: var(--space-4);
@@ -2805,44 +2706,196 @@ a:focus-visible {
   font-weight: 700;
 }
 
-.library-owner h2 {
+/*
+ * The library summary is one bordered surface: the identity on the left and
+ * five compact metric tiles on the right. The identity is plain text and a
+ * metric is a tinted tile, so the panel never nests a second card around
+ * either one.
+ */
+.library-overview {
+  display: grid;
+  gap: var(--space-24);
+  padding: var(--space-24);
+  border: var(--border-default);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-xs);
+}
+
+.library-source-label {
+  margin: 0 0 6px;
+  color: var(--color-violet-strong);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.library-identity h2 {
   margin: 0;
   font-family: Georgia, "Times New Roman", serif;
-  font-size: 23px;
+  font-size: 24px;
   font-weight: 400;
+  line-height: 1.2;
 }
 
-.library-owner p {
+.library-owner p,
+.library-headline {
   margin: var(--space-4) 0 0;
-  color: var(--muted);
-  font-size: 12px;
+  color: var(--color-text-secondary);
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
 }
 
+.library-metrics,
 .library-counts {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: var(--space-24);
+  /*
+   * Two columns fit on phones; from tablet up, equal columns expand only as
+   * far as the available width allows.
+   */
+  --metric-gap: var(--space-12);
+  --metric-value-size: 26px;
+  --metric-value-line-height: 32px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--metric-gap);
   margin: 0;
 }
 
-.library-counts div {
+.library-metric {
   display: grid;
+  align-content: start;
   gap: var(--space-4);
+  min-width: 0;
+  padding: var(--space-12);
+  border-radius: var(--radius-control);
+  background: color-mix(
+    in srgb,
+    var(--metric-accent) 12%,
+    var(--color-surface)
+  );
 }
-.library-counts dt {
-  color: var(--muted);
-  font-size: 10px;
+
+/*
+ * The fifth tile has no partner in a two column phone grid, so it spans the
+ * row instead of leaving an empty column beside it.
+ */
+.library-metric:last-child {
+  grid-column: 1 / -1;
 }
-.library-counts dd {
+
+.library-metric[data-category="job"] {
+  --metric-accent: var(--color-category-job);
+  --metric-label: var(--color-category-job-text);
+}
+.library-metric[data-category="project"] {
+  --metric-accent: var(--color-category-project);
+  --metric-label: var(--color-category-project-text);
+}
+.library-metric[data-category="points"] {
+  --metric-accent: var(--color-category-points);
+  --metric-label: var(--color-category-points-text);
+}
+.library-metric[data-category="skills"] {
+  --metric-accent: var(--color-category-skills);
+  --metric-label: var(--color-category-skills-text);
+}
+.library-metric[data-category="credentials"] {
+  --metric-accent: var(--color-category-credentials);
+  --metric-label: var(--color-category-credentials-text);
+}
+
+/*
+ * On the dark canvas a tinted tile needs an edge of its own, otherwise the
+ * tile and the panel it sits on read as one shape.
+ */
+:root[data-theme="dark"] .library-metric {
+  border: 1px solid
+    color-mix(in srgb, var(--metric-accent) 30%, var(--color-border));
+}
+
+.library-metric dt {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
   margin: 0;
-  font-size: 17px;
-  font-weight: 650;
+  color: var(--metric-label);
+  font-size: var(--type-caption-size);
+  font-weight: 600;
+  line-height: var(--type-caption-line-height);
+}
+
+/*
+ * A label that no longer fits wraps onto a second line instead of being
+ * cut off, so every tile keeps its full name at any width.
+ */
+.library-metric dt span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.library-metric dt svg {
+  flex: 0 0 auto;
+  /*
+   * The bright category hue is reserved for the tile tint. On a tinted tile
+   * it is too light to read as a shape, so the icon takes the text-safe step
+   * of the same hue and stays visible next to its label.
+   */
+  color: var(--metric-label);
+}
+
+.library-metric dd {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: var(--metric-value-size);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: var(--metric-value-line-height);
+  /*
+   * A long count wraps inside the tile rather than pushing the tile wider,
+   * so the tile keeps its size whatever the library holds.
+   */
+  overflow-wrap: anywhere;
+}
+
+/*
+ * A count with more than four characters steps down one size, so a grouped
+ * number such as 1,200 still sits inside the same tile.
+ */
+.library-metric dd.is-compact {
+  font-size: 24px;
+}
+
+@media (min-width: 768px) {
+  /*
+   * From a tablet up the row holds as many equal columns as the labels
+   * still fit in, and wraps to a second row when they no longer do.
+   */
+  .library-metrics {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  }
+  .library-metric:last-child {
+    grid-column: auto;
+  }
+}
+
+@media (min-width: 1440px) {
+  .library-metrics {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .library-overview {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+    align-items: center;
+    gap: 28px;
+  }
 }
 
 .library-workbench {
-  position: sticky;
-  top: 0;
+  position: static;
   z-index: 20;
   display: grid;
   gap: var(--space-12);
@@ -2850,17 +2903,29 @@ a:focus-visible {
   padding: var(--space-16);
   border: var(--border-default);
   border-radius: var(--radius-card);
-  background: var(--surface);
+  background: var(--color-surface);
 }
 
-.library-search,
+@media (min-width: 1024px) {
+  .library-workspace-frame .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+  }
+
+  .library-workbench {
+    position: sticky;
+    top: var(--library-topbar-height, 0px);
+    z-index: 20;
+  }
+}
+
 .library-filter-grid label {
   display: grid;
   min-width: 0;
   gap: var(--space-8);
 }
 
-.library-search > span,
 .library-filter-grid label > span {
   color: var(--muted);
   font-size: 10px;
@@ -2883,7 +2948,6 @@ a:focus-visible {
   border: 0;
 }
 
-.library-search input,
 .library-filter-grid select {
   width: 100%;
   min-width: 0;
@@ -2892,20 +2956,168 @@ a:focus-visible {
   border: var(--border-strong);
   border-radius: var(--radius-control);
   outline: none;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 12px;
+}
+.library-filter-grid select[data-active="true"] {
+  border-color: var(--focus);
+  background: var(--imagination-soft);
+}
+
+/*
+ * Keep the border on the complete search control so the icon, input, and
+ * conditional clear action read as one field, matching the library board.
+ */
+.library-search {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  min-width: 0;
+  height: 44px;
+  padding: 0 var(--space-12);
+  border: var(--border-strong);
+  border-radius: var(--radius-control);
   background: var(--surface-soft);
+}
+
+.library-search:focus-within {
+  border-color: var(--focus);
+  box-shadow: var(--field-focus-ring);
+}
+
+.library-search-field {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: var(--space-8);
+  min-width: 0;
+  height: 100%;
+}
+
+.library-search-icon {
+  flex: 0 0 auto;
+  color: var(--muted);
+}
+
+.library-search input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  outline: none;
+  background: transparent;
+  color: var(--ink);
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
+}
+
+.library-search input::placeholder {
+  color: var(--muted);
+}
+
+.library-search input::-webkit-search-cancel-button,
+.library-search input::-webkit-search-decoration {
+  appearance: none;
+  display: none;
+}
+
+.library-search-clear {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin-right: calc(0px - var(--space-12));
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.library-search-clear:hover {
+  background: var(--surface-hover);
+  color: var(--ink);
+}
+
+.library-search-clear:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+
+.library-result-count {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.library-sort {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.library-sort > span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.library-sort select {
+  height: 40px;
+  min-width: 0;
+  padding: 0 var(--space-8);
+  border: var(--border-strong);
+  border-radius: var(--radius-control);
+  outline: none;
+  background: var(--surface);
   color: var(--ink);
   font-size: 12px;
 }
 
-.library-search input:focus,
+.library-sort select:focus {
+  border-color: var(--focus);
+}
+
+.library-sort select:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
 .library-filter-grid select:focus {
   border-color: var(--focus);
 }
+
+.library-filter-grid select:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+@media (max-width: 1024px) {
+  .library-filter-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.library-filter-row {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-12);
+}
+
 .library-filter-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  flex: 1 1 auto;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   gap: var(--space-12);
-  margin-top: 0;
+  min-width: 0;
 }
 
 .library-workbench-footer {
@@ -2928,15 +3140,43 @@ a:focus-visible {
 
 .library-category-link {
   display: inline-flex;
-  min-height: 32px;
+  min-height: 36px;
   align-items: center;
+  gap: 6px;
   padding: 0 var(--space-12);
-  border: var(--border-default);
+  border: 1px solid var(--line);
   border-radius: var(--radius-full);
   color: var(--muted);
-  font-size: var(--type-caption-size);
+  font-size: 12px;
+  font-weight: 550;
   text-decoration: none;
   white-space: nowrap;
+}
+
+.library-category-count {
+  display: inline-grid;
+  min-width: 20px;
+  height: 20px;
+  place-items: center;
+  padding: 0 5px;
+  border-radius: var(--radius-full);
+  background: var(--surface-soft);
+  color: var(--muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.library-category-link[aria-current="location"] {
+  border-color: var(--color-orange);
+  background: var(--color-orange-subtle);
+  color: var(--color-orange-strong);
+  font-weight: 650;
+}
+
+.library-category-link[aria-current="location"] .library-category-count {
+  background: var(--color-surface);
+  color: var(--color-orange-strong);
 }
 
 .library-category-link:hover {
@@ -2952,17 +3192,17 @@ a:focus-visible {
 
 .library-filter-summary {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
   gap: var(--space-12);
-  min-height: 32px;
+  min-height: 30px;
   margin: 0;
   color: var(--muted);
   font-size: 12px;
 }
 
-.text-action,
-.facet-chip {
+.text-action {
   padding: 0;
   border: 0;
   background: transparent;
@@ -2971,8 +3211,7 @@ a:focus-visible {
   font-size: 11px;
   text-align: left;
 }
-.text-action:hover,
-.facet-chip:hover {
+.text-action:hover {
   text-decoration: underline;
 }
 
@@ -2981,9 +3220,8 @@ a:focus-visible {
  * button family, so every control on the library surface announces focus
  * the same way.
  */
-.text-action:focus-visible,
-.facet-chip:focus-visible {
-  outline: 2px solid var(--color-focus-ring);
+.text-action:focus-visible {
+  outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
 
@@ -2991,7 +3229,13 @@ a:focus-visible {
   display: grid;
   gap: var(--space-32);
   margin-top: var(--space-24);
-  scroll-margin-top: 200px;
+  scroll-margin-top: var(--library-sticky-space, 0px);
+}
+
+.library-sections {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-32);
 }
 
 /*
@@ -3000,146 +3244,493 @@ a:focus-visible {
  */
 .library-section {
   min-width: 0;
-  scroll-margin-top: 200px;
+  scroll-margin-top: var(--library-sticky-space, 0px);
 }
 
 .library-section-header {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
+  align-items: center;
   gap: var(--space-12);
-  padding-bottom: var(--space-8);
+  padding-bottom: var(--space-12);
   border-bottom: 1px solid var(--line);
 }
 
 .library-section-heading {
   margin: 0;
-  font-size: var(--type-section-heading-size);
+  font-size: 20px;
   font-weight: 650;
-  line-height: var(--type-section-heading-line-height);
+  line-height: 28px;
 }
 
 .library-section-count {
-  color: var(--muted);
-  font-size: 12px;
+  display: inline-flex;
+  min-height: 22px;
+  align-items: center;
+  padding: 0 var(--space-8);
+  border-radius: var(--radius-full);
+  background: var(--color-surface-alt);
+  color: var(--color-text-secondary);
+  font-size: var(--type-caption-size);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: var(--type-caption-line-height);
   white-space: nowrap;
 }
 
 .library-section-body {
+  display: flex;
+  flex-direction: column;
   min-width: 0;
+}
+
+.library-section-icon {
+  display: inline-flex;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-card);
+}
+
+.library-section-icon--jobs {
+  background: var(--color-orange-subtle);
+  color: var(--color-orange-strong);
+}
+
+.library-section-icon--projects {
+  background: var(--color-violet-subtle);
+  color: var(--color-violet-strong);
+}
+
+/* The info scale has no subtle tone of its own, so the tile mixes the base
+   colour into the surface instead. */
+.library-section-icon--skills {
+  background: color-mix(in srgb, var(--color-info) 16%, var(--color-surface));
+  color: var(--color-info-strong);
+}
+
+.library-section-icon--credentials {
+  background: var(--color-success-subtle);
+  color: var(--color-success-strong);
+}
+
+.library-section-title {
+  margin: 0;
+  font-size: var(--type-section-heading-size);
+  font-weight: 700;
+  line-height: var(--type-section-heading-line-height);
+}
+
+.library-section-body .experience-group:last-child {
+  border-bottom: 0;
 }
 
 .experience-group {
   padding: var(--space-16) 0 var(--space-8);
   border-bottom: var(--border-default);
 }
+
 .experience-heading {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-24);
-  margin-bottom: var(--space-8);
-}
-.experience-kind {
-  margin: 0 0 var(--space-4);
-  color: var(--accent);
-  font-size: 9px;
-  font-weight: 700;
-}
-.experience-heading h3 {
   margin: 0;
-  font-size: 16px;
-  font-weight: 650;
-}
-.experience-subtitle,
-.experience-dates {
-  margin: var(--space-4) 0 0;
-  color: var(--muted);
-  font-size: 11px;
-}
-.experience-dates {
-  flex: 0 0 auto;
+  font-size: inherit;
+  font-weight: inherit;
 }
 
+.experience-toggle {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto auto auto;
+  grid-template-areas: "icon heading count dates chevron";
+  align-items: center;
+  column-gap: var(--space-12);
+  row-gap: var(--space-4);
+  width: 100%;
+  min-height: 56px;
+  padding: var(--space-8) var(--space-8) var(--space-8) var(--space-4);
+  border: 0;
+  border-radius: var(--radius-card);
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.experience-toggle:hover {
+  background: var(--color-surface-alt);
+}
+
+.experience-toggle:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.experience-icon-tile {
+  display: inline-flex;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  grid-area: icon;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-control);
+  background: var(--color-orange-subtle);
+  color: var(--color-orange-strong);
+}
+
+.experience-icon-tile.is-project {
+  background: var(--color-violet-subtle);
+  color: var(--color-violet-strong);
+}
+
+.experience-heading-text {
+  display: flex;
+  min-width: 0;
+  grid-area: heading;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.experience-kind {
+  margin: 0;
+  color: var(--accent-hover);
+  font-size: var(--type-micro-label-size);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.experience-title {
+  font-size: var(--type-card-heading-size);
+  font-weight: 650;
+  line-height: var(--type-card-heading-line-height);
+  overflow-wrap: anywhere;
+}
+
+.experience-subtitle {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--type-helper-size);
+  line-height: var(--type-helper-line-height);
+  overflow-wrap: anywhere;
+}
+
+.experience-count {
+  grid-area: count;
+  color: var(--quiet);
+  font-size: var(--type-helper-size);
+  line-height: var(--type-helper-line-height);
+  white-space: nowrap;
+}
+
+.experience-dates {
+  grid-area: dates;
+  color: var(--quiet);
+  font-size: var(--type-helper-size);
+  line-height: var(--type-helper-line-height);
+  white-space: nowrap;
+}
+
+.experience-chevron {
+  grid-area: chevron;
+  color: var(--quiet);
+  transition: transform 160ms ease;
+}
+
+.experience-toggle[aria-expanded="true"] .experience-chevron {
+  transform: rotate(180deg);
+}
+
+.experience-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.experience-panel[hidden] {
+  display: none;
+}
+
+@media (max-width: 560px) {
+  .experience-toggle {
+    grid-template-columns: 32px minmax(0, 1fr) auto;
+    grid-template-areas:
+      "icon heading chevron"
+      "icon count  dates";
+  }
+}
 .library-point {
-  padding: var(--space-12) 0;
-  border-bottom: var(--border-default);
+  display: grid;
+  gap: var(--space-12);
+  margin-bottom: var(--space-12);
+  padding: var(--space-16);
+  border: var(--border-default);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  box-shadow: var(--shadow-xs);
 }
 .library-point:last-child {
-  border-bottom: 0;
+  margin-bottom: 0;
 }
-.library-point-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+.library-point-header {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) auto;
+  align-items: start;
   gap: var(--space-12);
 }
-.library-point-heading code {
+.library-point-icon {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border-radius: var(--radius-card);
+  background: color-mix(in srgb, var(--color-category-job) 14%, var(--surface));
+  color: var(--color-category-job-text);
+}
+.library-point-icon[data-kind="project"] {
+  background: color-mix(
+    in srgb,
+    var(--color-category-project) 14%,
+    var(--surface)
+  );
+  color: var(--color-category-project-text);
+}
+.library-point-intro {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+}
+.library-point-context {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--type-metadata-size);
+  line-height: var(--type-metadata-line-height);
+}
+.library-point-id {
+  color: var(--muted);
+  font-size: var(--type-metadata-size);
+  line-height: var(--type-metadata-line-height);
   overflow-wrap: anywhere;
-  color: var(--quiet);
-  font-size: 10px;
 }
 .point-status {
+  display: inline-flex;
   flex: 0 0 auto;
-  font-size: 10px;
+  align-items: center;
+  gap: var(--space-4);
+  padding: 3px 9px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-full);
+  font-size: var(--type-label-size);
   font-weight: 650;
+  white-space: nowrap;
 }
 .point-status.is-enabled {
-  color: var(--teal);
+  color: var(--color-success-strong);
+  border-color: color-mix(
+    in srgb,
+    var(--color-success-strong) 35%,
+    transparent
+  );
+  background: var(--color-success-subtle);
 }
 .point-status.is-disabled {
-  color: var(--danger);
+  color: var(--color-error-strong);
+  border-color: color-mix(in srgb, var(--color-error-strong) 35%, transparent);
+  background: var(--color-error-subtle);
+}
+.point-edit-action {
+  display: inline-flex;
+  min-height: 40px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-8);
+  padding: 0 var(--space-12);
+  border: var(--border-default);
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  font-size: var(--type-label-size);
+  font-weight: 600;
+  line-height: var(--type-label-line-height);
+}
+.point-edit-action svg {
+  flex: 0 0 auto;
+}
+.point-edit-action:hover {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface-alt);
+}
+.point-edit-action:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
 }
 .library-point-text {
-  margin: var(--space-8) 0;
+  margin: 10px 0 var(--space-8);
+  padding-left: var(--space-12);
+  border-left: 2px solid var(--quiet);
   color: var(--ink);
-  font-size: 12px;
-  line-height: 1.55;
+  font-size: var(--type-body-size);
+  font-weight: 400;
+  line-height: var(--type-body-line-height);
+  overflow-wrap: anywhere;
 }
 .point-provenance {
   margin: 0;
+  padding-top: var(--space-12);
+  border-top: var(--border-default);
   color: var(--muted);
-  font-size: 10px;
+  font-size: var(--type-metadata-size);
+  line-height: var(--type-metadata-line-height);
   overflow-wrap: anywhere;
 }
-.point-provenance strong {
+.point-provenance-prefix,
+.point-provenance-detail {
+  color: var(--muted);
+}
+.point-provenance-type {
   color: var(--ink);
   font-weight: 600;
 }
+/*
+ * Keep each quantified outcome, its value and its supporting evidence together.
+ * The grid adds no nested card surface and never treats a positive-looking
+ * number as a success signal.
+ */
 .point-metrics {
   display: grid;
-  gap: var(--space-8);
-  margin: var(--space-8) 0 0;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-12);
+  margin: var(--space-12) 0 0;
   padding: 0;
   list-style: none;
 }
-.point-metrics li {
-  display: grid;
-  gap: var(--space-4);
-  padding-left: var(--space-8);
-  border-left: 2px solid var(--teal);
-  font-size: 10px;
+
+@media (min-width: 700px) {
+  .point-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
-.point-metrics strong {
-  color: var(--ink);
+
+.point-metric {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: var(--space-8);
+  min-width: 0;
+}
+
+.point-metric-icon {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-control);
+  background: var(--color-violet-subtle);
+  color: var(--color-violet-strong);
+}
+
+.point-metric-body {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.point-metric-label {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.point-metric-value {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: var(--type-card-metric-value-size);
+  line-height: var(--type-card-metric-value-line-height);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.point-metric-unit {
+  color: var(--color-text-secondary);
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
   font-weight: 600;
 }
-.point-metrics span {
-  color: var(--muted);
-  line-height: 1.4;
+
+.point-metric-evidence,
+.point-metric-context {
+  margin: 2px 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--type-metadata-size);
+  line-height: var(--type-metadata-line-height);
+  overflow-wrap: anywhere;
+}
+
+.point-metric-context-label {
+  color: var(--color-text-secondary);
+  font-weight: 600;
 }
 .point-facets {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-8) var(--space-12);
-  margin-top: var(--space-8);
+  align-items: center;
+  gap: var(--space-8);
+  margin: 0;
 }
+
+/* Tags and linked skills stay distinct in shape, wording and color. */
 .facet-chip {
-  color: var(--accent-hover);
-  font-size: 10px;
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  min-height: 26px;
+  padding: 0 var(--space-8);
+  border: 1px solid transparent;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  line-height: 1.3;
+  text-align: left;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+.facet-chip.is-tag {
+  background: var(--color-orange-subtle);
+  border-color: color-mix(in srgb, var(--color-orange-strong) 32%, transparent);
+  color: var(--color-orange-strong);
 }
 .facet-chip.is-skill {
-  color: var(--teal);
+  background: var(--color-violet-subtle);
+  border-color: color-mix(in srgb, var(--color-violet-strong) 32%, transparent);
+  color: var(--color-violet-strong);
+}
+.facet-chip.is-tag:hover {
+  border-color: var(--color-orange-strong);
+}
+.facet-chip.is-skill:hover {
+  border-color: var(--color-violet-strong);
+}
+.facet-chip.is-more {
+  background: var(--color-surface-alt);
+  border-color: var(--color-border);
+  color: var(--color-text-secondary);
+}
+.facet-chip.is-more:hover {
+  background: var(--color-surface-hover);
+  border-color: var(--color-border-strong);
+}
+.facet-chip[aria-pressed="true"],
+.facet-chip[aria-pressed="true"]:hover {
+  background: var(--color-violet);
+  border-color: var(--color-violet);
+  color: var(--color-text-inverse);
+}
+.facet-chip:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
 }
 
 .library-empty,
@@ -3152,51 +3743,83 @@ a:focus-visible {
   padding: var(--space-16) 0;
   border-bottom: var(--border-default);
 }
+.library-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-8);
+  margin: 0 0 var(--space-16);
+  padding: var(--space-12);
+  border: 1px solid color-mix(in srgb, var(--color-violet) 28%, var(--line));
+  border-radius: var(--radius-control);
+  background: color-mix(in srgb, var(--color-violet) 7%, var(--surface));
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.library-notice svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+  color: var(--color-violet-strong);
+}
+
+.library-notice strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.library-state {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-8);
+  margin: var(--space-24) 0;
+  padding: var(--space-24);
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-card);
+  background: var(--surface-soft);
+}
+
+.library-state-icon {
+  color: var(--muted);
+}
+
+.library-state h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 650;
+  line-height: 1.4;
+}
+
+.library-state-message {
+  max-width: 62ch;
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.library-state-action {
+  margin-top: var(--space-4);
+}
+
+.library-secondary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-16);
+}
 .library-detail {
   min-width: 0;
 }
 .library-detail summary {
-  display: inline-flex;
-  min-height: 34px;
-  align-items: center;
-  gap: var(--space-8);
-  margin-top: var(--space-12);
-  padding: 0 var(--space-12);
-  border: var(--border-default);
-  border-radius: var(--radius-full);
-  color: var(--muted);
   cursor: pointer;
-  font-size: var(--type-label-size);
-  line-height: var(--type-label-line-height);
   list-style: none;
 }
 .library-detail summary::-webkit-details-marker {
   display: none;
 }
-.library-detail summary:hover {
-  border-color: var(--line-strong);
-  background: var(--surface-hover);
-  color: var(--ink);
-}
 .library-detail summary:focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 2px;
-}
-.library-detail-label.is-open {
-  display: none;
-}
-.library-detail[open] .library-detail-label.is-closed {
-  display: none;
-}
-.library-detail[open] .library-detail-label.is-open {
-  display: inline;
-}
-.library-detail-chevron {
-  flex: 0 0 auto;
-  transition: transform 160ms ease;
-}
-.library-detail[open] .library-detail-chevron {
-  transform: rotate(180deg);
 }
 .skill-list,
 .credential-list {
@@ -3246,6 +3869,13 @@ a:focus-visible {
   margin: var(--space-32) auto;
   padding: var(--space-24) 0;
 }
+.library-error .eyebrow {
+  margin: 0 0 var(--space-8);
+  color: var(--color-orange-strong);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line-height);
+  font-weight: 600;
+}
 .library-error h1 {
   font-size: 32px;
 }
@@ -3266,24 +3896,143 @@ a:focus-visible {
   margin-bottom: var(--space-24);
 }
 
+/*
+ * The action row keeps both creation buttons together while they fit. The
+ * mobile rule below stacks the secondary action first and primary action last.
+ */
 .library-edit-toolbar {
   display: flex;
   min-height: 44px;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
   gap: var(--space-12);
   margin: 0;
 }
 
-.library-edit-toolbar > span {
+.library-edit-status {
+  flex: 1 1 auto;
+  min-width: 0;
   color: var(--teal);
   font-size: 11px;
+}
+
+.library-edit-actions {
+  display: flex;
+  flex: 0 1 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.library-action {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 0 18px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+  text-align: center;
+  white-space: nowrap;
+  transition:
+    border-color 120ms ease,
+    background-color 120ms ease,
+    color 120ms ease;
+}
+
+.library-action svg {
+  flex: 0 0 auto;
+}
+
+.library-action:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.library-action:disabled {
+  cursor: not-allowed;
+}
+
+/*
+ * Primary - the orange CTA. The label keeps the app-wide contrast token
+ * rather than the board's white text, because white on this orange does
+ * not reach the readable contrast the shared tokens guarantee.
+ */
+.library-action--primary {
+  border-color: var(--action-orange-surface);
+  background: var(--action-orange-surface);
+  color: var(--action-orange-label);
+}
+
+.library-action--primary:hover:not(:disabled) {
+  border-color: var(--action-orange-surface-hover);
+  background: var(--action-orange-surface-hover);
+  color: var(--action-orange-label-hover);
+}
+
+.library-action--primary:active:not(:disabled) {
+  border-color: var(--action-orange-surface-pressed);
+  background: var(--action-orange-surface-pressed);
+  color: var(--action-orange-label-pressed);
+}
+
+.library-action--primary:disabled {
+  border-color: var(--action-orange-surface-disabled);
+  background: var(--action-orange-surface-disabled);
+  color: var(--action-orange-label-disabled);
+}
+
+/* Secondary - a neutral outlined action for the manual point editor. */
+.library-action--secondary {
+  border-color: var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+}
+
+.library-action--secondary:hover:not(:disabled) {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface-alt);
+  color: var(--color-text-primary);
+}
+
+.library-action--secondary:active:not(:disabled) {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface-hover);
+  color: var(--color-text-primary);
+}
+
+/*
+ * A disabled action is muted rather than merely inert, so a reader can see
+ * that the flow is already open without relying on the pointer cursor.
+ */
+.library-action--secondary:disabled {
+  border-color: var(--color-border);
+  background: var(--color-surface-alt);
+  color: var(--color-text-muted);
 }
 
 .point-row-actions {
   display: flex;
   align-items: center;
   gap: var(--space-12);
+}
+
+@media (max-width: 700px) {
+  .library-point-header {
+    grid-template-columns: 36px minmax(0, 1fr);
+  }
+
+  .point-row-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
 }
 
 .point-editor {
@@ -3297,6 +4046,19 @@ a:focus-visible {
   /* The editor is a nested surface: at most a subtle Sm, and no shadow in
      dark mode where the border and tonal step carry the separation. */
   box-shadow: var(--shadow-sm);
+}
+
+/* The editor opens inside the card it belongs to, so it keeps the card
+   surface and is separated from the summary by a divider instead of
+   becoming a second floating card. */
+.point-editor.is-inline {
+  margin: 16px 0 0;
+  padding: 16px 0 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .point-editor-heading,
@@ -3326,11 +4088,10 @@ a:focus-visible {
   width: 40px;
   height: 40px;
   place-items: center;
-  padding: 0;
   border: var(--border-default);
   border-radius: var(--radius-control);
   background: var(--surface);
-  color: var(--muted);
+  color: var(--color-text-secondary);
   cursor: pointer;
   line-height: 1;
   transition:
@@ -3517,20 +4278,12 @@ a:focus-visible {
     grid-column: 1 / -1;
   }
 
-  /*
-   * The workbench only sticks while the desktop column is wide enough to hold
-   * the filter row and the section navigation on one line each.
-   */
-  .library-workbench {
-    position: static;
-  }
-
   .library-section {
-    scroll-margin-top: var(--space-24);
+    scroll-margin-top: var(--library-sticky-space, 0px);
   }
 
   .library-content {
-    scroll-margin-top: var(--space-24);
+    scroll-margin-top: var(--library-sticky-space, 0px);
   }
 }
 
@@ -3551,24 +4304,32 @@ a:focus-visible {
   }
 }
 
+/* Below the desktop width the library header keeps its reading order but
+   stacks the source and creation controls under the heading, so the title
+   never has to share a row with the controls. */
+@media (max-width: 950px) {
+  .library-heading {
+    flex-direction: column;
+    gap: var(--space-16);
+  }
+
+  .library-header-controls {
+    width: 100%;
+    align-items: flex-start;
+  }
+}
+
 @media (max-width: 700px) {
   .jd-page {
     --type-page-title-size: 32px;
     --type-page-title-line-height: 40px;
   }
 
-  /* The library keeps the same compact page title on mobile and trims the
-     profile name so a long name wraps instead of clipping. */
   .library-page {
     --type-page-title-size: 32px;
     --type-page-title-line-height: 40px;
     --type-profile-name-size: 28px;
     --type-profile-name-line-height: 36px;
-  }
-
-  .library-error {
-    --type-page-title-size: 32px;
-    --type-page-title-line-height: 40px;
   }
 
   .app-frame {
@@ -3814,6 +4575,7 @@ a:focus-visible {
   }
 
   .library-heading {
+    flex-direction: column;
     gap: var(--space-16);
   }
   .history-heading {
@@ -3830,29 +4592,57 @@ a:focus-visible {
   .history-pdf {
     height: 60vh;
   }
-
+  .library-heading h1 {
+    font-size: 32px;
+    line-height: 40px;
+  }
   .library-overview {
-    align-items: flex-start;
-    flex-direction: column;
     gap: var(--space-16);
     padding: var(--space-16);
   }
   .library-counts {
     justify-content: flex-start;
-    gap: var(--space-12) var(--space-24);
+  }
+  .library-filter-row {
+    flex-wrap: wrap;
   }
   .library-filter-grid {
+    flex: 1 1 100%;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .library-sort {
+    margin-left: 0;
+  }
+  .library-secondary {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-16);
   }
   .library-workbench-footer {
     align-items: flex-start;
     flex-direction: column;
   }
+  .library-category-link {
+    min-height: 44px;
+  }
   .library-filter-summary {
     justify-content: flex-start;
   }
+  .library-source-controls {
+    width: 100%;
+    justify-content: flex-start;
+  }
   .library-source-switch a {
-    padding: var(--space-8);
+    padding: 0 var(--space-8);
+  }
+  .library-state {
+    padding: var(--space-16);
+  }
+
+  .facet-chip,
+  .point-row-actions .point-edit-action,
+  .library-filter-summary .text-action,
+  .library-state-action {
+    min-height: 44px;
   }
 
   .point-editor {
@@ -3878,6 +4668,15 @@ a:focus-visible {
   }
 }
 
+@media (pointer: coarse) {
+  .facet-chip,
+  .point-row-actions .point-edit-action,
+  .library-filter-summary .text-action,
+  .library-state-action {
+    min-height: 44px;
+  }
+}
+
 @media (max-width: 390px) {
   .page-content {
     padding-right: var(--space-16);
@@ -3892,16 +4691,24 @@ a:focus-visible {
   .library-filter-grid {
     grid-template-columns: minmax(0, 1fr);
   }
+  .library-sort {
+    margin-left: 0;
+  }
   .library-workbench {
     padding-right: var(--space-12);
     padding-left: var(--space-12);
   }
+  /* Insets step down a second time so the narrow layout keeps its content. */
   .library-overview,
   .point-editor {
     padding: var(--space-12);
   }
   .library-filter-summary {
     align-items: flex-start;
+    flex-direction: column;
+  }
+  .library-result-count {
+    margin-left: 0;
   }
   .metric-fields {
     grid-template-columns: minmax(0, 1fr);
@@ -3914,6 +4721,26 @@ a:focus-visible {
     flex-direction: column-reverse;
   }
   .editor-actions > button {
+    width: 100%;
+  }
+}
+
+/*
+ * Task 10 stack rule. Below 480px the two creation actions no longer fit
+ * side by side, so they stack in a fixed order - secondary first, primary
+ * last - and each button takes the full column width.
+ */
+@media (max-width: 480px) {
+  .library-edit-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .library-edit-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .library-action {
     width: 100%;
   }
 }
@@ -5463,4 +6290,273 @@ a:focus-visible {
 }
 .jd-workspace-frame:has(.paste-from-url-panel) .jd-form {
   flex: 0 0 auto;
+}
+
+/* ---------------------------------------------------------------------------
+   Achievement Library type scale.
+
+   The library consumes the shared type tokens above instead of a second
+   palette or a second font stack. Georgia/Times stays on the page title and
+   the profile name; Arial/Helvetica stays on every operational label, control,
+   and piece of metadata. Sizes follow the library board's hierarchy - page
+   title 40/48 (32/40 on mobile), section 24/32, profile name 30/38,
+   experience title 18/24, body 14/20, label and metadata 12/16, micro-label
+   11/14 - with no viewport-scaled sizes and no letter-spacing tricks.
+   --------------------------------------------------------------------------- */
+.library-page {
+  letter-spacing: 0;
+}
+
+.library-page .library-heading h1 {
+  max-width: 100%;
+  font-size: var(--type-page-title-size);
+  line-height: var(--type-page-title-line-height);
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+
+.library-page .eyebrow {
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line-height);
+  font-weight: 600;
+}
+
+.library-page .page-intro {
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
+}
+
+.library-page .library-source-switch a {
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+}
+
+.library-page .source-indicator {
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+  font-weight: 600;
+}
+
+.library-page .library-owner h2 {
+  font-size: var(--type-profile-name-size);
+  line-height: var(--type-profile-name-line-height);
+  overflow-wrap: anywhere;
+}
+
+.library-page .library-owner p {
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
+}
+
+.library-page .library-counts dt {
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+  font-weight: 600;
+}
+
+.library-page .library-counts dd:not(.is-compact) {
+  font-size: var(--type-metric-value-size);
+  line-height: var(--type-metric-value-line-height);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.library-page .library-search > span,
+.library-page .library-filter-grid label > span {
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+  font-weight: 600;
+}
+
+.library-page .library-search input,
+.library-page .library-filter-grid select {
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
+}
+
+.library-page .library-filter-summary {
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
+  font-variant-numeric: tabular-nums;
+}
+
+.library-page .text-action {
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+  font-weight: 600;
+}
+
+.library-page .experience-kind {
+  font-size: var(--type-micro-label-size);
+  line-height: var(--type-micro-label-line-height);
+  font-weight: 700;
+}
+
+.library-page .experience-title {
+  font-size: var(--type-experience-title-size);
+  line-height: var(--type-experience-title-line-height);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.library-page .experience-subtitle,
+.library-page .experience-dates {
+  font-size: var(--type-metadata-size);
+  line-height: var(--type-metadata-line-height);
+}
+
+.library-page .library-point-id {
+  color: var(--muted);
+  font-size: var(--type-metadata-size);
+  line-height: var(--type-metadata-line-height);
+}
+
+.library-page .point-status {
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+  font-weight: 600;
+}
+
+.library-page .library-point-text {
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
+  overflow-wrap: anywhere;
+}
+
+.library-page .point-provenance {
+  font-size: var(--type-metadata-size);
+  line-height: var(--type-metadata-line-height);
+}
+
+.library-page .point-metric-label {
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
+}
+
+.library-page .point-metric-value {
+  font-size: var(--type-card-metric-value-size);
+  line-height: var(--type-card-metric-value-line-height);
+}
+
+.library-page .point-metric-evidence,
+.library-page .point-metric-context {
+  font-size: var(--type-metadata-size);
+  line-height: var(--type-metadata-line-height);
+}
+
+.library-page .facet-chip {
+  max-width: 100%;
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+  overflow-wrap: anywhere;
+}
+
+.library-page .library-detail summary {
+  font-size: var(--type-section-heading-size);
+  line-height: var(--type-section-heading-line-height);
+  overflow-wrap: anywhere;
+}
+
+.library-page .library-detail summary span {
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+  font-variant-numeric: tabular-nums;
+}
+
+.library-page .skill-list li,
+.library-page .credential-list li {
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
+}
+
+.library-page .skill-list li > div span,
+.library-page .credential-list li > span {
+  font-size: var(--type-metadata-size);
+  line-height: var(--type-metadata-line-height);
+}
+
+.library-page .skill-listed,
+.library-page .skill-unlisted {
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+}
+
+.library-page .library-empty,
+.library-page .secondary-empty {
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
+}
+
+/* The detailed-entry editor shares the library page, so it uses the same
+   type roles as the rest of the workspace. */
+.library-page .point-editor-heading h2 {
+  font-size: var(--type-experience-title-size);
+  line-height: var(--type-experience-title-line-height);
+}
+
+.library-page .point-editor-heading .eyebrow {
+  font-size: var(--type-micro-label-size);
+  line-height: var(--type-micro-label-line-height);
+}
+
+.library-page .editor-field > span {
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+}
+
+.library-page .editor-field input,
+.library-page .editor-field select,
+.library-page .editor-field textarea {
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
+}
+
+.library-page .metric-editor-heading h3 {
+  font-size: var(--type-card-heading-size);
+  line-height: var(--type-card-heading-line-height);
+}
+
+.library-page .metric-fields legend {
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+}
+
+.library-page .editor-enabled {
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
+}
+
+.library-page .editor-error {
+  font-size: var(--type-helper-size);
+  line-height: var(--type-helper-line-height);
+}
+
+.library-page .library-edit-toolbar > span {
+  font-size: var(--type-helper-size);
+  line-height: var(--type-helper-line-height);
+}
+
+/* The load-failure state is the library route's own page, so it carries the
+   same title and body type as the library screen. */
+.library-error h1 {
+  font-size: var(--type-page-title-size);
+  line-height: var(--type-page-title-line-height);
+  overflow-wrap: anywhere;
+}
+
+.library-error .eyebrow {
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line-height);
+  font-weight: 600;
+}
+
+.library-error > p:not(.eyebrow) {
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
+}
+
+.library-switch-link {
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
 }

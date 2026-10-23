@@ -63,17 +63,17 @@ test("orders the category sections and keeps their counts truthful", async ({
   ]);
 
   await expect(page.locator("#library-jobs .library-section-count")).toHaveText(
-    "7 achievements",
+    "2",
   );
   await expect(
     page.locator("#library-projects .library-section-count"),
-  ).toHaveText("6 achievements");
+  ).toHaveText("2");
   await expect(
     page.locator("#library-skills .library-section-count"),
-  ).toHaveText("14 skills");
+  ).toHaveText("14");
   await expect(
     page.locator("#library-credentials .library-section-count"),
-  ).toHaveText("2 credentials");
+  ).toHaveText("2");
 });
 
 test("navigates to a category section from the workbench", async ({ page }) => {
@@ -138,28 +138,44 @@ test("keeps every section truthful when no record matches", async ({
     .fill("no matching library content");
 
   await expect(page.getByRole("status")).toHaveText(
-    "No achievement points match these filters.",
+    "None of the 13 achievements in this library match the current search and filters.",
+  );
+  await expect(page.locator(".library-result-count")).toHaveText(
+    "0 of 13 achievement points",
+  );
+
+  // Category links stay useful when filters leave a section empty.
+  await expect(
+    page.getByRole("region", { name: "Jobs", exact: true }),
+  ).toHaveCount(1);
+  await expect(
+    page.getByRole("region", { name: "Projects", exact: true }),
+  ).toHaveCount(1);
+  await expect(page.locator("#library-jobs .library-section-count")).toHaveText(
+    "0",
   );
   await expect(page.locator("#library-jobs .secondary-empty")).toHaveText(
-    "No jobs match this search.",
+    "No jobs match the current filters.",
   );
+  await expect(
+    page.locator("#library-projects .library-section-count"),
+  ).toHaveText("0");
   await expect(page.locator("#library-projects .secondary-empty")).toHaveText(
-    "No projects match this search.",
+    "No projects match the current filters.",
   );
+  await expect(page.locator(".experience-group")).toHaveCount(0);
+
+  // The two disclosure sections remain available and explain their empty state.
+  await expect(
+    page.locator("#library-skills .library-section-count"),
+  ).toHaveText("0");
   await expect(page.locator("#library-skills .secondary-empty")).toHaveText(
     "No skills match this search.",
   );
   await expect(
+    page.locator("#library-credentials .library-section-count"),
+  ).toHaveText("0");
+  await expect(
     page.locator("#library-credentials .secondary-empty"),
   ).toHaveText("No credentials match this search.");
-
-  await expect(page.locator("#library-jobs .library-section-count")).toHaveText(
-    "0 achievements",
-  );
-  await expect(
-    page.locator("#library-skills .library-section-count"),
-  ).toHaveText("0 skills");
-  await expect(
-    page.locator("#library-credentials .library-section-count"),
-  ).toHaveText("0 credentials");
 });

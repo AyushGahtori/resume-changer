@@ -11,12 +11,24 @@ import {
  * failure must be reported as a missing tool rather than as a broken test.
  */
 describe("PDF toolchain detection", () => {
-  it("reports both binaries as missing when neither is installed", () => {
-    const toolchain = detectPdfToolchain();
-    expect(toolchain.tectonic).toBeTruthy();
-    expect(toolchain.pdfInfo).toBeTruthy();
-    expect(toolchain.missing.length).toBeGreaterThan(0);
-    expect(toolchain.available).toBe(false);
+  it("reports missing binaries when configured paths do not exist", () => {
+    const previousTectonic = process.env.TECTONIC_BINARY;
+    const previousPdfInfo = process.env.PDFINFO_BINARY;
+    process.env.TECTONIC_BINARY = "missing-tectonic-for-test";
+    process.env.PDFINFO_BINARY = "missing-pdfinfo-for-test";
+
+    try {
+      const toolchain = detectPdfToolchain();
+      expect(toolchain.tectonic).toBe("missing-tectonic-for-test");
+      expect(toolchain.pdfInfo).toBe("missing-pdfinfo-for-test");
+      expect(toolchain.missing).toEqual(["Tectonic", "pdfinfo"]);
+      expect(toolchain.available).toBe(false);
+    } finally {
+      if (previousTectonic === undefined) delete process.env.TECTONIC_BINARY;
+      else process.env.TECTONIC_BINARY = previousTectonic;
+      if (previousPdfInfo === undefined) delete process.env.PDFINFO_BINARY;
+      else process.env.PDFINFO_BINARY = previousPdfInfo;
+    }
   });
 
   it("describes every missing binary in the skip and failure messages", () => {

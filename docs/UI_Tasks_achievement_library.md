@@ -575,11 +575,11 @@ Reference files: `docs/ui-images/achievement-library/search-workbench-light-dark
 
 **Files:** Extract `src/components/library/search-workbench.tsx` only if justified; integrate existing `LibraryFilters` state; style in shared CSS; add `tests/e2e/library-search.spec.ts` and `tests/e2e/library-responsive.spec.ts`.
 
-- [ ] Place search, filter controls, category navigation, sort, and result summary in a predictable order below the profile summary.
-- [ ] Make the workbench sticky only after confirming the shared header offset; keep it below the topbar, provide an opaque theme-aware surface, and use a border rather than a strong shadow.
-- [ ] Do not let sticky content cover focused inputs, dropdown options, category headings, or browser anchor targets; apply `scroll-margin-top` to destination sections.
-- [ ] On mobile, either keep a compact search row sticky and allow filter controls to wrap/scroll accessibly, or disable sticky behavior when it crowds content; preserve all controls.
-- [ ] Test scroll position, focus visibility, filter dropdown stacking, theme, and no horizontal page overflow at 320/390/768/1024/1440px.
+- [x] Place search, filter controls, category navigation, sort, and result summary in a predictable order below the profile summary.
+- [x] Make the workbench sticky only after confirming the shared header offset; keep it below the topbar, provide an opaque theme-aware surface, and use a border rather than a strong shadow.
+- [x] Do not let sticky content cover focused inputs, dropdown options, category headings, or browser anchor targets; apply `scroll-margin-top` to destination sections.
+- [x] On mobile, either keep a compact search row sticky and allow filter controls to wrap/scroll accessibly, or disable sticky behavior when it crowds content; preserve all controls.
+- [x] Test scroll position, focus visibility, filter dropdown stacking, theme, and no horizontal page overflow at 320/390/768/1024/1440px.
 
 **Acceptance:** Search/filter controls remain discoverable during long-page browsing without blocking content or keyboard focus.
 
@@ -597,12 +597,12 @@ Reference files: `docs/ui-images/achievement-library/search-anatomy-and-states.p
 
 **Files:** `src/components/achievement-library.tsx` or search-workbench component, `src/lib/data/achievement-search.ts` only if preserving its semantics requires a tested helper change, and `tests/e2e/library-search.spec.ts`.
 
-- [ ] Preserve the accessible name `Search library` and existing coverage of point text/ID, experience, tags, linked skill names/aliases, and provenance fields.
-- [ ] Use the board copy `Search achievements... (points, skills, tags, jobs, projects, credentials)` as placeholder only; the label must remain available to assistive technology.
-- [ ] Add a leading magnifier icon and a trailing clear button only when text is present; clear must reset the query without clearing unrelated filters unless the control is explicitly named `Reset filters`.
-- [ ] Keep typing immediate and deterministic; do not introduce hidden debouncing, a server search request, or stale query results without product requirement.
-- [ ] Ensure search-empty and no-results states are distinct from load/API errors and keep query text available for editing.
-- [ ] Test keyboard typing, clear, multiple facets composed with query, zero results, long query wrapping, and both themes.
+- [x] Preserve the accessible name `Search library` and existing coverage of point text/ID, experience, tags, linked skill names/aliases, and provenance fields.
+- [x] Use the board copy `Search achievements... (points, skills, tags, jobs, projects, credentials)` as placeholder only; the label must remain available to assistive technology.
+- [x] Add a leading magnifier icon and a trailing clear button only when text is present; clear must reset the query without clearing unrelated filters unless the control is explicitly named `Reset filters`.
+- [x] Keep typing immediate and deterministic; do not introduce hidden debouncing, a server search request, or stale query results without product requirement.
+- [x] Ensure search-empty and no-results states are distinct from load/API errors and keep query text available for editing.
+- [x] Test keyboard typing, clear, multiple facets composed with query, zero results, long query wrapping, and both themes.
 
 **Acceptance:** Search remains global and composable with every existing facet, and all visible input affordances work.
 
@@ -620,12 +620,12 @@ Reference files: `docs/ui-images/achievement-library/search-workbench-light-dark
 
 **Files:** Search workbench/library component, `src/lib/data/achievement-search.ts` only for required reusable pure behavior, `tests/unit/data/achievement-search.test.ts`, and `tests/e2e/library-filters.spec.ts`.
 
-- [ ] Preserve current facets: Job or project (`All experience`), Point source (`All sources`), Point status (`All statuses`), Linked skill (`All skills`), and Tag (`All tags`).
-- [ ] Generate choices from the loaded library and preserve stable labels/order; do not show fabricated skills/tags or empty nonfunctional dropdowns.
-- [ ] Keep all filters combinable with the query; result count and visible groups update together.
-- [ ] Preserve the `Reset filters` behavior and use an explicit reset action only when at least one filter/query differs from default.
-- [ ] Keep native select semantics or implement a fully keyboard-accessible listbox; do not hide native focus/option behavior with CSS-only faux menus.
-- [ ] Test each facet, cross-facet combination, empty options, disabled source controls when appropriate, reset, and long labels on mobile.
+- [x] Preserve current facets: Job or project (`All experience`), Point source (`All sources`), Point status (`All statuses`), Linked skill (`All skills`), and Tag (`All tags`).
+- [x] Generate choices from the loaded library and preserve stable labels/order; do not show fabricated skills/tags or empty nonfunctional dropdowns.
+- [x] Keep all filters combinable with the query; result count and visible groups update together.
+- [x] Preserve the `Reset filters` behavior and use an explicit reset action only when at least one filter/query differs from default.
+- [x] Keep native select semantics or implement a fully keyboard-accessible listbox; do not hide native focus/option behavior with CSS-only faux menus.
+- [x] Test each facet, cross-facet combination, empty options, disabled source controls when appropriate, reset, and long labels on mobile.
 
 **Acceptance:** Filters match existing `LibraryFilters` behavior, remain accessible, and cannot silently show stale counts or result sections.
 
@@ -643,12 +643,12 @@ Reference files: `docs/ui-images/achievement-library/library-search-filter-galle
 
 **Files:** Add a focused `src/components/library/category-navigation.tsx` only if useful; integrate with category sections; add `tests/e2e/library-category-navigation.spec.ts`.
 
-- [ ] Render `All`, `Jobs`, `Projects`, `Skills`, and `Credentials` in the reference order, with counts derived from the selected library and current matching data where applicable.
-- [ ] Treat these controls as in-page section navigation: selecting one scrolls the corresponding section into view and updates the active/current section state; it does not hide the other categories or modify advanced filters.
-- [ ] `All` returns to the page overview/top of the content. If a category has zero entries, show its zero count and either navigate to its truthful empty state or disable only when that choice is genuinely unavailable.
-- [ ] Use real section IDs and `aria-current`/appropriate tab semantics; do not claim `role=tab` unless implementing the full tab panel interaction model.
-- [ ] Keep the navigation sticky only within the workbench rules and apply anchor offset so section headings remain visible.
-- [ ] Test mouse, keyboard, screen-reader labels, active state while scrolling, counts, zero categories, reduced motion, and mobile overflow.
+- [x] Render `All`, `Jobs`, `Projects`, `Skills`, and `Credentials` in the reference order, with counts derived from the selected library and current matching data where applicable.
+- [x] Treat these controls as in-page section navigation: selecting one scrolls the corresponding section into view and updates the active/current section state; it does not hide the other categories or modify advanced filters.
+- [x] `All` returns to the page overview/top of the content. If a category has zero entries, show its zero count and either navigate to its truthful empty state or disable only when that choice is genuinely unavailable.
+- [x] Use real section IDs and `aria-current`/appropriate tab semantics; do not claim `role=tab` unless implementing the full tab panel interaction model.
+- [x] Keep the navigation sticky only within the workbench rules and apply anchor offset so section headings remain visible.
+- [x] Test mouse, keyboard, screen-reader labels, active state while scrolling, counts, zero categories, reduced motion, and mobile overflow.
 
 **Acceptance:** Category controls help users jump through the long page and remain separate from search facets and result filtering.
 

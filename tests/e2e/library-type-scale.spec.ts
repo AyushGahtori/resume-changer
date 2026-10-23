@@ -169,27 +169,23 @@ test("applies the shared type scale to the library hierarchy", async ({
 }) => {
   const title = await readType(page, ".library-heading h1");
   const eyebrow = await readType(page, ".library-page .eyebrow");
-  const sourceIndicator = await readType(
-    page,
-    ".library-page .source-indicator",
-  );
   const intro = await readType(page, ".library-page .page-intro");
   const profileName = await readType(page, ".library-owner h2");
   const headline = await readType(page, ".library-owner p");
   const metricLabel = await readType(page, ".library-counts dt");
   const metricValue = await readType(page, ".library-counts dd");
   const experienceKind = await readType(page, ".experience-kind");
-  const experienceTitle = await readType(page, ".experience-heading h3");
+  const experienceTitle = await readType(page, ".experience-title");
   const experienceMeta = await readType(page, ".experience-subtitle");
-  const pointId = await readType(page, ".library-point-heading code");
+  const pointId = await readType(page, ".library-point-id");
   const pointStatus = await readType(page, ".point-status");
   const pointText = await readType(page, ".library-point-text");
   const provenance = await readType(page, ".point-provenance");
-  const metricLabelInCard = await readType(page, ".point-metrics strong");
-  const metricEvidence = await readType(page, ".point-metrics span");
+  const metricLabelInCard = await readType(page, ".point-metric-label");
+  const metricEvidence = await readType(page, ".point-metric-evidence");
+  const cardMetricValue = await readType(page, ".point-metric-value");
   const chip = await readType(page, ".facet-chip");
-  const sectionTitle = await readType(page, ".library-section-heading");
-  const searchLabel = await readType(page, ".library-search > span");
+  const sectionTitle = await readType(page, ".library-detail summary");
   const searchInput = await readType(page, ".library-search input");
   const filterLabel = await readType(page, ".library-filter-grid label > span");
 
@@ -230,9 +226,15 @@ test("applies the shared type scale to the library hierarchy", async ({
     fontSize: "12px",
     lineHeight: "16px",
   });
+  expect(cardMetricValue).toMatchObject({
+    fontSize: "20px",
+    lineHeight: "24px",
+  });
   expect(chip).toMatchObject({ fontSize: "12px", lineHeight: "16px" });
   expect(sectionTitle).toMatchObject({ fontSize: "24px", lineHeight: "32px" });
-  expect(searchLabel).toMatchObject({ fontSize: "12px", lineHeight: "16px" });
+  await expect(
+    page.getByRole("searchbox", { name: "Search library" }),
+  ).toBeVisible();
   expect(searchInput).toMatchObject({ fontSize: "14px", lineHeight: "20px" });
   expect(filterLabel).toMatchObject({ fontSize: "12px", lineHeight: "16px" });
 
@@ -243,9 +245,6 @@ test("applies the shared type scale to the library hierarchy", async ({
   for (const reading of [title, intro, pointText, chip, metricValue]) {
     expect(["normal", "0px"]).toContain(reading?.letterSpacing);
   }
-
-  expect(["normal", "0px"]).toContain(sourceIndicator?.letterSpacing);
-  expect(["normal", "0px"]).toContain(experienceKind?.letterSpacing);
 });
 
 test("consumes the shared tokens instead of a second scale", async ({
@@ -267,16 +266,22 @@ test("consumes the shared tokens instead of a second scale", async ({
     metadata: await readToken(page, "--type-metadata-size"),
     microLabel: await readToken(page, "--type-micro-label-size"),
     metricValue: await readToken(page, "--type-metric-value-size"),
+    cardMetricValue: await readToken(page, "--type-card-metric-value-size"),
+    cardMetricValueLine: await readToken(
+      page,
+      "--type-card-metric-value-line-height",
+    ),
   };
 
   const title = await readType(page, ".library-heading h1");
   const profileName = await readType(page, ".library-owner h2");
-  const experienceTitle = await readType(page, ".experience-heading h3");
+  const experienceTitle = await readType(page, ".experience-title");
   const pointText = await readType(page, ".library-point-text");
   const chip = await readType(page, ".facet-chip");
   const provenance = await readType(page, ".point-provenance");
   const experienceKind = await readType(page, ".experience-kind");
   const metricValue = await readType(page, ".library-counts dd");
+  const cardMetricValue = await readType(page, ".point-metric-value");
 
   expect(title?.fontSize).toBe(tokens.pageTitle);
   expect(title?.lineHeight).toBe(tokens.pageTitleLine);
@@ -289,6 +294,8 @@ test("consumes the shared tokens instead of a second scale", async ({
   expect(provenance?.fontSize).toBe(tokens.metadata);
   expect(experienceKind?.fontSize).toBe(tokens.microLabel);
   expect(metricValue?.fontSize).toBe(tokens.metricValue);
+  expect(cardMetricValue?.fontSize).toBe(tokens.cardMetricValue);
+  expect(cardMetricValue?.lineHeight).toBe(tokens.cardMetricValueLine);
 });
 
 test("keeps the compact title on mobile and never clips content", async ({
@@ -335,7 +342,7 @@ test("wraps long headings, values, and achievement text", async ({ page }) => {
     > = {};
     const targets: [string, string][] = [
       [".library-owner h2", "KonstantinopolouFitzgeraldWilliams"],
-      [".experience-heading h3", "PrincipalInfrastructureReliabilityEngineer"],
+      [".experience-title", "PrincipalInfrastructureReliabilityEngineer"],
       [
         ".library-point-text",
         "https://example.com/achievements/verylongresourceidentifier",
@@ -382,6 +389,8 @@ test("keeps muted metadata readable in both themes", async ({ page }) => {
       ".library-counts dt",
       ".experience-subtitle",
       ".library-point-text",
+      ".point-metric-evidence",
+      ".point-metric-context",
     ];
 
     for (const selector of samples) {

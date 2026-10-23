@@ -131,7 +131,7 @@ test("applies the shared tokens to the library surfaces", async ({ page }) => {
   expect(summary.backgroundColor).not.toBe(summary.borderTopColor);
   expect(summary.boxShadow).not.toBe("none");
 
-  const workbench = await readSurface(page, ".library-workbench");
+  const workbench = await readSurface(page, ".library-controls");
 
   expect(workbench.borderRadius).toBe("8px");
   expect(workbench.paddingTop).toBe("16px");
@@ -150,7 +150,7 @@ test("applies the shared tokens to the library surfaces", async ({ page }) => {
   expect(sourceSegment).toBe("4px");
 
   const searchField = await page
-    .locator(".library-search input")
+    .locator(".library-search")
     .first()
     .evaluate((element) => {
       const style = getComputedStyle(element);
@@ -167,7 +167,7 @@ test("applies the shared tokens to the library surfaces", async ({ page }) => {
     borderRadius: "6px",
     borderTopWidth: "1px",
     borderTopStyle: "solid",
-    height: "40px",
+    height: "44px",
   });
 });
 

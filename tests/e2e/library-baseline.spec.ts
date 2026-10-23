@@ -36,8 +36,9 @@ test.describe("achievement library baseline", () => {
     );
     expect(order).toEqual([
       "library-page-header",
+      "library-notice",
       "library-overview",
-      "library-workbench",
+      "library-controls",
       "library-content",
     ]);
   });
@@ -64,7 +65,9 @@ test.describe("achievement library baseline", () => {
     await page.getByLabel("Point status").selectOption("disabled");
 
     await expect(
-      page.getByText("No achievement points match these filters."),
+      page.getByText(
+        "None of the 13 achievements in this library match the current search and filters.",
+      ),
     ).toBeVisible();
     await expect(page.getByText("0 of 13 achievement points")).toBeVisible();
     await expect(page.getByRole("definition")).toHaveText([
@@ -91,18 +94,20 @@ test.describe("achievement library baseline", () => {
     await expect(point.locator(".point-metrics")).toContainText(
       "Throughput improvement",
     );
-    await expect(point.locator(".point-metrics")).toContainText("28 %");
+    await expect(point.locator(".point-metrics")).toContainText("28%");
     await expect(point.locator(".point-metrics")).toContainText(
       "Synthetic benchmark scenario",
     );
     await expect(
-      point.getByRole("button", { name: "#system-design" }),
+      point.getByRole("button", { name: "Filter by #system-design" }),
     ).toBeVisible();
     await expect(
-      point.getByRole("button", { name: "System Design" }),
+      point.getByRole("button", { name: "Filter by skill System Design" }),
     ).toBeVisible();
 
-    await point.getByRole("button", { name: "System Design" }).click();
+    await point
+      .getByRole("button", { name: "Filter by skill System Design" })
+      .click();
     await expect(page.getByLabel("Linked skill")).toHaveValue(
       "skill-system-design",
     );
@@ -111,16 +116,15 @@ test.describe("achievement library baseline", () => {
   test("lists skills and credentials with their real counts", async ({
     page,
   }) => {
-    const skills = page.locator("#library-skills");
-    const credentials = page.locator("#library-credentials");
-    await expect(skills.locator(".library-section-count")).toHaveText(
-      "14 skills",
+    const details = page.locator(".library-detail");
+    await expect(details.nth(0).locator(".library-section-count")).toHaveText(
+      "14",
     );
-    await expect(credentials.locator(".library-section-count")).toHaveText(
-      "2 credentials",
+    await expect(details.nth(1).locator(".library-section-count")).toHaveText(
+      "2",
     );
 
-    await skills.locator(".library-detail summary").click();
+    await details.nth(0).locator("summary").click();
     await expect(page.locator(".skill-list li")).toHaveCount(14);
     await expect(page.locator(".skill-listed").first()).toHaveText(
       "On current resume",
@@ -129,7 +133,7 @@ test.describe("achievement library baseline", () => {
       "Library only",
     );
 
-    await credentials.locator(".library-detail summary").click();
+    await details.nth(1).locator("summary").click();
     await expect(page.locator(".credential-list li")).toHaveCount(2);
     await expect(
       page.getByText("Cloud Deployment Foundations (Demo)"),
@@ -146,7 +150,7 @@ test.describe("achievement library baseline", () => {
       "Example Cloud Labs",
     );
     await expect(job.locator(".experience-dates")).toHaveText(
-      /01\/2023\s+–\s+Present/,
+      /Jan 2023\s+–\s+Present/,
     );
 
     const project = page
@@ -155,7 +159,7 @@ test.describe("achievement library baseline", () => {
     await expect(project).toHaveAttribute("aria-label", "Project: QueueBoard");
     await expect(project.locator(".experience-kind")).toHaveText("PROJECT");
     await expect(project.locator(".experience-dates")).toHaveText(
-      /02\/2024\s+–\s+08\/2024/,
+      /Feb 2024\s+–\s+Aug 2024/,
     );
   });
 
