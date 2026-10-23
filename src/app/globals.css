@@ -7380,3 +7380,80 @@ a:focus-visible {
   font-size: var(--type-body-size);
   line-height: var(--type-body-line-height);
 }
+
+/* Imagination Canvas responsive layout */
+.imagination-canvas-layout {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-24);
+  width: 100%;
+  min-width: 0;
+}
+
+.imagination-canvas-layout__columns {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr);
+  align-items: start;
+  gap: var(--space-24);
+  min-width: 0;
+}
+
+.imagination-canvas-layout__workspace,
+.imagination-canvas-layout__writing-panel,
+.imagination-canvas-layout__title,
+.imagination-canvas-layout__composer,
+.imagination-canvas-layout__connection-canvas,
+.imagination-canvas-layout__context-libraries,
+.imagination-canvas-layout__writing-controls,
+.imagination-canvas-layout__result,
+.imagination-canvas-layout__footer {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.imagination-canvas-layout__workspace,
+.imagination-canvas-layout__writing-panel {
+  display: grid;
+  align-content: start;
+  gap: var(--space-16);
+}
+
+.imagination-canvas-layout__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-16);
+  padding-block: var(--space-16);
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.imagination-canvas-layout [data-slot] {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 1100px) {
+  .imagination-canvas-layout__columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 700px) {
+  .imagination-canvas-layout {
+    gap: var(--space-16);
+  }
+
+  .imagination-canvas-layout__columns,
+  .imagination-canvas-layout__workspace,
+  .imagination-canvas-layout__writing-panel {
+    gap: var(--space-16);
+  }
+
+  .imagination-canvas-layout__footer {
+    align-items: stretch;
+    justify-content: flex-start;
+  }
+}
