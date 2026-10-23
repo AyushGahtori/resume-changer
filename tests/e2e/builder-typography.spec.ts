@@ -82,7 +82,7 @@ test("keeps the builder heading hierarchy on the shared type scale", async ({
   await expect(sectionTitle).toHaveCSS("font-weight", "600");
 
   // Card title: 16/24, semibold.
-  const cardTitle = page.locator(".generation-draft strong");
+  const cardTitle = page.locator(".generation-draft-role");
   await expect(cardTitle).toHaveCSS("font-size", "16px");
   await expect(cardTitle).toHaveCSS("line-height", "24px");
   await expect(cardTitle).toHaveCSS("font-weight", "600");
@@ -140,7 +140,10 @@ test("keeps letter spacing at zero and the counts tabular", async ({
 
   // Numeric comparisons keep a stable width.
   const counts = await page.evaluate(() => {
-    const selectors = [".generation-draft", ".generation-section-heading p"];
+    const selectors = [
+      ".generation-draft-count",
+      ".generation-section-heading p",
+    ];
     return selectors.map((selector) => {
       const element = document.querySelector(selector);
       return {

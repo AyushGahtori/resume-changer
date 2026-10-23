@@ -1439,7 +1439,7 @@ export default function ResumeGenerator({ library, source }: Props) {
               )}
               <p className="generation-draft-meta">
                 {draft.company && <span>{draft.company}</span>}
-                <span>
+                <span className="generation-draft-count">
                   {draft.jobDescription.length.toLocaleString()} description
                   characters
                 </span>

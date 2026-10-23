@@ -469,36 +469,34 @@
 .studio-card-actions .studio-ai-text {
   color: var(--imagination);
 }
-.studio-card-menu {
-  position: relative;
-  margin-left: auto;
-}
-.studio-card-menu > summary {
+.studio-card-menu-trigger {
   display: grid;
   place-items: center;
   min-width: 28px;
   min-height: 28px;
+  margin-left: auto;
+  border-color: transparent;
+  background: transparent;
   color: var(--quiet);
   cursor: pointer;
-  list-style: none;
 }
-.studio-card-menu > div {
-  position: absolute;
-  right: 0;
-  bottom: 30px;
-  z-index: 6;
+.studio-card-menu-popover {
+  position: fixed;
+  z-index: 1000;
   width: 170px;
+  max-height: calc(100vh - 16px);
+  overflow-y: auto;
   padding: var(--space-4);
   border: 1px solid var(--line-strong);
   border-radius: var(--radius-card);
   background: var(--surface);
   /*
-   * A floating menu needs a little lift, and only a little. The token
-   * resolves to none in the dark theme, where the border separates it.
+   * The action menu is portaled to the document so the achievement scroller
+   * cannot clip it. The shared small shadow keeps it distinct in light mode.
    */
   box-shadow: var(--shadow-sm);
 }
-.studio-card-menu button {
+.studio-card-menu-popover button {
   display: block;
   width: 100%;
   margin: var(--space-4) 0;

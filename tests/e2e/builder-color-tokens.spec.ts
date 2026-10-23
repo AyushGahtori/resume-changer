@@ -202,8 +202,8 @@ test("maps the builder palette onto the shared app-wide tokens", async ({
   // builder-only palette.
   expect(normalized["--color-violet"]).toBe("#7c3aed");
   expect(normalized["--color-violet-light"]).toBe("#a78bfa");
-  expect(normalized["--color-orange"]).toBe("#f97316");
-  expect(normalized["--color-border"]).toBe("#e2e8f0");
+  expect(normalized["--color-orange"]).toBe("#ff7a45");
+  expect(normalized["--color-border"]).toBe("#cbd5e1");
   expect(normalized["--color-text-primary"]).toBe("#0f172a");
   expect(normalized["--color-error"]).toBe("#ef4444");
   expect(normalized["--color-warning"]).toBe("#f59e0b");

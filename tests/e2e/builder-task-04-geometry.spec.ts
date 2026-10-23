@@ -38,15 +38,14 @@ test.describe("Resume Builder geometry", () => {
     const navigation = page.locator(".studio-navigation button").first();
     expect(px(await styleOf(navigation, "border-radius"))).toBe(6);
 
-    // The Skills tab carries the search field, the filter pills, and the
-    // skill chips.
+    // The Skills tab carries the search field, filter pills, and skill rows.
     await page
       .locator(".studio-navigation button[aria-label='Skills']")
       .click();
 
     const controls = [
       page.locator(".studio-field input").first(),
-      page.locator(".studio-chip-list > button").first(),
+      page.locator(".studio-skill-option").first(),
     ];
     for (const control of controls) {
       await expect(control).toBeVisible();
@@ -140,16 +139,15 @@ test.describe("Resume Builder geometry", () => {
       page.locator(".studio-filters button", { hasText: "All" }),
     ).toHaveAttribute("aria-pressed", "true");
 
-    // A skill chip gains a checkmark when it is selected, but every chip in
-    // the group keeps the same box, so selecting one never makes its row
-    // taller than its neighbours.
-    const chipHeights = await page
-      .locator(".studio-chip-list > button")
+    // Selecting a skill changes its state, but each skill row keeps its
+    // dimensions so the group does not jump.
+    const skillRowHeights = await page
+      .locator(".studio-skill-option")
       .evaluateAll((nodes) =>
         nodes.map((node) => Math.round(node.getBoundingClientRect().height)),
       );
-    expect(chipHeights.length).toBeGreaterThan(1);
-    expect(new Set(chipHeights).size).toBe(1);
+    expect(skillRowHeights.length).toBeGreaterThan(1);
+    expect(skillRowHeights.every((height) => height >= 40)).toBe(true);
   });
 
   test("narrow layouts reduce insets instead of scrolling sideways", async ({

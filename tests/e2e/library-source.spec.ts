@@ -207,7 +207,8 @@ test("renders the shared source control the same way on the generate page", asyn
 }) => {
   await page.goto("/generate?source=demo");
 
-  const control = page.locator(switchSelector);
+  const sourceSelector = ".builder-source-switch";
+  const control = page.locator(sourceSelector);
   await expect(control).toHaveCSS("border-radius", "6px");
   await expect(
     control.getByRole("link", { name: "Demo data" }),
@@ -223,7 +224,7 @@ test("renders the shared source control the same way on the generate page", asyn
       track: getComputedStyle(switchElement).backgroundColor,
       selected: getComputedStyle(selectedElement).backgroundColor,
     };
-  }, switchSelector);
+  }, sourceSelector);
 
   expect(surfaces).not.toBeNull();
   expect(surfaces?.selected).not.toBe(surfaces?.track);

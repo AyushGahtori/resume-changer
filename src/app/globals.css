@@ -5049,7 +5049,7 @@ a:focus-visible {
   gap: 2px;
   padding: 3px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--radius-control);
   background: var(--surface);
 }
 
@@ -5128,6 +5128,10 @@ a:focus-visible {
 
 .generation-draft-meta span {
   overflow-wrap: anywhere;
+}
+
+.generation-draft-count {
+  font-variant-numeric: tabular-nums;
 }
 
 .generation-draft-note {

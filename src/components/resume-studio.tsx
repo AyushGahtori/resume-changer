@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { createPortal } from "react-dom";
 import AchievementImagination from "./achievement-imagination";
 import { useRouter } from "next/navigation";
 import StudioDialog from "./studio-dialog";
@@ -68,6 +69,190 @@ type ImaginationState = {
   ids: string[];
   groupId?: string;
 } | null;
+
+type StudioCardMenuProps = {
+  achievementId: string;
+  canRevert: boolean;
+  onConnect: () => void;
+  onMove: () => void;
+  onViewOriginal: () => void;
+  onRevert: () => void;
+  onRemove: () => void;
+};
+
+/**
+ * The achievement list scrolls inside its own panel. Portaling this menu to
+ * the document lets it remain visible at the top and bottom edges of that
+ * scroll area while its trigger stays attached to the card.
+ */
+function StudioCardMenu({
+  achievementId,
+  canRevert,
+  onConnect,
+  onMove,
+  onViewOriginal,
+  onRevert,
+  onRemove,
+}: StudioCardMenuProps) {
+  const [open, setOpen] = useState(false);
+  const [position, setPosition] = useState<{
+    top: number;
+    left: number;
+  } | null>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const focusedOnOpen = useRef(false);
+  const menuId = "studio-card-actions-" + encodeURIComponent(achievementId);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+
+    const updatePosition = () => {
+      const trigger = triggerRef.current;
+      const menu = menuRef.current;
+      if (!trigger || !menu) return;
+
+      const margin = 8;
+      const gap = 4;
+      const triggerBox = trigger.getBoundingClientRect();
+      const menuBox = menu.getBoundingClientRect();
+      const menuHeight = Math.min(
+        menuBox.height,
+        window.innerHeight - margin * 2,
+      );
+      const spaceBelow = window.innerHeight - triggerBox.bottom - gap - margin;
+      const spaceAbove = triggerBox.top - gap - margin;
+      const desiredTop =
+        spaceBelow >= menuHeight || spaceBelow >= spaceAbove
+          ? triggerBox.bottom + gap
+          : triggerBox.top - menuHeight - gap;
+      const top = Math.max(
+        margin,
+        Math.min(desiredTop, window.innerHeight - menuHeight - margin),
+      );
+      const left = Math.max(
+        margin,
+        Math.min(
+          triggerBox.right - menuBox.width,
+          window.innerWidth - menuBox.width - margin,
+        ),
+      );
+
+      setPosition((current) =>
+        current?.top === top && current.left === left ? current : { top, left },
+      );
+    };
+
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) {
+      focusedOnOpen.current = false;
+      setPosition(null);
+      return;
+    }
+    if (!position || focusedOnOpen.current) return;
+
+    menuRef.current
+      ?.querySelector<HTMLButtonElement>("button:not(:disabled)")
+      ?.focus();
+    focusedOnOpen.current = true;
+  }, [open, position]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const closeOnOutsidePointer = (event: PointerEvent) => {
+      if (!(event.target instanceof Node)) return;
+      if (
+        triggerRef.current?.contains(event.target) ||
+        menuRef.current?.contains(event.target)
+      ) {
+        return;
+      }
+      setOpen(false);
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      setOpen(false);
+      triggerRef.current?.focus();
+    };
+
+    document.addEventListener("pointerdown", closeOnOutsidePointer);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsidePointer);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [open]);
+
+  const runAction = (action: () => void) => {
+    triggerRef.current?.focus();
+    setOpen(false);
+    action();
+  };
+
+  return (
+    <>
+      <button
+        ref={triggerRef}
+        type="button"
+        className="studio-card-menu-trigger"
+        aria-label={"More actions for " + achievementId}
+        aria-expanded={open}
+        aria-controls={menuId}
+        onClick={() => setOpen((current) => !current)}
+      >
+        •••
+      </button>
+      {open &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            id={menuId}
+            ref={menuRef}
+            className="studio-card-menu-popover"
+            role="group"
+            aria-label={"Actions for achievement " + achievementId}
+            style={{
+              top: position?.top ?? 8,
+              left: position?.left ?? 8,
+              visibility: position ? "visible" : "hidden",
+            }}
+          >
+            <button type="button" onClick={() => runAction(onConnect)}>
+              Connect for merge
+            </button>
+            <button type="button" onClick={() => runAction(onMove)}>
+              Move to destination
+            </button>
+            <button type="button" onClick={() => runAction(onViewOriginal)}>
+              View original
+            </button>
+            <button
+              type="button"
+              disabled={!canRevert}
+              onClick={() => runAction(onRevert)}
+            >
+              Revert wording
+            </button>
+            <button type="button" onClick={() => runAction(onRemove)}>
+              Remove from resume
+            </button>
+          </div>,
+          document.body,
+        )}
+    </>
+  );
+}
 
 export default function ResumeStudio({
   library,
@@ -815,93 +1000,60 @@ export default function ResumeStudio({
                                 >
                                   ↓
                                 </button>
-                                <details className="studio-card-menu">
-                                  <summary
-                                    aria-label={`More actions for ${bullet.id}`}
-                                  >
-                                    •••
-                                  </summary>
-                                  <div>
-                                    <button
-                                      type="button"
-                                      onClick={() => connect(bullet.id)}
-                                    >
-                                      Connect for merge
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        setManual({
-                                          id: bullet.id,
-                                          text: bullet.text,
-                                          groupId: bullet.groupId,
-                                        })
-                                      }
-                                    >
-                                      Move to destination
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={(event) => {
-                                        const evidence = event.currentTarget
-                                          .closest("article")
-                                          ?.querySelector<HTMLDetailsElement>(
-                                            ".studio-evidence",
-                                          );
-                                        if (evidence) {
-                                          evidence.open = true;
-                                          evidence.scrollIntoView({
-                                            block: "nearest",
-                                          });
-                                        }
-                                      }}
-                                    >
-                                      View original
-                                    </button>
-                                    <button
-                                      type="button"
-                                      disabled={
-                                        bullet.text === bullet.originalText
-                                      }
-                                      onClick={() =>
-                                        change("Revert achievement", {
-                                          ...document,
-                                          bullets: document.bullets.map(
-                                            (item) =>
-                                              item.id === bullet.id
-                                                ? {
-                                                    ...item,
-                                                    text: item.originalText,
-                                                  }
-                                                : item,
-                                          ),
-                                        })
-                                      }
-                                    >
-                                      Revert wording
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        change("Remove achievement", {
-                                          ...document,
-                                          bullets: document.bullets.filter(
-                                            (item) => item.id !== bullet.id,
-                                          ),
-                                        });
-                                        setMergeIds(
-                                          mergeIds.filter(
-                                            (id) => id !== bullet.id,
-                                          ),
-                                        );
-                                      }}
-                                    >
-                                      Remove from resume
-                                    </button>
-                                  </div>
-                                </details>
+                                <StudioCardMenu
+                                  achievementId={bullet.id}
+                                  canRevert={
+                                    bullet.text !== bullet.originalText
+                                  }
+                                  onConnect={() => connect(bullet.id)}
+                                  onMove={() =>
+                                    setManual({
+                                      id: bullet.id,
+                                      text: bullet.text,
+                                      groupId: bullet.groupId,
+                                    })
+                                  }
+                                  onViewOriginal={() => {
+                                    const evidence =
+                                      window.document.getElementById(
+                                        "studio-evidence-" + bullet.id,
+                                      );
+                                    if (
+                                      evidence instanceof HTMLDetailsElement
+                                    ) {
+                                      evidence.open = true;
+                                      evidence.scrollIntoView({
+                                        block: "nearest",
+                                      });
+                                    }
+                                  }}
+                                  onRevert={() =>
+                                    change("Revert achievement", {
+                                      ...document,
+                                      bullets: document.bullets.map((item) =>
+                                        item.id === bullet.id
+                                          ? { ...item, text: item.originalText }
+                                          : item,
+                                      ),
+                                    })
+                                  }
+                                  onRemove={() => {
+                                    change("Remove achievement", {
+                                      ...document,
+                                      bullets: document.bullets.filter(
+                                        (item) => item.id !== bullet.id,
+                                      ),
+                                    });
+                                    setMergeIds(
+                                      mergeIds.filter((id) => id !== bullet.id),
+                                    );
+                                  }}
+                                />
                               </div>
-                              <details className="studio-evidence">
+                              <details
+                                id={"studio-evidence-" + bullet.id}
+                                className="studio-evidence"
+                              >
                                 <summary>
                                   Original &amp; evidence ·{" "}
                                   {bullet.sourceAchievementIds.join(", ") ||

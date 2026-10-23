@@ -19,15 +19,40 @@ function cardFor(page: Page, id: string): Locator {
     .filter({ has: page.locator(`[aria-label='Edit achievement ${id}']`) });
 }
 
-/**
- * The overflow menu is a `<summary>` element, so it is not exposed as a
- * button. It is located by its accessible label instead.
- */
 function moreActionsFor(page: Page, id: string): Locator {
-  return page.locator(
-    `.studio-card-menu summary[aria-label='More actions for ${id}']`,
-  );
+  return page.getByRole("button", { name: "More actions for " + id });
 }
+
+test("keeps the action menu visible outside the scroll area and closes with Escape", async ({
+  page,
+}) => {
+  await openStudio(page, false);
+  const trigger = moreActionsFor(page, firstId);
+  await trigger.click();
+
+  const menu = page.getByRole("group", {
+    name: "Actions for achievement " + firstId,
+  });
+  await expect(trigger).toHaveAttribute("aria-expanded", "true");
+  await expect(
+    menu.getByRole("button", { name: "View original" }),
+  ).toBeVisible();
+  expect(
+    await menu.evaluate((element) => element.parentElement === document.body),
+  ).toBe(true);
+
+  await page.keyboard.press("Escape");
+  await expect(trigger).toHaveAttribute("aria-expanded", "false");
+  await expect(trigger).toBeFocused();
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await trigger.click();
+  const mobileBounds = await menu.boundingBox();
+  expect(mobileBounds?.x).toBeGreaterThanOrEqual(0);
+  expect(mobileBounds!.x + mobileBounds!.width).toBeLessThanOrEqual(390);
+  expect(mobileBounds?.y).toBeGreaterThanOrEqual(0);
+  expect(mobileBounds!.y + mobileBounds!.height).toBeLessThanOrEqual(844);
+});
 
 function cardOrder(page: Page): Promise<string[]> {
   return page
@@ -114,7 +139,7 @@ test("reveals the original wording and its source evidence for an edited point",
 
   // "View original" opens that panel for the reviewer.
   await moreActionsFor(page, firstId).click();
-  await card.getByRole("button", { name: "View original" }).click();
+  await page.getByRole("button", { name: "View original" }).click();
   await expect(evidence).toHaveJSProperty("open", true);
 });
 
@@ -134,7 +159,7 @@ test("reverts an edited point to its original wording", async ({ page }) => {
   );
 
   await moreActionsFor(page, firstId).click();
-  const revert = card.getByRole("button", { name: "Revert wording" });
+  const revert = page.getByRole("button", { name: "Revert wording" });
   await expect(revert).toBeEnabled();
   await revert.click();
 
@@ -153,7 +178,7 @@ test("removes a point from the resume and keeps the remaining point", async ({
 
   const card = cardFor(page, firstId);
   await moreActionsFor(page, firstId).click();
-  await card.getByRole("button", { name: "Remove from resume" }).click();
+  await page.getByRole("button", { name: "Remove from resume" }).click();
 
   await expect(page.locator(".studio-achievement-card")).toHaveCount(1);
   await expect(cardFor(page, firstId)).toHaveCount(0);
