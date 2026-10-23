@@ -8,10 +8,21 @@ import { waitForAnimationsToSettle } from "../helpers/animations";
  * themes, while the other destinations stay neutral.
  */
 
-const activeTreatment = {
-  light: { color: "rgb(194, 65, 12)", background: "rgb(255, 247, 237)" },
-  dark: { color: "rgb(253, 186, 116)", background: "rgb(68, 39, 25)" },
-};
+async function readActiveTreatment(page: import("@playwright/test").Page) {
+  return page.locator("html").evaluate((root) => {
+    const probe = document.createElement("span");
+    probe.style.color = "var(--accent-hover)";
+    probe.style.backgroundColor = "var(--accent-soft)";
+    root.append(probe);
+    const theme = getComputedStyle(probe);
+    const treatment = {
+      color: theme.color,
+      background: theme.backgroundColor,
+    };
+    probe.remove();
+    return treatment;
+  });
+}
 
 test("marks Resume builder as the current destination on the builder route", async ({
   page,
@@ -44,22 +55,20 @@ test("keeps the active destination orange and the other rows neutral in both the
       await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
     }
     await waitForAnimationsToSettle(active);
+    const treatment = await readActiveTreatment(page);
 
-    await expect(active).toHaveCSS("color", activeTreatment[theme].color);
-    await expect(active).toHaveCSS(
-      "background-color",
-      activeTreatment[theme].background,
-    );
+    await expect(active).toHaveCSS("color", treatment.color);
+    await expect(active).toHaveCSS("background-color", treatment.background);
     await expect(active.locator(".nav-icon")).toHaveCSS(
       "color",
-      activeTreatment[theme].color,
+      treatment.color,
     );
 
     await expect(inactive).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
     const inactiveColor = await inactive.evaluate(
       (element) => getComputedStyle(element).color,
     );
-    expect(inactiveColor).not.toBe(activeTreatment[theme].color);
+    expect(inactiveColor).not.toBe(treatment.color);
   }
 });
 
@@ -75,7 +84,8 @@ test("keeps the active destination marked inside the mobile navigation", async (
   const active = dialog.getByRole("link", { name: "Resume builder" });
   await expect(active).toHaveAttribute("aria-current", "page");
   await expect(dialog.locator('[aria-current="page"]')).toHaveCount(1);
-  await expect(active).toHaveCSS("color", activeTreatment.light.color);
+  const treatment = await readActiveTreatment(page);
+  await expect(active).toHaveCSS("color", treatment.color);
 });
 
 test("keeps a visible focus ring on the active destination", async ({

@@ -490,6 +490,12 @@ a {
   color: var(--color-nav-active-text);
 }
 
+.app-frame.is-generate-route {
+  --color-nav-active-surface: var(--accent-soft);
+  --color-nav-active-text: var(--accent-hover);
+  --color-nav-active-border: transparent;
+}
+
 .app-frame.is-library-route {
   --color-nav-active-surface: #fff7ed;
   --color-nav-active-text: #c2410c;
