@@ -112,8 +112,8 @@
   border-radius: var(--radius-control);
   background: var(--surface-soft);
   color: var(--ink);
-  font-size: 11px;
-  line-height: 1.35;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
 }
 .resume-studio button:hover:not(:disabled),
 .studio-dialog button:hover:not(:disabled) {
@@ -148,21 +148,24 @@
 .studio-kicker {
   margin: 0 0 var(--space-4);
   color: var(--accent);
-  font-size: 9px;
-  font-weight: 750;
-  letter-spacing: 0.12em;
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+  font-weight: 600;
+  letter-spacing: 0;
 }
 .studio-heading h2 {
   margin: 0;
   color: var(--ink);
   font-family: Georgia, serif;
-  font-size: 27px;
-  font-weight: 500;
+  font-size: var(--type-section-heading-size);
+  line-height: var(--type-section-heading-line-height);
+  font-weight: 600;
 }
 .studio-heading p:last-child {
   margin: var(--space-4) 0 0;
   color: var(--muted);
-  font-size: 11px;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
 }
 .studio-badge {
   display: inline-flex;
@@ -174,8 +177,10 @@
   border-radius: var(--radius-full);
   background: var(--surface-soft);
   color: var(--teal);
-  font-size: 10px;
-  font-weight: 650;
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 .studio-badge.is-pending {
   color: var(--accent);
@@ -204,7 +209,8 @@
   padding: var(--space-8);
   text-align: left;
   color: var(--muted);
-  font-size: 10px;
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
 }
 .studio-navigation button > span {
   color: var(--quiet);
@@ -237,22 +243,23 @@
 }
 .studio-panel-heading h3 {
   margin: 0;
-  font-size: 15px;
-  line-height: 1.4;
+  font-size: var(--type-card-heading-size);
+  line-height: var(--type-card-heading-line-height);
+  font-weight: 600;
 }
 .studio-panel-heading p {
   margin: var(--space-4) 0 0;
   color: var(--muted);
-  font-size: 11px;
-  line-height: 1.5;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
 }
 .studio-panel-heading > button {
   flex-shrink: 0;
 }
 .studio-muted {
   color: var(--muted);
-  font-size: 11px;
-  line-height: 1.55;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
 }
 .studio-empty {
   margin: var(--space-8) 0;
@@ -260,8 +267,8 @@
   border: 1px dashed var(--line-strong);
   border-radius: var(--radius-card);
   color: var(--muted);
-  font-size: 12px;
-  line-height: 1.6;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
   text-align: center;
 }
 .studio-field {
@@ -269,8 +276,9 @@
   gap: var(--space-8);
   margin: 0 0 var(--space-12);
   color: var(--ink);
-  font-size: 11px;
-  font-weight: 650;
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+  font-weight: 600;
 }
 .studio-field input,
 .studio-field textarea,
@@ -284,9 +292,9 @@
   padding: var(--space-12);
   background: var(--surface-soft);
   color: var(--ink);
-  font-size: 12px;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
   font-weight: 400;
-  line-height: 1.6;
   outline-color: var(--focus);
 }
 .studio-field textarea {
@@ -312,12 +320,14 @@
 }
 .studio-overview-stats strong {
   font-size: 24px;
-  font-weight: 500;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
   color: var(--accent);
 }
 .studio-overview-stats span {
   color: var(--muted);
-  font-size: 10px;
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
 }
 .studio-achievement-scroll {
   position: relative;
@@ -346,13 +356,15 @@
 }
 .studio-destination > header h4 {
   margin: 0;
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: var(--type-card-heading-size);
+  line-height: var(--type-card-heading-line-height);
+  font-weight: 600;
 }
 .studio-destination > header p {
   margin: 2px 0 0;
   color: var(--muted);
-  font-size: 10px;
+  font-size: var(--type-helper-size);
+  line-height: var(--type-helper-line-height);
 }
 .studio-destination > header > button {
   margin-left: auto;
@@ -392,8 +404,8 @@
 .studio-achievement-card > p {
   margin: 0;
   color: var(--ink);
-  font-size: 12px;
-  line-height: 1.65;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
   overflow-wrap: anywhere;
 }
 .resume-studio .studio-connect-handle {
@@ -431,7 +443,8 @@
   gap: var(--space-4) var(--space-12);
   margin-top: var(--space-8);
   color: var(--quiet);
-  font-size: 9px;
+  font-size: var(--type-helper-size);
+  line-height: var(--type-helper-line-height);
 }
 .studio-card-actions {
   display: flex;
@@ -445,7 +458,8 @@
   padding: var(--space-4) var(--space-8);
   border-color: transparent;
   background: transparent;
-  font-size: 10px;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
   color: var(--muted);
 }
 .studio-card-actions .studio-ai-text {
@@ -489,13 +503,15 @@
 .studio-evidence {
   margin-top: var(--space-8);
   color: var(--muted);
-  font-size: 10px;
-  line-height: 1.6;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
 }
 .studio-evidence > summary {
   cursor: pointer;
   color: var(--quiet);
-  font-size: 9px;
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+  font-weight: 600;
   overflow-wrap: anywhere;
 }
 .studio-evidence p {
@@ -504,7 +520,8 @@
 .studio-evidence code {
   display: block;
   color: var(--imagination);
-  font-size: 9px;
+  font-size: var(--type-helper-size);
+  line-height: var(--type-helper-line-height);
 }
 .studio-mini-skills {
   display: flex;
@@ -522,8 +539,8 @@
   border: 1px dashed var(--line-strong);
   border-radius: var(--radius-card);
   color: var(--quiet);
-  font-size: 11px;
-  line-height: 1.6;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
 }
 .studio-merge-svg {
   position: absolute;
@@ -570,7 +587,8 @@
 .studio-merge-toolbar > span {
   flex: 1 1 100%;
   color: var(--imagination);
-  font-size: 10px;
+  font-size: var(--type-helper-size);
+  line-height: var(--type-helper-line-height);
 }
 .studio-action-bar {
   position: sticky;
@@ -588,7 +606,8 @@
 }
 .studio-action-bar > span {
   color: var(--muted);
-  font-size: 10px;
+  font-size: var(--type-helper-size);
+  line-height: var(--type-helper-line-height);
 }
 .studio-action-bar > div {
   display: flex;
@@ -601,7 +620,7 @@
   border-color: var(--accent);
   background: var(--accent);
   color: var(--accent-contrast);
-  font-weight: 700;
+  font-weight: 600;
   padding: var(--space-8) var(--space-12);
 }
 .resume-studio .studio-primary:hover:not(:disabled),
@@ -624,8 +643,8 @@
   border-radius: var(--radius-control);
   background: var(--danger-soft);
   color: var(--danger);
-  font-size: 11px;
-  line-height: 1.6;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
 }
 .studio-notice {
   border-color: var(--teal);
@@ -642,7 +661,8 @@
   border: 1px solid var(--imagination);
   border-radius: var(--radius-card);
   background: var(--imagination-soft);
-  font-size: 12px;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
 }
 .studio-restore > span {
   flex: 1;
@@ -663,11 +683,14 @@
   gap: var(--space-8);
 }
 .studio-capacity-title strong {
-  font-size: 12px;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
+  font-weight: 600;
 }
 .studio-capacity-title span {
   color: var(--imagination);
-  font-size: 9px;
+  font-size: var(--type-helper-size);
+  line-height: var(--type-helper-line-height);
 }
 .studio-capacity-row {
   display: grid;
@@ -675,7 +698,9 @@
   gap: 8px;
   align-items: center;
   color: var(--muted);
-  font-size: 10px;
+  font-size: var(--type-helper-size);
+  line-height: var(--type-helper-line-height);
+  font-variant-numeric: tabular-nums;
 }
 .studio-capacity-row progress {
   width: 100%;
@@ -701,8 +726,8 @@
 .studio-capacity > p {
   margin: 0;
   color: var(--muted);
-  font-size: 9px;
-  line-height: 1.6;
+  font-size: var(--type-helper-size);
+  line-height: var(--type-helper-line-height);
 }
 .studio-filters {
   display: flex;
@@ -714,7 +739,8 @@
   min-height: 27px;
   padding: 4px 9px;
   border-radius: var(--radius-full);
-  font-size: 9px;
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
 }
 .studio-filters button[aria-pressed="true"] {
   border-color: var(--imagination);
@@ -739,12 +765,14 @@
   padding: var(--space-4);
   color: var(--ink);
   cursor: pointer;
-  font-size: 11px;
-  font-weight: 650;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
+  font-weight: 600;
 }
 .studio-skill-groups summary small {
   color: var(--quiet);
-  font-size: 9px;
+  font-size: var(--type-helper-size);
+  line-height: var(--type-helper-line-height);
   font-weight: 400;
 }
 .studio-chip-list {
@@ -759,11 +787,13 @@
   align-items: center;
   min-height: 32px;
   padding: var(--space-4) var(--space-8);
-  font-size: 10px;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
 }
 .studio-chip-list button small {
   color: var(--quiet);
-  font-size: 8px;
+  font-size: var(--type-helper-size);
+  line-height: var(--type-helper-line-height);
 }
 .studio-chip-list button[aria-pressed="true"] {
   border-color: var(--imagination);
@@ -788,7 +818,8 @@
   border: 1px solid var(--line);
   border-radius: var(--radius-control);
   color: var(--ink);
-  font-size: 12px;
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
 }
 .studio-record,
 .studio-revision {
@@ -797,8 +828,8 @@
   border: 1px solid var(--line);
   border-radius: var(--radius-card);
   background: var(--surface-soft);
-  font-size: 11px;
-  line-height: 1.6;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
 }
 .studio-record p,
 .studio-revision p {
@@ -807,7 +838,7 @@
 }
 .studio-record summary {
   cursor: pointer;
-  font-weight: 650;
+  font-weight: 600;
 }
 .studio-record li {
   margin-bottom: var(--space-8);
@@ -819,7 +850,8 @@
   justify-content: space-between;
 }
 .studio-revision p {
-  font-size: 9px;
+  font-size: var(--type-helper-size);
+  line-height: var(--type-helper-line-height);
 }
 .studio-available-list {
   display: grid;
@@ -837,12 +869,13 @@
 }
 .studio-available-list small {
   color: var(--accent);
-  font-size: 10px;
+  font-size: var(--type-helper-size);
+  line-height: var(--type-helper-line-height);
 }
 .studio-available-list p {
   margin: 8px 0 10px;
-  font-size: 12px;
-  line-height: 1.6;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
 }
 .studio-dialog {
   width: min(960px, calc(100vw - var(--space-32)));
@@ -872,7 +905,9 @@
 }
 .studio-dialog-heading h2 {
   margin: 0;
-  font-size: 18px;
+  font-size: 20px;
+  line-height: 28px;
+  font-weight: 600;
 }
 .studio-dialog-heading h2::before {
   content: "✦";
@@ -895,15 +930,16 @@
 }
 .imagination-composer > span {
   color: var(--imagination);
-  font-size: 10px;
-  letter-spacing: 0.07em;
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+  letter-spacing: 0;
 }
 .imagination-composer textarea {
   padding: 0;
   border: 0;
   background: transparent;
-  font-size: 15px;
-  line-height: 1.7;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
 }
 .imagination-context-map {
   position: relative;
@@ -914,7 +950,8 @@
   margin: 0 0 var(--space-12);
   border-bottom: 1px solid var(--line);
   color: var(--muted);
-  font-size: 10px;
+  font-size: var(--type-helper-size);
+  line-height: var(--type-helper-line-height);
 }
 .imagination-context-map::before {
   content: "";
@@ -934,7 +971,9 @@
   border-radius: 50%;
   background: var(--imagination);
   color: var(--surface);
-  font-size: 18px;
+  font-size: var(--type-card-heading-size);
+  line-height: var(--type-card-heading-line-height);
+  font-weight: 600;
 }
 .imagination-connected {
   display: flex;
@@ -946,7 +985,8 @@
   position: relative;
   border-color: var(--imagination);
   background: var(--imagination-soft);
-  font-size: 10px;
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
 }
 .imagination-context-map p {
   margin: 0;
@@ -965,12 +1005,15 @@
 }
 .imagination-context-libraries h3 {
   margin: 0 0 var(--space-8);
-  font-size: 13px;
+  font-size: var(--type-card-heading-size);
+  line-height: var(--type-card-heading-line-height);
+  font-weight: 600;
 }
 .imagination-context-libraries input {
-  padding: var(--space-8);
+  padding: 8px;
   margin-bottom: var(--space-8);
-  font-size: 11px;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
 }
 .imagination-context-list {
   display: grid;
@@ -981,14 +1024,16 @@
 }
 .imagination-context-list summary {
   cursor: pointer;
-  font-size: 10px;
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+  font-weight: 600;
 }
 .studio-dialog .imagination-context-card {
   width: 100%;
   padding: var(--space-8);
   text-align: left;
-  font-size: 11px;
-  line-height: 1.55;
+  font-size: var(--type-helper-size);
+  line-height: var(--type-helper-line-height);
 }
 .studio-dialog .imagination-context-card[aria-pressed="true"],
 .studio-dialog .studio-chip-list button[aria-pressed="true"] {
@@ -1003,14 +1048,16 @@
 }
 .imagination-originals h3 {
   margin: 0 0 var(--space-8);
-  font-size: 11px;
+  font-size: var(--type-card-heading-size);
+  line-height: var(--type-card-heading-line-height);
+  font-weight: 600;
   color: var(--quiet);
 }
 .imagination-originals p {
   padding-left: 12px;
   border-left: 2px solid var(--imagination);
-  font-size: 13px;
-  line-height: 1.65;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
 }
 .studio-quick-actions {
   display: flex;
@@ -1022,7 +1069,8 @@
   min-height: 27px;
   padding: 4px 9px;
   border-radius: var(--radius-full);
-  font-size: 10px;
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
 }
 .imagination-request-actions {
   display: flex;
@@ -1036,16 +1084,19 @@
   align-items: center;
   gap: var(--space-8);
   color: var(--muted);
-  font-size: 11px;
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
 }
 .imagination-request-actions select {
   width: auto;
   padding: var(--space-4) var(--space-8);
-  font-size: 11px;
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
 }
 .imagination-request-actions > span {
   color: var(--quiet);
-  font-size: 10px;
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
 }
 .imagination-request-actions > .studio-ai-button {
   margin-left: auto;
@@ -1059,11 +1110,13 @@
 }
 .imagination-suggestion .studio-field > span {
   color: var(--imagination);
-  font-size: 10px;
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
 }
 .imagination-suggestion textarea {
   background: transparent;
-  font-size: 13px;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
 }
 .imagination-progress {
   position: relative;
@@ -1073,7 +1126,8 @@
   border-radius: var(--radius-card);
   background: var(--imagination-soft);
   color: var(--imagination);
-  font-size: 12px;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
   animation: imagination-breathe 2s ease-in-out infinite alternate;
 }
 .studio-dialog-footer {
@@ -1090,19 +1144,22 @@
   align-items: center;
   gap: var(--space-8);
   margin-right: auto;
-  font-size: 11px;
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
 }
 .studio-dialog-footer select {
   width: auto;
   padding: var(--space-8);
-  font-size: 11px;
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
 }
 .studio-dialog-footer .studio-muted {
   flex: 1;
 }
 .is-studio-layout .generation-origin {
   padding: var(--space-8);
-  font-size: 10px;
+  font-size: var(--type-helper-size);
+  line-height: var(--type-helper-line-height);
   border-left-color: var(--imagination);
 }
 .is-studio-layout .generation-section-heading {
@@ -1114,7 +1171,8 @@
 .pdf-zoom-control .pdf-fit-button {
   width: auto;
   padding: 0 var(--space-8);
-  font-size: 9px;
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
 }
 .pdf-fit-button[aria-pressed="true"] {
   border-color: var(--imagination);
@@ -1174,7 +1232,8 @@
 }
 .studio-drop-destinations span,
 .studio-drop-destinations small {
-  font-size: 11px;
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
   color: var(--muted);
 }
 .studio-drop-destinations > div:hover {
@@ -1212,15 +1271,17 @@
     align-items: flex-start;
   }
   .studio-heading h2 {
-    font-size: 24px;
+    font-size: var(--type-section-heading-size);
+    line-height: var(--type-section-heading-line-height);
   }
   .studio-heading p:last-child {
     max-width: 190px;
     line-height: 1.5;
   }
   .studio-heading .studio-badge {
-    font-size: 9px;
-    padding: 4px 7px;
+    font-size: var(--type-label-size);
+    line-height: var(--type-label-line-height);
+    padding: var(--space-4) var(--space-8);
   }
   .studio-editor {
     padding: var(--space-12) var(--space-8);
@@ -1252,7 +1313,8 @@
     gap: var(--space-4);
   }
   .studio-card-actions > button {
-    font-size: 9px;
+    font-size: var(--type-label-size);
+    line-height: var(--type-label-line-height);
   }
   .studio-dialog {
     width: 100vw;
