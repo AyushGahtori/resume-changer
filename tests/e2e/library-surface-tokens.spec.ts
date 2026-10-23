@@ -131,7 +131,7 @@ test("applies the shared tokens to the library surfaces", async ({ page }) => {
   expect(summary.backgroundColor).not.toBe(summary.borderTopColor);
   expect(summary.boxShadow).not.toBe("none");
 
-  const workbench = await readSurface(page, ".library-controls");
+  const workbench = await readSurface(page, ".library-workbench");
 
   expect(workbench.borderRadius).toBe("8px");
   expect(workbench.paddingTop).toBe("16px");

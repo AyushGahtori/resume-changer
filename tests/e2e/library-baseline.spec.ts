@@ -35,11 +35,10 @@ test.describe("achievement library baseline", () => {
       ),
     );
     expect(order).toEqual([
-      "library-heading",
+      "library-page-header",
       "library-overview",
-      "library-controls",
-      "library-experiences",
-      "library-secondary",
+      "library-workbench",
+      "library-content",
     ]);
   });
 
@@ -112,11 +111,16 @@ test.describe("achievement library baseline", () => {
   test("lists skills and credentials with their real counts", async ({
     page,
   }) => {
-    const details = page.locator(".library-detail");
-    await expect(details.nth(0).locator("summary span")).toHaveText("14");
-    await expect(details.nth(1).locator("summary span")).toHaveText("2");
+    const skills = page.locator("#library-skills");
+    const credentials = page.locator("#library-credentials");
+    await expect(skills.locator(".library-section-count")).toHaveText(
+      "14 skills",
+    );
+    await expect(credentials.locator(".library-section-count")).toHaveText(
+      "2 credentials",
+    );
 
-    await details.nth(0).locator("summary").click();
+    await skills.locator(".library-detail summary").click();
     await expect(page.locator(".skill-list li")).toHaveCount(14);
     await expect(page.locator(".skill-listed").first()).toHaveText(
       "On current resume",
@@ -125,7 +129,7 @@ test.describe("achievement library baseline", () => {
       "Library only",
     );
 
-    await details.nth(1).locator("summary").click();
+    await credentials.locator(".library-detail summary").click();
     await expect(page.locator(".credential-list li")).toHaveCount(2);
     await expect(
       page.getByText("Cloud Deployment Foundations (Demo)"),
