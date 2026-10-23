@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import AchievementImagination from "@/components/achievement-imagination";
+import ImaginationCanvas from "@/components/imagination-canvas";
 import type { ResumeDataSource } from "@/lib/data/loaders";
 import type { ResumeLibrary } from "@/lib/schemas/resume-data";
 
@@ -15,12 +15,9 @@ export default function ImaginationCanvasClient({ library, source }: Props) {
   const libraryHref = source === "demo" ? "/library?source=demo" : "/library";
 
   return (
-    <AchievementImagination
-      allowResume={false}
+    <ImaginationCanvas
       library={library}
-      onAccept={() => router.refresh()}
       onClose={() => router.push(libraryHref)}
-      operation="create"
       source={source}
     />
   );

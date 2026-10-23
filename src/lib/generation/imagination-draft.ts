@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { AchievementWritingModeSchema } from "../ai/achievement-writing";
 import { StableIdSchema, type ResumeLibrary } from "../schemas/resume-data";
 
 export const ImaginationDraftSchema = z
@@ -9,6 +10,7 @@ export const ImaginationDraftSchema = z
     selectedIds: z.array(StableIdSchema).max(10),
     skillIds: z.array(StableIdSchema).max(10),
     targetLines: z.number().int().min(1).max(4),
+    writingMode: AchievementWritingModeSchema.optional(),
   })
   .strict();
 export type ImaginationDraft = z.infer<typeof ImaginationDraftSchema>;

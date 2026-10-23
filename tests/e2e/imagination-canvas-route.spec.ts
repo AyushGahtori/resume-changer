@@ -5,8 +5,12 @@ test("loads the personal canvas route directly and after refresh", async ({
 }) => {
   await page.goto("/library/imagination");
 
-  const canvas = page.getByRole("dialog", { name: "Imagination Canvas" });
+  const canvas = page.getByRole("heading", {
+    name: "Imagination Canvas",
+    exact: true,
+  });
   await expect(canvas).toBeVisible();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(page.locator(".library-page")).toHaveCount(0);
   await expect(
     page.getByRole("link", { name: "Achievement library" }),
@@ -23,7 +27,7 @@ test("loads the personal canvas route directly and after refresh", async ({
 
   await page.reload();
   await expect(
-    page.getByRole("dialog", { name: "Imagination Canvas" }),
+    page.getByRole("heading", { name: "Imagination Canvas", exact: true }),
   ).toBeVisible();
 });
 
@@ -64,7 +68,7 @@ for (const theme of ["light", "dark"] as const) {
       page.getByRole("navigation", { name: "Main navigation" }),
     ).toBeVisible();
     await expect(
-      page.getByRole("dialog", { name: "Imagination Canvas" }),
+      page.getByRole("heading", { name: "Imagination Canvas", exact: true }),
     ).toBeVisible();
   });
 }

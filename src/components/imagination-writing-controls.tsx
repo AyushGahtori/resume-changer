@@ -15,14 +15,9 @@ import {
 import type { LucideIcon } from "lucide-react";
 import React from "react";
 import type { CSSProperties, FormEvent } from "react";
+import type { AchievementWritingMode } from "@/lib/ai/achievement-writing";
 
-export type ImaginationWritingMode =
-  | "make-shorter"
-  | "more-technical"
-  | "improve-clarity"
-  | "emphasize-engineering-impact"
-  | "improve-action-verbs"
-  | "reduce-repetition";
+export type ImaginationWritingMode = AchievementWritingMode;
 
 export type ImaginationTargetLineCount = 1 | 2 | 3 | 4;
 
@@ -44,20 +39,20 @@ type WritingPreset = {
 };
 
 export const IMAGINATION_WRITING_PRESETS = [
-  { mode: "make-shorter", label: "Make shorter", Icon: Scissors },
-  { mode: "more-technical", label: "More technical", Icon: Wrench },
-  { mode: "improve-clarity", label: "Improve clarity", Icon: Eye },
+  { mode: "make_shorter", label: "Make shorter", Icon: Scissors },
+  { mode: "more_technical", label: "More technical", Icon: Wrench },
+  { mode: "improve_clarity", label: "Improve clarity", Icon: Eye },
   {
-    mode: "emphasize-engineering-impact",
+    mode: "emphasize_engineering_impact",
     label: "Emphasize engineering impact",
     Icon: ChartNoAxesColumn,
   },
   {
-    mode: "improve-action-verbs",
+    mode: "improve_action_verbs",
     label: "Improve action verbs",
     Icon: ArrowRight,
   },
-  { mode: "reduce-repetition", label: "Reduce repetition", Icon: RefreshCw },
+  { mode: "reduce_repetition", label: "Reduce repetition", Icon: RefreshCw },
 ] as const satisfies readonly WritingPreset[];
 
 export type ImaginationWritingControlsProps = {
@@ -117,7 +112,7 @@ export default function ImaginationWritingControls({
 
   const panelStyle: CSSProperties = {
     display: "grid",
-    gap: "var(--space-16)",
+    gap: "var(--space-12)",
     minWidth: 0,
     padding: "var(--space-16)",
     border: "1px solid var(--line)",

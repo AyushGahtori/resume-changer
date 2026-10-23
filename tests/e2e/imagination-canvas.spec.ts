@@ -1,14 +1,10 @@
 import { expect, test, type Page } from "@playwright/test";
 import { join } from "node:path";
 
-const canvasPath = "/library/imagination?source=demo";
+const canvasPath = "/library/imagination";
 
 async function openIntegratedCanvas(page: Page) {
-  const response = await page.goto(canvasPath);
-  test.skip(
-    response?.status() === 404,
-    "The dedicated route is a Task 01 integration dependency and is absent from the current main baseline.",
-  );
+  await page.goto(canvasPath);
   await expect(
     page.getByRole("heading", { name: "Imagination Canvas", exact: true }),
   ).toBeVisible();
@@ -135,6 +131,7 @@ test("opens as a standalone page and captures responsive light and dark views", 
         dimensions.clientWidth,
       );
 
+      await page.evaluate(() => window.scrollTo(0, 0));
       await page.screenshot({
         path: testInfo.outputPath(
           `imagination-canvas-${viewport.name}-${theme}.png`,

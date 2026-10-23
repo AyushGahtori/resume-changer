@@ -64,7 +64,7 @@ function renderTree(props: ImaginationWritingControlsProps): ReactNode {
 describe("ImaginationWritingControls", () => {
   it("renders the six named presets in order and marks the selected mode", () => {
     const tree = renderTree(
-      makeProps({ selectedMode: "emphasize-engineering-impact" }),
+      makeProps({ selectedMode: "emphasize_engineering_impact" }),
     );
     const presetButtons = collectElements(tree, "button").filter((button) =>
       IMAGINATION_WRITING_PRESETS.some(

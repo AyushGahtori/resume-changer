@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useId, useMemo, useState, type DragEvent } from "react";
-import { FileText, Settings2 } from "lucide-react";
+import { FileText, Search, Settings2 } from "lucide-react";
 import { groupSkillsForReview } from "@/lib/generation/review-draft";
 import {
   studioGroups,
@@ -287,6 +287,11 @@ export default function ImaginationContextLibraries({
             htmlFor={achievementSearchId}
           >
             <span className="studio-visually-hidden">Search achievements</span>
+            <Search
+              className="imagination-search-icon"
+              size={15}
+              aria-hidden="true"
+            />
             <input
               id={achievementSearchId}
               type="search"
@@ -329,7 +334,8 @@ export default function ImaginationContextLibraries({
                   key={achievement.id}
                   onClick={() => changeAchievementSelection(achievement.id)}
                 >
-                  {achievement.text}
+                  <FileText size={18} aria-hidden="true" />
+                  <span>{achievement.text}</span>
                 </button>
               );
             })}
@@ -356,6 +362,11 @@ export default function ImaginationContextLibraries({
             <span className="studio-visually-hidden">
               Search declared skills
             </span>
+            <Search
+              className="imagination-search-icon"
+              size={15}
+              aria-hidden="true"
+            />
             <input
               id={skillSearchId}
               type="search"

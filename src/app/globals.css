@@ -7457,3 +7457,278 @@ a:focus-visible {
     justify-content: flex-start;
   }
 }
+
+/* The integrated canvas keeps the existing workspace chrome. */
+.imagination-canvas-page {
+  padding: 16px 24px;
+  min-width: 0;
+  max-width: 1800px;
+  margin-inline: auto;
+}
+.imagination-canvas-page .imagination-canvas-layout {
+  gap: 16px;
+}
+.imagination-canvas-page .imagination-canvas-layout__columns {
+  gap: 20px;
+}
+.imagination-canvas-page .imagination-canvas-layout__workspace {
+  gap: 0;
+}
+.imagination-canvas-page .imagination-canvas-layout__context-libraries {
+  margin-top: 16px;
+}
+.imagination-canvas-page .imagination-canvas-layout__writing-panel {
+  gap: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+.imagination-canvas-page .imagination-writing-controls {
+  border: 0 !important;
+  border-radius: 8px 8px 0 0 !important;
+}
+.imagination-canvas-page .imagination-canvas-layout__result > section {
+  border: 0;
+  border-top: 1px solid var(--line);
+  border-radius: 0 0 8px 8px;
+}
+.imagination-canvas-page .imagination-context-libraries {
+  gap: 12px;
+}
+.imagination-canvas-page .imagination-context-libraries > section {
+  padding: 12px;
+}
+.imagination-canvas-page .imagination-context-list {
+  max-height: 200px;
+}
+.imagination-canvas-page .imagination-context-panel-heading h3 {
+  font-size: 15px;
+  line-height: 22px;
+}
+.imagination-canvas-page .imagination-context-list button {
+  font-size: 12px;
+  line-height: 18px;
+}
+.imagination-canvas-page .imagination-context-list details {
+  padding: 6px;
+}
+.imagination-canvas-page .imagination-context-list summary {
+  font-size: 12px;
+  line-height: 20px;
+}
+.imagination-canvas-page .studio-chip-list {
+  gap: 5px;
+}
+.imagination-canvas-page .studio-chip-list button {
+  min-height: 30px;
+  padding: 4px 7px;
+}
+.imagination-canvas-page .imagination-canvas-layout__footer {
+  padding: 0;
+  border: 0;
+}
+.imagination-canvas-page .imagination-canvas-layout__footer > footer {
+  position: static;
+  margin: 0;
+  width: 100%;
+  padding: 16px;
+  grid-template-columns: minmax(140px, 1fr) auto minmax(140px, 1fr) auto;
+}
+.imagination-canvas-page .imagination-canvas-layout__footer button:last-child {
+  border-color: var(--imagination);
+  background: var(--imagination);
+  color: var(--color-text-inverse);
+}
+.imagination-canvas-page
+  .imagination-canvas-layout__footer
+  button:last-child:disabled {
+  opacity: 0.5;
+}
+@media (max-width: 1100px) {
+  .imagination-canvas-page .imagination-canvas-layout__footer > footer {
+    display: flex;
+    flex-wrap: wrap;
+  }
+}
+@media (max-width: 700px) {
+  .imagination-canvas-page {
+    padding: 16px;
+  }
+  .imagination-canvas-page .imagination-context-libraries {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .imagination-canvas-page .imagination-context-list {
+    max-height: 280px;
+  }
+}
+
+.imagination-canvas-page .imagination-writing-controls .studio-quick-actions {
+  gap: 6px;
+  margin: 0;
+}
+.imagination-canvas-page .imagination-writing-preset {
+  min-height: 28px;
+  padding: 4px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-soft);
+  color: var(--ink);
+  font-size: 12px;
+  line-height: 18px;
+  cursor: pointer;
+}
+.imagination-canvas-page .imagination-writing-preset svg {
+  color: var(--imagination);
+}
+.imagination-canvas-page .imagination-writing-preset:hover:not(:disabled) {
+  border-color: var(--imagination);
+}
+.imagination-canvas-page .imagination-writing-preset:focus-visible,
+.imagination-canvas-page .imagination-writing-submit:focus-visible,
+.imagination-canvas-page .imagination-writing-cancel:focus-visible {
+  outline: var(--focus-outline);
+  outline-offset: 2px;
+}
+.imagination-canvas-page .imagination-writing-preset:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+.imagination-canvas-page .imagination-writing-controls .studio-field textarea {
+  min-height: 80px;
+  height: 80px;
+}
+.imagination-canvas-page .imagination-request-actions {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas: "target submit" "feedback feedback";
+  gap: 8px;
+  margin: 0;
+}
+.imagination-canvas-page .imagination-request-actions label {
+  grid-area: target;
+}
+.imagination-canvas-page .imagination-request-actions > span {
+  grid-area: feedback;
+  font-size: 11px;
+  line-height: 16px;
+}
+.imagination-canvas-page .imagination-request-actions select {
+  min-width: 96px;
+  min-height: 36px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-soft);
+  color: var(--ink);
+}
+.imagination-canvas-page .imagination-writing-submit {
+  grid-area: submit;
+  justify-self: end;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 40px;
+  padding: 9px 14px;
+  border: 1px solid var(--imagination);
+  border-radius: 6px;
+  font-size: 13px;
+  line-height: 20px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.imagination-canvas-page .imagination-writing-submit:disabled {
+  cursor: not-allowed;
+}
+.imagination-canvas-page .imagination-writing-cancel {
+  grid-column: 1 / -1;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--ink);
+  background: var(--surface-soft);
+}
+.imagination-canvas-page .imagination-context-list .studio-chip-list button {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+}
+.imagination-canvas-page
+  .imagination-context-list
+  .studio-chip-list
+  button[aria-pressed="true"] {
+  border-color: var(--imagination);
+  background: var(--imagination-soft);
+  color: var(--imagination-hover);
+}
+.imagination-canvas-page .imagination-context-list details {
+  border: 0;
+  padding: 0;
+  background: transparent;
+}
+.imagination-canvas-page .imagination-context-list summary {
+  padding: 3px 0;
+}
+@media (max-width: 400px) {
+  .imagination-canvas-page .imagination-request-actions {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "target" "feedback" "submit";
+  }
+  .imagination-canvas-page .imagination-writing-submit {
+    justify-self: stretch;
+    width: 100%;
+  }
+}
+
+.imagination-canvas-page .imagination-context-libraries > section {
+  background: var(--surface);
+}
+.imagination-canvas-page
+  .imagination-context-libraries
+  .imagination-context-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.imagination-canvas-page .imagination-context-card svg {
+  flex-shrink: 0;
+  color: var(--quiet);
+  margin-top: 1px;
+}
+.imagination-canvas-page .imagination-context-card[aria-pressed="true"] svg {
+  color: var(--imagination);
+}
+.imagination-canvas-page .imagination-context-search {
+  position: relative;
+}
+.imagination-canvas-page .imagination-search-icon {
+  position: absolute;
+  left: 10px;
+  bottom: 11px;
+  color: var(--quiet);
+  pointer-events: none;
+}
+.imagination-canvas-page .imagination-context-search input {
+  padding-left: 32px;
+}
+.imagination-canvas-page .imagination-canvas-layout__result > section {
+  border-top: 0;
+}
+.imagination-result-divider {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 16px;
+  color: var(--imagination);
+}
+.imagination-result-divider::before,
+.imagination-result-divider::after {
+  content: "";
+  height: 1px;
+  background: var(--line);
+  flex: 1;
+}

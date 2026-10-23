@@ -578,7 +578,9 @@ test("opens the Imagination Canvas route and returns to the library on cancel", 
   await expect(
     page.getByRole("heading", { name: "Imagination Canvas" }),
   ).toBeVisible();
-  await expect(page.getByLabel("Achievement text")).toBeFocused();
+  await expect(
+    page.getByRole("textbox", { name: "New achievement", exact: true }),
+  ).toBeFocused();
   await expect(
     page.getByRole("link", { name: "Achievement library" }),
   ).toHaveAttribute("aria-current", "page");
@@ -654,16 +656,11 @@ test("deepens the primary action on hover and mutes both when disabled", async (
   expect(pressedBackground).not.toBe(hoverBackground);
   await page.mouse.up();
 
-  // The press also completes a click, which opens the Imagination Canvas.
-  await expect(primary).toBeDisabled();
-  const disabledBackground = await tokenColor(
-    page,
-    "--action-orange-surface-disabled",
-  );
-  await expect
-    .poll(async () => (await buttonStyles(primary)).background)
-    .toBe(disabledBackground);
-  expect(disabledBackground).not.toBe(restBackground);
+  // A completed click navigates away, so there is no disabled modal trigger.
+  await expect(page).toHaveURL("/library/imagination");
+  await expect(
+    page.getByRole("heading", { name: "Imagination Canvas", exact: true }),
+  ).toBeVisible();
 
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
   await expect(primary).toBeEnabled();

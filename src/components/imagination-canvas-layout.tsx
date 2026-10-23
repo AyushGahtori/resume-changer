@@ -24,17 +24,14 @@ export default function ImaginationCanvasLayout({
       className="imagination-canvas-layout"
       data-layout="responsive-two-column"
     >
+      <header className="imagination-canvas-layout__title" data-slot="title">
+        {title}
+      </header>
       <div className="imagination-canvas-layout__columns">
         <section
           aria-label="Achievement workspace"
           className="imagination-canvas-layout__workspace"
         >
-          <header
-            className="imagination-canvas-layout__title"
-            data-slot="title"
-          >
-            {title}
-          </header>
           <div
             className="imagination-canvas-layout__composer"
             data-slot="composer"
@@ -71,9 +68,9 @@ export default function ImaginationCanvasLayout({
         </aside>
       </div>
 
-      <footer className="imagination-canvas-layout__footer" data-slot="footer">
+      <div className="imagination-canvas-layout__footer" data-slot="footer">
         {footer}
-      </footer>
+      </div>
     </div>
   );
 }

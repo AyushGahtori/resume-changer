@@ -60,7 +60,7 @@
 .editor {
   width: 100%;
   min-width: 0;
-  min-height: 128px;
+  min-height: 112px;
   resize: vertical;
   padding: var(--space-12);
   border: 1px solid var(--line-strong);

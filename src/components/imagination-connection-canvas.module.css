@@ -3,7 +3,7 @@
   min-width: 0;
   padding: 14px 16px 12px;
   overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--imagination) 30%, var(--line));
+  border: 1px solid var(--line);
   border-radius: 8px;
   background-color: var(--surface);
   background-image: radial-gradient(
@@ -206,6 +206,52 @@
   font-weight: 550;
   line-height: 18px;
   text-align: center;
+}
+.status:empty {
+  display: none;
+}
+.dragHint,
+.limitHint {
+  position: absolute;
+  top: 18px;
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  max-width: 156px;
+  padding: 9px;
+  border-radius: 8px;
+  color: var(--imagination-hover);
+  background: var(--imagination-soft);
+}
+.dragHint {
+  left: 0;
+}
+.limitHint {
+  right: 0;
+  color: var(--color-warning-strong);
+  background: var(--color-warning-subtle);
+}
+.dragHint svg,
+.limitHint svg {
+  flex-shrink: 0;
+}
+.dragHint p,
+.limitHint p {
+  margin: 0;
+  font-size: 10px;
+  line-height: 15px;
+}
+.dragHint strong,
+.limitHint strong {
+  display: block;
+  font-weight: 650;
+}
+@media (max-width: 650px) {
+  .dragHint,
+  .limitHint {
+    display: none;
+  }
 }
 
 @keyframes rise-and-fade {

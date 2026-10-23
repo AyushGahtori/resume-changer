@@ -9,7 +9,15 @@ import React, {
   useState,
   type DragEvent,
 } from "react";
-import { ArrowUp, FileText, Sparkles, Wrench, X } from "lucide-react";
+import {
+  ArrowUp,
+  FileText,
+  Lightbulb,
+  Move,
+  Sparkles,
+  Wrench,
+  X,
+} from "lucide-react";
 import styles from "./imagination-connection-canvas.module.css";
 
 export const MAX_CONNECTED_ITEMS = 10;
@@ -291,24 +299,34 @@ export default function ImaginationConnectionCanvas({
       onDrop={handleDrop}
     >
       <div className={styles.stage} ref={stageRef}>
+        <div className={styles.dragHint}>
+          <Move size={20} aria-hidden="true" />
+          <p>
+            <strong>Hold and drag</strong> an achievement or skill to connect it
+            to your draft.
+          </p>
+        </div>
+        <div className={styles.limitHint}>
+          <Lightbulb size={22} aria-hidden="true" />
+          <p>
+            <strong>Connect up to 10 items</strong> for better, more relevant
+            suggestions.
+          </p>
+        </div>
         <div className={styles.root} ref={rootRef}>
+          {count > 0 && (
+            <span
+              className="imagination-canvas-motion"
+              data-active="true"
+              aria-hidden="true"
+              key={uniqueItems.map(connectionKey).join(",")}
+            >
+              <ArrowUp className="imagination-canvas-motion__arrow" size={15} />
+              <ArrowUp className="imagination-canvas-motion__arrow" size={15} />
+              <ArrowUp className="imagination-canvas-motion__arrow" size={15} />
+            </span>
+          )}
           <div className={styles.sparkle} aria-hidden="true">
-            {count > 0 && (
-              <span className={styles.particles}>
-                <ArrowUp
-                  className={`${styles.particle} ${styles.particleOne}`}
-                  size={13}
-                />
-                <ArrowUp
-                  className={`${styles.particle} ${styles.particleTwo}`}
-                  size={12}
-                />
-                <ArrowUp
-                  className={`${styles.particle} ${styles.particleThree}`}
-                  size={11}
-                />
-              </span>
-            )}
             <Sparkles size={20} />
           </div>
           <span

@@ -1,6 +1,6 @@
 "use client";
 
-import { Info, Pencil, Sparkles } from "lucide-react";
+import { Info, Pencil, Sparkles, X } from "lucide-react";
 import * as React from "react";
 import type { ChangeEvent } from "react";
 import type { ResumeLibrary } from "@/lib/schemas/resume-data";
@@ -13,6 +13,8 @@ export const MAX_ACHIEVEMENT_TEXT_LENGTH = 8_000;
 export type ImaginationCreateNotice = "library" | "resume" | "both" | null;
 
 export type ImaginationComposerProps = {
+  part?: "all" | "intro" | "editor";
+  composerRef?: React.RefObject<HTMLTextAreaElement | null>;
   library: ResumeLibrary;
   destinationGroupId: string;
   connectedAchievementIds: string[];
@@ -23,6 +25,7 @@ export type ImaginationComposerProps = {
   value: string;
   onTextChange: (value: string) => void;
   createNotice: ImaginationCreateNotice;
+  onDismissNotice?: () => void;
   restoreDraft: ImaginationDraft | null;
   onRestoreDraft: (draft: ImaginationDraft) => void;
   onDismissRestoreDraft: () => void;
@@ -60,6 +63,8 @@ export function reconcileDestinationAchievementIds(
 }
 
 export default function ImaginationComposer({
+  part = "all",
+  composerRef,
   library,
   destinationGroupId,
   connectedAchievementIds,
@@ -67,6 +72,7 @@ export default function ImaginationComposer({
   value,
   onTextChange,
   createNotice,
+  onDismissNotice,
   restoreDraft,
   onRestoreDraft,
   onDismissRestoreDraft,
@@ -98,144 +104,170 @@ export default function ImaginationComposer({
   }
 
   return (
-    <section className={styles.root} aria-labelledby="imagination-canvas-title">
-      <header className={styles.header}>
-        <div className={styles.titleRow}>
-          <Sparkles
-            className={styles.titleIcon}
-            aria-hidden="true"
-            focusable="false"
-            size={28}
-            strokeWidth={2.1}
-          />
-          <h1 className={styles.title} id="imagination-canvas-title">
-            Imagination Canvas
-          </h1>
-        </div>
-        <p className={styles.subtitle}>
-          Turn rough notes and connected evidence into a factual achievement
-          statement.
-        </p>
-      </header>
+    <section
+      className={styles.root + (part === "intro" ? " " + styles.intro : "")}
+      aria-labelledby={
+        part === "editor"
+          ? "imagination-editor-label"
+          : "imagination-canvas-title"
+      }
+    >
+      {part !== "editor" && (
+        <>
+          <header className={styles.header}>
+            <div className={styles.titleRow}>
+              <Sparkles
+                className={styles.titleIcon}
+                aria-hidden="true"
+                focusable="false"
+                size={28}
+                strokeWidth={2.1}
+              />
+              <h1 className={styles.title} id="imagination-canvas-title">
+                Imagination Canvas
+              </h1>
+            </div>
+            <p className={styles.subtitle}>
+              Turn rough notes and connected evidence into a factual achievement
+              statement.
+            </p>
+          </header>
 
-      {noticeCopy && (
-        <aside className={styles.notice} aria-label="Create mode information">
-          <Info
-            className={styles.noticeIcon}
-            aria-hidden="true"
-            focusable="false"
-            size={20}
-          />
-          <div>
-            <h2 className={styles.noticeTitle}>Create mode</h2>
-            <p className={styles.noticeText}>{noticeCopy}</p>
-          </div>
-        </aside>
-      )}
-
-      <div className={styles.destination}>
-        <label
-          className={styles.destinationLabel}
-          htmlFor="imagination-resume-destination"
-        >
-          Resume destination
-        </label>
-        <select
-          className={styles.destinationSelect}
-          id="imagination-resume-destination"
-          value={selectedDestinationId}
-          onChange={handleDestinationChange}
-          disabled={destinations.length === 0}
-        >
-          {selectedDestinationId === "" && (
-            <option value="" disabled>
-              {destinations.length === 0
-                ? "No resume destinations available"
-                : "Select a resume destination"}
-            </option>
+          {noticeCopy && (
+            <aside
+              className={styles.notice}
+              aria-label="Create mode information"
+            >
+              {onDismissNotice && (
+                <button
+                  type="button"
+                  className={styles.dismissNotice}
+                  onClick={onDismissNotice}
+                  aria-label="Dismiss create mode information"
+                >
+                  <X size={15} aria-hidden="true" />
+                </button>
+              )}
+              <Info
+                className={styles.noticeIcon}
+                aria-hidden="true"
+                focusable="false"
+                size={20}
+              />
+              <div>
+                <h2 className={styles.noticeTitle}>Create mode</h2>
+                <p className={styles.noticeText}>{noticeCopy}</p>
+              </div>
+            </aside>
           )}
-          {destinations.map((destination) => {
-            const subtitle = destination.subtitle.trim();
-            return (
-              <option key={destination.id} value={destination.id}>
-                {subtitle
-                  ? destination.title + " · " + subtitle
-                  : destination.title}
-              </option>
-            );
-          })}
-        </select>
-      </div>
 
-      {restoreDraft && (
+          <div className={styles.destination}>
+            <label
+              className={styles.destinationLabel}
+              htmlFor="imagination-resume-destination"
+            >
+              Resume destination
+            </label>
+            <select
+              className={styles.destinationSelect}
+              id="imagination-resume-destination"
+              value={selectedDestinationId}
+              onChange={handleDestinationChange}
+              disabled={destinations.length === 0}
+            >
+              {selectedDestinationId === "" && (
+                <option value="" disabled>
+                  {destinations.length === 0
+                    ? "No resume destinations available"
+                    : "Select a resume destination"}
+                </option>
+              )}
+              {destinations.map((destination) => {
+                const subtitle = destination.subtitle.trim();
+                return (
+                  <option key={destination.id} value={destination.id}>
+                    {subtitle
+                      ? destination.title + " · " + subtitle
+                      : destination.title}
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+
+          {restoreDraft && (
+            <section
+              className={styles.restore}
+              aria-label="Saved unfinished achievement draft"
+            >
+              <p className={styles.restoreMessage} role="status">
+                An unfinished writing draft is saved on this device.
+              </p>
+              <div className={styles.restoreActions}>
+                <button
+                  className={styles.restoreButton}
+                  type="button"
+                  onClick={() => onRestoreDraft(restoreDraft)}
+                >
+                  Restore writing draft
+                </button>
+                <button
+                  className={styles.discardButton}
+                  type="button"
+                  onClick={onDismissRestoreDraft}
+                >
+                  Start a new achievement
+                </button>
+              </div>
+            </section>
+          )}
+        </>
+      )}
+      {part !== "intro" && (
         <section
-          className={styles.restore}
-          aria-label="Saved unfinished achievement draft"
+          className={styles.editor}
+          aria-labelledby="imagination-editor-label"
         >
-          <p className={styles.restoreMessage} role="status">
-            An unfinished writing draft is saved on this device.
-          </p>
-          <div className={styles.restoreActions}>
-            <button
-              className={styles.restoreButton}
-              type="button"
-              onClick={() => onRestoreDraft(restoreDraft)}
+          <div className={styles.editorTopline}>
+            <label
+              className={styles.editorLabel}
+              id="imagination-editor-label"
+              htmlFor="imagination-achievement-text"
             >
-              Restore writing draft
-            </button>
+              <Pencil
+                className={styles.editorIcon}
+                aria-hidden="true"
+                focusable="false"
+                size={17}
+                strokeWidth={2}
+              />
+              New achievement
+            </label>
             <button
-              className={styles.discardButton}
+              className={styles.startButton}
               type="button"
-              onClick={onDismissRestoreDraft}
+              aria-controls="imagination-achievement-text"
+              onClick={() => composerElement?.focus()}
             >
-              Start a new achievement
+              <Sparkles aria-hidden="true" focusable="false" size={15} />
+              Start with a draft
             </button>
           </div>
+          <textarea
+            className={styles.textarea}
+            id="imagination-achievement-text"
+            ref={(element) => {
+              composerElement = element;
+              if (composerRef) composerRef.current = element;
+            }}
+            rows={4}
+            maxLength={MAX_ACHIEVEMENT_TEXT_LENGTH}
+            placeholder="Write what you built, improved, or accomplished…"
+            value={value}
+            onChange={(event) => onTextChange(event.currentTarget.value)}
+          />
         </section>
       )}
-
-      <section
-        className={styles.editor}
-        aria-labelledby="imagination-editor-label"
-      >
-        <div className={styles.editorTopline}>
-          <label
-            className={styles.editorLabel}
-            id="imagination-editor-label"
-            htmlFor="imagination-achievement-text"
-          >
-            <Pencil
-              className={styles.editorIcon}
-              aria-hidden="true"
-              focusable="false"
-              size={17}
-              strokeWidth={2}
-            />
-            New achievement
-          </label>
-          <button
-            className={styles.startButton}
-            type="button"
-            aria-controls="imagination-achievement-text"
-            onClick={() => composerElement?.focus()}
-          >
-            <Sparkles aria-hidden="true" focusable="false" size={15} />
-            Start with a draft
-          </button>
-        </div>
-        <textarea
-          className={styles.textarea}
-          id="imagination-achievement-text"
-          ref={(element) => {
-            composerElement = element;
-          }}
-          rows={4}
-          maxLength={MAX_ACHIEVEMENT_TEXT_LENGTH}
-          placeholder="Write what you built, improved, or accomplished…"
-          value={value}
-          onChange={(event) => onTextChange(event.currentTarget.value)}
-        />
-      </section>
     </section>
   );
 }

@@ -27,6 +27,7 @@
   color: var(--ink);
   font-size: clamp(1.55rem, 2.4vw, 2rem);
   font-weight: 700;
+  font-family: Arial, Helvetica, sans-serif;
   letter-spacing: -0.025em;
   line-height: 1.2;
 }
@@ -91,12 +92,14 @@
 .destinationSelect {
   width: 100%;
   min-width: 0;
-  padding: var(--space-12);
+  padding: 8px 12px;
   border: 1px solid var(--line-strong);
   border-radius: var(--radius-control);
   background: var(--surface-soft);
   color: var(--ink);
   font: inherit;
+  font-size: 14px;
+  line-height: 20px;
   outline-color: var(--focus);
 }
 
@@ -153,10 +156,10 @@
   display: grid;
   gap: var(--space-8);
   min-width: 0;
-  padding: var(--space-16);
+  padding: 12px;
   border: 1px solid var(--imagination);
   border-radius: 8px;
-  background: var(--imagination-soft);
+  background: color-mix(in srgb, var(--imagination-soft) 45%, var(--surface));
 }
 
 .editorTopline {
@@ -173,7 +176,7 @@
   align-items: center;
   gap: var(--space-8);
   color: var(--ink);
-  font-size: var(--type-label-size);
+  font-size: 14px;
   line-height: var(--type-label-line-height);
   font-weight: 700;
 }
@@ -187,7 +190,7 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-4);
-  min-height: 32px;
+  min-height: 24px;
   padding: 4px;
   border: 0;
   background: transparent;
@@ -202,11 +205,12 @@
   display: block;
   width: 100%;
   min-width: 0;
-  min-height: 112px;
-  padding: var(--space-12);
+  min-height: 88px;
+  height: 92px;
+  padding: 10px;
   border: 1px solid var(--imagination);
   border-radius: var(--radius-control);
-  background: var(--surface);
+  background: color-mix(in srgb, var(--imagination-soft) 25%, var(--surface));
   color: var(--ink);
   font: inherit;
   font-size: var(--type-body-size);
@@ -224,4 +228,40 @@
     grid-template-columns: minmax(0, 1fr);
     gap: var(--space-8);
   }
+}
+
+.intro {
+  grid-template-columns: minmax(0, 1.3fr) minmax(280px, 1fr);
+  align-items: start;
+  column-gap: 24px;
+  row-gap: 12px;
+}
+.intro .destination,
+.intro .restore {
+  grid-column: 1 / -1;
+}
+@media (max-width: 1050px) {
+  .intro {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.notice {
+  position: relative;
+  padding-right: 32px;
+}
+.dismissNotice {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: inline-flex;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--imagination-hover);
+  cursor: pointer;
+}
+.dismissNotice:focus-visible {
+  outline: var(--focus-outline);
+  outline-offset: 3px;
 }
