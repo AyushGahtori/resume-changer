@@ -1352,6 +1352,11 @@ export default function ResumeGenerator({ library, source }: Props) {
     roleTitle: draft.roleTitle,
     company: draft.company,
   });
+  const analysisContext = [
+    { label: "Role", value: analysis?.targetTitle || draft.roleTitle },
+    { label: "Seniority", value: analysis?.seniority },
+    { label: "Company", value: draft.company },
+  ].filter(({ value }) => Boolean(value?.trim()));
   const jobAnalysisState = resolveJobAnalysisState({
     draftReady,
     hasJobDescription,
@@ -1660,7 +1665,6 @@ export default function ResumeGenerator({ library, source }: Props) {
                   <div className="selection-analysis-heading">
                     <div>
                       <h3>Job analysis</h3>
-                      <p>{coverageSource}</p>
                     </div>
                     <span
                       className={`selection-analysis-state is-${jobAnalysisState}`}
@@ -1676,12 +1680,31 @@ export default function ResumeGenerator({ library, source }: Props) {
                               : "Not analyzed"}
                     </span>
                   </div>
+                  {analysis && (
+                    <>
+                      <p className="selection-analysis-context-label">
+                        Compared with the saved job description
+                      </p>
+                      {analysisContext.length > 0 && (
+                        <dl className="selection-analysis-context">
+                          {analysisContext.map(({ label, value }) => (
+                            <div key={label}>
+                              <dt>{label}</dt>
+                              <dd>{value}</dd>
+                            </div>
+                          ))}
+                        </dl>
+                      )}
+                    </>
+                  )}
                   {jobAnalysisState === "ready" ? (
                     <p className="selection-analysis-detail">
-                      {coverageSummary.total} requirement
-                      {coverageSummary.total === 1 ? "" : "s"} extracted from
-                      this job description. Requirement coverage below shows how
-                      the selected evidence supports each one.
+                      <strong>
+                        {coverageSummary.total} requirement
+                        {coverageSummary.total === 1 ? "" : "s"} extracted.
+                      </strong>{" "}
+                      The coverage below shows how selected evidence supports
+                      each one.
                     </p>
                   ) : (
                     <p className="selection-analysis-detail">

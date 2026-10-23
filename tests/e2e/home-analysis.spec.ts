@@ -81,6 +81,29 @@ test("loading, failure, panel retry, real result and stale-analysis invalidation
   await expect(page.locator(".analysis-role")).toContainText(
     homeAnalysis.targetTitle,
   );
+  const explicitRequirements = page.locator("details.analysis-section").filter({
+    has: page.getByRole("heading", {
+      name: "Explicit requirements",
+      exact: true,
+    }),
+  });
+  await expect(explicitRequirements).toHaveJSProperty("open", true);
+  const tools = page.locator("details.analysis-section").filter({
+    has: page.getByRole("heading", {
+      name: "Tools and platforms",
+      exact: true,
+    }),
+  });
+  await expect(tools).toHaveJSProperty("open", false);
+  await expect(tools.locator(".analysis-section-summary")).toContainText(
+    "2 items",
+  );
+  await tools.locator("summary").click();
+  await expect(tools).toHaveJSProperty("open", true);
+  await expect(tools.locator(".analysis-keyword-chip")).toContainText([
+    "TypeScript",
+    "PostgreSQL",
+  ]);
   await expect(page.locator(".analysis-inferred")).toContainText(
     "not requirements",
   );
