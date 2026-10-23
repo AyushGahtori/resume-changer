@@ -1387,10 +1387,7 @@ export default function ResumeGenerator({ library, source }: Props) {
     result?.metadata.selectedAchievementIds.length ??
     0;
   const omittedSkillCount = result
-    ? Math.max(
-        0,
-        requestedSkillCount - result.metadata.renderedSkillIds.length,
-      )
+    ? Math.max(0, requestedSkillCount - result.metadata.renderedSkillIds.length)
     : 0;
   const hasRecommendationEdits =
     JSON.stringify([...selectedIds].sort()) !==
@@ -1398,6 +1395,18 @@ export default function ResumeGenerator({ library, source }: Props) {
     recommendedSkillIds.some(
       (id) => selectedSkillIds !== null && !selectedSkillIds.includes(id),
     );
+  /**
+   * The compile control stays a single utility action: it creates the first
+   * PDF, recompiles the current LaTeX once one exists, and reports the
+   * pending state while the compiler runs.
+   */
+  const compileActionLabel = isCompiling
+    ? pdfUrl
+      ? "Compiling…"
+      : "Creating PDF…"
+    : pdfUrl
+      ? "Recompile"
+      : "Create PDF";
 
   return (
     <section className="generation-page" aria-labelledby="page-title">
@@ -2536,34 +2545,49 @@ export default function ResumeGenerator({ library, source }: Props) {
                       onClick={() => setOutputView("pdf")}
                       onKeyDown={handleOutputTabKeyDown}
                       role="tab"
+                      title={
+                        pdfUrl
+                          ? "Show the compiled PDF"
+                          : "Compile the PDF to preview it here"
+                      }
                       tabIndex={outputView === "pdf" ? 0 : -1}
                       type="button"
                     >
                       PDF
                     </button>
                   </div>
-                  {outputView === "pdf" && pdfUrl ? (
-                    <>
-                      <button
-                        aria-label="Download PDF"
-                        onClick={downloadPdf}
-                        title="Download PDF"
-                        type="button"
-                      >
-                        Download PDF
-                      </button>
-                      <button
-                        onClick={() => compilePdf()}
-                        disabled={isCompiling}
-                        type="button"
-                      >
-                        {isCompiling ? "Compiling…" : "Recompile"}
-                      </button>
-                    </>
-                  ) : (
+                  <button
+                    aria-describedby={
+                      pdfUrl ? undefined : "generation-pdf-availability"
+                    }
+                    aria-label="Download PDF"
+                    className="generation-action generation-action-download"
+                    disabled={!pdfUrl || isCompiling}
+                    onClick={downloadPdf}
+                    title={
+                      pdfUrl
+                        ? "Download the compiled PDF"
+                        : "Compile the PDF to enable this download"
+                    }
+                    type="button"
+                  >
+                    Download PDF
+                  </button>
+                  <button
+                    aria-busy={isCompiling}
+                    className="generation-action generation-action-compile"
+                    disabled={isCompiling || isGenerating}
+                    onClick={() => compilePdf()}
+                    title="Compile the current generated LaTeX into a PDF"
+                    type="button"
+                  >
+                    {compileActionLabel}
+                  </button>
+                  {outputView === "latex" && (
                     <>
                       <button
                         aria-label="Copy LaTeX"
+                        className="generation-action generation-action-utility"
                         onClick={copyLatex}
                         title="Copy LaTeX"
                         type="button"
@@ -2572,35 +2596,43 @@ export default function ResumeGenerator({ library, source }: Props) {
                       </button>
                       <button
                         aria-label="Download LaTeX file"
+                        className="generation-action generation-action-utility"
                         onClick={downloadLatex}
                         title="Download LaTeX file"
                         type="button"
                       >
                         Download LaTeX
                       </button>
-                      <button
-                        className="primary-button generation-compile-button"
-                        disabled={isCompiling || isGenerating}
-                        onClick={() => compilePdf()}
-                        type="button"
-                      >
-                        {isCompiling ? "Creating PDF…" : "Create PDF"}
-                      </button>
                     </>
                   )}
-                  {result && (
-                    <button
-                      aria-label="Download export package"
-                      onClick={downloadExportPackage}
-                      title="Download LaTeX, PDF when available, and generation metadata"
-                      type="button"
-                    >
-                      Export package
-                    </button>
-                  )}
+                  <button
+                    aria-label="Download export package"
+                    className="generation-action generation-action-utility"
+                    disabled={isCompiling}
+                    onClick={downloadExportPackage}
+                    title={
+                      isCompiling
+                        ? "Wait for the current compile to finish."
+                        : "Download LaTeX, PDF when available, and generation metadata"
+                    }
+                    type="button"
+                  >
+                    Export package
+                  </button>
                 </div>
               )}
             </div>
+
+            {result && !pdfUrl && (
+              <p
+                className="generation-action-hint"
+                id="generation-pdf-availability"
+              >
+                {isCompiling
+                  ? "Compiling your generated LaTeX into a PDF…"
+                  : "No compiled PDF yet. Choose “Create PDF” to compile your generated LaTeX; the PDF download and the PDF inside the export package stay unavailable until it succeeds."}
+              </p>
+            )}
 
             {copyMessage && (
               <p className="generation-notice" role="status">
@@ -2608,11 +2640,19 @@ export default function ResumeGenerator({ library, source }: Props) {
               </p>
             )}
             {requestError ? (
-              <StatusBanner tone="error" role="alert" className="preview-status">
+              <StatusBanner
+                tone="error"
+                role="alert"
+                className="preview-status"
+              >
                 <p>{requestError}</p>
               </StatusBanner>
             ) : compileError ? (
-              <StatusBanner tone="error" role="alert" className="preview-status">
+              <StatusBanner
+                tone="error"
+                role="alert"
+                className="preview-status"
+              >
                 <p>{compileError.error}</p>
                 {compileError.diagnostics && (
                   <details>
@@ -2622,7 +2662,11 @@ export default function ResumeGenerator({ library, source }: Props) {
                 )}
               </StatusBanner>
             ) : isCompiling ? (
-              <StatusBanner tone="info" role="status" className="preview-status">
+              <StatusBanner
+                tone="info"
+                role="status"
+                className="preview-status"
+              >
                 <p>Compiling the PDF…</p>
                 <p className="preview-status-detail">
                   The document is being prepared from your generated LaTeX. This
@@ -2641,7 +2685,11 @@ export default function ResumeGenerator({ library, source }: Props) {
               </StatusBanner>
             ) : null}
             {viewerNotice && (
-              <StatusBanner tone="caution" role="status" className="preview-status">
+              <StatusBanner
+                tone="caution"
+                role="status"
+                className="preview-status"
+              >
                 {viewerNotice}
               </StatusBanner>
             )}
@@ -2721,7 +2769,11 @@ export default function ResumeGenerator({ library, source }: Props) {
                             title="Zoom out"
                             type="button"
                           >
-                            <Minus aria-hidden="true" size={14} strokeWidth={2} />
+                            <Minus
+                              aria-hidden="true"
+                              size={14}
+                              strokeWidth={2}
+                            />
                           </button>
                           <span className="pdf-zoom-value" aria-live="polite">
                             {pdfFit
@@ -2741,7 +2793,11 @@ export default function ResumeGenerator({ library, source }: Props) {
                             title="Zoom in"
                             type="button"
                           >
-                            <Plus aria-hidden="true" size={14} strokeWidth={2} />
+                            <Plus
+                              aria-hidden="true"
+                              size={14}
+                              strokeWidth={2}
+                            />
                           </button>
                           <span
                             className="pdf-toolbar-divider"

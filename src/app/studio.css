@@ -1280,6 +1280,58 @@
 .is-studio-layout .generation-output-actions {
   justify-content: flex-start;
 }
+/*
+ * Preview output actions: the download control is the neutral outlined
+ * secondary action, while compiling and exporting stay compact utility
+ * actions. The orange primary emphasis belongs to the Generate LaTeX
+ * workflow call to action, never to these controls.
+ */
+.generation-output-actions .generation-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.generation-output-actions .generation-action-download {
+  min-height: 28px;
+  padding: 0 10px;
+  border-color: var(--line-strong);
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 600;
+}
+.generation-output-actions .generation-action-download:hover:not(:disabled) {
+  border-color: var(--line-strong);
+  background: var(--surface-hover);
+  color: var(--ink);
+}
+.generation-output-actions .generation-action-compile,
+.generation-output-actions .generation-action-utility {
+  min-height: 26px;
+  padding: 0 8px;
+  border-color: var(--line);
+  background: var(--surface-soft);
+  color: var(--muted);
+  font-weight: 500;
+}
+.generation-output-actions .generation-action-compile:hover:not(:disabled),
+.generation-output-actions .generation-action-utility:hover:not(:disabled) {
+  border-color: var(--line-strong);
+  background: var(--surface-hover);
+  color: var(--ink);
+}
+.generation-output-actions .generation-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+  color: var(--muted);
+}
+.generation-action-hint {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.5;
+}
 .pdf-zoom-control .pdf-fit-button {
   width: auto;
   padding: 0 var(--space-8);
