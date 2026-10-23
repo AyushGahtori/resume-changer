@@ -18,6 +18,7 @@ import {
   getLibraryFilterOptions,
   type LibraryFilters,
 } from "@/lib/data/achievement-search";
+import { LIBRARY_ACTIONS } from "@/lib/ui/library-actions";
 import { countLabel } from "@/lib/ui/library-labels";
 import type {
   AchievementPoint,
@@ -54,6 +55,8 @@ function PointRow({
   onEdit?: () => void;
 }) {
   const skillsById = new Map(library.skills.map((skill) => [skill.id, skill]));
+  const editAction = LIBRARY_ACTIONS["edit-point"];
+  const EditIcon = editAction.icon;
   return (
     <article className="library-point">
       <div className="library-point-heading">
@@ -65,8 +68,17 @@ function PointRow({
             {point.enabled ? "Enabled" : "Disabled"}
           </span>
           {onEdit && (
-            <button className="text-action" onClick={onEdit} type="button">
-              Edit
+            <button
+              className="ui-button ui-button--tertiary ui-button--compact"
+              onClick={onEdit}
+              type="button"
+            >
+              <EditIcon
+                aria-hidden="true"
+                size={editAction.iconSize}
+                strokeWidth={2}
+              />
+              {editAction.label}
             </button>
           )}
         </div>
@@ -182,6 +194,10 @@ export default function AchievementLibrary({ library, source }: Props) {
   const [editor, setEditor] = useState<EditorState>(null);
   const [creating, setCreating] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
+  const addAction = LIBRARY_ACTIONS["add-achievement"];
+  const detailedEntryAction = LIBRARY_ACTIONS["detailed-entry"];
+  const AddIcon = addAction.icon;
+  const DetailedEntryIcon = detailedEntryAction.icon;
   const result = useMemo(
     () => filterAchievementLibrary(library, filters),
     [filters, library],
@@ -259,18 +275,35 @@ export default function AchievementLibrary({ library, source }: Props) {
         {canEdit && (
           <div className="library-edit-toolbar">
             <span>{saveMessage}</span>
-            <button type="button" onClick={() => openEditor()}>
-              Detailed entry
+            <button
+              className="ui-button ui-button--secondary"
+              type="button"
+              onClick={() => {
+                setSaveMessage("");
+                setEditor({ mode: "create" });
+              }}
+            >
+              <DetailedEntryIcon
+                aria-hidden="true"
+                size={detailedEntryAction.iconSize}
+                strokeWidth={2}
+              />
+              {detailedEntryAction.label}
             </button>
             <button
-              className="primary-button"
+              className="ui-button ui-button--primary"
               onClick={() => {
                 setSaveMessage("");
                 setCreating(true);
               }}
               type="button"
             >
-              Add achievement
+              <AddIcon
+                aria-hidden="true"
+                size={addAction.iconSize}
+                strokeWidth={2}
+              />
+              {addAction.label}
             </button>
           </div>
         )}
