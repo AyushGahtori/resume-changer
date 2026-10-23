@@ -374,6 +374,7 @@ test("opens the flow each library action names", async ({ page }) => {
   await page
     .getByRole("button", { name: "Add achievement", exact: true })
     .click();
+  await expect(page).toHaveURL("/library/imagination");
   await expect(
     page.getByRole("heading", { name: "Imagination Canvas" }),
   ).toBeVisible();
@@ -422,12 +423,11 @@ test("keeps the library actions inside a narrow viewport", async ({ page }) => {
 });
 
 /**
- * Task 10 coverage for the two creation actions.
+ * Coverage for the two library creation actions.
  *
- * `Add achievement` opens the Imagination Canvas and `Detailed entry` opens
- * the manual point editor. These tests lock in the presentation of both
- * actions, the focus they hand over and take back, and the rule that stops
- * a second invocation from restarting a flow that is already open.
+ * `Add achievement` opens the dedicated Imagination Canvas route and
+ * `Detailed entry` opens the manual point editor. These tests protect the
+ * presentation of both actions and the editor's focus and duplicate behavior.
  */
 
 const detailedEntry = (page: Page) =>
@@ -570,21 +570,27 @@ test("does not restart the manual editor on a repeated invocation", async ({
   );
 });
 
-test("moves focus into the Imagination Canvas and returns it on cancel", async ({
+test("opens the Imagination Canvas route and returns to the library on cancel", async ({
   page,
 }) => {
   await addAchievement(page).click();
+  await expect(page).toHaveURL("/library/imagination");
   await expect(
     page.getByRole("heading", { name: "Imagination Canvas" }),
   ).toBeVisible();
   await expect(page.getByLabel("Achievement text")).toBeFocused();
-  await expect(addAchievement(page)).toBeDisabled();
+  await expect(
+    page.getByRole("link", { name: "Achievement library" }),
+  ).toHaveAttribute("aria-current", "page");
 
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(page).toHaveURL("/library");
   await expect(
     page.getByRole("heading", { name: "Imagination Canvas" }),
   ).toHaveCount(0);
-  await expect(addAchievement(page)).toBeFocused();
+  await expect(
+    page.getByRole("heading", { name: "Achievement library" }),
+  ).toBeVisible();
 });
 
 test("keeps both actions reachable on a narrow viewport", async ({ page }) => {
