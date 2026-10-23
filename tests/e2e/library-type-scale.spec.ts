@@ -169,6 +169,10 @@ test("applies the shared type scale to the library hierarchy", async ({
 }) => {
   const title = await readType(page, ".library-heading h1");
   const eyebrow = await readType(page, ".library-page .eyebrow");
+  const sourceIndicator = await readType(
+    page,
+    ".library-page .source-indicator",
+  );
   const intro = await readType(page, ".library-page .page-intro");
   const profileName = await readType(page, ".library-owner h2");
   const headline = await readType(page, ".library-owner p");
@@ -239,6 +243,9 @@ test("applies the shared type scale to the library hierarchy", async ({
   for (const reading of [title, intro, pointText, chip, metricValue]) {
     expect(["normal", "0px"]).toContain(reading?.letterSpacing);
   }
+
+  expect(["normal", "0px"]).toContain(sourceIndicator?.letterSpacing);
+  expect(["normal", "0px"]).toContain(experienceKind?.letterSpacing);
 });
 
 test("consumes the shared tokens instead of a second scale", async ({

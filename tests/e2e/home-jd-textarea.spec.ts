@@ -141,16 +141,16 @@ for (const theme of ["light", "dark"] as const) {
       // The fluid preview grid keeps native vertical resizing at every width.
       expect(geometry.resize).toBe("vertical");
       await editor.scrollIntoViewIfNeeded();
+      await editor.evaluate((element) => {
+        const roomBelow =
+          window.innerHeight - element.getBoundingClientRect().bottom;
+        if (roomBelow < 60) window.scrollBy(0, 60 - roomBelow);
+      });
       const bounds = (await editor.boundingBox())!;
-      await page.mouse.move(
-        bounds.x + bounds.width - 3,
-        bounds.y + bounds.height - 3,
-      );
+      const resizeX = bounds.x + bounds.width - 3;
+      await page.mouse.move(resizeX, bounds.y + bounds.height - 3);
       await page.mouse.down();
-      await page.mouse.move(
-        bounds.x + bounds.width + 50,
-        bounds.y + bounds.height + 50,
-      );
+      await page.mouse.move(resizeX, bounds.y + bounds.height + 45);
       await page.mouse.up();
       // A newly visible page scrollbar can reduce available width.
       expect((await editor.boundingBox())!.width).toBeLessThanOrEqual(
