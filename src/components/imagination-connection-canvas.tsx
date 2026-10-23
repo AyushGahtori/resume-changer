@@ -9,15 +9,7 @@ import React, {
   useState,
   type DragEvent,
 } from "react";
-import {
-  ArrowUp,
-  FileText,
-  Lightbulb,
-  Move,
-  Sparkles,
-  Wrench,
-  X,
-} from "lucide-react";
+import { ArrowUp, FileText, Move, Sparkles, Wrench, X } from "lucide-react";
 import styles from "./imagination-connection-canvas.module.css";
 
 export const MAX_CONNECTED_ITEMS = 10;
@@ -173,6 +165,7 @@ export default function ImaginationConnectionCanvas({
   const sourceRef = useRef<HTMLDivElement>(null);
   const itemsRef = useRef<HTMLDivElement>(null);
   const itemElementsRef = useRef(new Map<string, HTMLDivElement>());
+  const feedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const helperId = useId();
   const [feedback, setFeedback] = useState("");
   const [geometry, setGeometry] = useState({
@@ -180,6 +173,20 @@ export default function ImaginationConnectionCanvas({
     height: 0,
     lines: [] as ConnectionLine[],
   });
+
+  const showTransientFeedback = useCallback((msg: string) => {
+    setFeedback(msg);
+    if (feedbackTimerRef.current) clearTimeout(feedbackTimerRef.current);
+    feedbackTimerRef.current = setTimeout(() => {
+      setFeedback("");
+    }, 2200);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (feedbackTimerRef.current) clearTimeout(feedbackTimerRef.current);
+    };
+  }, []);
 
   const measureConnections = useCallback(() => {
     const stage = stageRef.current;
@@ -240,19 +247,19 @@ export default function ImaginationConnectionCanvas({
       onConnect,
     );
     if (rejection === "duplicate") {
-      setFeedback("That item is already connected.");
+      showTransientFeedback("That item is already connected.");
       return;
     }
     if (rejection === "limit") {
-      setFeedback(MAX_CONNECTION_MESSAGE);
+      showTransientFeedback(MAX_CONNECTION_MESSAGE);
       return;
     }
 
     const item = uniqueItems.find(
       (connected) => connectionKey(connected) === connectionKey(candidate),
     );
-    setFeedback(
-      item ? `Connecting ${item.label}.` : "Connecting selected evidence.",
+    showTransientFeedback(
+      item ? `Connected ${item.label}.` : "Connected selected evidence.",
     );
   }
 
@@ -269,7 +276,7 @@ export default function ImaginationConnectionCanvas({
       event.dataTransfer.getData(CONNECTION_DRAG_TYPE),
     );
     if (!candidate) {
-      setFeedback(
+      showTransientFeedback(
         "Choose an achievement or skill from the evidence libraries.",
       );
       return;
@@ -279,7 +286,7 @@ export default function ImaginationConnectionCanvas({
 
   function handleRemove(item: ConnectedEvidence) {
     dispatchConnectionRemoval(item, onRemove);
-    setFeedback(`Removed ${item.label} from connected evidence.`);
+    showTransientFeedback(`Removed ${item.label} from connected evidence.`);
     canvasRef.current?.focus();
   }
 
@@ -299,6 +306,19 @@ export default function ImaginationConnectionCanvas({
       onDrop={handleDrop}
     >
       <div className={styles.stage} ref={stageRef}>
+        {count > 0 && (
+          <span
+            className="imagination-canvas-motion"
+            data-active="true"
+            aria-hidden="true"
+            key={uniqueItems.map(connectionKey).join(",")}
+          >
+            <ArrowUp className="imagination-canvas-motion__arrow" size={15} />
+            <ArrowUp className="imagination-canvas-motion__arrow" size={15} />
+            <ArrowUp className="imagination-canvas-motion__arrow" size={15} />
+            <ArrowUp className="imagination-canvas-motion__arrow" size={15} />
+          </span>
+        )}
         <div className={styles.dragHint}>
           <Move size={20} aria-hidden="true" />
           <p>
@@ -306,26 +326,7 @@ export default function ImaginationConnectionCanvas({
             to your draft.
           </p>
         </div>
-        <div className={styles.limitHint}>
-          <Lightbulb size={22} aria-hidden="true" />
-          <p>
-            <strong>Connect up to 10 items</strong> for better, more relevant
-            suggestions.
-          </p>
-        </div>
         <div className={styles.root} ref={rootRef}>
-          {count > 0 && (
-            <span
-              className="imagination-canvas-motion"
-              data-active="true"
-              aria-hidden="true"
-              key={uniqueItems.map(connectionKey).join(",")}
-            >
-              <ArrowUp className="imagination-canvas-motion__arrow" size={15} />
-              <ArrowUp className="imagination-canvas-motion__arrow" size={15} />
-              <ArrowUp className="imagination-canvas-motion__arrow" size={15} />
-            </span>
-          )}
           <div className={styles.sparkle} aria-hidden="true">
             <Sparkles size={20} />
           </div>
@@ -338,7 +339,7 @@ export default function ImaginationConnectionCanvas({
             {count} / {MAX_CONNECTED_ITEMS} connected
           </span>
           <p className={styles.helper} id={helperId}>
-            Hold and drag evidence here, or select it from the libraries.
+            Hold and drag to connect evidence or skills
           </p>
         </div>
 

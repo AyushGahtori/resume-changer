@@ -22,7 +22,7 @@
 .stage {
   position: relative;
   width: 100%;
-  min-height: 168px;
+  min-height: 140px;
 }
 
 .root {
@@ -36,13 +36,13 @@
 .sparkle {
   position: relative;
   display: grid;
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   place-items: center;
   border-radius: 50%;
   background: var(--imagination);
   color: var(--color-text-on-violet, #fff);
-  box-shadow: 0 3px 10px color-mix(in srgb, var(--imagination) 25%, transparent);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--imagination) 30%, transparent);
 }
 
 .particles {
@@ -76,19 +76,19 @@
 }
 
 .count {
-  margin-top: 7px;
+  margin-top: 5px;
   color: var(--ink);
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 650;
-  line-height: 18px;
+  line-height: 17px;
   font-variant-numeric: tabular-nums;
 }
 
 .helper {
-  margin: 3px 0 0;
+  margin: 2px 0 0;
   color: var(--muted);
-  font-size: 12px;
-  line-height: 17px;
+  font-size: 11px;
+  line-height: 15px;
 }
 
 .sourceAnchor {
@@ -126,27 +126,29 @@
   position: relative;
   z-index: 1;
   display: flex;
-  min-height: 40px;
+  min-height: 34px;
   flex-wrap: wrap;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
   gap: 8px;
-  margin: 38px auto 0;
+  margin: 16px auto 0;
+  max-height: 96px;
+  overflow-y: auto;
 }
 
 .chip {
   display: flex;
   min-width: 0;
-  max-width: min(100%, 360px);
-  min-height: 38px;
+  max-width: min(100%, 280px);
+  min-height: 32px;
   align-items: center;
-  gap: 8px;
-  padding: 5px 6px 5px 10px;
-  border: 1px solid color-mix(in srgb, var(--imagination) 52%, var(--line));
+  gap: 6px;
+  padding: 3px 6px 3px 10px;
+  border: 1px solid color-mix(in srgb, var(--imagination) 48%, var(--line));
   border-radius: 7px;
   background: var(--surface);
   color: var(--ink);
-  box-shadow: 0 2px 8px color-mix(in srgb, var(--ink) 7%, transparent);
+  box-shadow: 0 1px 4px color-mix(in srgb, var(--ink) 6%, transparent);
 }
 
 .chipIcon {
@@ -158,20 +160,20 @@
   min-width: 0;
   overflow: hidden;
   color: var(--ink);
-  font-size: 13px;
-  line-height: 18px;
+  font-size: 12px;
+  line-height: 16px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .remove {
   display: grid;
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   flex: 0 0 auto;
   place-items: center;
   border: 0;
-  border-radius: 5px;
+  border-radius: 4px;
   background: transparent;
   color: var(--muted);
   cursor: pointer;
@@ -189,67 +191,61 @@
 
 .empty {
   display: grid;
-  min-height: 40px;
+  min-height: 30px;
   place-items: center;
   margin: 0;
   color: var(--muted);
-  font-size: 12px;
-  line-height: 18px;
+  font-size: 11px;
+  line-height: 16px;
   text-align: center;
 }
 
 .status {
   min-height: 18px;
-  margin: 5px 0 0;
+  margin: 4px 0 0;
   color: var(--imagination-hover);
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 550;
-  line-height: 18px;
+  line-height: 17px;
   text-align: center;
 }
 .status:empty {
   display: none;
 }
-.dragHint,
-.limitHint {
+.dragHint {
   position: absolute;
-  top: 18px;
-  z-index: 1;
+  top: 12px;
+  z-index: 2;
   display: flex;
   align-items: flex-start;
-  gap: 7px;
-  max-width: 156px;
-  padding: 9px;
+  gap: 8px;
+  max-width: 170px;
+  padding: 8px 10px;
   border-radius: 8px;
+}
+.dragHint {
+  left: 12px;
   color: var(--imagination-hover);
   background: var(--imagination-soft);
 }
-.dragHint {
-  left: 0;
+:root[data-theme="dark"] .dragHint {
+  background: var(--imagination-soft);
+  color: var(--imagination-hover);
 }
-.limitHint {
-  right: 0;
-  color: var(--color-warning-strong);
-  background: var(--color-warning-subtle);
-}
-.dragHint svg,
-.limitHint svg {
+.dragHint svg {
   flex-shrink: 0;
 }
-.dragHint p,
-.limitHint p {
+.dragHint p {
   margin: 0;
   font-size: 10px;
-  line-height: 15px;
+  line-height: 14px;
 }
-.dragHint strong,
-.limitHint strong {
+.dragHint strong {
   display: block;
   font-weight: 650;
 }
-@media (max-width: 650px) {
-  .dragHint,
-  .limitHint {
+@media (max-width: 720px) {
+  .dragHint {
     display: none;
   }
 }

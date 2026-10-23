@@ -199,16 +199,6 @@ export default function ImaginationWritingControls({
         })}
       </div>
 
-      <hr
-        aria-hidden="true"
-        style={{
-          width: "100%",
-          margin: "calc(var(--space-16) * -1) 0 0",
-          border: 0,
-          borderTop: "1px solid var(--line)",
-        }}
-      />
-
       <form
         aria-busy={isLoading}
         onSubmit={handleSubmit}

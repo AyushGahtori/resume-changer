@@ -56,6 +56,7 @@ describe("ImaginationConnectionCanvas", () => {
     expect(markup).toContain("0 / 10 connected");
     expect(markup).toContain('aria-label="Evidence connection canvas"');
     expect(markup).toContain("Drop an achievement or skill here");
+    expect(markup).not.toContain("Connect up to 10 items");
     expect(markup).not.toContain("Remove connected");
   });
 

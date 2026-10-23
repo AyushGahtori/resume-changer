@@ -466,19 +466,22 @@ export default function ImaginationContextLibraries({
 
       <style>
         {[
-          ".imagination-context-panel-heading { display: flex; align-items: center; gap: var(--space-8); }",
+          ".imagination-context-panel-heading { display: flex; align-items: center; gap: 8px; }",
           ".imagination-context-panel-heading svg { flex: 0 0 auto; color: var(--imagination); }",
-          ".imagination-context-panel-heading h3 { margin: 0; }",
-          ".imagination-context-search { margin-top: var(--space-8); }",
-          ".imagination-context-list { min-width: 0; }",
-          ".imagination-context-list > details { min-width: 0; }",
+          ".imagination-context-panel-heading h3 { margin: 0; font-size: 13px; font-weight: 700; color: var(--ink); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }",
+          ".imagination-context-search { margin-top: 6px; margin-bottom: 8px; position: relative; }",
+          ".imagination-context-search input { width: 100%; min-height: 32px; padding: 4px 10px 4px 28px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface-soft); font-size: 12px; color: var(--ink); }",
+          ".imagination-context-list { min-width: 0; max-height: 180px; overflow-y: auto; padding-right: 4px; }",
+          ".imagination-context-list > details { min-width: 0; margin-bottom: 4px; border: 0; background: transparent; }",
+          ".imagination-context-list summary { font-size: 12px; font-weight: 600; color: var(--ink); padding: 3px 0; cursor: pointer; }",
           ".imagination-context-list summary:focus-visible, .imagination-context-libraries button:focus-visible { outline: var(--focus-outline); outline-offset: 2px; }",
-          ".imagination-context-libraries .imagination-context-card { display: block; width: 100%; min-height: 44px; padding: var(--space-8); border: 1px solid var(--line); border-radius: var(--radius-control); background: var(--surface-soft); color: var(--ink); font-size: var(--type-body-size); line-height: var(--type-body-line-height); text-align: left; cursor: pointer; }",
+          ".imagination-context-libraries .imagination-context-card { display: flex; align-items: flex-start; gap: 8px; width: 100%; min-height: 36px; padding: 7px 10px; margin-bottom: 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--ink); font-size: 11.5px; line-height: 1.4; text-align: left; cursor: pointer; transition: all 0.15s ease; }",
           ".imagination-context-libraries .imagination-context-card:hover:not(:disabled), .imagination-context-libraries .studio-chip-list button:hover:not(:disabled) { border-color: var(--imagination); background: var(--surface-hover); }",
-          ".imagination-context-libraries button[aria-pressed=true] { border-color: var(--imagination); background: var(--imagination-soft); }",
-          ".imagination-context-libraries button:disabled:not([aria-pressed=true]) { color: var(--quiet); cursor: not-allowed; opacity: 0.7; }",
-          ".imagination-context-libraries .studio-chip-list button { border-radius: var(--radius-control); cursor: pointer; }",
-          ".imagination-context-limit { margin: 0 0 var(--space-12); }",
+          ".imagination-context-libraries button[aria-pressed=true] { border-color: var(--imagination) !important; background: var(--imagination-soft) !important; color: var(--imagination-hover) !important; font-weight: 600; }",
+          ".imagination-context-libraries button:disabled:not([aria-pressed=true]) { color: var(--quiet); cursor: not-allowed; opacity: 0.6; }",
+          ".imagination-context-libraries .studio-chip-list { display: flex; flex-wrap: wrap; gap: 5px; padding: 4px 0 6px; }",
+          ".imagination-context-libraries .studio-chip-list button { display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: 6px; padding: 3px 8px; min-height: 24px; font-size: 11px; font-weight: 500; line-height: 16px; background: var(--surface); color: var(--ink); cursor: pointer; transition: all 0.15s ease; }",
+          ".imagination-context-limit { margin: 6px 0 var(--space-8); font-size: 11px; }",
         ].join("\n")}
       </style>
     </>

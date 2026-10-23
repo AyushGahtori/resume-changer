@@ -188,7 +188,6 @@ export default function ImaginationResult({
               disabled={status === "loading"}
               onClick={useSuggestion}
             >
-              <Check aria-hidden="true" size={16} />
               Use suggestion in editor
             </button>
             <button

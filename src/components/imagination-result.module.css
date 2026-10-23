@@ -1,8 +1,8 @@
 .result {
   display: grid;
-  gap: var(--space-12);
+  gap: 10px;
   min-width: 0;
-  padding: var(--space-16);
+  padding: 12px 14px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--surface);
@@ -21,9 +21,12 @@
   flex: 1;
   margin: 0;
   color: var(--ink);
-  font-size: var(--type-card-heading-size);
-  line-height: var(--type-card-heading-line-height);
+  font-size: 14px;
+  line-height: 20px;
   font-weight: 650;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, sans-serif;
 }
 
 .headingIcon {
@@ -36,21 +39,27 @@
   flex: 0 0 auto;
   align-items: center;
   gap: 4px;
-  padding: 4px 8px;
-  border: 1px solid color-mix(in srgb, var(--teal) 32%, var(--line));
+  padding: 2px 8px;
+  border: 1px solid #bbf7d0;
   border-radius: 999px;
-  background: var(--teal-soft);
-  color: var(--teal);
-  font-size: var(--type-label-size);
-  line-height: var(--type-label-line-height);
+  background: #dcfce7;
+  color: #15803d;
+  font-size: 11px;
+  line-height: 16px;
   font-weight: 650;
   white-space: nowrap;
+}
+
+:root[data-theme="dark"] .measuredBadge {
+  border-color: rgba(34, 197, 94, 0.3);
+  background: rgba(34, 197, 94, 0.18);
+  color: #4ade80;
 }
 
 .editorLabel {
   display: grid;
   min-width: 0;
-  gap: var(--space-8);
+  gap: 4px;
   color: var(--ink);
   font-size: var(--type-label-size);
   line-height: var(--type-label-line-height);
@@ -60,16 +69,18 @@
 .editor {
   width: 100%;
   min-width: 0;
-  min-height: 112px;
+  min-height: 56px;
+  height: 60px;
+  max-height: 120px;
   resize: vertical;
-  padding: var(--space-12);
-  border: 1px solid var(--line-strong);
+  padding: 8px 10px;
+  border: 1px solid var(--line);
   border-radius: 6px;
   background: var(--surface-soft);
   color: var(--ink);
   font: inherit;
-  font-size: var(--type-body-size);
-  line-height: 1.55;
+  font-size: 12.5px;
+  line-height: 1.45;
 }
 
 .editor:focus-visible,
@@ -92,8 +103,8 @@
   align-items: flex-start;
   gap: var(--space-8);
   margin: 0;
-  font-size: var(--type-body-size);
-  line-height: var(--type-body-line-height);
+  font-size: 12px;
+  line-height: 16px;
 }
 
 .stateMessage,
@@ -103,7 +114,7 @@
 }
 
 .stateMessage {
-  padding: var(--space-12);
+  padding: 10px 12px;
   border: 1px dashed var(--line-strong);
   border-radius: 6px;
   background: var(--surface-soft);
@@ -120,7 +131,7 @@
 }
 
 .errorMessage {
-  padding: var(--space-12);
+  padding: 10px 12px;
   border: 1px solid color-mix(in srgb, var(--danger) 35%, var(--line));
   border-radius: 6px;
   background: var(--danger-soft);
@@ -133,7 +144,7 @@
 }
 
 .warning {
-  padding: var(--space-8) var(--space-12);
+  padding: 4px 8px;
   border-left: 2px solid var(--line-strong);
   color: var(--muted);
   font-size: var(--type-helper-size);
@@ -144,43 +155,46 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-8);
+  gap: 8px;
+  margin-top: 2px;
 }
 
 .actionButton,
 .useButton {
   display: inline-flex;
-  min-height: 36px;
+  min-height: 32px;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 7px var(--space-12);
-  border: 1px solid var(--line-strong);
+  padding: 5px 12px;
+  border: 1px solid var(--line);
   border-radius: 6px;
   background: var(--surface);
   color: var(--ink);
   font: inherit;
-  font-size: var(--type-label-size);
-  line-height: var(--type-label-line-height);
+  font-size: 12px;
+  line-height: 18px;
   font-weight: 600;
   cursor: pointer;
+  transition: all 0.15s ease;
 }
 
 .actionButton:hover:not(:disabled) {
+  border-color: var(--imagination);
   background: var(--surface-hover);
 }
 
 .useButton {
   margin-right: auto;
-  border-color: var(--action-violet-surface);
-  background: var(--action-violet-surface);
-  color: var(--action-violet-label);
+  border-color: var(--imagination);
+  background: var(--imagination);
+  color: #fff;
 }
 
 .useButton:hover:not(:disabled) {
-  border-color: var(--action-violet-surface-hover);
-  background: var(--action-violet-surface-hover);
-  color: var(--action-violet-label);
+  border-color: var(--imagination-hover);
+  background: var(--imagination-hover);
+  color: #fff;
 }
 
 .actionButton:disabled,
@@ -192,6 +206,7 @@
 .copyFeedback {
   font-size: var(--type-helper-size);
   line-height: var(--type-helper-line-height);
+  color: var(--imagination-hover);
 }
 
 @keyframes imagination-result-spin {

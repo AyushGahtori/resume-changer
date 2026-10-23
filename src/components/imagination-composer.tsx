@@ -120,8 +120,8 @@ export default function ImaginationComposer({
                 className={styles.titleIcon}
                 aria-hidden="true"
                 focusable="false"
-                size={28}
-                strokeWidth={2.1}
+                size={24}
+                strokeWidth={2.2}
               />
               <h1 className={styles.title} id="imagination-canvas-title">
                 Imagination Canvas
@@ -152,7 +152,7 @@ export default function ImaginationComposer({
                 className={styles.noticeIcon}
                 aria-hidden="true"
                 focusable="false"
-                size={20}
+                size={18}
               />
               <div>
                 <h2 className={styles.noticeTitle}>Create mode</h2>
