@@ -2076,6 +2076,197 @@ a:focus-visible {
   border-radius: 6px;
   background: var(--imagination-soft);
 }
+
+.jd-page .ats-preview .analysis-role {
+  grid-template-columns: minmax(0, 1.4fr) minmax(84px, 0.9fr);
+  gap: 12px;
+  margin-top: 12px;
+  padding: 12px 0;
+}
+
+.jd-page .ats-preview .analysis-details-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  margin-top: 16px;
+}
+
+.jd-page .ats-preview .analysis-details-heading :is(h3, h4) {
+  margin: 0;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 20px;
+}
+
+.jd-page .ats-preview .analysis-details-heading p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 16px;
+}
+
+.jd-page .ats-preview .analysis-grid {
+  gap: 0;
+  margin-top: 4px;
+}
+
+.jd-page .ats-preview .analysis-section {
+  border-top: 1px solid var(--line);
+}
+
+.jd-page .ats-preview .analysis-section-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 10px;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 2px 10px 0;
+  cursor: pointer;
+  list-style: none;
+}
+
+.jd-page .ats-preview .analysis-section-summary::-webkit-details-marker {
+  display: none;
+}
+
+.jd-page .ats-preview .analysis-section-summary::marker {
+  content: "";
+}
+
+.jd-page .ats-preview .analysis-section-summary::after {
+  width: 7px;
+  height: 7px;
+  border-right: 1.5px solid var(--muted);
+  border-bottom: 1.5px solid var(--muted);
+  content: "";
+  transform: rotate(45deg);
+  transition: transform 150ms ease;
+}
+
+.jd-page
+  .ats-preview
+  .analysis-section[open]
+  > .analysis-section-summary::after {
+  transform: rotate(225deg);
+}
+
+.jd-page .ats-preview .analysis-section-summary:focus-visible {
+  border-radius: 4px;
+  outline: var(--focus-outline);
+  outline-offset: 2px;
+}
+
+.jd-page .ats-preview .analysis-section-title {
+  min-width: 0;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 18px;
+  overflow-wrap: anywhere;
+}
+
+.jd-page .ats-preview .analysis-section-count {
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: var(--surface-soft);
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 14px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.jd-page .ats-preview .analysis-section-content {
+  padding: 0 0 12px;
+}
+
+.jd-page .ats-preview .analysis-section-content > ul {
+  margin: 0;
+}
+
+.jd-page .ats-preview .analysis-section-content > p {
+  margin: 0;
+}
+
+.jd-page .ats-preview .analysis-section-content li {
+  margin-top: 0;
+  font-size: 13px;
+  line-height: 19px;
+}
+
+.jd-page .ats-preview .analysis-section-content li + li {
+  margin-top: 5px;
+}
+
+.jd-page .ats-preview .analysis-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0;
+  list-style: none;
+}
+
+.jd-page .ats-preview .analysis-chip-list li {
+  max-width: 100%;
+}
+
+.analysis-keyword-chip {
+  display: inline-flex;
+  max-width: 100%;
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-soft);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.jd-page .ats-preview .analysis-terminology-list {
+  display: grid;
+  gap: 7px;
+  padding: 0;
+  list-style: none;
+}
+
+.jd-page .ats-preview .analysis-terminology-list li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px 6px;
+}
+
+.jd-page .ats-preview .analysis-terminology-list strong {
+  color: var(--ink);
+  font-weight: 650;
+}
+
+.jd-page .ats-preview .analysis-terminology-list span {
+  color: var(--muted);
+}
+
+.jd-page .ats-preview .analysis-inferred {
+  padding: 0;
+  border-top: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.jd-page .ats-preview .analysis-inferred > .analysis-section-summary {
+  padding-inline: 10px;
+  border-radius: 6px;
+  background: var(--imagination-soft);
+}
+
+.jd-page .ats-preview .analysis-inferred[open] > .analysis-section-summary {
+  border-radius: 6px 6px 0 0;
+}
+
+.jd-page .ats-preview .analysis-inferred > .analysis-section-content {
+  padding: 0 10px 10px;
+  border-radius: 0 0 6px 6px;
+  background: var(--imagination-soft);
+}
 .jd-page .analysis-panel .analysis-cache-notice {
   margin: 12px 0 0;
   padding: 12px;
@@ -5333,10 +5524,10 @@ a:focus-visible {
  * job description. It never implies an analysis that does not exist.
  */
 .selection-analysis {
-  margin: 0 0 12px;
-  padding: 10px 12px;
+  margin: 0 0 14px;
+  padding: 14px;
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: 8px;
   background: var(--surface-soft);
 }
 
@@ -5349,15 +5540,54 @@ a:focus-visible {
 
 .selection-analysis-heading h3 {
   margin: 0;
-  font-size: 11px;
+  font-size: 15px;
   font-weight: 650;
+  line-height: 21px;
 }
 
-.selection-analysis-heading p {
-  margin: 3px 0 0;
+.selection-analysis-context-label {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 16px;
+}
+
+.selection-analysis-context {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 6px 0 0;
+  padding: 0;
+}
+
+.selection-analysis-context > div {
+  display: flex;
+  flex: 0 1 auto;
+  align-items: baseline;
+  min-width: 0;
+  max-width: 100%;
+  gap: 5px;
+  padding: 3px 7px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+}
+
+.selection-analysis-context dt {
   color: var(--muted);
   font-size: 10px;
-  line-height: 1.45;
+  line-height: 14px;
+  white-space: nowrap;
+}
+
+.selection-analysis-context dd {
+  min-width: 0;
+  margin: 0;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 17px;
+  overflow-wrap: anywhere;
 }
 
 .selection-analysis-state {
@@ -5393,10 +5623,15 @@ a:focus-visible {
 }
 
 .selection-analysis-detail {
-  margin: 6px 0 0;
+  margin: 10px 0 0;
   color: var(--muted);
   font-size: var(--type-body-size);
   line-height: var(--type-body-line-height);
+}
+
+.selection-analysis-detail strong {
+  color: var(--ink);
+  font-weight: 650;
 }
 
 .selection-analysis-detail a {

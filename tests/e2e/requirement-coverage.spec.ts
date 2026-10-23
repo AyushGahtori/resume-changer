@@ -107,11 +107,41 @@ test("reports the coverage of the current job analysis and its source", async ({
   const analysis = page.getByRole("region", { name: "Job analysis" });
   await expect(analysis).toContainText("Analyzed");
   await expect(analysis).toContainText(
-    "Compared against the saved job description for Platform Engineer, Entry level, Example Cloud.",
+    "Compared with the saved job description",
   );
-  await expect(analysis).toContainText(
-    "3 requirements extracted from this job description.",
-  );
+  await expect(analysis.locator(".selection-analysis-context dt")).toHaveText([
+    "Role",
+    "Seniority",
+    "Company",
+  ]);
+  await expect(analysis.locator(".selection-analysis-context dd")).toHaveText([
+    "Platform Engineer",
+    "Entry level",
+    "Example Cloud",
+  ]);
+  await expect(analysis).toContainText("3 requirements extracted.");
+  await page.screenshot({
+    path: test.info().outputPath("job-analysis-coverage.png"),
+    fullPage: true,
+    animations: "disabled",
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await expect(analysis.locator(".selection-analysis-context dd")).toHaveText([
+    "Platform Engineer",
+    "Entry level",
+    "Example Cloud",
+  ]);
+  await page.screenshot({
+    path: test.info().outputPath("job-analysis-coverage-mobile.png"),
+    fullPage: true,
+    animations: "disabled",
+  });
+  await page.setViewportSize({ width: 1280, height: 720 });
 
   await page.route("**/api/ai/select-achievements", (route) =>
     route.fulfill({
