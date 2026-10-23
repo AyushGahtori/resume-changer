@@ -5793,6 +5793,101 @@ a:focus-visible {
   color: var(--accent-contrast);
 }
 
+/*
+ * The search and the experience filter over the achievement list.
+ *
+ * The board keeps the magnifier, the native select and the quiet reset on
+ * one row; they wrap into a stack on a narrow screen.
+ */
+.generation-selection-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.generation-search-field {
+  display: flex;
+  flex: 1 1 160px;
+  min-width: 0;
+  align-items: center;
+  gap: 7px;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--muted);
+}
+
+.generation-search-field input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--ink);
+  font-size: 12px;
+}
+
+.generation-search-field:focus-within {
+  border-color: var(--focus);
+  outline: 2px solid var(--color-violet);
+  outline-offset: 1px;
+}
+
+.generation-experience-filter {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 200px;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 12px;
+}
+
+.generation-experience-filter:focus-visible {
+  border-color: var(--focus);
+  outline: 2px solid var(--color-violet);
+  outline-offset: 1px;
+}
+
+.generation-filter-reset {
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.generation-filter-reset:hover {
+  border-color: var(--line-strong);
+  background: var(--surface-hover);
+  color: var(--ink);
+}
+
+.generation-filter-count {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.generation-no-matches {
+  margin: 0;
+  padding: 16px 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
 .generation-groups {
   display: grid;
   gap: 14px;
@@ -6160,6 +6255,10 @@ a:focus-visible {
 
   .generation-groups {
     max-height: 65vh;
+  }
+
+  .generation-search-field {
+    flex-basis: 100%;
   }
 
   .latex-preview {

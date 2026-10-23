@@ -197,3 +197,117 @@ test("analyzes a saved JD, retries point suggestions, and allows grounded overri
   ).toBe(true);
   expect(attempts).toBe(2);
 });
+
+const selectionCount = ".generation-selection .generation-section-heading p";
+
+test("finds evidence by search and by experience without losing the selection", async ({
+  page,
+}) => {
+  await page.goto("/generate?source=demo");
+
+  const search = page.getByRole("searchbox", { name: "Search achievements" });
+  const experience = page.getByLabel("Filter by experience");
+  await expect(search).toBeVisible();
+  await expect(experience).toBeVisible();
+  await expect(page.locator(".generation-point")).toHaveCount(13);
+  await expect(page.locator(selectionCount)).toContainText("0 selected");
+  await expect(page.locator(selectionCount)).toContainText("13 enabled");
+
+  // An achievement is selected in a group the search will hide.
+  await page.getByLabel("Select achievement achievement-orders-api").check();
+  await expect(page.locator(selectionCount)).toContainText("1 selected");
+
+  await search.fill("queueboard");
+  await expect(page.locator(".generation-point")).toHaveCount(3);
+  await expect(page.locator(".generation-filter-count")).toHaveText(
+    "3 of 13 achievements match",
+  );
+  // The search hides the selected achievement, it does not deselect it.
+  await expect(page.locator(selectionCount)).toContainText("1 selected");
+
+  // The experience filter and the search combine.
+  await experience.selectOption("job-example-cloud-labs");
+  await expect(page.locator(".generation-point")).toHaveCount(0);
+  await expect(page.locator(".generation-no-matches")).toBeVisible();
+  await expect(page.locator(selectionCount)).toContainText("1 selected");
+
+  await page.getByRole("button", { name: "Reset filters" }).click();
+  await expect(page.locator(".generation-point")).toHaveCount(13);
+  await expect(search).toHaveValue("");
+  await expect(experience).toHaveValue("");
+  await expect(page.locator(selectionCount)).toContainText("1 selected");
+});
+
+test("tells an empty search apart from an empty library", async ({ page }) => {
+  await page.goto("/generate?source=demo");
+
+  // The reset only appears while a search or a filter is active.
+  await expect(page.getByRole("button", { name: "Reset filters" })).toHaveCount(
+    0,
+  );
+
+  await page
+    .getByRole("searchbox", { name: "Search achievements" })
+    .fill("nothing matches this");
+  await expect(page.locator(".generation-no-matches")).toHaveText(
+    "No achievements match this search.",
+  );
+  // The library still holds evidence, so this is not the empty library.
+  await expect(page.locator(".generation-empty")).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Reset filters" }),
+  ).toBeVisible();
+
+  await page.getByRole("button", { name: "Reset filters" }).click();
+  await expect(page.locator(".generation-point")).toHaveCount(13);
+  await expect(page.locator(".generation-no-matches")).toHaveCount(0);
+});
+
+test("reaches the search and the experience filter with the keyboard", async ({
+  page,
+}) => {
+  await page.goto("/generate?source=demo");
+
+  const search = page.getByRole("searchbox", { name: "Search achievements" });
+  await search.focus();
+  await page.keyboard.type("worker");
+  await expect(page.locator(".generation-point")).toHaveCount(1);
+  await expect(page.locator(".generation-filter-count")).toHaveText(
+    "1 of 13 achievements match",
+  );
+
+  // The field shows a visible focus ring.
+  const focus = await page.evaluate(() => {
+    const field = document.querySelector(".generation-search-field");
+    const style = getComputedStyle(field!);
+    return {
+      outlineStyle: style.outlineStyle,
+      outlineWidth: style.outlineWidth,
+    };
+  });
+  expect(focus.outlineStyle).not.toBe("none");
+  expect(Number.parseFloat(focus.outlineWidth)).toBeGreaterThan(0);
+
+  // The experience filter takes the keyboard too.
+  await page.getByLabel("Filter by experience").focus();
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("Enter");
+  await expect(page.getByLabel("Filter by experience")).not.toHaveValue("");
+});
+
+test("keeps the search row inside a narrow viewport", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/generate?source=demo");
+
+  const search = page.getByRole("searchbox", { name: "Search achievements" });
+  await search.fill(
+    "a very long search that keeps going well past the width of the panel",
+  );
+  await expect(page.locator(".generation-point")).toHaveCount(0);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+  await expect(search).toBeVisible();
+});
