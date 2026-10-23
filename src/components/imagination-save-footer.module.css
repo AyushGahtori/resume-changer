@@ -1,0 +1,136 @@
+.footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 4;
+  display: grid;
+  grid-template-columns: minmax(170px, 1.1fr) minmax(150px, auto) minmax(
+      180px,
+      1fr
+    ) auto auto;
+  align-items: center;
+  gap: var(--space-12);
+  margin: var(--space-16) calc(var(--space-24) * -1) calc(var(--space-24) * -1);
+  padding: var(--space-12) var(--space-24);
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: 0 -4px 12px color-mix(in srgb, var(--surface) 88%, transparent);
+}
+
+.review {
+  min-width: 0;
+}
+
+.review p,
+.pdfNote,
+.unavailable,
+.error {
+  margin: 0;
+  font-size: var(--type-helper-size);
+  line-height: var(--type-helper-line-height);
+}
+
+.reviewStatus {
+  margin-top: var(--space-4) !important;
+  color: var(--muted);
+}
+
+.destination {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--space-8);
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+}
+
+.destination select {
+  width: auto;
+  min-width: 0;
+  max-width: 100%;
+  padding: var(--space-8);
+}
+
+.pdfNote {
+  min-width: 0;
+  color: var(--muted);
+}
+
+.unavailable {
+  color: var(--muted);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.actions button {
+  min-height: 40px;
+  white-space: nowrap;
+}
+
+.actions button:focus-visible,
+.destination select:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.actions button:disabled,
+.destination select:disabled {
+  cursor: not-allowed;
+}
+
+.icon {
+  width: 16px;
+  height: 16px;
+  margin-right: var(--space-4);
+  vertical-align: -3px;
+}
+
+.error {
+  grid-column: 1 / -1;
+  color: var(--danger);
+}
+
+@media (max-width: 760px) {
+  .footer {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--space-8);
+    margin-inline: calc(var(--space-16) * -1);
+    margin-bottom: calc(var(--space-16) * -1);
+    padding-inline: var(--space-16);
+  }
+
+  .review,
+  .destination,
+  .pdfNote,
+  .unavailable {
+    grid-column: 1 / -1;
+  }
+
+  .destination {
+    justify-content: space-between;
+  }
+
+  .destination select {
+    flex: 1;
+  }
+
+  .actions {
+    grid-column: 1 / -1;
+    justify-content: flex-end;
+  }
+
+  .actions button:last-child {
+    flex: 1;
+  }
+}
+
+@media (max-width: 420px) {
+  .footer {
+    margin-inline: calc(var(--space-12) * -1);
+    margin-bottom: calc(var(--space-12) * -1);
+    padding-inline: var(--space-12);
+  }
+}

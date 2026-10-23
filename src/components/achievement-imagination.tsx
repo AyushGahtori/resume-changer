@@ -13,6 +13,14 @@ import {
   parseImaginationDraft,
   type ImaginationDraft,
 } from "@/lib/generation/imagination-draft";
+import {
+  buildImaginationLibraryPoint,
+  getDefaultImaginationSaveDestination,
+  getImaginationSaveDestinations,
+  getImaginationTextToAccept,
+  type ImaginationSaveDestination,
+} from "@/lib/generation/imagination-save";
+import ImaginationSaveFooter from "./imagination-save-footer";
 
 export type AcceptedAchievement = {
   id: string;
@@ -67,9 +75,14 @@ export default function AchievementImagination({
   const [busy, setBusy] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const [saveTo, setSaveTo] = useState<"resume" | "library" | "both">(
-    allowResume ? "resume" : "library",
+  const [saveTo, setSaveTo] = useState<ImaginationSaveDestination | null>(() =>
+    getDefaultImaginationSaveDestination(
+      source,
+      allowResume,
+      groups.length > 0,
+    ),
   );
+  const [saveError, setSaveError] = useState("");
   const controller = useRef<AbortController | null>(null);
   const [savedDraft, setSavedDraft] = useState<ImaginationDraft | null>(null);
   const [storageReady, setStorageReady] = useState(false);
@@ -80,6 +93,20 @@ export default function AchievementImagination({
       .map((point) => ({ ...point, groupId: group.id })),
   );
   const contextCount = selectedIds.length + skillIds.length;
+  const hasLibraryDestination = groups.length > 0;
+  const saveDestinations = getImaginationSaveDestinations(
+    source,
+    allowResume,
+    hasLibraryDestination,
+  );
+  const saveDestination =
+    saveTo && saveDestinations.includes(saveTo)
+      ? saveTo
+      : getDefaultImaginationSaveDestination(
+          source,
+          allowResume,
+          hasLibraryDestination,
+        );
   const selectedSources =
     operation === "create"
       ? points
@@ -216,16 +243,23 @@ export default function AchievementImagination({
   }
 
   async function accept() {
-    const acceptedText = (operation === "create" ? text : proposed).trim();
+    const acceptedText = getImaginationTextToAccept(operation, text, proposed);
     if (!acceptedText) {
-      setError("Write or accept an achievement before saving.");
+      setSaveError("Write or accept an achievement before saving.");
+      return;
+    }
+    if (operation === "create" && !saveDestination) {
+      setSaveError("No save destination is available for this data source.");
       return;
     }
     setSaving(true);
-    setError("");
+    setSaveError("");
     let id = `studio-${crypto.randomUUID()}`;
     try {
-      if (operation === "create" && saveTo !== "resume") {
+      if (
+        operation === "create" &&
+        (saveDestination === "library" || saveDestination === "both")
+      ) {
         if (source !== "personal")
           throw new Error(
             "Switch to your personal library to save an achievement.",
@@ -237,26 +271,16 @@ export default function AchievementImagination({
         const response = await fetch("/api/library/points", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            parentType,
-            parentId: groupId,
-            point: {
-              id,
-              text: acceptedText,
-              tags: [],
+          body: JSON.stringify(
+            buildImaginationLibraryPoint({
+              parentType,
+              parentId: groupId,
+              pointId: id,
+              reviewedText: acceptedText,
               skillIds,
-              metrics: [],
-              source: {
-                type: "direct-user",
-                label: "Reviewed in Imagination Canvas",
-                reference: JSON.stringify({
-                  sourceAchievementIds: sourceIds,
-                  skillIds,
-                }),
-              },
-              enabled: true,
-            },
-          }),
+              sourceAchievementIds: sourceIds,
+            }),
+          ),
         });
         const payload = await response.json();
         if (!response.ok)
@@ -265,7 +289,11 @@ export default function AchievementImagination({
           );
         onLibrarySaved?.();
       }
-      if (operation !== "create" || saveTo !== "library" || !allowResume)
+      if (
+        operation !== "create" ||
+        saveDestination !== "library" ||
+        !allowResume
+      )
         onAccept({
           id,
           text: acceptedText,
@@ -287,7 +315,7 @@ export default function AchievementImagination({
       }
       onClose();
     } catch (failure) {
-      setError(
+      setSaveError(
         failure instanceof Error
           ? failure.message
           : "The achievement could not be saved.",
@@ -369,6 +397,7 @@ export default function AchievementImagination({
                 value={text}
                 onChange={(event) => {
                   setText(event.target.value);
+                  setSaveError("");
                   invalidateSuggestion();
                 }}
               />
@@ -624,6 +653,7 @@ export default function AchievementImagination({
                 type="button"
                 onClick={() => {
                   setText(proposed);
+                  setSaveError("");
                   setProposed("");
                 }}
               >
@@ -637,56 +667,31 @@ export default function AchievementImagination({
             {error}
           </p>
         )}
-        <div className="studio-dialog-footer">
-          <p className="studio-muted" role="status">
-            {measuredLines
-              ? `${measuredLines} ${measuredLines === 1 ? "line" : "lines"} confirmed by LaTeX. `
-              : ""}
-            {layoutWarning || "Review the facts before accepting this draft."}
-          </p>
-          {operation === "create" && (
-            <label>
-              Save to{" "}
-              <select
-                aria-label="Save achievement to"
-                value={saveTo}
-                onChange={(event) =>
-                  setSaveTo(event.target.value as typeof saveTo)
-                }
-              >
-                {allowResume && <option value="resume">Current resume</option>}
-                {source === "personal" && (
-                  <option value="library">Achievement Library</option>
-                )}
-                {allowResume && source === "personal" && (
-                  <option value="both">Resume and library</option>
-                )}
-              </select>
-            </label>
+        <ImaginationSaveFooter
+          operation={operation}
+          source={source}
+          allowResume={allowResume}
+          hasLibraryDestination={hasLibraryDestination}
+          saveTo={saveDestination}
+          canSave={Boolean(
+            (operation === "create" ? text : proposed).trim() &&
+            (operation !== "create" || groupId),
           )}
-          <span className="studio-muted">
-            Your PDF updates only after Apply changes.
-          </span>
-          <button type="button" onClick={onClose}>
-            Cancel
-          </button>
-          <button
-            className="studio-primary"
-            type="button"
-            disabled={
-              busy ||
-              saving ||
-              !(operation === "create" ? text.trim() : proposed.trim())
-            }
-            onClick={accept}
-          >
-            {saving
-              ? "Saving…"
-              : operation === "create"
-                ? "Save achievement"
-                : "Accept draft"}
-          </button>
-        </div>
+          isBusy={busy}
+          isSaving={saving}
+          error={saveError}
+          reviewStatus={
+            measuredLines
+              ? `${measuredLines} ${measuredLines === 1 ? "line" : "lines"} confirmed by LaTeX. ${layoutWarning}`.trim()
+              : layoutWarning
+          }
+          onSaveToChange={(destination) => {
+            setSaveTo(destination);
+            setSaveError("");
+          }}
+          onCancel={onClose}
+          onSave={accept}
+        />
       </div>
     </StudioDialog>
   );
