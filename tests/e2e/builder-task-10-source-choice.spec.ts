@@ -255,6 +255,30 @@ test.describe("a source choice that changes the loaded library", () => {
     await expect(page.getByText("14 enabled")).toBeVisible();
   });
 
+  test("clears source-bound selections when the loaded library changes", async ({
+    page,
+  }) => {
+    await page.goto("/generate?source=demo");
+    await expect(page.getByText("0 selected · 13 enabled")).toBeVisible();
+
+    await page.getByRole("checkbox").first().check();
+    await expect(page.getByText("1 selected · 13 enabled")).toBeVisible();
+
+    await Promise.all([
+      page.waitForURL("**/generate"),
+      personalLink(page).click(),
+    ]);
+    await expect(page.getByText("0 selected · 14 enabled")).toBeVisible();
+    await expect(page.getByRole("checkbox").first()).not.toBeChecked();
+
+    await Promise.all([
+      page.waitForURL("**/generate?source=demo"),
+      demoLink(page).click(),
+    ]);
+    await expect(page.getByText("0 selected · 13 enabled")).toBeVisible();
+    await expect(page.getByRole("checkbox").first()).not.toBeChecked();
+  });
+
   test("keeps a saved session with the source that produced it", async ({
     page,
   }) => {

@@ -1,5 +1,8 @@
 # Resume Builder UI Redesign Task Plan
 
+> **Implementation status (2026-10-23):** Tasks 01–29 are complete in the integrated application.
+> The checklist is audited against the merged implementation and final acceptance evidence in [the Resume Builder review](ui-review/resume-builder-task-29/REVIEW.md).
+
 ## Purpose And Scope
 
 This document is the frontend companion to project-plan.md and the Resume Builder counterpart to UI_Tasks_home.md and UI_Tasks_achievement_library.md. It translates the eight supplied Resume Builder boards into a component-level implementation plan for the existing workflow at /generate. The reference covers the shared workspace shell, builder header and job context, achievement selection, AI tailoring controls, generated-content review, and LaTeX/PDF preview and export.
@@ -356,11 +359,11 @@ Reference files: docs/ui-images/resume-builder/ui-kit-shadow-spacing.png, docs/u
 
 **Files:** src/app/studio.css and only shared variables in src/app/globals.css when the existing system provides no equivalent.
 
-- [ ] Reuse the 4/8/16/24/32/48/64px rhythm. Keep 24px as a major desktop inset, 16px for compact surfaces, and 8-12px within label/control relationships.
-- [ ] Keep controls near 6px radius and cards at 8px maximum; reserve full rounding for chips, status pills, and small circular icon backgrounds.
-- [ ] Prefer crisp 1px borders; use at most a subtle existing light shadow on a major surface and no nested-card shadow.
-- [ ] In dark mode, distinguish surfaces by tone and border instead of pasting light shadows or glow onto dark cards.
-- [ ] Keep stable dimensions for buttons, toolbar controls, selection rows, and badges so states do not shift layout.
+- [x] Reuse the 4/8/16/24/32/48/64px rhythm. Keep 24px as a major desktop inset, 16px for compact surfaces, and 8-12px within label/control relationships.
+- [x] Keep controls near 6px radius and cards at 8px maximum; reserve full rounding for chips, status pills, and small circular icon backgrounds.
+- [x] Prefer crisp 1px borders; use at most a subtle existing light shadow on a major surface and no nested-card shadow.
+- [x] In dark mode, distinguish surfaces by tone and border instead of pasting light shadows or glow onto dark cards.
+- [x] Keep stable dimensions for buttons, toolbar controls, selection rows, and badges so states do not shift layout.
 
 **Acceptance:** The builder’s surfaces and controls share consistent geometry without adding decorative nested cards.
 
@@ -380,11 +383,11 @@ Reference files: docs/ui-images/resume-builder/ui-kit-buttons.png, docs/ui-image
 
 **Files:** Relevant builder components, src/app/studio.css, and the existing component E2E test or a clearly named task-specific action test.
 
-- [ ] Use Generate LaTeX as the orange primary action; Download PDF is secondary; AI actions use violet emphasis; low-risk utilities remain neutral/ghost.
-- [ ] Use installed Lucide icons where available. Keep visible text on actions whose meaning is not universally obvious.
-- [ ] Preserve real onClick handlers, loading/disabled states, and error messages; omit unsupported buttons such as settings/trash where no action exists.
-- [ ] Ensure hit areas are stable and comfortably operable, with visible focus, hover, pressed, disabled, and loading treatments where applicable.
-- [ ] Respect reduced motion and do not shift adjacent controls when state styling changes.
+- [x] Use Generate LaTeX as the orange primary action; Download PDF is secondary; AI actions use violet emphasis; low-risk utilities remain neutral/ghost.
+- [x] Use installed Lucide icons where available. Keep visible text on actions whose meaning is not universally obvious.
+- [x] Preserve real onClick handlers, loading/disabled states, and error messages; omit unsupported buttons such as settings/trash where no action exists.
+- [x] Ensure hit areas are stable and comfortably operable, with visible focus, hover, pressed, disabled, and loading treatments where applicable.
+- [x] Respect reduced motion and do not shift adjacent controls when state styling changes.
 
 **Acceptance:** Every displayed action does its named operation and every icon-only control is labeled and keyboard usable.
 
@@ -404,12 +407,12 @@ Reference files: docs/ui-images/resume-builder/builder-overview-light-dark.png, 
 
 **Files:** src/components/resume-generator.tsx, src/components/resume-studio.tsx, src/app/studio.css, and a focused layout test.
 
-- [ ] Keep WorkspaceShell as the owner of brand/sidebar/top bar; do not make a second application frame.
-- [ ] Preserve the current step from job context to achievement selection, then generated-document review and preview; keep the active content clear without copying poster copy.
-- [ ] Use a flexible selection/work area beside the preview on wide screens, with min-width:0 and independent scroll only where current behavior needs it.
-- [ ] Preserve existing generate, apply, compile, and export state transitions; do not replace the workflow with static panels.
-- [ ] At narrow sizes, stack panes in a useful order and keep the primary action reachable.
-- [ ] Test landmarks, pane order, resize behavior, and absence of page-level horizontal overflow.
+- [x] Keep WorkspaceShell as the owner of brand/sidebar/top bar; do not make a second application frame.
+- [x] Preserve the current step from job context to achievement selection, then generated-document review and preview; keep the active content clear without copying poster copy.
+- [x] Use a flexible selection/work area beside the preview on wide screens, with min-width:0 and independent scroll only where current behavior needs it.
+- [x] Preserve existing generate, apply, compile, and export state transitions; do not replace the workflow with static panels.
+- [x] At narrow sizes, stack panes in a useful order and keep the primary action reachable.
+- [x] Test landmarks, pane order, resize behavior, and absence of page-level horizontal overflow.
 
 **Acceptance:** The builder reads as one coherent operational workflow in the shared shell and all existing actions remain reachable.
 
@@ -427,10 +430,10 @@ Reference files: docs/ui-images/resume-builder/builder-overview-light-dark.png, 
 
 **Files:** src/components/workspace-shell.tsx only if route active-state semantics need correction, shared styles, and the existing shell or builder E2E test.
 
-- [ ] Confirm /generate marks Resume builder as the current destination and exposes aria-current="page".
-- [ ] Preserve shared destination order, icon-plus-label navigation, collapse/mobile behavior, and accessible names.
-- [ ] Apply only the established active-state treatment; do not redesign unrelated navigation routes.
-- [ ] Check the active row and keyboard focus in both themes, at desktop and mobile widths.
+- [x] Confirm /generate marks Resume builder as the current destination and exposes aria-current="page".
+- [x] Preserve shared destination order, icon-plus-label navigation, collapse/mobile behavior, and accessible names.
+- [x] Apply only the established active-state treatment; do not redesign unrelated navigation routes.
+- [x] Check the active row and keyboard focus in both themes, at desktop and mobile widths.
 
 **Acceptance:** Direct navigation and refresh show the correct active route without changing shell behavior elsewhere.
 
@@ -450,11 +453,11 @@ Reference files: docs/ui-images/resume-builder/header-light-dark.png, docs/ui-im
 
 **Files:** src/components/resume-generator.tsx, shared breadcrumb only if current route text is wrong, src/app/studio.css, and the existing builder E2E test.
 
-- [ ] Preserve the breadcrumb Workspace / Resume builder and the current manual-generation step indicator 02 / 04 when that step is active.
-- [ ] Use the product title Build your resume. and the truthful supporting instruction shown in the crop.
-- [ ] Keep page heading, step label, and subtitle in a clear hierarchy; do not copy the poster title or slide number.
-- [ ] Keep the Local mode/theme controls owned by WorkspaceShell; do not duplicate them inside the page.
-- [ ] Test one h1, route/breadcrumb state, progress label, and wrapping on desktop and narrow viewport.
+- [x] Preserve the breadcrumb Workspace / Resume builder and the current manual-generation step indicator 02 / 04 when that step is active.
+- [x] Use the product title Build your resume. and the truthful supporting instruction shown in the crop.
+- [x] Keep page heading, step label, and subtitle in a clear hierarchy; do not copy the poster title or slide number.
+- [x] Keep the Local mode/theme controls owned by WorkspaceShell; do not duplicate them inside the page.
+- [x] Test one h1, route/breadcrumb state, progress label, and wrapping on desktop and narrow viewport.
 
 **Acceptance:** Users can identify their location, active step, and next expectation without confusing the step number with a completion claim.
 
@@ -474,11 +477,11 @@ Reference files: docs/ui-images/resume-builder/ui-kit-job-context-card.png, docs
 
 **Files:** src/components/resume-generator.tsx and focused tests/e2e/resume-journey.spec.ts assertions.
 
-- [ ] Show the actual role/company and description length only when present in the restored job-description draft.
-- [ ] Use the current job description as context for selection/tailoring; never copy ML engineer, Google, or sample character count as a default.
-- [ ] Represent missing context with a clear route/action to provide it, not with invented values.
-- [ ] Keep the description summary compact, readable, and safely wrapped; avoid exposing the whole long description in a cramped chip.
-- [ ] Test restored, empty, long-title, long-company, and changed-context states with synthetic data.
+- [x] Show the actual role/company and description length only when present in the restored job-description draft.
+- [x] Use the current job description as context for selection/tailoring; never copy ML engineer, Google, or sample character count as a default.
+- [x] Represent missing context with a clear route/action to provide it, not with invented values.
+- [x] Keep the description summary compact, readable, and safely wrapped; avoid exposing the whole long description in a cramped chip.
+- [x] Test restored, empty, long-title, long-company, and changed-context states with synthetic data.
 
 **Acceptance:** Context is accurate, useful, and traceable to the real draft; empty values remain clearly empty.
 
@@ -498,11 +501,11 @@ Reference files: docs/ui-images/resume-builder/header-component-states.png, docs
 
 **Files:** src/components/resume-generator.tsx, src/app/generate/page.tsx only if route semantics are broken, and existing source-navigation tests.
 
-- [ ] Preserve the current personal/demo source routes and selection; do not merge two libraries or change data loading.
-- [ ] Use a clear two-option segmented link/control with visible selected state, focus ring, and accessible current value.
-- [ ] Label source data honestly and preserve read-only/disabled behavior wherever it exists.
-- [ ] Do not implement the toggle as a cosmetic preference if selecting it changes the actual loaded source.
-- [ ] Test direct load, refresh, back/forward, keyboard activation, and source-bound selection behavior.
+- [x] Preserve the current personal/demo source routes and selection; do not merge two libraries or change data loading.
+- [x] Use a clear two-option segmented link/control with visible selected state, focus ring, and accessible current value.
+- [x] Label source data honestly and preserve read-only/disabled behavior wherever it exists.
+- [x] Do not implement the toggle as a cosmetic preference if selecting it changes the actual loaded source.
+- [x] Test direct load, refresh, back/forward, keyboard activation, and source-bound selection behavior.
 
 **Acceptance:** Source choice selects the actual current data source and remains understandable in both themes.
 
@@ -522,11 +525,11 @@ Reference files: docs/ui-images/resume-builder/tailoring-light-dark.png, docs/ui
 
 **Files:** Existing handlers in src/components/resume-generator.tsx, action styles in src/app/studio.css, and focused tests/e2e/achievement-selection.spec.ts or a named AI-actions spec.
 
-- [ ] Preserve distinct existing operations and handlers for suggestion, guided tailoring, and automatic tailoring.
-- [ ] Show a pending/disabled state only while that operation is actually running; preserve cancellation/error feedback if supported.
-- [ ] Preserve the explicit user-consent prompt before any available local or original-wording fallback.
-- [ ] Do not claim that suggestions have been generated before a successful response; keep resulting selections tied to real evidence IDs.
-- [ ] Test each action with mocked success, failure, and fallback-consent paths; do not call a live provider.
+- [x] Preserve distinct existing operations and handlers for suggestion, guided tailoring, and automatic tailoring.
+- [x] Show a pending/disabled state only while that operation is actually running; preserve cancellation/error feedback if supported.
+- [x] Preserve the explicit user-consent prompt before any available local or original-wording fallback.
+- [x] Do not claim that suggestions have been generated before a successful response; keep resulting selections tied to real evidence IDs.
+- [x] Test each action with mocked success, failure, and fallback-consent paths; do not call a live provider.
 
 **Acceptance:** AI controls are visually distinct, truthful, and retain existing consent and result semantics.
 
@@ -546,11 +549,11 @@ Reference files: docs/ui-images/resume-builder/selection-workspace-light-dark.pn
 
 **Files:** src/components/resume-generator.tsx and focused selection component tests.
 
-- [ ] Display selected and available totals from current groups and the selected ID set.
-- [ ] Keep counts synchronized after individual selection, clear/select-all, source changes, search, and filtering.
-- [ ] Do not count disabled evidence if the current generation flow excludes it.
-- [ ] Give the count an accessible name and keep it readable without color-only status.
-- [ ] Test zero, partial, all, filtered, and source-changed selection states.
+- [x] Display selected and available totals from current groups and the selected ID set.
+- [x] Keep counts synchronized after individual selection, clear/select-all, source changes, search, and filtering.
+- [x] Do not count disabled evidence if the current generation flow excludes it.
+- [x] Give the count an accessible name and keep it readable without color-only status.
+- [x] Test zero, partial, all, filtered, and source-changed selection states.
 
 **Acceptance:** Visible counts always match the actual evidence eligible for generation.
 
@@ -570,11 +573,11 @@ Reference files: docs/ui-images/resume-builder/selection-anatomy.png, docs/ui-im
 
 **Files:** Selection controls in src/components/resume-generator.tsx, a pure helper only if justified, and focused tests/e2e/achievement-selection.spec.ts coverage.
 
-- [ ] Keep search tied to existing achievement text/group fields and the existing experience filter.
-- [ ] Preserve selected IDs when the visible search/filter changes; filtering must not silently deselect evidence.
-- [ ] Provide a clear/reset affordance only while a value/filter is active and keep the result count truthful.
-- [ ] Show an understandable no-matches state distinct from no available evidence.
-- [ ] Test combined search/filter, keyboard use, clear/reset, long input, zero results, and preservation of hidden selection.
+- [x] Keep search tied to existing achievement text/group fields and the existing experience filter.
+- [x] Preserve selected IDs when the visible search/filter changes; filtering must not silently deselect evidence.
+- [x] Provide a clear/reset affordance only while a value/filter is active and keep the result count truthful.
+- [x] Show an understandable no-matches state distinct from no available evidence.
+- [x] Test combined search/filter, keyboard use, clear/reset, long input, zero results, and preservation of hidden selection.
 
 **Acceptance:** Users can locate evidence without changing the selected set except through explicit selection controls.
 
@@ -594,11 +597,11 @@ Reference files: docs/ui-images/resume-builder/selection-workspace-light-dark.pn
 
 **Files:** getPointGroups in src/components/resume-generator.tsx or the current list renderer; tests/e2e/achievement-selection.spec.ts.
 
-- [ ] Preserve job/project identity and current group order; distinguish group type with label/icon and text.
-- [ ] Show role/project title and available company/context as separate, correctly labeled text.
-- [ ] Preserve source IDs and existing selection availability; do not create sample jobs or accomplishments.
-- [ ] Handle empty groups by omitting them only when their current behavior does so; do not hide eligible points.
-- [ ] Test mixed groups, no enabled points, duplicate-looking titles, and long titles/company names.
+- [x] Preserve job/project identity and current group order; distinguish group type with label/icon and text.
+- [x] Show role/project title and available company/context as separate, correctly labeled text.
+- [x] Preserve source IDs and existing selection availability; do not create sample jobs or accomplishments.
+- [x] Handle empty groups by omitting them only when their current behavior does so; do not hide eligible points.
+- [x] Test mixed groups, no enabled points, duplicate-looking titles, and long titles/company names.
 
 **Acceptance:** Every selectable item remains attached to its real experience context and no evidence is duplicated or dropped.
 
@@ -618,11 +621,11 @@ Reference files: docs/ui-images/resume-builder/ui-kit-selection-controls.png, do
 
 **Files:** Existing point-row component in src/components/resume-generator.tsx, src/app/studio.css, and a focused rendered-state test.
 
-- [ ] Use a labeled native checkbox or equivalent accessible checkbox for each eligible achievement.
-- [ ] Keep the selected marker, text, and hit target aligned; the row itself may activate selection only if it does not conflict with links/buttons.
-- [ ] Support unchecked, checked, hover, keyboard focus, and genuinely disabled states shown by current data.
-- [ ] Preserve selections when editing search/filter and expose checked state to assistive technology.
-- [ ] Test mouse, Space/keyboard toggle, focus, disabled behavior, long text, and selected count synchronization.
+- [x] Use a labeled native checkbox or equivalent accessible checkbox for each eligible achievement.
+- [x] Keep the selected marker, text, and hit target aligned; the row itself may activate selection only if it does not conflict with links/buttons.
+- [x] Support unchecked, checked, hover, keyboard focus, and genuinely disabled states shown by current data.
+- [x] Preserve selections when editing search/filter and expose checked state to assistive technology.
+- [x] Test mouse, Space/keyboard toggle, focus, disabled behavior, long text, and selected count synchronization.
 
 **Acceptance:** Every eligible evidence row can be selected and deselected by pointer and keyboard with a truthful state.
 
@@ -642,11 +645,11 @@ Reference files: docs/ui-images/resume-builder/selection-interaction-states.png,
 
 **Files:** Existing selection handlers in src/components/resume-generator.tsx and a focused selection interaction test.
 
-- [ ] Keep Select all and Clear wired to current state handlers; define whether Select all targets filtered or all eligible points and make the label/behavior consistent.
-- [ ] Preserve existing selections outside the visible filter if the product contract is global; do not surprise users by clearing hidden selections.
-- [ ] Disable or hide an action only when it would do nothing; ensure the disabled visual is honest.
-- [ ] Keep selected count and primary generation action synchronized.
-- [ ] Test filtered list, partially selected, all selected, empty list, keyboard activation, and repeated clicks.
+- [x] Keep Select all and Clear wired to current state handlers; define whether Select all targets filtered or all eligible points and make the label/behavior consistent.
+- [x] Preserve existing selections outside the visible filter if the product contract is global; do not surprise users by clearing hidden selections.
+- [x] Disable or hide an action only when it would do nothing; ensure the disabled visual is honest.
+- [x] Keep selected count and primary generation action synchronized.
+- [x] Test filtered list, partially selected, all selected, empty list, keyboard activation, and repeated clicks.
 
 **Acceptance:** Bulk selection is predictable, reversible through the provided controls, and does not discard hidden selections unexpectedly.
 
@@ -666,11 +669,11 @@ Reference files: docs/ui-images/resume-builder/tailoring-match-logic.png, docs/u
 
 **Files:** src/components/studio-skills.tsx, src/lib/generation/skill-layout.ts only if a visual-only bug is found, and tests/unit/generation/skill-layout.test.ts plus focused E2E coverage.
 
-- [ ] Preserve the current measured two-line LaTeX skill capacity and explanatory uncertainty when measurements are unavailable.
-- [ ] Keep skill search and All/Included/Available/Recommended/Cannot fit filters truthful and composable.
-- [ ] Distinguish selected, recommended, available, and cannot-fit states with text/state semantics, not color alone.
-- [ ] Do not add skills to the generated resume automatically or exceed measured capacity.
-- [ ] Test search, filters, selection, capacity boundaries, unavailable measurements, and long skill labels.
+- [x] Preserve the current measured two-line LaTeX skill capacity and explanatory uncertainty when measurements are unavailable.
+- [x] Keep skill search and All/Included/Available/Recommended/Cannot fit filters truthful and composable.
+- [x] Distinguish selected, recommended, available, and cannot-fit states with text/state semantics, not color alone.
+- [x] Do not add skills to the generated resume automatically or exceed measured capacity.
+- [x] Test search, filters, selection, capacity boundaries, unavailable measurements, and long skill labels.
 
 **Acceptance:** Skill selection reflects current data and measured fit without changing the resume-generation contract.
 
@@ -690,11 +693,11 @@ Reference files: docs/ui-images/resume-builder/tailoring-light-dark.png, docs/ui
 
 **Files:** Existing include controls in src/components/resume-generator.tsx and src/components/resume-studio.tsx; relevant journey/studio tests.
 
-- [ ] Preserve current Projects and credentials inclusion toggles and their actual effect on generated output.
-- [ ] Keep checked state and labels accessible and maintain current defaults; do not silently opt in/out.
-- [ ] Show a disabled state only when the related section has no data or the current workflow cannot include it.
-- [ ] Preserve selected state across supported review/apply transitions and report validation accurately.
-- [ ] Test both toggles on/off, missing data, save/apply, and generated document output.
+- [x] Preserve current Projects and credentials inclusion toggles and their actual effect on generated output.
+- [x] Keep checked state and labels accessible and maintain current defaults; do not silently opt in/out.
+- [x] Show a disabled state only when the related section has no data or the current workflow cannot include it.
+- [x] Preserve selected state across supported review/apply transitions and report validation accurately.
+- [x] Test both toggles on/off, missing data, save/apply, and generated document output.
 
 **Acceptance:** Inclusion controls correspond to real persisted/draft output and clearly communicate their state.
 
@@ -714,11 +717,11 @@ Reference files: docs/ui-images/resume-builder/review-light-dark.png, docs/ui-im
 
 **Files:** src/components/resume-studio.tsx, src/lib/generation/review-draft.ts only if behavior already requires a tested pure helper, and tests/e2e/resume-studio.spec.ts.
 
-- [ ] Show the actual number of included generated bullets and the supported review/apply action.
-- [ ] Preserve current job-analysis details and generated-bullet editing/override behavior.
-- [ ] Keep Include Projects section and Include credentials tied to current draft state.
-- [ ] Never apply a visual sample bullet or claim AI generated content when no response exists.
-- [ ] Test zero, partial, and full included count, edits, review action, failure, and successful apply.
+- [x] Show the actual number of included generated bullets and the supported review/apply action.
+- [x] Preserve current job-analysis details and generated-bullet editing/override behavior.
+- [x] Keep Include Projects section and Include credentials tied to current draft state.
+- [x] Never apply a visual sample bullet or claim AI generated content when no response exists.
+- [x] Test zero, partial, and full included count, edits, review action, failure, and successful apply.
 
 **Acceptance:** The review area shows the real generated draft and count and preserves existing draft/apply semantics.
 
@@ -738,11 +741,11 @@ Reference files: docs/ui-images/resume-builder/review-light-dark.png, docs/ui-im
 
 **Files:** Current analysis presentation in src/components/resume-generator.tsx or src/components/resume-studio.tsx; tests/unit/ai/requirement-coverage.test.ts and focused UI tests.
 
-- [ ] Label job requirements, matched/partial/missing categories only from the existing analysis result.
-- [ ] Keep source job context visible enough to explain what the analysis compares.
-- [ ] Do not call coverage an ATS score, guarantee interviews, or invent percentages from list length.
-- [ ] Distinguish absent analysis, loading, ready, and error states with honest messages and retry only if an existing handler supports it.
-- [ ] Test representative success, partial data, empty analysis, stale context, and failure using fixtures.
+- [x] Label job requirements, matched/partial/missing categories only from the existing analysis result.
+- [x] Keep source job context visible enough to explain what the analysis compares.
+- [x] Do not call coverage an ATS score, guarantee interviews, or invent percentages from list length.
+- [x] Distinguish absent analysis, loading, ready, and error states with honest messages and retry only if an existing handler supports it.
+- [x] Test representative success, partial data, empty analysis, stale context, and failure using fixtures.
 
 **Acceptance:** Every displayed insight traces to the current job analysis and has an explicit, truthful state.
 
@@ -762,11 +765,11 @@ Reference files: docs/ui-images/resume-builder/review-light-dark.png, docs/ui-im
 
 **Files:** src/components/resume-studio.tsx, src/components/studio-skills.tsx if it owns these controls, and existing review/override tests.
 
-- [ ] Preserve explicit include state for skills, projects, credentials, and any supported sections; do not infer selections from sample imagery.
-- [ ] Keep state names and label associations accessible, including mixed/disabled state only when current data supports them.
-- [ ] Avoid presenting an exhaustive fake skills matrix; show only real skills and meaningful categories.
-- [ ] Preserve keyboard selection and draft persistence; do not silently change inclusion on tab switches or AI responses.
-- [ ] Test toggle changes, included count, draft restore, validation, and generated output.
+- [x] Preserve explicit include state for skills, projects, credentials, and any supported sections; do not infer selections from sample imagery.
+- [x] Keep state names and label associations accessible, including mixed/disabled state only when current data supports them.
+- [x] Avoid presenting an exhaustive fake skills matrix; show only real skills and meaningful categories.
+- [x] Preserve keyboard selection and draft persistence; do not silently change inclusion on tab switches or AI responses.
+- [x] Test toggle changes, included count, draft restore, validation, and generated output.
 
 **Acceptance:** Review controls map one-to-one to real draft values and are usable by keyboard and screen readers.
 
@@ -786,11 +789,11 @@ Reference files: docs/ui-images/resume-builder/preview-light-dark.png, docs/ui-i
 
 **Files:** Preview/viewer component in src/components/resume-studio.tsx or its current child, src/app/studio.css, and tests/e2e/resume-studio.spec.ts.
 
-- [ ] Show the actual generated LaTeX or compiled PDF; preserve current mode selection and document state.
-- [ ] Keep the viewer readable, scrollable, and bounded within its pane; do not embed a static board resume or sample PDF.
-- [ ] Preserve page count and generation metadata only when the real compile response provides them.
-- [ ] Handle empty, compiling, ready, and error states without replacing real output with misleading placeholder content.
-- [ ] Test both formats, long documents, viewport resize, theme, and successful/failed compile.
+- [x] Show the actual generated LaTeX or compiled PDF; preserve current mode selection and document state.
+- [x] Keep the viewer readable, scrollable, and bounded within its pane; do not embed a static board resume or sample PDF.
+- [x] Preserve page count and generation metadata only when the real compile response provides them.
+- [x] Handle empty, compiling, ready, and error states without replacing real output with misleading placeholder content.
+- [x] Test both formats, long documents, viewport resize, theme, and successful/failed compile.
 
 **Acceptance:** The preview reflects the current generated output and remains usable without hiding its source or state.
 
@@ -810,11 +813,11 @@ Reference files: docs/ui-images/resume-builder/preview-anatomy.png, docs/ui-imag
 
 **Files:** Existing preview toolbar implementation and src/app/studio.css; add a focused viewer interaction test if a state changes.
 
-- [ ] Keep LaTeX/PDF tabs linked to their real output and expose the selected format accessibly.
-- [ ] Preserve supported zoom, page navigation, full-screen, download, print/rotate, or toolbar actions only where the current viewer implements them.
-- [ ] Give icon-only controls accessible names and tooltips; do not create inert toolbar icons from the illustrated PDF viewer.
-- [ ] Keep zoom within supported bounds and preserve current page/format across relevant interactions.
-- [ ] Test keyboard use, focus visibility, zoom boundaries, format switch, and full-screen exit if supported.
+- [x] Keep LaTeX/PDF tabs linked to their real output and expose the selected format accessibly.
+- [x] Preserve supported zoom, page navigation, full-screen, download, print/rotate, or toolbar actions only where the current viewer implements them.
+- [x] Give icon-only controls accessible names and tooltips; do not create inert toolbar icons from the illustrated PDF viewer.
+- [x] Keep zoom within supported bounds and preserve current page/format across relevant interactions.
+- [x] Test keyboard use, focus visibility, zoom boundaries, format switch, and full-screen exit if supported.
 
 **Acceptance:** Every visible viewer control has a working action or is omitted; no toolbar control merely imitates the board.
 
@@ -834,11 +837,11 @@ Reference files: docs/ui-images/resume-builder/preview-interaction-states.png, d
 
 **Files:** Existing status rendering in src/components/resume-generator.tsx and src/components/resume-studio.tsx; tests/e2e/resume-studio.spec.ts.
 
-- [ ] Distinguish no preview, compiling, PDF ready, LaTeX ready, and failure using existing state/response data.
-- [ ] Preserve concise, actionable diagnostics from the current compiler; do not suppress or fabricate a ready state.
-- [ ] Keep generation source/provenance language accurate and do not claim “AI-assisted” if output did not use AI.
-- [ ] Announce asynchronous status changes accessibly without moving focus or repeatedly interrupting users.
-- [ ] Test empty, loading, ready, validation error, compile error, and retry only if the current route supports retry.
+- [x] Distinguish no preview, compiling, PDF ready, LaTeX ready, and failure using existing state/response data.
+- [x] Preserve concise, actionable diagnostics from the current compiler; do not suppress or fabricate a ready state.
+- [x] Keep generation source/provenance language accurate and do not claim “AI-assisted” if output did not use AI.
+- [x] Announce asynchronous status changes accessibly without moving focus or repeatedly interrupting users.
+- [x] Test empty, loading, ready, validation error, compile error, and retry only if the current route supports retry.
 
 **Acceptance:** Status is accurate, visible in both themes, and useful to screen-reader users.
 
@@ -858,11 +861,11 @@ Reference files: docs/ui-images/resume-builder/ui-kit-achievement-item-card.png,
 
 **Files:** Point row/group renderer in src/components/resume-generator.tsx and focused achievement-selection E2E coverage.
 
-- [ ] Preserve the real achievement text and experience title/company context when shown.
-- [ ] Keep the checkbox and text relationship clear; preserve selected IDs through rendering and reordering.
-- [ ] Do not inject sample metrics, company names, bullet text, dates, or tags from the board into production data.
-- [ ] Wrap long text and keep important content inspectable; only truncate when there is a working disclosure.
-- [ ] Test long/short bullets, missing optional metadata, duplicate display text with distinct IDs, and disabled points.
+- [x] Preserve the real achievement text and experience title/company context when shown.
+- [x] Keep the checkbox and text relationship clear; preserve selected IDs through rendering and reordering.
+- [x] Do not inject sample metrics, company names, bullet text, dates, or tags from the board into production data.
+- [x] Wrap long text and keep important content inspectable; only truncate when there is a working disclosure.
+- [x] Test long/short bullets, missing optional metadata, duplicate display text with distinct IDs, and disabled points.
 
 **Acceptance:** The rendered list preserves every eligible real point and communicates enough context for an informed selection.
 
@@ -882,11 +885,11 @@ Reference files: docs/ui-images/resume-builder/ui-kit-preview-controls.png, docs
 
 **Files:** Existing handlers in src/components/resume-generator.tsx and src/lib/generation/export-package.ts integration; tests/e2e/resume-studio.spec.ts and tests/unit/generation/export-package.test.ts.
 
-- [ ] Keep Download PDF wired to the latest valid PDF and Recompile wired to the current generated LaTeX.
-- [ ] Preserve export filename, generation metadata, and existing validation gates.
-- [ ] Show pending/disabled/error state based on the operation; do not allow duplicate submission while busy.
-- [ ] Never label an unavailable or stale PDF as ready; explain missing compile output and required next action.
-- [ ] Test successful download, missing PDF, compile failure, disabled state, and export package content using fixtures.
+- [x] Keep Download PDF wired to the latest valid PDF and Recompile wired to the current generated LaTeX.
+- [x] Preserve export filename, generation metadata, and existing validation gates.
+- [x] Show pending/disabled/error state based on the operation; do not allow duplicate submission while busy.
+- [x] Never label an unavailable or stale PDF as ready; explain missing compile output and required next action.
+- [x] Test successful download, missing PDF, compile failure, disabled state, and export package content using fixtures.
 
 **Acceptance:** Download/export actions deliver the current real artifact and accurately communicate readiness.
 
@@ -906,11 +909,11 @@ Reference files: docs/ui-images/resume-builder/workflow-before-after.png, docs/u
 
 **Files:** src/components/resume-generator.tsx, src/components/resume-studio.tsx, and focused journey test assertions only where a real navigation/context defect exists.
 
-- [ ] Make current job context, achievement choice, AI assistance, review, preview, and export discoverable in the flow already supported by the app.
-- [ ] Preserve existing navigation, draft, back/forward, and apply behavior; do not add a new backend workflow or duplicate step state.
-- [ ] Keep two-pane working/preview relationship clear; avoid presenting the slide’s diagram as a new app page.
-- [ ] Use contextual labels to explain the next action without claiming completion before the underlying work succeeds.
-- [ ] Test transitions with interrupted, empty, failed, and successful generation/compile fixtures.
+- [x] Make current job context, achievement choice, AI assistance, review, preview, and export discoverable in the flow already supported by the app.
+- [x] Preserve existing navigation, draft, back/forward, and apply behavior; do not add a new backend workflow or duplicate step state.
+- [x] Keep two-pane working/preview relationship clear; avoid presenting the slide’s diagram as a new app page.
+- [x] Use contextual labels to explain the next action without claiming completion before the underlying work succeeds.
+- [x] Test transitions with interrupted, empty, failed, and successful generation/compile fixtures.
 
 **Acceptance:** The existing workflow is easier to understand without adding dead steps, fake progress, or new data behavior.
 
@@ -932,11 +935,11 @@ Reference files: docs/ui-images/resume-builder/builder-overview-light-dark.png, 
 
 **Files:** Relevant builder components, src/app/studio.css, and focused responsive/keyboard tests owned by the changed component.
 
-- [ ] Check 320, 390, 768, 1024, and 1440 CSS pixel widths in both themes; stack panes and controls without hiding actions.
-- [ ] Verify no page/nested horizontal overflow, clipped focus ring, clipped tooltip, inaccessible scroll area, or dialog outside the viewport.
-- [ ] Preserve headings, labels, native semantics, visible focus, keyboard operation, announcements, and reduced-motion behavior.
-- [ ] Keep empty, loading, error, demo/read-only, and success states distinct and text-backed.
-- [ ] Test long job titles, skills, achievements, diagnostics, and filenames at small widths; never shrink type to fit.
+- [x] Check 320, 390, 768, 1024, and 1440 CSS pixel widths in both themes; stack panes and controls without hiding actions.
+- [x] Verify no page/nested horizontal overflow, clipped focus ring, clipped tooltip, inaccessible scroll area, or dialog outside the viewport.
+- [x] Preserve headings, labels, native semantics, visible focus, keyboard operation, announcements, and reduced-motion behavior.
+- [x] Keep empty, loading, error, demo/read-only, and success states distinct and text-backed.
+- [x] Test long job titles, skills, achievements, diagnostics, and filenames at small widths; never shrink type to fit.
 
 **Acceptance:** All current actions and content remain usable at supported sizes and with keyboard/screen-reader navigation.
 
@@ -960,12 +963,12 @@ Reference files: docs/ui-images/resume-builder/builder-overview-light-dark.png, 
 
 **Files:** Preserve and extend tests/e2e/resume-studio.spec.ts, tests/e2e/resume-journey.spec.ts, tests/e2e/achievement-selection.spec.ts, and the relevant generation/LaTeX unit suites. Add clearly named component tests for new interactive behavior; do not rename the entire suite.
 
-- [ ] Every new or materially changed interactive component has its own focused test file or focused owner-suite coverage; every new pure helper has unit tests.
-- [ ] Preserve source, context draft, search/filter, evidence IDs, AI consent/fallback, inclusion toggles, review/apply, skill capacity, history, LaTeX/PDF compile, export, and failure regressions.
-- [ ] Compare app-only screenshots in light/dark at 1440x900 and 390x844; also check 1024x768 and 320px for wrapping and overflow.
-- [ ] Exercise actual pointer and keyboard controls, hover/focus/pressed/loading/disabled states, modal flows, empty/error states, source switching, zoom, and download where supported.
-- [ ] Run npm run lint, npm run typecheck, npm test, relevant npm run test:e2e, and git diff --check; report anything blocked by environment.
-- [ ] Confirm the diff contains only the assigned task, its tests, and relevant reference crops; exclude personal data, secrets, logs, generated output, and unrelated working-tree changes.
+- [x] Every new or materially changed interactive component has its own focused test file or focused owner-suite coverage; every new pure helper has unit tests.
+- [x] Preserve source, context draft, search/filter, evidence IDs, AI consent/fallback, inclusion toggles, review/apply, skill capacity, history, LaTeX/PDF compile, export, and failure regressions.
+- [x] Compare app-only screenshots in light/dark at 1440x900 and 390x844; also check 1024x768 and 320px for wrapping and overflow.
+- [x] Exercise actual pointer and keyboard controls, hover/focus/pressed/loading/disabled states, modal flows, empty/error states, source switching, zoom, and download where supported.
+- [x] Run npm run lint, npm run typecheck, npm test, relevant npm run test:e2e, and git diff --check; report anything blocked by environment.
+- [x] Confirm the diff contains only the assigned task, its tests, and relevant reference crops; exclude personal data, secrets, logs, generated output, and unrelated working-tree changes.
 
 **Acceptance:** Focused and existing tests pass, both themes and responsive states are visually reviewed against the exact crops, and all actions remain truthful and functional.
 

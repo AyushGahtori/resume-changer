@@ -14,7 +14,13 @@ export default async function GeneratePage({
 
   try {
     const library = await loadResumeLibrary({ source });
-    return <ResumeGenerator library={library} source={source} />;
+    /*
+     * The builder's selections, analysis, tailoring, and output belong to the
+     * library that produced them. A source-link navigation can preserve the
+     * route segment's React tree, so key the workflow by source to discard
+     * state that would otherwise be carried into a different library.
+     */
+    return <ResumeGenerator key={source} library={library} source={source} />;
   } catch (error) {
     const message =
       error instanceof DataLoadError

@@ -1,5 +1,8 @@
 # Achievement Library UI Redesign Task Plan
 
+> **Implementation status (2026-10-23):** Tasks 01–29 are complete in the integrated application.
+> The checklist is audited against the merged implementation and final acceptance evidence in [the Achievement Library review](ui-review/library-task-29/REVIEW.md).
+
 ## Purpose And Scope
 
 This document is the frontend companion to [`project-plan.md`](project-plan.md) and the Achievement Library counterpart to [`UI_Tasks_home.md`](UI_Tasks_home.md). It turns the eight supplied Achievement Library boards into an ordered, component-by-component implementation plan for the existing library at `/library`. The target is the real product screen inside the boards: the persistent application shell, library heading and controls, profile summary, searchable/filterable content, experience groups, achievement cards, skills, and credentials.
@@ -275,11 +278,11 @@ Reference files: `docs/ui-images/achievement-library/achievement-overview-light-
 
 **Files:** Inspect `src/app/library/page.tsx`, `src/components/achievement-library.tsx`, `src/components/workspace-shell.tsx`, `src/app/globals.css`, `src/lib/data/achievement-search.ts`, `src/lib/data/loaders.ts`, and existing library E2E/unit tests. Add no visual component in this inventory-only task.
 
-- [ ] Record personal/demo route behavior, loader errors and alternate-source navigation, current visible sections, search fields, filter semantics, enabled/edit behavior, editor flows, and persistence/API calls before styling.
-- [ ] Record current light/dark and viewport screenshots at 1440x900, 1024x768, 768x1024, 390x844, and 320x740 using synthetic/demo data only.
-- [ ] Map each visible board component to current source files and mark whether the action already exists, can be derived safely from current data, or requires product/backend work.
-- [ ] Note current data that the board does not show, including optional profile data, education, evidence, provenance, and empty values; no existing data may be silently removed during visual grouping.
-- [ ] Run the existing focused library tests before any redesign and preserve their assertions as regression coverage.
+- [x] Record personal/demo route behavior, loader errors and alternate-source navigation, current visible sections, search fields, filter semantics, enabled/edit behavior, editor flows, and persistence/API calls before styling.
+- [x] Record current light/dark and viewport screenshots at 1440x900, 1024x768, 768x1024, 390x844, and 320x740 using synthetic/demo data only.
+- [x] Map each visible board component to current source files and mark whether the action already exists, can be derived safely from current data, or requires product/backend work.
+- [x] Note current data that the board does not show, including optional profile data, education, evidence, provenance, and empty values; no existing data may be silently removed during visual grouping.
+- [x] Run the existing focused library tests before any redesign and preserve their assertions as regression coverage.
 
 **Acceptance:** A written inventory identifies behavior to preserve, visual conflicts, unsupported controls, and matching before screenshots. No production data, files, or backend behavior are changed.
 
@@ -297,11 +300,11 @@ Reference files: `docs/ui-images/achievement-library/library-color-palette.png`,
 
 **Files:** `src/app/globals.css`; update `docs/UI_Tasks_home.md` token references only as part of an explicitly coordinated shared-token reconciliation; add `tests/unit/ui/design-tokens.test.ts` only if the project uses a TypeScript token contract rather than CSS variables.
 
-- [ ] Define or reuse shared tokens for canvas, sidebar, surface, alternate surface, primary/secondary/muted text, border, orange, orange-soft, violet, violet-soft, success, warning, error, info, and focus.
-- [ ] Use the Achievement Library board's printed orange `#FF7A45`, orange light `#FFE9E0`, violet `#7C3AED`, violet light `#EFEBFF`, primary text `#0F172A`, secondary `#334155`, muted `#64748B`, gray border `#CBD5E1`, and cool surface `#F8FAFC` as the visual targets.
-- [ ] Reconcile these values with the already-established app-wide tokens (`#F97316`, `#FFF7ED`, `#EDE9FE`, `#E2E8F0`) in one shared place; never add page-specific token overrides just to hide the discrepancy.
-- [ ] Keep category colors tied to labels: job orange, project violet, points amber, skills green, credentials indigo. These are identifiers, not health/status scores.
-- [ ] Choose dark equivalents from the printed sidebar examples and verify text/control contrast; mark unprinted values as implementation estimates in review notes.
+- [x] Define or reuse shared tokens for canvas, sidebar, surface, alternate surface, primary/secondary/muted text, border, orange, orange-soft, violet, violet-soft, success, warning, error, info, and focus.
+- [x] Use the Achievement Library board's printed orange `#FF7A45`, orange light `#FFE9E0`, violet `#7C3AED`, violet light `#EFEBFF`, primary text `#0F172A`, secondary `#334155`, muted `#64748B`, gray border `#CBD5E1`, and cool surface `#F8FAFC` as the visual targets.
+- [x] Reconcile these values with the already-established app-wide tokens (`#F97316`, `#FFF7ED`, `#EDE9FE`, `#E2E8F0`) in one shared place; never add page-specific token overrides just to hide the discrepancy.
+- [x] Keep category colors tied to labels: job orange, project violet, points amber, skills green, credentials indigo. These are identifiers, not health/status scores.
+- [x] Choose dark equivalents from the printed sidebar examples and verify text/control contrast; mark unprinted values as implementation estimates in review notes.
 
 **Acceptance:** Library and home consume the same named token source, both themes remain readable, and no duplicate `.library-page` palette exists.
 
@@ -319,12 +322,12 @@ Reference files: `docs/ui-images/achievement-library/library-type-scale.png`, `d
 
 **Files:** `src/app/globals.css`; add a unit test only if a pure TypeScript typography helper is introduced; add visual computed-style checks to the focused library E2E suite.
 
-- [ ] Preserve the existing Georgia/Times title treatment and Arial/Helvetica UI, labels, controls, and metadata. Do not load fonts, import Inter/Playfair, or change global `font-family` declarations.
-- [ ] Define/reuse named sizes and line heights for page title, section heading, profile name, experience/card title, body, field label, metadata, helper, and micro-label.
-- [ ] Use the board hierarchy as a guide: product page title about 40/48 desktop and 32/40 mobile; section 24/32; profile name 28-32/36-40; achievement/experience heading 18-20/24; body 14/20; label/metadata 12/16; caption 11/14; prominent metric value 24-32/32.
-- [ ] Keep semibold weights for labels and headings where shown; use regular body text and tabular numerals for count/metric comparisons.
-- [ ] Keep letter spacing at `0`, avoid viewport-scaled font formulas, and allow controlled wrapping for long job titles, tags, source labels, and achievement content.
-- [ ] Check both themes for muted text that looks disabled when it is not disabled.
+- [x] Preserve the existing Georgia/Times title treatment and Arial/Helvetica UI, labels, controls, and metadata. Do not load fonts, import Inter/Playfair, or change global `font-family` declarations.
+- [x] Define/reuse named sizes and line heights for page title, section heading, profile name, experience/card title, body, field label, metadata, helper, and micro-label.
+- [x] Use the board hierarchy as a guide: product page title about 40/48 desktop and 32/40 mobile; section 24/32; profile name 28-32/36-40; achievement/experience heading 18-20/24; body 14/20; label/metadata 12/16; caption 11/14; prominent metric value 24-32/32.
+- [x] Keep semibold weights for labels and headings where shown; use regular body text and tabular numerals for count/metric comparisons.
+- [x] Keep letter spacing at `0`, avoid viewport-scaled font formulas, and allow controlled wrapping for long job titles, tags, source labels, and achievement content.
+- [x] Check both themes for muted text that looks disabled when it is not disabled.
 
 **Acceptance:** Page hierarchy matches the board while preserving project fonts; no heading, count, label, or long value clips at the supported widths.
 
@@ -346,12 +349,12 @@ Reference files: `docs/ui-images/achievement-library/library-spacing-gallery.png
 
 **Files:** `src/app/globals.css` and only the library component styles that need to consume shared variables.
 
-- [ ] Reuse the shared 4/8/12/16/24/32/48/64px rhythm. Use 24px desktop surface padding, 16px compact interior padding, and 12-16px gaps between related controls.
-- [ ] Keep input/button radii near 6px and library cards at 8px maximum; category chips and status pills may be fully rounded.
-- [ ] Use a crisp 1px border on surfaces and fields. Prefer no shadow for nested content, XS on controls if needed, and at most a very subtle Sm on a major light surface.
-- [ ] In dark mode, separate surfaces with border and tonal steps instead of light-theme shadows or glow.
-- [ ] Avoid card-inside-card nesting; metric tiles can be repeated items inside the summary surface but must not become individually floating cards with competing shadows.
-- [ ] Reduce page/card insets deliberately on tablet/mobile without changing typography or producing horizontal scrolling.
+- [x] Reuse the shared 4/8/12/16/24/32/48/64px rhythm. Use 24px desktop surface padding, 16px compact interior padding, and 12-16px gaps between related controls.
+- [x] Keep input/button radii near 6px and library cards at 8px maximum; category chips and status pills may be fully rounded.
+- [x] Use a crisp 1px border on surfaces and fields. Prefer no shadow for nested content, XS on controls if needed, and at most a very subtle Sm on a major light surface.
+- [x] In dark mode, separate surfaces with border and tonal steps instead of light-theme shadows or glow.
+- [x] Avoid card-inside-card nesting; metric tiles can be repeated items inside the summary surface but must not become individually floating cards with competing shadows.
+- [x] Reduce page/card insets deliberately on tablet/mobile without changing typography or producing horizontal scrolling.
 
 **Acceptance:** Surface rhythm, control geometry, and elevation are consistent across page sections and themes.
 
@@ -371,12 +374,12 @@ Reference files: `docs/ui-images/achievement-library/library-button-states.png`,
 
 **Files:** Existing library components; use installed `lucide-react` icons; shared button styles in `src/app/globals.css`; focused `tests/e2e/library-actions.spec.ts` if new action states are introduced.
 
-- [ ] Render `Add achievement` as the primary orange action with a leading plus icon, white/high-contrast text, and stable dimensions.
-- [ ] Render `Edit` as a compact tertiary action with a pencil icon if space allows; keep a readable text label where icon-only meaning would be unclear.
-- [ ] Give filter, expand/collapse, clear, and menu icon controls accessible names and tooltips for unfamiliar actions. Do not use letter abbreviations or emoji as icons.
-- [ ] Do not add heart/favorite/delete buttons without a defined data contract, API operation, confirmation path, and focused tests.
-- [ ] Keep click targets at least 44x44px when practical; maintain a stable 40-44px visual button height and 12px control gaps.
-- [ ] Cover hover, visible focus, pressed, disabled/read-only, and any actual pending state; avoid transitions that resize or shift adjacent controls.
+- [x] Render `Add achievement` as the primary orange action with a leading plus icon, white/high-contrast text, and stable dimensions.
+- [x] Render `Edit` as a compact tertiary action with a pencil icon if space allows; keep a readable text label where icon-only meaning would be unclear.
+- [x] Give filter, expand/collapse, clear, and menu icon controls accessible names and tooltips for unfamiliar actions. Do not use letter abbreviations or emoji as icons.
+- [x] Do not add heart/favorite/delete buttons without a defined data contract, API operation, confirmation path, and focused tests.
+- [x] Keep click targets at least 44x44px when practical; maintain a stable 40-44px visual button height and 12px control gaps.
+- [x] Cover hover, visible focus, pressed, disabled/read-only, and any actual pending state; avoid transitions that resize or shift adjacent controls.
 
 **Acceptance:** Every visible button performs its named action; icon-only actions are accessible and no reference-only action appears as a dead control.
 
@@ -417,11 +420,11 @@ Reference files: `docs/ui-images/achievement-library/sidebar-light-dark.png`, `d
 
 **Files:** `src/components/workspace-shell.tsx` only if route semantics or active treatment need correction; `src/app/globals.css`; `tests/e2e/library-shell.spec.ts` or the existing shell test.
 
-- [ ] Confirm `/library` is the active route and `Achievement library` exposes `aria-current="page"`.
-- [ ] Keep the existing icon-plus-label row and destination ordering; use the same 20px icon and 48px navigation hit row as other routes.
-- [ ] Apply the library active state with orange text/icon and soft orange surface in light mode, and the printed dark active surface/text treatment in dark mode, after shared token reconciliation.
-- [ ] Preserve collapsed-sidebar accessible names/tooltips and mobile drawer keyboard behavior; do not hide the library destination on narrow screens.
-- [ ] Test direct navigation, refresh, active state in both themes, keyboard focus, and collapsed/mobile access.
+- [x] Confirm `/library` is the active route and `Achievement library` exposes `aria-current="page"`.
+- [x] Keep the existing icon-plus-label row and destination ordering; use the same 20px icon and 48px navigation hit row as other routes.
+- [x] Apply the library active state with orange text/icon and soft orange surface in light mode, and the printed dark active surface/text treatment in dark mode, after shared token reconciliation.
+- [x] Preserve collapsed-sidebar accessible names/tooltips and mobile drawer keyboard behavior; do not hide the library destination on narrow screens.
+- [x] Test direct navigation, refresh, active state in both themes, keyboard focus, and collapsed/mobile access.
 
 **Acceptance:** Users can identify and keyboard-navigate to the active library route; no other route's active state changes.
 
@@ -441,12 +444,12 @@ Reference files: `docs/ui-images/achievement-library/library-header-light-dark.p
 
 **Files:** `src/components/achievement-library.tsx`, shared breadcrumb in `src/components/workspace-shell.tsx` only if current route text is wrong, `src/app/globals.css`, and `tests/e2e/library-header.spec.ts`.
 
-- [ ] Use the eyebrow `YOUR EXPERIENCE`, one page `h1` named `Achievement library`, and supporting line `Browse the resume information saved in this workspace.`
-- [ ] Preserve the shared breadcrumb `Workspace / Achievement library`; do not repeat the brand in the page header.
-- [ ] Place the heading left and keep source/action controls aligned to the right at desktop; wrap or stack without changing semantic order on narrow viewports.
-- [ ] Use sentence case for normal controls and preserve uppercase only for the eyebrow and compact labels shown uppercase in reference.
-- [ ] Do not copy poster headline `Achievement Library UI Kit`, slide numbers, callout writing, decorative artwork, or sample identity.
-- [ ] Test one `h1`, breadcrumb text/current route, heading wrapping, and visible controls at 1440px and 320px.
+- [x] Use the eyebrow `YOUR EXPERIENCE`, one page `h1` named `Achievement library`, and supporting line `Browse the resume information saved in this workspace.`
+- [x] Preserve the shared breadcrumb `Workspace / Achievement library`; do not repeat the brand in the page header.
+- [x] Place the heading left and keep source/action controls aligned to the right at desktop; wrap or stack without changing semantic order on narrow viewports.
+- [x] Use sentence case for normal controls and preserve uppercase only for the eyebrow and compact labels shown uppercase in reference.
+- [x] Do not copy poster headline `Achievement Library UI Kit`, slide numbers, callout writing, decorative artwork, or sample identity.
+- [x] Test one `h1`, breadcrumb text/current route, heading wrapping, and visible controls at 1440px and 320px.
 
 **Acceptance:** The page's purpose and location are obvious without creating a large marketing hero or obscuring the content below.
 
@@ -464,11 +467,11 @@ Reference files: `docs/ui-images/achievement-library/library-header-light-dark.p
 
 **Files:** `src/components/achievement-library.tsx`, `src/app/library/page.tsx` only if semantics need correction, shared styles, and `tests/e2e/library-source.spec.ts`.
 
-- [ ] Preserve links to `/library` and `/library?source=demo`, with `aria-current="page"` on the selected source.
-- [ ] Use a stable segmented-control appearance with a clear selected surface, border, and focus treatment; preserve link semantics because selecting a source navigates.
-- [ ] Keep the visible data provenance label in the summary (`My resume data` for personal, `Fictional demo data` for demo) and never blend records across sources.
-- [ ] Demo source stays read-only: hide or disable creation/edit actions consistently, and keep this distinction clear without relying only on color.
-- [ ] Verify source selection after direct URL load, refresh, back/forward navigation, and keyboard activation.
+- [x] Preserve links to `/library` and `/library?source=demo`, with `aria-current="page"` on the selected source.
+- [x] Use a stable segmented-control appearance with a clear selected surface, border, and focus treatment; preserve link semantics because selecting a source navigates.
+- [x] Keep the visible data provenance label in the summary (`My resume data` for personal, `Fictional demo data` for demo) and never blend records across sources.
+- [x] Demo source stays read-only: hide or disable creation/edit actions consistently, and keep this distinction clear without relying only on color.
+- [x] Verify source selection after direct URL load, refresh, back/forward navigation, and keyboard activation.
 
 **Acceptance:** Source navigation and read-only behavior match the current server-rendered route contract in both themes.
 
@@ -486,11 +489,11 @@ Reference files: `docs/ui-images/achievement-library/source-toggle-add-control-s
 
 **Files:** `src/components/achievement-library.tsx`, existing `achievement-point-editor.tsx` and `achievement-imagination.tsx` only for integration/accessibility, shared styles, and `tests/e2e/library-editing.spec.ts`.
 
-- [ ] Keep `Detailed entry` wired to the existing point editor and `Add achievement` wired to the existing Imagination Canvas; do not change AI prompts, save contracts, or acceptance semantics.
-- [ ] Use a clear button presentation for `Detailed entry`. Do not expose `role="switch"` unless it actually toggles persistent/in-place state; opening an editor is a button action.
-- [ ] Render `Add achievement` as the primary orange action with leading plus icon and the existing accessible name. Preserve current behavior when personal data is unavailable or read-only.
-- [ ] Keep both actions reachable at desktop/mobile and use a documented stack/wrap rule before controls become cramped.
-- [ ] Test both entry flows, cancel, successful save, demo visibility, focus, and duplicate invocation while saving.
+- [x] Keep `Detailed entry` wired to the existing point editor and `Add achievement` wired to the existing Imagination Canvas; do not change AI prompts, save contracts, or acceptance semantics.
+- [x] Use a clear button presentation for `Detailed entry`. Do not expose `role="switch"` unless it actually toggles persistent/in-place state; opening an editor is a button action.
+- [x] Render `Add achievement` as the primary orange action with leading plus icon and the existing accessible name. Preserve current behavior when personal data is unavailable or read-only.
+- [x] Keep both actions reachable at desktop/mobile and use a documented stack/wrap rule before controls become cramped.
+- [x] Test both entry flows, cancel, successful save, demo visibility, focus, and duplicate invocation while saving.
 
 **Acceptance:** Visual polish does not change the two distinct create workflows or create an inaccurate toggle state.
 
@@ -508,12 +511,12 @@ Reference files: `docs/ui-images/achievement-library/profile-summary-light-dark.
 
 **Files:** Extract `src/components/library/profile-summary.tsx` only if this creates a coherent component; integrate from `src/components/achievement-library.tsx`; style in shared CSS; add `tests/e2e/library-summary.spec.ts`.
 
-- [ ] Keep one summary surface with identity content and five metric items; do not create a second nested card around the identity or each individual metric.
-- [ ] Label the source accurately and show full name plus optional headline only when present.
-- [ ] Preserve Jobs, Projects, Points, Skills, and Credentials counts as data-derived values; counts must update only when their source data changes, not when search facets hide results.
-- [ ] Separate total library counts from the search workbench's visible-result count so users do not confuse them.
-- [ ] Use a responsive grid that preserves reading order and all labels at narrow widths.
-- [ ] Test personal/demo sources, missing optional headline, zero counts, large counts, and mobile wrapping with synthetic data.
+- [x] Keep one summary surface with identity content and five metric items; do not create a second nested card around the identity or each individual metric.
+- [x] Label the source accurately and show full name plus optional headline only when present.
+- [x] Preserve Jobs, Projects, Points, Skills, and Credentials counts as data-derived values; counts must update only when their source data changes, not when search facets hide results.
+- [x] Separate total library counts from the search workbench's visible-result count so users do not confuse them.
+- [x] Use a responsive grid that preserves reading order and all labels at narrow widths.
+- [x] Test personal/demo sources, missing optional headline, zero counts, large counts, and mobile wrapping with synthetic data.
 
 **Acceptance:** The summary provides an honest overview of the loaded library without hardcoded identity or count values.
 
@@ -531,11 +534,11 @@ Reference files: `docs/ui-images/achievement-library/profile-summary-anatomy.png
 
 **Files:** Profile summary component/page coordinator and `tests/e2e/library-summary.spec.ts`.
 
-- [ ] Display the current profile name and optional headline; omit absent values without placeholder identity or an empty row.
-- [ ] Use the source label `My resume data` or `Fictional demo data` as current code provides.
-- [ ] The board's `View details` action may be added only if an existing profile/settings route and meaningful destination are confirmed. Otherwise omit it; do not create a dead link or pretend the profile is editable from here.
-- [ ] If a supported destination exists, use a secondary button/link with a descriptive accessible name and real route, preserving unsaved state behavior.
-- [ ] Test empty optional profile fields and supported navigation; if no target exists, add a test asserting the unsupported CTA is absent.
+- [x] Display the current profile name and optional headline; omit absent values without placeholder identity or an empty row.
+- [x] Use the source label `My resume data` or `Fictional demo data` as current code provides.
+- [x] The board's `View details` action may be added only if an existing profile/settings route and meaningful destination are confirmed. Otherwise omit it; do not create a dead link or pretend the profile is editable from here.
+- [x] If a supported destination exists, use a secondary button/link with a descriptive accessible name and real route, preserving unsaved state behavior.
+- [x] Test empty optional profile fields and supported navigation; if no target exists, add a test asserting the unsupported CTA is absent.
 
 **Acceptance:** Summary identity is real, source-aware, and free of invented account/profile affordances.
 
@@ -553,11 +556,11 @@ Reference files: `docs/ui-images/achievement-library/profile-summary-light-dark.
 
 **Files:** Profile summary component, `src/app/globals.css`, and `tests/e2e/library-summary.spec.ts`; add a pure count helper test only if count mapping is extracted.
 
-- [ ] Derive Jobs from `library.jobs.length`, Projects from `library.projects.length`, Points from the total points across jobs/projects, Skills from `library.skills.length`, and Credentials from `library.credentials.length`.
-- [ ] Keep each icon/label/value grouped; use actual accessible label text and expose counts as text, not icon/color alone.
-- [ ] Apply restrained category accents: Jobs orange, Projects violet, Points amber, Skills green, Credentials indigo. Do not turn metric color into a positive/negative score.
-- [ ] Format values without lossy rounding; long counts must wrap or use stable number formatting without changing tile dimensions.
-- [ ] Keep metric tiles visually aligned and keyboard-neutral unless the metric is an actual link.
+- [x] Derive Jobs from `library.jobs.length`, Projects from `library.projects.length`, Points from the total points across jobs/projects, Skills from `library.skills.length`, and Credentials from `library.credentials.length`.
+- [x] Keep each icon/label/value grouped; use actual accessible label text and expose counts as text, not icon/color alone.
+- [x] Apply restrained category accents: Jobs orange, Projects violet, Points amber, Skills green, Credentials indigo. Do not turn metric color into a positive/negative score.
+- [x] Format values without lossy rounding; long counts must wrap or use stable number formatting without changing tile dimensions.
+- [x] Keep metric tiles visually aligned and keyboard-neutral unless the metric is an actual link.
 
 **Acceptance:** Every number has a clear meaning and tracks the selected real library, including empty and large libraries.
 
@@ -666,12 +669,12 @@ Reference files: `docs/ui-images/achievement-library/search-workbench-light-dark
 
 **Files:** Search component; add a pure sort/view-model helper under `src/lib/data/` only if useful; cover helper under `tests/unit/data/achievement-search.test.ts` and UI in `tests/e2e/library-filters.spec.ts`.
 
-- [ ] Show a visible matching-point count separate from the total summary metrics; use singular/plural copy correctly.
-- [ ] If `Sort: Most recent` is interactive, provide real deterministic sort options supported by date/title data (for example most recent, oldest, alphabetical) and preserve stable order for ties or missing dates.
-- [ ] If only the reference's default most-recent ordering is implemented, show it as a noninteractive label rather than a dead dropdown.
-- [ ] Sorting must never mutate source JSON, saved array order, provenance, or point IDs; it affects only the derived view model.
-- [ ] Show `Reset filters` only when the current query/facets are nondefault; reset them without changing data source or theme.
-- [ ] Test sort stability, missing/ongoing dates, search/filter composition, count updates, reset visibility, and singular/plural.
+- [x] Show a visible matching-point count separate from the total summary metrics; use singular/plural copy correctly.
+- [x] If `Sort: Most recent` is interactive, provide real deterministic sort options supported by date/title data (for example most recent, oldest, alphabetical) and preserve stable order for ties or missing dates.
+- [x] If only the reference's default most-recent ordering is implemented, show it as a noninteractive label rather than a dead dropdown.
+- [x] Sorting must never mutate source JSON, saved array order, provenance, or point IDs; it affects only the derived view model.
+- [x] Show `Reset filters` only when the current query/facets are nondefault; reset them without changing data source or theme.
+- [x] Test sort stability, missing/ongoing dates, search/filter composition, count updates, reset visibility, and singular/plural.
 
 **Acceptance:** The result count and any sort affordance describe the exact currently visible data and never imply hidden or lost records.
 
@@ -691,12 +694,12 @@ Reference files: `docs/ui-images/achievement-library/long-page-before-after.png`
 
 **Files:** `src/components/achievement-library.tsx`, justified section components under `src/components/library/`, `src/app/globals.css`, and `tests/e2e/library-groups.spec.ts`.
 
-- [ ] Create clear Jobs and Projects regions containing their existing experience groups; Skills and Credentials remain distinct data sections with their real item counts.
-- [ ] Preserve current record identity and order unless a tested sort mode changes only the displayed ordering.
-- [ ] A search/facet filter must update matching content consistently across point groups, linked skills, and credentials; do not show a point's parent section when no child point matches.
-- [ ] Preserve empty sections or omit their body based on the designed zero-state rule; never remove records from the loaded `ResumeLibrary`.
-- [ ] Preserve Education or other supported data outside the four illustrated categories; do not mislabel it as a credential or silently hide it. Document the product-approved placement if the current app exposes it.
-- [ ] Test mixed category data, empty categories, query results in secondary sections, data source changes, and both personal/demo modes.
+- [x] Create clear Jobs and Projects regions containing their existing experience groups; Skills and Credentials remain distinct data sections with their real item counts.
+- [x] Preserve current record identity and order unless a tested sort mode changes only the displayed ordering.
+- [x] A search/facet filter must update matching content consistently across point groups, linked skills, and credentials; do not show a point's parent section when no child point matches.
+- [x] Preserve empty sections or omit their body based on the designed zero-state rule; never remove records from the loaded `ResumeLibrary`.
+- [x] Preserve Education or other supported data outside the four illustrated categories; do not mislabel it as a credential or silently hide it. Document the product-approved placement if the current app exposes it.
+- [x] Test mixed category data, empty categories, query results in secondary sections, data source changes, and both personal/demo modes.
 
 **Acceptance:** The hierarchy matches the library's evidence structure without data loss, duplication, or false category assignment.
 
@@ -714,12 +717,12 @@ Reference files: `docs/ui-images/achievement-library/experience-section-card-ana
 
 **Files:** Experience group/section components in `src/components/achievement-library.tsx` or `src/components/library/`; `tests/e2e/library-groups.spec.ts`.
 
-- [ ] Show role/company or project name/context, visible point count, and a date range only when dates exist in source data.
-- [ ] Format stored `YYYY-MM` values in an accessible month/year format; display `Present` only when `endDate` is actually null, never for an absent/malformed date.
-- [ ] If a section is collapsible, use a real button/disclosure with `aria-expanded`, a stable icon, keyboard activation, and preserved focus. Do not make the whole header a button if it also contains independent actions.
-- [ ] Preserve filter state and scroll position when a group opens/closes; do not collapse all sections unexpectedly after edits or query changes.
-- [ ] Use accessible heading levels and ensure empty groups are either omitted or have a purposeful empty-state message.
-- [ ] Test jobs/projects, absent dates, ongoing roles, long names, collapsed/expanded keyboard behavior, and filter results.
+- [x] Show role/company or project name/context, visible point count, and a date range only when dates exist in source data.
+- [x] Format stored `YYYY-MM` values in an accessible month/year format; display `Present` only when `endDate` is actually null, never for an absent/malformed date.
+- [x] If a section is collapsible, use a real button/disclosure with `aria-expanded`, a stable icon, keyboard activation, and preserved focus. Do not make the whole header a button if it also contains independent actions.
+- [x] Preserve filter state and scroll position when a group opens/closes; do not collapse all sections unexpectedly after edits or query changes.
+- [x] Use accessible heading levels and ensure empty groups are either omitted or have a purposeful empty-state message.
+- [x] Test jobs/projects, absent dates, ongoing roles, long names, collapsed/expanded keyboard behavior, and filter results.
 
 **Acceptance:** Every group communicates its type and current content count, and disclosure is stable and accessible.
 
@@ -737,12 +740,12 @@ Reference files: `docs/ui-images/achievement-library/achievement-card-light-dark
 
 **Files:** `PointRow`/achievement-card component, `src/app/globals.css`, and `tests/e2e/library-cards.spec.ts`.
 
-- [ ] Render one card per real `AchievementPoint`, retaining accessible article/heading structure and unique identity.
-- [ ] Arrange available data in this order: experience context where needed, achievement text, quantified metrics, tags/linked skills, and provenance; show enabled state and edit action in the header area when personal source allows.
-- [ ] Omit absent metrics/tags/source fields cleanly; do not show blank placeholders, skeleton lines in a loaded card, or sample demo sentences as generic UI copy.
-- [ ] Preserve long descriptions and source details; use progressive disclosure only under Task 27 and never truncate without an accessible way to reveal the full value.
-- [ ] Keep cards visually stable when a card has zero/one/many metrics, tags, or skills.
-- [ ] Test card identity, long text, missing optional fields, both themes, and demo read-only behavior.
+- [x] Render one card per real `AchievementPoint`, retaining accessible article/heading structure and unique identity.
+- [x] Arrange available data in this order: experience context where needed, achievement text, quantified metrics, tags/linked skills, and provenance; show enabled state and edit action in the header area when personal source allows.
+- [x] Omit absent metrics/tags/source fields cleanly; do not show blank placeholders, skeleton lines in a loaded card, or sample demo sentences as generic UI copy.
+- [x] Preserve long descriptions and source details; use progressive disclosure only under Task 27 and never truncate without an accessible way to reveal the full value.
+- [x] Keep cards visually stable when a card has zero/one/many metrics, tags, or skills.
+- [x] Test card identity, long text, missing optional fields, both themes, and demo read-only behavior.
 
 **Acceptance:** Cards surface real achievement evidence in the board's scan order while preserving every supported field.
 
@@ -760,12 +763,12 @@ Reference files: `docs/ui-images/achievement-library/achievement-card-anatomy.pn
 
 **Files:** Achievement-card component and `tests/e2e/library-cards.spec.ts`.
 
-- [ ] Keep job/project title, organization/role, and date context separate from the achievement point's actual `text`.
-- [ ] Render achievement text as the most prominent body content in the point card, at 14px/20px regular or the existing app body style; preserve exact text without rewriting or AI summarization.
-- [ ] Use a subtle leading accent rule only if it remains visible in both themes and does not imply unverified positive status.
-- [ ] Allow natural wrapping and `overflow-wrap:anywhere` for unusually long words/URLs; avoid line clamp unless full content is still accessible by a tested disclosure control.
-- [ ] Do not include demo sample copy in empty/default production states.
-- [ ] Test multiline text, punctuation, long tokens, source change, and zoom/narrow layout.
+- [x] Keep job/project title, organization/role, and date context separate from the achievement point's actual `text`.
+- [x] Render achievement text as the most prominent body content in the point card, at 14px/20px regular or the existing app body style; preserve exact text without rewriting or AI summarization.
+- [x] Use a subtle leading accent rule only if it remains visible in both themes and does not imply unverified positive status.
+- [x] Allow natural wrapping and `overflow-wrap:anywhere` for unusually long words/URLs; avoid line clamp unless full content is still accessible by a tested disclosure control.
+- [x] Do not include demo sample copy in empty/default production states.
+- [x] Test multiline text, punctuation, long tokens, source change, and zoom/narrow layout.
 
 **Acceptance:** Users can scan the actual achievement sentence without confusing it with its employer/project context.
 
@@ -783,11 +786,11 @@ Reference files: `docs/ui-images/achievement-library/achievement-card-anatomy.pn
 
 **Files:** Achievement-card metric renderer; optional pure formatter under `src/lib/`; `tests/e2e/library-cards.spec.ts` and a focused unit test if formatting logic is extracted.
 
-- [ ] For each `Metric`, show the real label, value, optional unit, evidence, and optional context without changing its meaning.
-- [ ] Keep the evidence string inspectable; do not hide it behind hover or discard it to save space.
-- [ ] Use color/icons as secondary distinction only. Positive-looking values in board examples are not proof of success; do not add green arrows or positive emphasis unless the stored metric explicitly supports it.
-- [ ] Handle no metrics, one metric, odd counts, long labels/evidence, units, and long numeric strings without overflow.
-- [ ] Preserve all metric IDs and values through edit/save; no metric is duplicated between collapsed and expanded presentation.
+- [x] For each `Metric`, show the real label, value, optional unit, evidence, and optional context without changing its meaning.
+- [x] Keep the evidence string inspectable; do not hide it behind hover or discard it to save space.
+- [x] Use color/icons as secondary distinction only. Positive-looking values in board examples are not proof of success; do not add green arrows or positive emphasis unless the stored metric explicitly supports it.
+- [x] Handle no metrics, one metric, odd counts, long labels/evidence, units, and long numeric strings without overflow.
+- [x] Preserve all metric IDs and values through edit/save; no metric is duplicated between collapsed and expanded presentation.
 
 **Acceptance:** Every displayed metric remains traceable to its saved evidence and is readable at all viewports.
 
@@ -807,11 +810,11 @@ Reference files: `docs/ui-images/achievement-library/achievement-card-type-color
 
 **Files:** `PointRow`/achievement card and `tests/e2e/library-cards.spec.ts`; preserve `onTag` and `onSkill` handlers.
 
-- [ ] Render tags and linked skills distinctly but compactly; keep current click-to-filter behavior for tags and skills.
-- [ ] Preserve exact skill names from referenced IDs; ignore dangling IDs visually only if schema/load validation explicitly permits them, and never invent a fallback skill label.
-- [ ] Use a maximum visible-chip rule only when overflow is conveyed with a working `+N` disclosure that reveals all hidden labels.
-- [ ] Do not use removable-chip affordances inside a read-only card; remove behavior belongs in the editor if supported.
-- [ ] Test duplicate-free display, long tag names, keyboard activation, active-filter result changes, hidden-chip expansion, and demo read-only behavior.
+- [x] Render tags and linked skills distinctly but compactly; keep current click-to-filter behavior for tags and skills.
+- [x] Preserve exact skill names from referenced IDs; ignore dangling IDs visually only if schema/load validation explicitly permits them, and never invent a fallback skill label.
+- [x] Use a maximum visible-chip rule only when overflow is conveyed with a working `+N` disclosure that reveals all hidden labels.
+- [x] Do not use removable-chip affordances inside a read-only card; remove behavior belongs in the editor if supported.
+- [x] Test duplicate-free display, long tag names, keyboard activation, active-filter result changes, hidden-chip expansion, and demo read-only behavior.
 
 **Acceptance:** Facet chips support efficient filtering while preserving all tags/skills in data and their semantic distinction.
 
@@ -829,12 +832,12 @@ Reference files: `docs/ui-images/achievement-library/achievement-card-anatomy.pn
 
 **Files:** Achievement-card component; do not modify the source schema/load contract; add/extend `tests/e2e/library-cards.spec.ts`.
 
-- [ ] Display `point.source.type` and available `label`/`reference` fields as provenance, not decorative metadata.
-- [ ] Include a clear `Source:` label or equivalent accessible context and preserve punctuation/content safely.
-- [ ] When the source lacks a label/reference, omit the empty segment rather than appending separators or a fictitious page/bullet location.
-- [ ] Keep provenance visible in the normal card or provide a tested, keyboard-accessible details affordance that does not require hover.
-- [ ] Do not render personal file paths or sensitive local paths that are not already intentionally exposed by the product; use the existing safe source label/reference behavior.
-- [ ] Test each source type, optional fields, long references, light/dark contrast, and responsive wrapping.
+- [x] Display `point.source.type` and available `label`/`reference` fields as provenance, not decorative metadata.
+- [x] Include a clear `Source:` label or equivalent accessible context and preserve punctuation/content safely.
+- [x] When the source lacks a label/reference, omit the empty segment rather than appending separators or a fictitious page/bullet location.
+- [x] Keep provenance visible in the normal card or provide a tested, keyboard-accessible details affordance that does not require hover.
+- [x] Do not render personal file paths or sensitive local paths that are not already intentionally exposed by the product; use the existing safe source label/reference behavior.
+- [x] Test each source type, optional fields, long references, light/dark contrast, and responsive wrapping.
 
 **Acceptance:** Users can see where a point came from without being shown invented or unsafe source details.
 
@@ -852,12 +855,12 @@ Reference files: `docs/ui-images/achievement-library/achievement-card-interactio
 
 **Files:** `PointRow`/card component, existing point editor integration, `src/app/globals.css`, and `tests/e2e/library-editing.spec.ts`.
 
-- [ ] Pair the stored `point.enabled` value with a text label `Enabled` or `Disabled` and a semantic icon/color.
-- [ ] Personal data may expose the current `Edit` action. Demo data must not show an enabled editor action or call a disabled state editable.
-- [ ] Preserve existing status filtering and save behavior; status updates occur through the real editor/API only.
-- [ ] Do not add a status toggle directly to the card unless the API/confirmation/undo semantics are explicitly designed and tested.
-- [ ] Do not add favorite/heart, delete/trash, or overflow actions because the current schema/route does not support them.
-- [ ] Test enabled/disabled rendering, filter alignment, demo action absence, edit success/failure, keyboard operation, and status color plus text.
+- [x] Pair the stored `point.enabled` value with a text label `Enabled` or `Disabled` and a semantic icon/color.
+- [x] Personal data may expose the current `Edit` action. Demo data must not show an enabled editor action or call a disabled state editable.
+- [x] Preserve existing status filtering and save behavior; status updates occur through the real editor/API only.
+- [x] Do not add a status toggle directly to the card unless the API/confirmation/undo semantics are explicitly designed and tested.
+- [x] Do not add favorite/heart, delete/trash, or overflow actions because the current schema/route does not support them.
+- [x] Test enabled/disabled rendering, filter alignment, demo action absence, edit success/failure, keyboard operation, and status color plus text.
 
 **Acceptance:** Status is truthful, text-backed, and consistent with existing filter/edit contracts.
 
@@ -877,12 +880,12 @@ Reference files: `docs/ui-images/achievement-library/experience-section-card-ana
 
 **Files:** `src/components/achievement-library.tsx`, `src/components/achievement-point-editor.tsx`, `src/components/achievement-imagination.tsx` only for integration, `tests/e2e/library-editing.spec.ts`, and `tests/e2e/library-groups.spec.ts`.
 
-- [ ] If progressive disclosure is added, preserve a visible summary and a real expand button with `aria-expanded`; the expanded region must reveal, not replace, source, metrics/evidence, context, tags, and linked skills.
-- [ ] Preserve the existing detailed editor's ID, text, tags, skills, metrics, provenance, enabled state, validation, duplicate-ID handling, save, cancel, and persistence.
-- [ ] Preserve the existing assisted creation flow separately from manual detailed entry; both must close/cancel and save using current contracts.
-- [ ] Keep demo data read-only and label it fictional; no edit button should open an editor that cannot persist.
-- [ ] Preserve an error message and entered values when save fails; do not collapse the card or close the editor on failure.
-- [ ] Test keyboard open/close, focus return, unsaved cancel, failed/successful saves, refresh persistence, duplicate ID, and mobile editor fit.
+- [x] If progressive disclosure is added, preserve a visible summary and a real expand button with `aria-expanded`; the expanded region must reveal, not replace, source, metrics/evidence, context, tags, and linked skills.
+- [x] Preserve the existing detailed editor's ID, text, tags, skills, metrics, provenance, enabled state, validation, duplicate-ID handling, save, cancel, and persistence.
+- [x] Preserve the existing assisted creation flow separately from manual detailed entry; both must close/cancel and save using current contracts.
+- [x] Keep demo data read-only and label it fictional; no edit button should open an editor that cannot persist.
+- [x] Preserve an error message and entered values when save fails; do not collapse the card or close the editor on failure.
+- [x] Test keyboard open/close, focus return, unsaved cancel, failed/successful saves, refresh persistence, duplicate ID, and mobile editor fit.
 
 **Acceptance:** Visual disclosure and editing integrate with existing, tested data flows and do not lose user-entered details.
 
@@ -904,12 +907,12 @@ Reference files: `docs/ui-images/achievement-library/achievement-overview-light-
 
 **Files:** Library components and `src/app/globals.css`; focused `tests/e2e/library-responsive.spec.ts`, `tests/e2e/library-empty-states.spec.ts`, and component-specific keyboard tests.
 
-- [ ] At 1440px use the wide summary and filter rows; at 1024/768px wrap metrics/filters and keep sections full width; at 390/320px stack summary, search, controls, content, and metric tiles without hiding actions.
-- [ ] Keep page-level horizontal overflow absent and test nested search chips, long metadata, metric rows, source references, and editor dialogs.
-- [ ] Distinguish no data, no search matches, unavailable personal file, and demo read-only states with concise messages and correct semantics; preserve the current loader error and alternate-source route.
-- [ ] Provide semantic landmarks/headings, labels, descriptive icon names, active route state, visible keyboard focus, text-backed status, and focus management for editor dialogs.
-- [ ] Maintain 44x44px touch targets where practical, WCAG AA text contrast, `prefers-reduced-motion`, and no hover-only critical data.
-- [ ] Test all applicable states in light/dark and at widths 320, 390, 768, 1024, and 1440 CSS pixels; test keyboard navigation and representative long content.
+- [x] At 1440px use the wide summary and filter rows; at 1024/768px wrap metrics/filters and keep sections full width; at 390/320px stack summary, search, controls, content, and metric tiles without hiding actions.
+- [x] Keep page-level horizontal overflow absent and test nested search chips, long metadata, metric rows, source references, and editor dialogs.
+- [x] Distinguish no data, no search matches, unavailable personal file, and demo read-only states with concise messages and correct semantics; preserve the current loader error and alternate-source route.
+- [x] Provide semantic landmarks/headings, labels, descriptive icon names, active route state, visible keyboard focus, text-backed status, and focus management for editor dialogs.
+- [x] Maintain 44x44px touch targets where practical, WCAG AA text contrast, `prefers-reduced-motion`, and no hover-only critical data.
+- [x] Test all applicable states in light/dark and at widths 320, 390, 768, 1024, and 1440 CSS pixels; test keyboard navigation and representative long content.
 
 **Acceptance:** All real content/actions remain available at small widths; empty/error/read-only states are understandable, accessible, and non-overlapping.
 
@@ -933,12 +936,12 @@ Reference files: `docs/ui-images/achievement-library/achievement-overview-light-
 
 **Files:** At minimum preserve/extend `tests/e2e/library.spec.ts`, `tests/e2e/library-editing.spec.ts`, and `tests/unit/data/achievement-search.test.ts`; add focused files such as `tests/e2e/library-shell.spec.ts`, `library-header.spec.ts`, `library-summary.spec.ts`, `library-search.spec.ts`, `library-filters.spec.ts`, `library-category-navigation.spec.ts`, `library-groups.spec.ts`, `library-cards.spec.ts`, and `library-responsive.spec.ts` only for new behavior not already covered. Keep each component's tests in a clearly named file.
 
-- [ ] Every new interactive component and non-trivial helper/function has focused coverage; avoid duplicate tests that only rename existing assertions.
-- [ ] Preserve regressions for source switching, group/provenance display, combined search/facets, empty results, reset, create/edit/cancel/save, duplicate ID, demo read-only, theme, and mobile layout.
-- [ ] Compare product screenshots in light and dark mode at 1440x900 and 390x844; add 1024x768 and 320px checks for wrapping/overflow. Capture the application viewport only, not the poster or browser dev overlays.
-- [ ] Exercise search, filters, category navigation, sorting (if present), disclosure, hover/focus/pressed states, edit, create, error, no-results, and source changes; inspect console/network errors.
-- [ ] Before PR run `npm run lint`, `npm run typecheck`, `npm test`, and relevant `npm run test:e2e`; report environment failures separately and do not claim tests passed if the server/browser could not start.
-- [ ] Run `git diff --check`; confirm no personal JSON, local logs, `.env*`, generated files, unsupported API behavior, unrelated route redesign, or poster assets entered the implementation diff.
+- [x] Every new interactive component and non-trivial helper/function has focused coverage; avoid duplicate tests that only rename existing assertions.
+- [x] Preserve regressions for source switching, group/provenance display, combined search/facets, empty results, reset, create/edit/cancel/save, duplicate ID, demo read-only, theme, and mobile layout.
+- [x] Compare product screenshots in light and dark mode at 1440x900 and 390x844; add 1024x768 and 320px checks for wrapping/overflow. Capture the application viewport only, not the poster or browser dev overlays.
+- [x] Exercise search, filters, category navigation, sorting (if present), disclosure, hover/focus/pressed states, edit, create, error, no-results, and source changes; inspect console/network errors.
+- [x] Before PR run `npm run lint`, `npm run typecheck`, `npm test`, and relevant `npm run test:e2e`; report environment failures separately and do not claim tests passed if the server/browser could not start.
+- [x] Run `git diff --check`; confirm no personal JSON, local logs, `.env*`, generated files, unsupported API behavior, unrelated route redesign, or poster assets entered the implementation diff.
 
 **Acceptance:** Focused and existing tests pass, both themes and responsive layouts are visually reviewed, all app behavior is truthful, and the PR is limited to the Achievement Library UI.
 
