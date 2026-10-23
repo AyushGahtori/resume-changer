@@ -308,11 +308,11 @@ Reference file: docs/ui-images/resume-builder/ui-kit-color-palette.png
 
 **Files:** src/app/globals.css and shared token tests if the project has a token contract. Update other UI plans only as part of an explicitly coordinated design-system decision.
 
-- [ ] Use or map the printed orange, violet, accent, background, surface, text, border, and semantic status values from the token table above.
-- [ ] Reconcile differences with existing app-wide/home/library values in one shared place; do not add builder-only duplicate tokens.
-- [ ] Preserve current dark theme values where the board has no exact dark hex; treat new dark shades as estimates and verify contrast.
-- [ ] Keep orange for the main resume action, violet for AI/selected/focus emphasis, and success/warning/error for truthful state only.
-- [ ] Add a focused token test only if tokens are represented in a testable structured source.
+- [x] Use or map the printed orange, violet, accent, background, surface, text, border, and semantic status values from the token table above.
+- [x] Reconcile differences with existing app-wide/home/library values in one shared place; do not add builder-only duplicate tokens.
+- [x] Preserve current dark theme values where the board has no exact dark hex; treat new dark shades as estimates and verify contrast.
+- [x] Keep orange for the main resume action, violet for AI/selected/focus emphasis, and success/warning/error for truthful state only.
+- [x] Add a focused token test only if tokens are represented in a testable structured source.
 
 **Acceptance:** Builder controls use the agreed shared tokens in both themes; no private builder palette or unexplained app-wide color fork is introduced.
 
