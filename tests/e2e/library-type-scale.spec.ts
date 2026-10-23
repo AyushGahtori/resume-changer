@@ -186,7 +186,6 @@ test("applies the shared type scale to the library hierarchy", async ({
   const cardMetricValue = await readType(page, ".point-metric-value");
   const chip = await readType(page, ".facet-chip");
   const sectionTitle = await readType(page, ".library-detail summary");
-  const searchLabel = await readType(page, ".library-search > span");
   const searchInput = await readType(page, ".library-search input");
   const filterLabel = await readType(page, ".library-filter-grid label > span");
 
@@ -233,7 +232,9 @@ test("applies the shared type scale to the library hierarchy", async ({
   });
   expect(chip).toMatchObject({ fontSize: "12px", lineHeight: "16px" });
   expect(sectionTitle).toMatchObject({ fontSize: "24px", lineHeight: "32px" });
-  expect(searchLabel).toMatchObject({ fontSize: "12px", lineHeight: "16px" });
+  await expect(
+    page.getByRole("searchbox", { name: "Search library" }),
+  ).toBeVisible();
   expect(searchInput).toMatchObject({ fontSize: "14px", lineHeight: "20px" });
   expect(filterLabel).toMatchObject({ fontSize: "12px", lineHeight: "16px" });
 

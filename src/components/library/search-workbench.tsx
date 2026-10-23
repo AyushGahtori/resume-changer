@@ -57,6 +57,17 @@ export default function SearchWorkbench({
       ).sort(),
     [library.jobs, library.projects],
   );
+  const categoryCounts = {
+    jobs: result.jobs.length,
+    projects: result.projects.length,
+    skills: result.skills.length,
+    credentials: result.credentials.length,
+    all:
+      result.jobs.length +
+      result.projects.length +
+      result.skills.length +
+      result.credentials.length,
+  };
 
   useEffect(() => {
     const workbenchRefValue = workbenchRef.current;
@@ -238,7 +249,7 @@ export default function SearchWorkbench({
       </div>
 
       <div className="library-workbench-footer">
-        <CategoryNavigation />
+        <CategoryNavigation counts={categoryCounts} />
         <div className="library-filter-summary" aria-live="polite">
           <span className="library-result-count">
             {formatLibraryResultCount(

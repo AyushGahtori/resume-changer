@@ -150,7 +150,7 @@ test("applies the shared tokens to the library surfaces", async ({ page }) => {
   expect(sourceSegment).toBe("4px");
 
   const searchField = await page
-    .locator(".library-search input")
+    .locator(".library-search")
     .first()
     .evaluate((element) => {
       const style = getComputedStyle(element);

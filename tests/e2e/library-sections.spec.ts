@@ -102,7 +102,7 @@ test("states the number of records that each section holds", async ({
   await expect(credentials.locator(".credential-list li")).toHaveCount(2);
 });
 
-test("drops a parent section when none of its points match", async ({
+test("keeps empty parent sections navigable when none of their points match", async ({
   page,
 }) => {
   await page.goto("/library?source=demo");
@@ -118,10 +118,12 @@ test("drops a parent section when none of its points match", async ({
     jobs.getByRole("heading", { name: "Software Engineer" }),
   ).toHaveCount(0);
 
-  // The project section has no matching point, so it is not rendered.
-  await expect(
-    page.getByRole("region", { name: "Projects", exact: true }),
-  ).toHaveCount(0);
+  const projects = page.getByRole("region", { name: "Projects", exact: true });
+  await expect(projects).toHaveCount(1);
+  await expect(projects.locator(".library-section-count")).toHaveText("0");
+  await expect(projects.locator(".secondary-empty")).toHaveText(
+    "No projects match the current filters.",
+  );
   await expect(page.getByRole("status")).toHaveCount(0);
 });
 
@@ -144,13 +146,17 @@ test("keeps the secondary sections in step with the query", async ({
   await expect(skills.locator(".library-section-count")).toHaveText("0");
   await expect(skills.getByText("No skills match this search.")).toBeVisible();
 
-  // No point matches the query, so the experience sections are not rendered.
-  await expect(
-    page.getByRole("region", { name: "Jobs", exact: true }),
-  ).toHaveCount(0);
-  await expect(
-    page.getByRole("region", { name: "Projects", exact: true }),
-  ).toHaveCount(0);
+  // Empty experience sections remain navigable and explain the active query.
+  const jobs = page.getByRole("region", { name: "Jobs", exact: true });
+  const projects = page.getByRole("region", { name: "Projects", exact: true });
+  await expect(jobs.locator(".library-section-count")).toHaveText("0");
+  await expect(jobs.locator(".secondary-empty")).toHaveText(
+    "No jobs match the current filters.",
+  );
+  await expect(projects.locator(".library-section-count")).toHaveText("0");
+  await expect(projects.locator(".secondary-empty")).toHaveText(
+    "No projects match the current filters.",
+  );
   await expect(page.getByRole("status")).toHaveText(
     "None of the 13 achievements in this library match the current search and filters.",
   );
@@ -198,9 +204,11 @@ test("rebuilds the sections when the data source changes", async ({ page }) => {
 
   const jobsSection = page.getByRole("region", { name: "Jobs", exact: true });
   await expect(jobsSection.locator(".library-section-count")).toHaveText("1");
-  await expect(
-    page.getByRole("region", { name: "Projects", exact: true }),
-  ).toHaveCount(0);
+  const projects = page.getByRole("region", { name: "Projects", exact: true });
+  await expect(projects.locator(".library-section-count")).toHaveText("0");
+  await expect(projects.locator(".secondary-empty")).toHaveText(
+    "No projects saved in this library.",
+  );
   await expect(page.getByText("My resume data")).toBeVisible();
 
   // The demo source keeps its own records.

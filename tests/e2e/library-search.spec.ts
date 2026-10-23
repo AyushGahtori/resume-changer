@@ -511,9 +511,16 @@ test("keeps the no-results state distinct from a load failure and keeps the quer
   const search = page.getByRole("searchbox", { name: "Search library" });
   await search.fill("no matching library content");
 
-  const empty = page.locator(".library-empty");
-  await expect(empty).toBeVisible();
-  await expect(empty).toHaveAttribute("role", "status");
+  const emptyState = page.locator(".library-state");
+  await expect(emptyState).toBeVisible();
+  await expect(
+    emptyState.getByRole("heading", {
+      name: "No achievements match these filters",
+    }),
+  ).toBeVisible();
+  await expect(emptyState.getByRole("status")).toHaveText(
+    "None of the 13 achievements in this library match the current search and filters.",
+  );
 
   // A library that cannot be read is rendered as a separate, announced
   // failure, so the two states never look like each other.

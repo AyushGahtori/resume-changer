@@ -643,12 +643,12 @@ Reference files: `docs/ui-images/achievement-library/library-search-filter-galle
 
 **Files:** Add a focused `src/components/library/category-navigation.tsx` only if useful; integrate with category sections; add `tests/e2e/library-category-navigation.spec.ts`.
 
-- [ ] Render `All`, `Jobs`, `Projects`, `Skills`, and `Credentials` in the reference order, with counts derived from the selected library and current matching data where applicable.
-- [ ] Treat these controls as in-page section navigation: selecting one scrolls the corresponding section into view and updates the active/current section state; it does not hide the other categories or modify advanced filters.
-- [ ] `All` returns to the page overview/top of the content. If a category has zero entries, show its zero count and either navigate to its truthful empty state or disable only when that choice is genuinely unavailable.
-- [ ] Use real section IDs and `aria-current`/appropriate tab semantics; do not claim `role=tab` unless implementing the full tab panel interaction model.
-- [ ] Keep the navigation sticky only within the workbench rules and apply anchor offset so section headings remain visible.
-- [ ] Test mouse, keyboard, screen-reader labels, active state while scrolling, counts, zero categories, reduced motion, and mobile overflow.
+- [x] Render `All`, `Jobs`, `Projects`, `Skills`, and `Credentials` in the reference order, with counts derived from the selected library and current matching data where applicable.
+- [x] Treat these controls as in-page section navigation: selecting one scrolls the corresponding section into view and updates the active/current section state; it does not hide the other categories or modify advanced filters.
+- [x] `All` returns to the page overview/top of the content. If a category has zero entries, show its zero count and either navigate to its truthful empty state or disable only when that choice is genuinely unavailable.
+- [x] Use real section IDs and `aria-current`/appropriate tab semantics; do not claim `role=tab` unless implementing the full tab panel interaction model.
+- [x] Keep the navigation sticky only within the workbench rules and apply anchor offset so section headings remain visible.
+- [x] Test mouse, keyboard, screen-reader labels, active state while scrolling, counts, zero categories, reduced motion, and mobile overflow.
 
 **Acceptance:** Category controls help users jump through the long page and remain separate from search facets and result filtering.
 

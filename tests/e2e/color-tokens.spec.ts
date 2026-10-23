@@ -316,6 +316,7 @@ test("the achievement library renders from the same shared tokens", async ({
         tokens: {
           canvas: token("--color-canvas"),
           surface: token("--color-surface"),
+          surfaceAlt: token("--color-surface-alt"),
           border: token("--color-border"),
           textPrimary: token("--color-text-primary"),
           textSecondary: token("--color-text-secondary"),
@@ -357,7 +358,7 @@ test("the achievement library renders from the same shared tokens", async ({
     normalizeCssColor(light.tokens.border),
   );
   expect(normalizeCssColor(light.sourceSwitch!.backgroundColor)).toBe(
-    normalizeCssColor(light.tokens.surface),
+    normalizeCssColor(light.tokens.surfaceAlt),
   );
   expect(normalizeCssColor(light.selectedSource!.color)).toBe(
     normalizeCssColor(light.tokens.textPrimary),
@@ -387,6 +388,10 @@ test("the achievement library renders from the same shared tokens", async ({
     darkTokens.surface,
   );
   await expectColorToSettle(
+    async () => (await libraryColors()).sourceSwitch?.backgroundColor ?? null,
+    darkTokens.surface,
+  );
+  await expectColorToSettle(
     async () => (await libraryColors()).overview?.borderTopColor ?? null,
     darkTokens.border,
   );
@@ -398,6 +403,9 @@ test("the achievement library renders from the same shared tokens", async ({
   const dark = await libraryColors();
 
   expect(normalizeCssColor(dark.overview!.backgroundColor)).toBe(
+    normalizeCssColor(dark.tokens.surface),
+  );
+  expect(normalizeCssColor(dark.sourceSwitch!.backgroundColor)).toBe(
     normalizeCssColor(dark.tokens.surface),
   );
   expect(normalizeCssColor(dark.overview!.borderTopColor)).toBe(

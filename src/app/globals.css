@@ -3136,15 +3136,43 @@ a:focus-visible {
 
 .library-category-link {
   display: inline-flex;
-  min-height: 32px;
+  min-height: 36px;
   align-items: center;
+  gap: 6px;
   padding: 0 var(--space-12);
   border: 1px solid var(--line);
   border-radius: var(--radius-full);
   color: var(--muted);
   font-size: 12px;
+  font-weight: 550;
   text-decoration: none;
   white-space: nowrap;
+}
+
+.library-category-count {
+  display: inline-grid;
+  min-width: 20px;
+  height: 20px;
+  place-items: center;
+  padding: 0 5px;
+  border-radius: var(--radius-full);
+  background: var(--surface-soft);
+  color: var(--muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.library-category-link[aria-current="location"] {
+  border-color: var(--color-orange);
+  background: var(--color-orange-subtle);
+  color: var(--color-orange-strong);
+  font-weight: 650;
+}
+
+.library-category-link[aria-current="location"] .library-category-count {
+  background: var(--color-surface);
+  color: var(--color-orange-strong);
 }
 
 .library-category-link:hover {
@@ -4588,6 +4616,9 @@ a:focus-visible {
   .library-workbench-footer {
     align-items: flex-start;
     flex-direction: column;
+  }
+  .library-category-link {
+    min-height: 44px;
   }
   .library-filter-summary {
     justify-content: flex-start;

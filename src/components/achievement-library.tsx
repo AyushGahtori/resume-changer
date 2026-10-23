@@ -459,23 +459,23 @@ export default function AchievementLibrary({ library, source }: Props) {
         ) : null}
 
         <div className="library-sections">
-          {result.jobs.length > 0 && (
-            <section
-              aria-labelledby="library-section-jobs"
-              className="library-section"
-              id={LIBRARY_SECTION_IDS.jobs}
-            >
-              <div className="library-section-header">
-                <LibrarySectionHeader
-                  count={result.jobs.length}
-                  icon={<BriefcaseBusiness size={18} />}
-                  title="Jobs"
-                  titleId="library-section-jobs"
-                  tone="jobs"
-                />
-              </div>
-              <div className="library-section-body">
-                {result.jobs.map((job) => (
+          <section
+            aria-labelledby="library-section-jobs"
+            className="library-section"
+            id={LIBRARY_SECTION_IDS.jobs}
+          >
+            <div className="library-section-header">
+              <LibrarySectionHeader
+                count={result.jobs.length}
+                icon={<BriefcaseBusiness size={18} />}
+                title="Jobs"
+                titleId="library-section-jobs"
+                tone="jobs"
+              />
+            </div>
+            <div className="library-section-body">
+              {result.jobs.length > 0 ? (
+                result.jobs.map((job) => (
                   <ExperienceGroup
                     activeSkillId={filters.skillId}
                     activeTag={filters.tag}
@@ -496,28 +496,34 @@ export default function AchievementLibrary({ library, source }: Props) {
                         : undefined
                     }
                   />
-                ))}
-              </div>
-            </section>
-          )}
+                ))
+              ) : (
+                <p className="secondary-empty">
+                  {library.jobs.length === 0
+                    ? "No jobs saved in this library."
+                    : "No jobs match the current filters."}
+                </p>
+              )}
+            </div>
+          </section>
 
-          {result.projects.length > 0 && (
-            <section
-              aria-labelledby="library-section-projects"
-              className="library-section"
-              id={LIBRARY_SECTION_IDS.projects}
-            >
-              <div className="library-section-header">
-                <LibrarySectionHeader
-                  count={result.projects.length}
-                  icon={<Box size={18} />}
-                  title="Projects"
-                  titleId="library-section-projects"
-                  tone="projects"
-                />
-              </div>
-              <div className="library-section-body">
-                {result.projects.map((project) => (
+          <section
+            aria-labelledby="library-section-projects"
+            className="library-section"
+            id={LIBRARY_SECTION_IDS.projects}
+          >
+            <div className="library-section-header">
+              <LibrarySectionHeader
+                count={result.projects.length}
+                icon={<Box size={18} />}
+                title="Projects"
+                titleId="library-section-projects"
+                tone="projects"
+              />
+            </div>
+            <div className="library-section-body">
+              {result.projects.length > 0 ? (
+                result.projects.map((project) => (
                   <ExperienceGroup
                     activeSkillId={filters.skillId}
                     activeTag={filters.tag}
@@ -540,10 +546,16 @@ export default function AchievementLibrary({ library, source }: Props) {
                         : undefined
                     }
                   />
-                ))}
-              </div>
-            </section>
-          )}
+                ))
+              ) : (
+                <p className="secondary-empty">
+                  {library.projects.length === 0
+                    ? "No projects saved in this library."
+                    : "No projects match the current filters."}
+                </p>
+              )}
+            </div>
+          </section>
 
           <div
             aria-label="Skills and credentials"

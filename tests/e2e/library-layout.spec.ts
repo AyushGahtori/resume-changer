@@ -144,13 +144,25 @@ test("keeps every section truthful when no record matches", async ({
     "0 of 13 achievement points",
   );
 
-  // Experience sections disappear when they have no matching groups.
+  // Category links stay useful when filters leave a section empty.
   await expect(
     page.getByRole("region", { name: "Jobs", exact: true }),
-  ).toHaveCount(0);
+  ).toHaveCount(1);
   await expect(
     page.getByRole("region", { name: "Projects", exact: true }),
-  ).toHaveCount(0);
+  ).toHaveCount(1);
+  await expect(page.locator("#library-jobs .library-section-count")).toHaveText(
+    "0",
+  );
+  await expect(page.locator("#library-jobs .secondary-empty")).toHaveText(
+    "No jobs match the current filters.",
+  );
+  await expect(
+    page.locator("#library-projects .library-section-count"),
+  ).toHaveText("0");
+  await expect(page.locator("#library-projects .secondary-empty")).toHaveText(
+    "No projects match the current filters.",
+  );
   await expect(page.locator(".experience-group")).toHaveCount(0);
 
   // The two disclosure sections remain available and explain their empty state.
