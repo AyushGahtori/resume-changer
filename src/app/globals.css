@@ -3896,6 +3896,10 @@ a:focus-visible {
     padding-right: var(--space-12);
     padding-left: var(--space-12);
   }
+  .library-overview,
+  .point-editor {
+    padding: var(--space-12);
+  }
   .library-filter-summary {
     align-items: flex-start;
   }
