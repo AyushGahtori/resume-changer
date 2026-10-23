@@ -15,15 +15,15 @@ API, data-loading, or export behavior was changed.
 `docs/ui-images/resume-builder/ui-kit-achievement-item-card.png` were opened
 first. The type scale card prints two font families and one size ramp:
 
-| Board role | Board size | Board weight | Board family |
-| ---------- | ---------- | ------------ | ------------ |
+| Board role | Board size | Board weight | Board family     |
+| ---------- | ---------- | ------------ | ---------------- |
 | H1         | 40         | Bold         | Playfair Display |
 | H2         | 32         | Bold         | Playfair Display |
 | H3         | 24         | Semibold     | Playfair Display |
 | H4         | 20         | Semibold     | Playfair Display |
-| Body       | 16         | Regular      | Inter |
-| Small      | 14         | Regular      | Inter |
-| Caption    | 12         | Regular      | Inter |
+| Body       | 16         | Regular      | Inter            |
+| Small      | 14         | Regular      | Inter            |
+| Caption    | 12         | Regular      | Inter            |
 
 The plan forbids both printed families: _"Preserve Georgia/Times for current
 serif headings and Arial/Helvetica for operational UI. Do not load Playfair
@@ -49,17 +49,17 @@ The plan's checklist names the ramp the app should use: _"page title near
 heading, not an app heading, which is what the task's visual specification
 says outright: _"The oversized serif slide heading is not the app heading."_
 
-| Role                    | Board     | App token                        | Size / line height    |
-| ----------------------- | --------- | -------------------------------- | --------------------- |
-| Page title (H1)         | 40 Bold   | `--type-page-title-size`         | 40 / 48 desktop       |
-| Page title, mobile      | —         | `--type-page-title-mobile-size`  | 32 / 40 at ≤ 700px    |
-| Section heading (H3)    | 24 Semi   | `--type-section-heading-size`    | 24 / 32               |
-| Card title (H4)         | 20 Semi   | `--type-card-heading-size`       | 16 / 24               |
-| Card title, studio pane | 20 Semi   | local value in `studio.css`      | 20 / 28               |
-| Body, lead copy         | 16 Regular| `--type-body-large-size`         | 16 / 24               |
-| Body, operational       | 16 / 14   | `--type-body-size`               | 14 / 20               |
-| Label / meta            | 12 Regular| `--type-label-size`              | 12 / 16               |
-| Helper / caption        | 12 Regular| `--type-helper-size`             | 12 / 16               |
+| Role                    | Board      | App token                       | Size / line height |
+| ----------------------- | ---------- | ------------------------------- | ------------------ |
+| Page title (H1)         | 40 Bold    | `--type-page-title-size`        | 40 / 48 desktop    |
+| Page title, mobile      | —          | `--type-page-title-mobile-size` | 32 / 40 at ≤ 700px |
+| Section heading (H3)    | 24 Semi    | `--type-section-heading-size`   | 24 / 32            |
+| Card title (H4)         | 20 Semi    | `--type-card-heading-size`      | 16 / 24            |
+| Card title, studio pane | 20 Semi    | local value in `studio.css`     | 20 / 28            |
+| Body, lead copy         | 16 Regular | `--type-body-large-size`        | 16 / 24            |
+| Body, operational       | 16 / 14    | `--type-body-size`              | 14 / 20            |
+| Label / meta            | 12 Regular | `--type-label-size`             | 12 / 16            |
+| Helper / caption        | 12 Regular | `--type-helper-size`            | 12 / 16            |
 
 Eight roles already existed in `:root` and were reused as they were. Three
 roles were missing and were added to the same `:root` block, so the builder
@@ -79,21 +79,21 @@ uses the app-wide scale and not a builder-private ramp:
 The builder and the studio had never been tokenized. Their type was written
 as literal pixel values, and much of it was far below the board:
 
-| Selector                              | Before                       | After                    |
-| ------------------------------------- | ---------------------------- | ------------------------ |
-| `.generation-heading h1`              | `38px`, no line height       | 40 / 48                  |
-| `.generation-section-heading h2`      | `15px`, weight 650           | 24 / 32, weight 600      |
-| `.generation-section-heading p`       | `10px`                       | 14 / 20, tabular counts  |
-| `.generation-draft`                   | `11px`                       | 14 / 20, tabular counts  |
-| `.generation-draft strong`            | `12px`                       | 16 / 24, weight 600      |
-| `.generation-label`                   | `9px`, weight 700            | 12 / 16, weight 600      |
-| `.generation-group legend strong`     | `11px`, weight 650           | 16 / 24, weight 600      |
-| `.generation-point`                   | `9px`                        | 14 / 20                  |
-| `.selection-point-reason`             | `9px`                        | 12 / 16                  |
-| `.studio-kicker`                      | `9px`, weight 750, `0.12em`  | 12 / 16, weight 600, `0` |
-| `.studio-heading h2`                  | `27px`, weight 500           | 24 / 32, weight 600      |
-| `.studio-panel-heading h3`            | `15px`                       | 16 / 24, weight 600      |
-| `.studio-badge`                       | `10px`, weight 650           | 12 / 16, weight 600      |
+| Selector                          | Before                      | After                    |
+| --------------------------------- | --------------------------- | ------------------------ |
+| `.generation-heading h1`          | `38px`, no line height      | 40 / 48                  |
+| `.generation-section-heading h2`  | `15px`, weight 650          | 24 / 32, weight 600      |
+| `.generation-section-heading p`   | `10px`                      | 14 / 20, tabular counts  |
+| `.generation-draft`               | `11px`                      | 14 / 20, tabular counts  |
+| `.generation-draft strong`        | `12px`                      | 16 / 24, weight 600      |
+| `.generation-label`               | `9px`, weight 700           | 12 / 16, weight 600      |
+| `.generation-group legend strong` | `11px`, weight 650          | 16 / 24, weight 600      |
+| `.generation-point`               | `9px`                       | 14 / 20                  |
+| `.selection-point-reason`         | `9px`                       | 12 / 16                  |
+| `.studio-kicker`                  | `9px`, weight 750, `0.12em` | 12 / 16, weight 600, `0` |
+| `.studio-heading h2`              | `27px`, weight 500          | 24 / 32, weight 600      |
+| `.studio-panel-heading h3`        | `15px`                      | 16 / 24, weight 600      |
+| `.studio-badge`                   | `10px`, weight 650          | 12 / 16, weight 600      |
 
 131 builder and studio rules were rewritten onto the shared tokens. Nothing
 was scaled with the viewport: the only responsive step is the single
@@ -115,7 +115,7 @@ was scaled with the viewport: the only responsive step is the single
 - **Tabular counts.** Where the app already compares numbers, the digits
   now use `font-variant-numeric: tabular-nums`: the job-context card
   (`.generation-draft`), the section subtitle (`.generation-section-heading
-  p`), the coverage heading, the Guided Tailor count, the studio badge, the
+p`), the coverage heading, the Guided Tailor count, the studio badge, the
   studio overview stats, and the studio capacity row.
 - **The page title keeps Georgia 400.** The plan's checkbox asks for
   "semibold labels/headings", but the same task also asks to preserve the
@@ -155,12 +155,12 @@ The heading row now wraps, and the action row can shrink but never exceeds
 the panel. Measured after the fix, at every supported width:
 
 | Viewport | Panel content | Heading `scrollWidth` | Actions right edge | Panel right edge |
-| -------- | ------------- | --------------------- | ------------------ | --------------- |
-| 1440     | 454px         | 454                   | 765                | 784             |
-| 1024     | 718px         | 718                   | within the panel  | 1000            |
-| 768      | —             | = client width        | within the panel  | —               |
-| 390      | 328px         | 328                   | 359                | 374             |
-| 320      | 258px         | 258                   | 289                | 304             |
+| -------- | ------------- | --------------------- | ------------------ | ---------------- |
+| 1440     | 454px         | 454                   | 765                | 784              |
+| 1024     | 718px         | 718                   | within the panel   | 1000             |
+| 768      | —             | = client width        | within the panel   | —                |
+| 390      | 328px         | 328                   | 359                | 374              |
+| 320      | 258px         | 258                   | 289                | 304              |
 
 No font size was reduced to achieve this, and no element is clipped.
 

@@ -89,11 +89,11 @@ test("marks the focused format tab with a visible focus ring", async ({
   expect(focusRing.outlineStyle).not.toBe("none");
   expect(Number.parseFloat(focusRing.outlineWidth)).toBeGreaterThan(0);
 
-  const latexBackground = await latexTab.evaluate((element) =>
-    window.getComputedStyle(element).backgroundColor,
+  const latexBackground = await latexTab.evaluate(
+    (element) => window.getComputedStyle(element).backgroundColor,
   );
-  const pdfBackground = await pdfTab.evaluate((element) =>
-    window.getComputedStyle(element).backgroundColor,
+  const pdfBackground = await pdfTab.evaluate(
+    (element) => window.getComputedStyle(element).backgroundColor,
   );
   expect(latexBackground).not.toBe(pdfBackground);
 });
@@ -147,7 +147,9 @@ test("gives every viewer control a working action and an accessible name", async
   await expect(
     toolbar.getByRole("button", { name: "Open full screen" }),
   ).toBeVisible();
-  await expect(toolbar.getByRole("button", { name: "Fit width" })).toBeVisible();
+  await expect(
+    toolbar.getByRole("button", { name: "Fit width" }),
+  ).toBeVisible();
 
   await expect(toolbar.getByRole("button", { name: "Zoom in" })).toBeEnabled();
   await expect(

@@ -18,13 +18,13 @@ Frontend/API: `http://127.0.0.1:3111` (dev server), browser suite on port `3110`
 
 ## What the controls do now
 
-| Control          | Availability                                   | Wired to                                        |
-| ---------------- | ---------------------------------------------- | ----------------------------------------------- |
-| `Download PDF`   | always rendered; disabled until a PDF exists   | `downloadPdf()` → the latest verified PDF blob  |
-| `Create PDF` / `Recompile` | always rendered; disabled while compiling | `compilePdf()` → the current generated LaTeX    |
-| `Copy`           | LaTeX view                                     | `copyLatex()` → `result.latex`                  |
-| `Download LaTeX` | LaTeX view                                     | `downloadLatex()` → `result.latex`              |
-| `Export package` | always rendered; disabled while compiling      | `downloadExportPackage()` → `createResumeExportPackage()` |
+| Control                    | Availability                                 | Wired to                                                  |
+| -------------------------- | -------------------------------------------- | --------------------------------------------------------- |
+| `Download PDF`             | always rendered; disabled until a PDF exists | `downloadPdf()` → the latest verified PDF blob            |
+| `Create PDF` / `Recompile` | always rendered; disabled while compiling    | `compilePdf()` → the current generated LaTeX              |
+| `Copy`                     | LaTeX view                                   | `copyLatex()` → `result.latex`                            |
+| `Download LaTeX`           | LaTeX view                                   | `downloadLatex()` → `result.latex`                        |
+| `Export package`           | always rendered; disabled while compiling    | `downloadExportPackage()` → `createResumeExportPackage()` |
 
 The compile control is one control with three truthful labels: **Create PDF**
 when nothing is compiled, **Recompile** once a verified PDF exists, and

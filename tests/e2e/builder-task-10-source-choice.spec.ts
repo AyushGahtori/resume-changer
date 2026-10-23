@@ -200,7 +200,9 @@ test.describe("the resume builder source choice", () => {
       jobContext.getByRole("navigation", { name: "Resume data source" }),
     ).toBeVisible();
 
-    const jobText = await jobContext.locator("strong").first().boundingBox();
+    const jobText = await jobContext
+      .locator(".generation-draft-role")
+      .boundingBox();
     const choice = await sourceSwitch(page).boundingBox();
     expect(jobText).not.toBeNull();
     expect(choice).not.toBeNull();
@@ -222,11 +224,7 @@ test.describe("the resume builder source choice", () => {
     await seedDraft(page);
     await page.setViewportSize({ width: 320, height: 740 });
     await page.goto("/generate?source=demo");
-    const jobText = await page
-      .locator(".generation-draft")
-      .locator("strong")
-      .first()
-      .boundingBox();
+    const jobText = await page.locator(".generation-draft-role").boundingBox();
     const choice = await sourceSwitch(page).boundingBox();
     expect(jobText).not.toBeNull();
     expect(choice).not.toBeNull();

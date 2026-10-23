@@ -7,6 +7,10 @@ import type { CSSProperties, FormEvent, KeyboardEvent, ReactNode } from "react";
 import {
   CircleAlert,
   CircleCheck,
+  CircleDashed,
+  CircleHelp,
+  CircleMinus,
+  CircleX,
   FileText,
   Info,
   LoaderCircle,
@@ -15,13 +19,6 @@ import {
   Minus,
   Plus,
   TriangleAlert,
-} from "lucide-react";
-import {
-  CircleCheck,
-  CircleDashed,
-  CircleHelp,
-  CircleMinus,
-  CircleX,
 } from "lucide-react";
 import {
   EMPTY_DRAFT,

@@ -13,6 +13,7 @@ const viewports = [
   { name: "mobile", width: 390, height: 844 },
   { name: "narrow", width: 320, height: 740 },
 ];
+const themes = ["light", "dark"] as const;
 
 async function openBuilder(page: import("@playwright/test").Page) {
   await page.goto("/generate?source=demo");
@@ -91,24 +92,54 @@ test("stacks the panes and keeps the primary action reachable on a narrow screen
   expect(box!.y + box!.height).toBeLessThanOrEqual(844);
 });
 
-for (const viewport of viewports) {
-  test(`keeps the builder inside the viewport width at ${viewport.name}`, async ({
-    page,
-  }) => {
-    await page.setViewportSize({
-      width: viewport.width,
-      height: viewport.height,
-    });
-    await openBuilder(page);
+for (const theme of themes) {
+  for (const viewport of viewports) {
+    test(`keeps the builder usable at ${viewport.name} in ${theme} theme`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({
+        width: viewport.width,
+        height: viewport.height,
+      });
+      await openBuilder(page);
+      if (theme === "dark") {
+        await page.getByRole("button", { name: "Switch to dark mode" }).click();
+        await expect(page.locator("html")).toHaveAttribute(
+          "data-theme",
+          "dark",
+        );
+      }
 
-    const dimensions = await page.evaluate(() => ({
-      documentWidth: document.documentElement.scrollWidth,
-      viewportWidth: document.documentElement.clientWidth,
-    }));
-    expect(dimensions.documentWidth).toBeLessThanOrEqual(
-      dimensions.viewportWidth,
-    );
-  });
+      const dimensions = await page.evaluate(() => {
+        const horizontalOverflow = Array.from(
+          document.querySelectorAll<HTMLElement>(
+            ".generation-page, .generation-draft, .generation-layout, .generation-selection, .generation-preview",
+          ),
+        )
+          .filter(
+            (element) =>
+              element.getClientRects().length > 0 &&
+              element.scrollWidth > element.clientWidth + 1,
+          )
+          .map((element) => element.className);
+        return {
+          documentWidth: document.documentElement.scrollWidth,
+          viewportWidth: document.documentElement.clientWidth,
+          horizontalOverflow,
+        };
+      });
+      expect(dimensions.documentWidth).toBeLessThanOrEqual(
+        dimensions.viewportWidth,
+      );
+      expect(dimensions.horizontalOverflow).toEqual([]);
+
+      const primaryAction = page.getByRole("button", {
+        name: "Generate LaTeX",
+      });
+      await primaryAction.scrollIntoViewIfNeeded();
+      await expect(primaryAction).toBeVisible();
+    });
+  }
 }
 
 test("resizes the preview pane from the resizer", async ({ page }) => {

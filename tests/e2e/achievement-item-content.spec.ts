@@ -179,9 +179,7 @@ test("names each checkbox after the text it controls", async ({ page }) => {
     "Select achievement achievement-fixture-short",
   );
   await expect(shortCheckbox).toHaveAccessibleName(/Shipped a fix\./);
-  await expect(shortCheckbox).toHaveAccessibleName(
-    /achievement-fixture-short/,
-  );
+  await expect(shortCheckbox).toHaveAccessibleName(/achievement-fixture-short/);
 
   const longCheckbox = page.getByLabel(
     "Select achievement achievement-fixture-long",
@@ -237,9 +235,7 @@ test("renders a group without optional context cleanly", async ({ page }) => {
 test("keeps the selected achievements when the workspace is re-rendered", async ({
   page,
 }) => {
-  await page
-    .getByLabel("Select achievement achievement-fixture-short")
-    .check();
+  await page.getByLabel("Select achievement achievement-fixture-short").check();
   await page.getByRole("button", { name: "Generate LaTeX" }).click();
   await expect(page.getByLabel("Generated LaTeX")).toContainText(
     "Riley Fixture",

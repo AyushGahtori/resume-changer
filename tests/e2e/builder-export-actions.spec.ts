@@ -45,9 +45,9 @@ async function generateLaTeX(page: Page) {
   );
   // The generation also writes to the local history, and the compile
   // control stays locked until that request settles.
-  await expect(
-    page.getByRole("button", { name: "Create PDF" }),
-  ).toBeEnabled({ timeout: 30_000 });
+  await expect(page.getByRole("button", { name: "Create PDF" })).toBeEnabled({
+    timeout: 30_000,
+  });
 }
 
 test("offers no PDF download and explains the next step before a PDF exists", async ({
@@ -62,15 +62,11 @@ test("offers no PDF download and explains the next step before a PDF exists", as
     "generation-pdf-availability",
   );
   await expect(page.getByRole("tab", { name: "PDF" })).toBeDisabled();
-  await expect(
-    page.locator("#generation-pdf-availability"),
-  ).toHaveText(
+  await expect(page.locator("#generation-pdf-availability")).toHaveText(
     "No compiled PDF yet. Choose “Create PDF” to compile your generated LaTeX; the PDF download and the PDF inside the export package stay unavailable until it succeeds.",
   );
   await expect(page.getByText("PDF ready · 1 page.")).toHaveCount(0);
-  await expect(
-    page.getByRole("button", { name: "Create PDF" }),
-  ).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Create PDF" })).toBeEnabled();
 });
 
 test("keeps the preview actions inside the preview pane on a narrow screen", async ({
@@ -122,9 +118,7 @@ test("downloads the compiled PDF and enables the PDF tab", async ({ page }) => {
   await expect(downloadButton).toBeEnabled();
   const downloadPromise = page.waitForEvent("download");
   await downloadButton.click();
-  expect((await downloadPromise).suggestedFilename()).toBe(
-    `${fileBase}.pdf`,
-  );
+  expect((await downloadPromise).suggestedFilename()).toBe(`${fileBase}.pdf`);
 });
 
 test("recompiles the current LaTeX and keeps the controls truthful", async ({
@@ -173,9 +167,15 @@ test("blocks a second submission and the downloads while a compile is running", 
 
   const compile = page.getByRole("button", { name: "Create PDF" });
   await compile.click();
-  await expect(page.getByRole("button", { name: "Creating PDF…" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Creating PDF…" })).toBeDisabled();
-  await expect(page.getByRole("button", { name: "Download PDF" })).toBeDisabled();
+  await expect(
+    page.getByRole("button", { name: "Creating PDF…" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Creating PDF…" }),
+  ).toBeDisabled();
+  await expect(
+    page.getByRole("button", { name: "Download PDF" }),
+  ).toBeDisabled();
   await expect(
     page.getByRole("button", { name: "Download export package" }),
   ).toBeDisabled();
@@ -211,7 +211,9 @@ test("explains a failed compile and leaves the PDF download unavailable", async 
   await expect(page.locator(".generation-preview [role=alert]")).toContainText(
     "the compiled document has 2 pages",
   );
-  await expect(page.getByRole("button", { name: "Download PDF" })).toBeDisabled();
+  await expect(
+    page.getByRole("button", { name: "Download PDF" }),
+  ).toBeDisabled();
   await expect(page.getByRole("tab", { name: "PDF" })).toBeDisabled();
   await expect(page.getByText("PDF ready · 1 page.")).toHaveCount(0);
   await expect(page.locator("#generation-pdf-availability")).toContainText(

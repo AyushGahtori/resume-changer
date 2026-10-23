@@ -42,12 +42,9 @@ for (const theme of ["light", "dark"]) {
       viewport: { width: viewport.width, height: viewport.height },
       deviceScaleFactor: 1,
     });
-    await context.addInitScript(
-      (value) => {
-        window.localStorage.setItem("resume-changer.theme.v1", value);
-      },
-      theme,
-    );
+    await context.addInitScript((value) => {
+      window.localStorage.setItem("resume-changer.theme.v1", value);
+    }, theme);
     const page = await context.newPage();
     await page.route("**/api/compile", (route) =>
       route.fulfill({

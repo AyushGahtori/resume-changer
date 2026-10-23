@@ -13,6 +13,20 @@ async function openBuilder(page: import("@playwright/test").Page) {
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
 }
 
+async function readThemeTokenColor(
+  page: import("@playwright/test").Page,
+  token: string,
+) {
+  return page.locator("html").evaluate((root, tokenName) => {
+    const probe = document.createElement("span");
+    probe.style.color = `var(${tokenName})`;
+    root.append(probe);
+    const color = getComputedStyle(probe).color;
+    probe.remove();
+    return color;
+  }, token);
+}
+
 test("keeps one page title with the product name and the instruction", async ({
   page,
 }) => {
@@ -70,16 +84,27 @@ test("sets the title in the serif display size and the label in orange", async (
   expect(title.lineHeight).toBe("48px");
 
   const eyebrow = page.locator(".generation-heading .eyebrow");
-  await expect(eyebrow).toHaveCSS("color", "rgb(249, 115, 22)");
-  await expect(eyebrow).toHaveCSS("font-size", "10px");
+  await expect(eyebrow).toHaveCSS(
+    "color",
+    await readThemeTokenColor(page, "--accent-hover"),
+  );
+  await expect(eyebrow).toHaveCSS("font-size", "12px");
   await expect(eyebrow.locator("span")).toHaveCSS(
     "color",
-    "rgb(100, 116, 139)",
+    await readThemeTokenColor(page, "--quiet"),
   );
 
   const intro = page.locator(".page-intro");
-  await expect(intro).toHaveCSS("color", "rgb(71, 85, 105)");
-  await expect(intro).toHaveCSS("font-size", "14px");
+  await expect(intro).toHaveCSS(
+    "color",
+    await readThemeTokenColor(page, "--muted"),
+  );
+  const bodyLargeSize = await page
+    .locator("html")
+    .evaluate((root) =>
+      getComputedStyle(root).getPropertyValue("--type-body-large-size").trim(),
+    );
+  await expect(intro).toHaveCSS("font-size", bodyLargeSize);
 });
 
 test("keeps the header compact and the work inside the first viewport", async ({
@@ -127,16 +152,17 @@ test("scales the title down and stacks the header on a narrow screen", async ({
   expect(title.right).toBeLessThanOrEqual(390);
 
   const stacked = await page.evaluate(() => {
-    const heading = document.querySelector(".generation-heading > div");
-    const source = document.querySelector(".library-source-switch");
-    if (!heading || !source) return null;
+    const context = document.querySelector(".generation-draft");
+    const details = context?.querySelector(".generation-draft-details");
+    const source = context?.querySelector(".generation-draft-source");
+    if (!details || !source) return null;
     return {
-      headingBottom: heading.getBoundingClientRect().bottom,
+      detailsBottom: details.getBoundingClientRect().bottom,
       sourceTop: source.getBoundingClientRect().top,
     };
   });
   expect(stacked).not.toBeNull();
-  expect(stacked!.sourceTop).toBeGreaterThanOrEqual(stacked!.headingBottom);
+  expect(stacked!.sourceTop).toBeGreaterThanOrEqual(stacked!.detailsBottom);
 
   const dimensions = await page.evaluate(() => ({
     documentWidth: document.documentElement.scrollWidth,
