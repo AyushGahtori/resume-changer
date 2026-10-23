@@ -5278,6 +5278,7 @@ a:focus-visible {
   background: var(--surface);
   color: var(--ink);
   box-shadow: 0 0 0 1px var(--line);
+  font-weight: 650;
 }
 
 .generation-output-tabs button:disabled {
@@ -5286,7 +5287,7 @@ a:focus-visible {
 }
 
 .generation-selection-actions button,
-.generation-output-actions button {
+.generation-output-actions > button {
   min-height: 30px;
   padding: 0 9px;
   border: 1px solid var(--line);
@@ -5299,7 +5300,7 @@ a:focus-visible {
 }
 
 .generation-selection-actions button:hover,
-.generation-output-actions button:hover {
+.generation-output-actions > button:hover {
   border-color: var(--line-strong);
   background: var(--surface-hover);
   color: var(--ink);
@@ -6021,7 +6022,7 @@ a:focus-visible {
 
 .generation-groups {
   display: grid;
-  gap: 14px;
+  gap: 12px;
   max-height: min(58vh, 620px);
   overflow: auto;
   padding-right: 4px;
@@ -6066,7 +6067,7 @@ a:focus-visible {
   align-items: baseline;
   flex-wrap: wrap;
   gap: 4px 8px;
-  padding: 0 0 7px;
+  padding: 0 0 6px;
 }
 
 .generation-group legend span {
@@ -6115,6 +6116,7 @@ a:focus-visible {
 }
 
 .generation-point span {
+  min-width: 0;
   overflow-wrap: anywhere;
 }
 
@@ -6132,9 +6134,13 @@ a:focus-visible {
 }
 
 .generation-preview-empty {
-  display: grid;
+  display: flex;
   min-height: 260px;
-  place-items: center;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 20px;
   border: 1px dashed var(--line-strong);
   color: var(--muted);
   font-size: var(--type-body-size);
@@ -6144,7 +6150,21 @@ a:focus-visible {
 
 .generation-preview-empty p {
   margin: 0;
-  padding: 20px;
+  padding: 0;
+}
+
+.generation-preview-empty-icon {
+  color: var(--muted);
+}
+
+.generation-preview-empty-icon.is-spinning {
+  animation: preview-status-spin 900ms linear infinite;
+}
+
+@keyframes preview-status-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .generation-metadata {
@@ -6155,15 +6175,92 @@ a:focus-visible {
 }
 
 .generation-origin {
-  margin: 0 0 10px;
-  padding: 9px 11px;
+  margin-bottom: 10px;
+}
+
+/*
+ * Status banners carry an icon, a message, and a semantic tone. The tone is
+ * only a second signal: every banner repeats its meaning in words, so the
+ * message stays readable without the color.
+ */
+.status-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 10px;
   border: 1px solid var(--line);
-  border-left: 3px solid var(--teal);
   border-radius: 5px;
-  background: var(--surface-soft);
   color: var(--ink);
   font-size: var(--type-body-size);
   line-height: var(--type-body-line-height);
+}
+
+.status-banner-icon {
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+
+.status-banner-body {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.status-banner-body > p {
+  margin: 0;
+}
+
+.status-banner--info {
+  border-color: color-mix(in srgb, var(--color-info) 34%, var(--line));
+  background: color-mix(in srgb, var(--color-info) 9%, var(--surface));
+}
+
+.status-banner--info .status-banner-icon {
+  color: var(--color-info-strong);
+}
+
+.status-banner--success {
+  border-color: color-mix(in srgb, var(--color-success) 34%, var(--line));
+  background: var(--color-success-subtle);
+}
+
+.status-banner--success .status-banner-icon {
+  color: var(--color-success-strong);
+}
+
+.status-banner--caution {
+  border-color: color-mix(in srgb, var(--color-warning) 34%, var(--line));
+  background: var(--color-warning-subtle);
+}
+
+.status-banner--caution .status-banner-icon {
+  color: var(--color-warning-strong);
+}
+
+.status-banner--error {
+  border-color: color-mix(in srgb, var(--color-error) 34%, var(--line));
+  background: var(--color-error-subtle);
+}
+
+.status-banner--error .status-banner-icon {
+  color: var(--color-error-strong);
+}
+
+.status-banner .generation-metadata {
+  margin: 0;
+  color: inherit;
+}
+
+.generation-metadata-notice {
+  margin-bottom: 9px;
+}
+
+.preview-status {
+  margin-bottom: 10px;
+}
+
+.preview-status-detail {
+  color: var(--muted);
+  font-size: 10px;
 }
 
 .latex-preview {
@@ -6213,6 +6310,28 @@ a:focus-visible {
   overflow-wrap: anywhere;
 }
 
+.status-banner details {
+  margin-top: 8px;
+  color: var(--ink);
+}
+
+.status-banner summary {
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.status-banner pre {
+  max-height: 220px;
+  overflow: auto;
+  margin: 8px 0 0;
+  color: var(--ink);
+  font-family: "Cascadia Code", Consolas, monospace;
+  font-size: 10px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .pdf-preview-workspace {
   min-width: 0;
 }
@@ -6230,17 +6349,22 @@ a:focus-visible {
 
 .pdf-preview-toolbar {
   display: flex;
-  min-height: 42px;
+  min-height: 38px;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 5px 9px;
+  gap: 8px 12px;
+  padding: 4px 10px;
   border-bottom: 1px solid var(--line);
   background: var(--surface);
 }
 
 .pdf-preview-toolbar button {
-  min-height: 29px;
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   padding: 0 9px;
   border: 1px solid var(--line);
   border-radius: 4px;
@@ -6261,8 +6385,20 @@ a:focus-visible {
   opacity: 0.45;
 }
 
+/* Icon-only controls keep a square footprint so the row never shifts. */
+.pdf-preview-toolbar .pdf-toolbar-icon {
+  width: 28px;
+  min-width: 28px;
+  padding: 0;
+}
+
+.pdf-preview-toolbar .pdf-toolbar-action {
+  white-space: nowrap;
+}
+
 .pdf-zoom-control {
   display: inline-flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
   color: var(--muted);
@@ -6271,10 +6407,23 @@ a:focus-visible {
   font-variant-numeric: tabular-nums;
 }
 
-.pdf-zoom-control button {
-  width: 30px;
-  padding: 0;
-  font-size: 16px;
+.pdf-zoom-value {
+  min-width: 56px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.pdf-toolbar-divider {
+  width: 1px;
+  height: 16px;
+  background: var(--line);
+}
+
+.pdf-preview-toolbar .pdf-fit-button {
+  width: auto;
+  padding: 0 8px;
+  font-size: 9px;
+  white-space: nowrap;
 }
 
 .pdf-preview-frame {
@@ -6386,6 +6535,19 @@ a:focus-visible {
   .pdf-preview-viewport {
     height: min(68vh, 720px);
     min-height: 360px;
+  }
+
+  /* The viewer toolbar wraps instead of overflowing on narrow screens. */
+  .pdf-preview-toolbar {
+    gap: 8px;
+  }
+
+  .pdf-zoom-control {
+    gap: 8px;
+  }
+
+  .pdf-zoom-value {
+    min-width: 48px;
   }
 
   .generation-groups {

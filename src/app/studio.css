@@ -186,6 +186,10 @@
   color: var(--accent);
   background: var(--accent-soft);
 }
+.studio-badge.is-compiling {
+  color: var(--color-info-strong);
+  background: color-mix(in srgb, var(--color-info) 12%, var(--surface));
+}
 .studio-body {
   display: grid;
   grid-template-columns: 142px minmax(0, 1fr);
@@ -1285,12 +1289,6 @@
 .pdf-fit-button[aria-pressed="true"] {
   border-color: var(--imagination);
   color: var(--imagination);
-}
-.pdf-preview-toolbar {
-  flex-wrap: wrap;
-}
-.pdf-zoom-control {
-  flex-wrap: wrap;
 }
 @keyframes imagination-breathe {
   from {
