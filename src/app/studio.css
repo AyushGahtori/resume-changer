@@ -1,9 +1,9 @@
 .generation-layout.is-studio-layout {
-  grid-template-columns: minmax(0, 1fr) 8px minmax(
+  grid-template-columns: minmax(0, 1fr) var(--space-8) minmax(
       300px,
       var(--preview-share, 43%)
     );
-  gap: 6px;
+  gap: var(--space-8);
 }
 
 /**
@@ -73,7 +73,7 @@
   align-self: stretch;
   min-height: 300px;
   cursor: col-resize;
-  border-radius: 99px;
+  border-radius: var(--radius-full);
   touch-action: none;
 }
 .studio-panel-resizer::after {
@@ -92,19 +92,24 @@
 .resume-studio {
   min-width: 0;
   border: 1px solid var(--line);
-  border-radius: 14px;
+  border-radius: var(--radius-card);
   background: var(--surface);
   overflow: clip;
-  box-shadow: var(--shadow);
+  /*
+   * A major surface carries one subtle light shadow and nothing more. The
+   * token resolves to none in the dark theme, where the border and the
+   * surface step do the separating instead.
+   */
+  box-shadow: var(--shadow-xs);
 }
 .resume-studio button,
 .studio-dialog button,
 .studio-restore button {
   cursor: pointer;
   min-height: 32px;
-  padding: 6px 10px;
+  padding: var(--space-8) var(--space-12);
   border: 1px solid var(--line);
-  border-radius: 7px;
+  border-radius: var(--radius-control);
   background: var(--surface-soft);
   color: var(--ink);
   font-size: 11px;
@@ -131,17 +136,17 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 14px;
-  padding: 20px 22px;
+  gap: var(--space-16);
+  padding: var(--space-24);
   border-bottom: 1px solid var(--line);
-  background: linear-gradient(
-    115deg,
-    color-mix(in srgb, var(--accent-soft) 40%, var(--surface)),
-    var(--surface) 65%
-  );
+  /*
+   * The panel header is the same surface as the panel it sits in. A tinted
+   * gradient here read as a second card on top of the first one.
+   */
+  background: var(--surface);
 }
 .studio-kicker {
-  margin: 0 0 5px;
+  margin: 0 0 var(--space-4);
   color: var(--accent);
   font-size: 9px;
   font-weight: 750;
@@ -155,7 +160,7 @@
   font-weight: 500;
 }
 .studio-heading p:last-child {
-  margin: 5px 0 0;
+  margin: var(--space-4) 0 0;
   color: var(--muted);
   font-size: 11px;
 }
@@ -163,9 +168,10 @@
   display: inline-flex;
   flex-shrink: 0;
   align-items: center;
-  padding: 5px 9px;
+  min-height: 24px;
+  padding: var(--space-4) var(--space-8);
   border: 1px solid var(--line);
-  border-radius: 99px;
+  border-radius: var(--radius-full);
   background: var(--surface-soft);
   color: var(--teal);
   font-size: 10px;
@@ -183,18 +189,19 @@
 .studio-navigation {
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  padding: 14px 8px;
+  gap: var(--space-4);
+  padding: var(--space-8);
   border-right: 1px solid var(--line);
   background: color-mix(in srgb, var(--surface-soft) 55%, var(--surface));
 }
 .studio-navigation button {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-8);
+  min-height: 32px;
   border-color: transparent;
   background: transparent;
-  padding: 9px 8px;
+  padding: var(--space-8);
   text-align: left;
   color: var(--muted);
   font-size: 10px;
@@ -219,14 +226,14 @@
 }
 .studio-editor {
   min-width: 0;
-  padding: 18px 14px;
+  padding: var(--space-16);
 }
 .studio-panel-heading {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 17px;
+  gap: var(--space-12);
+  margin-bottom: var(--space-16);
 }
 .studio-panel-heading h3 {
   margin: 0;
@@ -234,7 +241,7 @@
   line-height: 1.4;
 }
 .studio-panel-heading p {
-  margin: 5px 0 0;
+  margin: var(--space-4) 0 0;
   color: var(--muted);
   font-size: 11px;
   line-height: 1.5;
@@ -248,10 +255,10 @@
   line-height: 1.55;
 }
 .studio-empty {
-  margin: 10px 0;
-  padding: 22px 16px;
+  margin: var(--space-8) 0;
+  padding: var(--space-16);
   border: 1px dashed var(--line-strong);
-  border-radius: 9px;
+  border-radius: var(--radius-card);
   color: var(--muted);
   font-size: 12px;
   line-height: 1.6;
@@ -259,8 +266,8 @@
 }
 .studio-field {
   display: grid;
-  gap: 7px;
-  margin: 0 0 13px;
+  gap: var(--space-8);
+  margin: 0 0 var(--space-12);
   color: var(--ink);
   font-size: 11px;
   font-weight: 650;
@@ -273,8 +280,8 @@
   min-width: 0;
   width: 100%;
   border: 1px solid var(--line-strong);
-  border-radius: 7px;
-  padding: 10px;
+  border-radius: var(--radius-control);
+  padding: var(--space-12);
   background: var(--surface-soft);
   color: var(--ink);
   font-size: 12px;
@@ -292,15 +299,15 @@
 .studio-overview-stats {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-  margin: 18px 0;
+  gap: var(--space-8);
+  margin: var(--space-16) 0;
 }
 .studio-overview-stats > div {
   display: grid;
-  gap: 5px;
-  padding: 16px 10px;
+  gap: var(--space-4);
+  padding: var(--space-16);
   border: 1px solid var(--line);
-  border-radius: 9px;
+  border-radius: var(--radius-card);
   background: var(--surface-soft);
 }
 .studio-overview-stats strong {
@@ -326,16 +333,16 @@
 }
 .studio-destination {
   position: relative;
-  margin-bottom: 20px;
+  margin-bottom: var(--space-16);
 }
 .studio-destination > header {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 9px;
-  min-height: 47px;
-  padding-left: 46px;
-  margin-bottom: 9px;
+  gap: var(--space-8);
+  min-height: var(--space-48);
+  padding-left: var(--space-48);
+  margin-bottom: var(--space-8);
 }
 .studio-destination > header h4 {
   margin: 0;
@@ -365,10 +372,10 @@
 .studio-achievement-card {
   position: relative;
   min-width: 0;
-  padding: 13px 12px 10px 48px;
-  margin-bottom: 10px;
+  padding: var(--space-12) var(--space-12) var(--space-8) var(--space-48);
+  margin-bottom: var(--space-8);
   border: 1px solid var(--line);
-  border-radius: 9px;
+  border-radius: var(--radius-card);
   background: var(--surface-soft);
   transition:
     border-color 150ms,
@@ -421,8 +428,8 @@
 .studio-card-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px 12px;
-  margin-top: 9px;
+  gap: var(--space-4) var(--space-12);
+  margin-top: var(--space-8);
   color: var(--quiet);
   font-size: 9px;
 }
@@ -430,12 +437,12 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 5px;
-  margin-top: 10px;
+  gap: var(--space-4);
+  margin-top: var(--space-8);
 }
 .studio-card-actions > button {
   min-height: 27px;
-  padding: 3px 7px;
+  padding: var(--space-4) var(--space-8);
   border-color: transparent;
   background: transparent;
   font-size: 10px;
@@ -463,20 +470,24 @@
   bottom: 30px;
   z-index: 6;
   width: 170px;
-  padding: 5px;
+  padding: var(--space-4);
   border: 1px solid var(--line-strong);
-  border-radius: 8px;
+  border-radius: var(--radius-card);
   background: var(--surface);
-  box-shadow: var(--shadow);
+  /*
+   * A floating menu needs a little lift, and only a little. The token
+   * resolves to none in the dark theme, where the border separates it.
+   */
+  box-shadow: var(--shadow-sm);
 }
 .studio-card-menu button {
   display: block;
   width: 100%;
-  margin: 3px 0;
+  margin: var(--space-4) 0;
   text-align: left;
 }
 .studio-evidence {
-  margin-top: 7px;
+  margin-top: var(--space-8);
   color: var(--muted);
   font-size: 10px;
   line-height: 1.6;
@@ -488,7 +499,7 @@
   overflow-wrap: anywhere;
 }
 .studio-evidence p {
-  margin: 7px 0;
+  margin: var(--space-8) 0;
 }
 .studio-evidence code {
   display: block;
@@ -501,15 +512,15 @@
   gap: 4px;
 }
 .studio-mini-skills > span {
-  padding: 2px 5px;
-  border-radius: 4px;
+  padding: var(--space-4) var(--space-8);
+  border-radius: var(--radius-control);
   background: var(--surface);
 }
 .studio-drop-zone {
-  margin-left: 44px;
-  padding: 20px;
+  margin-left: var(--space-48);
+  padding: var(--space-24);
   border: 1px dashed var(--line-strong);
-  border-radius: 8px;
+  border-radius: var(--radius-card);
   color: var(--quiet);
   font-size: 11px;
   line-height: 1.6;
@@ -549,11 +560,11 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
-  padding: 9px;
-  margin-bottom: 10px;
+  gap: var(--space-8);
+  padding: var(--space-8);
+  margin-bottom: var(--space-8);
   border: 1px solid color-mix(in srgb, var(--imagination) 45%, var(--line));
-  border-radius: 8px;
+  border-radius: var(--radius-card);
   background: var(--imagination-soft);
 }
 .studio-merge-toolbar > span {
@@ -569,8 +580,8 @@
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 10px;
-  padding: 13px 16px;
+  gap: var(--space-8);
+  padding: var(--space-16);
   border-top: 1px solid var(--line);
   background: color-mix(in srgb, var(--surface) 96%, transparent);
   backdrop-filter: blur(10px);
@@ -582,7 +593,7 @@
 .studio-action-bar > div {
   display: flex;
   flex-wrap: wrap;
-  gap: 5px;
+  gap: var(--space-4);
   margin-left: auto;
 }
 .resume-studio .studio-primary,
@@ -591,7 +602,7 @@
   background: var(--accent);
   color: var(--accent-contrast);
   font-weight: 700;
-  padding: 8px 13px;
+  padding: var(--space-8) var(--space-12);
 }
 .resume-studio .studio-primary:hover:not(:disabled),
 .studio-dialog .studio-primary:hover:not(:disabled) {
@@ -607,10 +618,10 @@
 }
 .studio-error,
 .studio-notice {
-  margin: 0 14px 12px;
-  padding: 10px 12px;
+  margin: 0 var(--space-16) var(--space-12);
+  padding: var(--space-8) var(--space-12);
   border-left: 2px solid var(--danger);
-  border-radius: 4px;
+  border-radius: var(--radius-control);
   background: var(--danger-soft);
   color: var(--danger);
   font-size: 11px;
@@ -625,11 +636,11 @@
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 9px;
-  margin-bottom: 14px;
-  padding: 12px;
+  gap: var(--space-8);
+  margin-bottom: var(--space-16);
+  padding: var(--space-12);
   border: 1px solid var(--imagination);
-  border-radius: 9px;
+  border-radius: var(--radius-card);
   background: var(--imagination-soft);
   font-size: 12px;
 }
@@ -639,17 +650,17 @@
 }
 .studio-capacity {
   display: grid;
-  gap: 10px;
-  padding: 14px;
-  margin-bottom: 15px;
-  border-radius: 9px;
+  gap: var(--space-8);
+  padding: var(--space-16);
+  margin-bottom: var(--space-16);
+  border-radius: var(--radius-card);
   background: var(--imagination-soft);
 }
 .studio-capacity-title {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 10px;
+  gap: var(--space-8);
 }
 .studio-capacity-title strong {
   font-size: 12px;
@@ -671,18 +682,18 @@
   height: 7px;
   appearance: none;
   border: 0;
-  border-radius: 9px;
+  border-radius: var(--radius-full);
   overflow: hidden;
   background: var(--line-strong);
   accent-color: var(--imagination);
 }
 .studio-capacity-row progress::-webkit-progress-bar {
   background: var(--line-strong);
-  border-radius: 9px;
+  border-radius: var(--radius-full);
 }
 .studio-capacity-row progress::-webkit-progress-value {
   background: var(--imagination);
-  border-radius: 9px;
+  border-radius: var(--radius-full);
 }
 .studio-capacity-row progress::-moz-progress-bar {
   background: var(--imagination);
@@ -696,13 +707,13 @@
 .studio-filters {
   display: flex;
   flex-wrap: wrap;
-  gap: 5px;
-  margin: 10px 0 13px;
+  gap: var(--space-4);
+  margin: var(--space-8) 0 var(--space-12);
 }
 .studio-filters button {
   min-height: 27px;
   padding: 4px 9px;
-  border-radius: 99px;
+  border-radius: var(--radius-full);
   font-size: 9px;
 }
 .studio-filters button[aria-pressed="true"] {
@@ -712,20 +723,20 @@
 }
 .studio-skill-groups {
   display: grid;
-  gap: 9px;
-  margin-bottom: 15px;
+  gap: var(--space-8);
+  margin-bottom: var(--space-16);
 }
 .studio-skill-groups > details,
 .imagination-context-list > details {
-  padding: 10px;
+  padding: var(--space-12);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--radius-card);
 }
 .studio-skill-groups summary {
   display: flex;
   justify-content: space-between;
-  gap: 10px;
-  padding: 3px;
+  gap: var(--space-8);
+  padding: var(--space-4);
   color: var(--ink);
   cursor: pointer;
   font-size: 11px;
@@ -739,15 +750,15 @@
 .studio-chip-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 7px;
-  padding-top: 12px;
+  gap: var(--space-8);
+  padding-top: var(--space-12);
 }
 .studio-chip-list > button {
   display: inline-flex;
-  gap: 6px;
+  gap: var(--space-8);
   align-items: center;
   min-height: 32px;
-  padding: 5px 8px;
+  padding: var(--space-4) var(--space-8);
   font-size: 10px;
 }
 .studio-chip-list button small {
@@ -770,28 +781,28 @@
 }
 .studio-section-toggle {
   display: flex;
-  gap: 9px;
+  gap: var(--space-8);
   align-items: center;
-  padding: 11px;
-  margin: 0 0 7px;
+  padding: var(--space-12);
+  margin: 0 0 var(--space-8);
   border: 1px solid var(--line);
-  border-radius: 7px;
+  border-radius: var(--radius-control);
   color: var(--ink);
   font-size: 12px;
 }
 .studio-record,
 .studio-revision {
-  padding: 13px;
-  margin-bottom: 10px;
+  padding: var(--space-12);
+  margin-bottom: var(--space-8);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--radius-card);
   background: var(--surface-soft);
   font-size: 11px;
   line-height: 1.6;
 }
 .studio-record p,
 .studio-revision p {
-  margin: 5px 0 0;
+  margin: var(--space-4) 0 0;
   color: var(--muted);
 }
 .studio-record summary {
@@ -799,7 +810,7 @@
   font-weight: 650;
 }
 .studio-record li {
-  margin-bottom: 7px;
+  margin-bottom: var(--space-8);
 }
 .studio-revision {
   display: flex;
@@ -812,15 +823,15 @@
 }
 .studio-available-list {
   display: grid;
-  gap: 10px;
+  gap: var(--space-8);
   max-height: 60vh;
   overflow: auto;
   overscroll-behavior: contain;
 }
 .studio-available-list > article {
-  padding: 13px;
+  padding: var(--space-12);
   border: 1px solid var(--line);
-  border-radius: 9px;
+  border-radius: var(--radius-card);
   background: var(--surface-soft);
   cursor: grab;
 }
@@ -834,14 +845,14 @@
   line-height: 1.6;
 }
 .studio-dialog {
-  width: min(960px, calc(100vw - 32px));
-  max-height: calc(100dvh - 40px);
+  width: min(960px, calc(100vw - var(--space-32)));
+  max-height: calc(100dvh - var(--space-48));
   padding: 0;
   border: 1px solid var(--line-strong);
-  border-radius: 16px;
+  border-radius: var(--radius-card);
   background: var(--surface);
   color: var(--ink);
-  box-shadow: 0 30px 100px #0006;
+  box-shadow: var(--shadow);
 }
 .studio-dialog::backdrop {
   background: #08080db3;
@@ -854,8 +865,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 20px;
-  padding: 18px 22px;
+  gap: var(--space-24);
+  padding: var(--space-24);
   border-bottom: 1px solid var(--line);
   background: var(--surface);
 }
@@ -865,7 +876,7 @@
 }
 .studio-dialog-heading h2::before {
   content: "✦";
-  margin-right: 9px;
+  margin-right: var(--space-8);
   color: var(--imagination);
 }
 .studio-dialog-heading > button {
@@ -874,12 +885,12 @@
   font-size: 20px;
 }
 .imagination-body {
-  padding: 20px 22px;
+  padding: var(--space-24);
 }
 .imagination-composer {
-  padding: 16px;
+  padding: var(--space-16);
   border: 1px solid var(--imagination);
-  border-radius: 11px;
+  border-radius: var(--radius-card);
   background: var(--imagination-soft);
 }
 .imagination-composer > span {
@@ -898,9 +909,9 @@
   position: relative;
   display: grid;
   justify-items: center;
-  gap: 9px;
-  padding: 14px 10px 22px;
-  margin: -2px 0 12px;
+  gap: var(--space-8);
+  padding: var(--space-16) var(--space-8) var(--space-24);
+  margin: 0 0 var(--space-12);
   border-bottom: 1px solid var(--line);
   color: var(--muted);
   font-size: 10px;
@@ -929,7 +940,7 @@
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 7px;
+  gap: var(--space-8);
 }
 .imagination-connected button {
   position: relative;
@@ -943,27 +954,27 @@
 .imagination-context-libraries {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
-  margin: 0 0 18px;
+  gap: var(--space-16);
+  margin: 0 0 var(--space-16);
 }
 .imagination-context-libraries > section {
   min-width: 0;
-  padding: 12px;
+  padding: var(--space-12);
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: var(--radius-card);
 }
 .imagination-context-libraries h3 {
-  margin: 0 0 9px;
+  margin: 0 0 var(--space-8);
   font-size: 13px;
 }
 .imagination-context-libraries input {
-  padding: 8px;
-  margin-bottom: 9px;
+  padding: var(--space-8);
+  margin-bottom: var(--space-8);
   font-size: 11px;
 }
 .imagination-context-list {
   display: grid;
-  gap: 7px;
+  gap: var(--space-8);
   max-height: 240px;
   overflow: auto;
   overscroll-behavior: contain;
@@ -974,7 +985,7 @@
 }
 .studio-dialog .imagination-context-card {
   width: 100%;
-  padding: 10px;
+  padding: var(--space-8);
   text-align: left;
   font-size: 11px;
   line-height: 1.55;
@@ -985,13 +996,13 @@
   background: var(--imagination-soft);
 }
 .imagination-originals {
-  padding: 14px;
-  margin-bottom: 16px;
-  border-radius: 9px;
+  padding: var(--space-16);
+  margin-bottom: var(--space-16);
+  border-radius: var(--radius-card);
   background: var(--surface-soft);
 }
 .imagination-originals h3 {
-  margin: 0 0 10px;
+  margin: 0 0 var(--space-8);
   font-size: 11px;
   color: var(--quiet);
 }
@@ -1004,32 +1015,32 @@
 .studio-quick-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  margin: 0 0 12px;
+  gap: var(--space-8);
+  margin: 0 0 var(--space-12);
 }
 .studio-quick-actions button {
   min-height: 27px;
   padding: 4px 9px;
-  border-radius: 99px;
+  border-radius: var(--radius-full);
   font-size: 10px;
 }
 .imagination-request-actions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 9px;
-  margin-bottom: 14px;
+  gap: var(--space-8);
+  margin-bottom: var(--space-16);
 }
 .imagination-request-actions label {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: var(--space-8);
   color: var(--muted);
   font-size: 11px;
 }
 .imagination-request-actions select {
   width: auto;
-  padding: 4px 7px;
+  padding: var(--space-4) var(--space-8);
   font-size: 11px;
 }
 .imagination-request-actions > span {
@@ -1040,10 +1051,10 @@
   margin-left: auto;
 }
 .imagination-suggestion {
-  padding: 16px;
-  margin: 15px 0;
+  padding: var(--space-16);
+  margin: var(--space-16) 0;
   border: 1px solid var(--imagination);
-  border-radius: 10px;
+  border-radius: var(--radius-card);
   background: var(--imagination-soft);
 }
 .imagination-suggestion .studio-field > span {
@@ -1057,9 +1068,9 @@
 .imagination-progress {
   position: relative;
   overflow: hidden;
-  padding: 13px;
+  padding: var(--space-12);
   border: 1px solid var(--imagination);
-  border-radius: 8px;
+  border-radius: var(--radius-card);
   background: var(--imagination-soft);
   color: var(--imagination);
   font-size: 12px;
@@ -1070,27 +1081,27 @@
   flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
-  gap: 9px;
-  padding-top: 16px;
+  gap: var(--space-8);
+  padding-top: var(--space-16);
   border-top: 1px solid var(--line);
 }
 .studio-dialog-footer > label {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: var(--space-8);
   margin-right: auto;
   font-size: 11px;
 }
 .studio-dialog-footer select {
   width: auto;
-  padding: 6px;
+  padding: var(--space-8);
   font-size: 11px;
 }
 .studio-dialog-footer .studio-muted {
   flex: 1;
 }
 .is-studio-layout .generation-origin {
-  padding: 8px 10px;
+  padding: var(--space-8);
   font-size: 10px;
   border-left-color: var(--imagination);
 }
@@ -1102,7 +1113,7 @@
 }
 .pdf-zoom-control .pdf-fit-button {
   width: auto;
-  padding: 0 8px;
+  padding: 0 var(--space-8);
   font-size: 9px;
 }
 .pdf-fit-button[aria-pressed="true"] {
@@ -1155,10 +1166,10 @@
 .studio-drop-destinations > div {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: var(--space-4);
   border: 1px dashed var(--imagination);
-  border-radius: 10px;
-  padding: 12px;
+  border-radius: var(--radius-card);
+  padding: var(--space-12);
   background: var(--surface);
 }
 .studio-drop-destinations span,
@@ -1173,13 +1184,13 @@
   margin: 16px 0;
 }
 .studio-skill-order ol {
-  padding-left: 20px;
+  padding-left: var(--space-24);
 }
 .studio-skill-order li {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 5px 0;
+  gap: var(--space-8);
+  padding: var(--space-4) 0;
 }
 .studio-skill-order li span {
   flex: 1;
@@ -1212,13 +1223,13 @@
     padding: 4px 7px;
   }
   .studio-editor {
-    padding: 15px 10px;
+    padding: var(--space-12) var(--space-8);
   }
   .studio-panel-heading {
     flex-wrap: wrap;
   }
   .studio-action-bar {
-    padding: 10px;
+    padding: var(--space-8);
   }
   .studio-action-bar > div {
     width: 100%;
@@ -1235,10 +1246,10 @@
     justify-content: space-between;
   }
   .studio-achievement-card {
-    padding-right: 9px;
+    padding-right: var(--space-8);
   }
   .studio-card-actions {
-    gap: 2px;
+    gap: var(--space-4);
   }
   .studio-card-actions > button {
     font-size: 9px;
@@ -1251,10 +1262,10 @@
     margin: 0;
   }
   .studio-dialog-heading {
-    padding: 15px;
+    padding: var(--space-16);
   }
   .imagination-body {
-    padding: 15px;
+    padding: var(--space-16);
   }
   .imagination-context-libraries {
     grid-template-columns: minmax(0, 1fr);
