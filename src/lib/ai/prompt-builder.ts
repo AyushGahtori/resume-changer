@@ -21,8 +21,10 @@ import { PROMPT_VERSION, SHARED_INSTRUCTIONS } from "./prompts/v1/shared";
 import { JAKE_STYLE_TEMPLATE } from "../latex/jake-template";
 import { AiProviderError } from "./provider";
 import {
+  ACHIEVEMENT_WRITING_MODE_DIRECTIVES,
   AchievementWritingInputSchema,
   AchievementWritingResultSchema,
+  type AchievementWritingMode,
   type AchievementWritingInput,
 } from "./achievement-writing";
 import {
@@ -111,9 +113,10 @@ export function buildAiPrompt<T extends AiTask>(
 ): { prompt: string; outputSchema: Record<string, unknown> } {
   const configuration = taskConfiguration[task];
   const validatedInput = configuration.inputSchema.parse(input);
-  const { templateContext, ...taskData } =
+  const { templateContext, writingMode, ...taskData } =
     validatedInput as typeof validatedInput & {
       templateContext?: string;
+      writingMode?: AchievementWritingMode;
     };
   const context: Record<string, unknown> = { ...taskData };
   if (task === "selectAchievements") {
@@ -135,6 +138,11 @@ export function buildAiPrompt<T extends AiTask>(
     `Prompt version: ${PROMPT_VERSION}`,
     `Shared instructions:\n${SHARED_INSTRUCTIONS}`,
     `Task instructions:\n${configuration.instructions}`,
+    ...(task === "achievementCreate" && writingMode
+      ? [
+          `Server-selected writing mode directive:\nApply this directive together with the user's instruction. If they conflict, follow this directive while preserving all supported facts and the shared factuality rules.\n${ACHIEVEMENT_WRITING_MODE_DIRECTIVES[writingMode]}`,
+        ]
+      : []),
     `Task data (JSON):\n${JSON.stringify(context)}`,
   ];
 
