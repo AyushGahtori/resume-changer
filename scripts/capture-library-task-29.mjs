@@ -155,6 +155,32 @@ async function main() {
     }
 
     /*
+     * Capture the personal source with its supported create/edit affordances.
+     * The source is backed only by the isolated fictional sample library.
+     */
+    for (const viewport of viewports.filter(
+      ({ name }) => name === "1440x900" || name === "390x844",
+    )) {
+      for (const theme of themes) {
+        const context = await browser.newContext({
+          viewport: { width: viewport.width, height: viewport.height },
+          deviceScaleFactor: 1,
+          reducedMotion: "reduce",
+          colorScheme: theme,
+        });
+        const page = await openLibrary(context, theme, "/library");
+        await page.screenshot({
+          path: join(
+            outputDir,
+            "personal-" + theme + "-" + viewport.name + ".png",
+          ),
+          animations: "disabled",
+        });
+        await context.close();
+      }
+    }
+
+    /*
      * The parts of the page that sit below the fold, captured on their own
      * so the review can look at them at a readable scale.
      */
@@ -221,7 +247,7 @@ async function main() {
       await page
         .getByRole("searchbox", { name: "Search library" })
         .fill("no matching library content");
-      await page.waitForSelector(".library-empty");
+      await page.waitForSelector(".library-state");
       await page.screenshot({
         path: join(outputDir, `${theme}-empty.png`),
         animations: "disabled",

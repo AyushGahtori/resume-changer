@@ -208,3 +208,9 @@ browser, and removes the data root when it is done.
 - The job context band's own surface, padding, border and typography.
 - The selection, the counts, the AI actions, the preview and the export.
 - No dependency, schema, prompt, API route or loader.
+
+## Integration follow-up — source-bound state
+
+The final integration audit fixed the source-switch state leak recorded above. `src/app/generate/page.tsx` now keys `ResumeGenerator` by the loaded source, so selections, recommendations, analysis, tailoring, and generated output cannot remain attached to a different library after a client-side route change. The draft still comes from the existing shared job-draft store, and saved sessions continue to use their source-specific keys.
+
+`tests/e2e/builder-task-10-source-choice.spec.ts` now covers selecting an item, switching demo → personal → demo, and verifying the correct counts and cleared checkboxes. The complete source-choice file passes: 12/12. See the final screenshots and validation in `docs/ui-review/resume-builder-task-29/REVIEW.md`.
