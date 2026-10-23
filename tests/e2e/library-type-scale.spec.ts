@@ -244,8 +244,8 @@ test("applies the shared type scale to the library hierarchy", async ({
     expect(["normal", "0px"]).toContain(reading?.letterSpacing);
   }
 
-  expect(sourceIndicator?.letterSpacing).toBe("0px");
-  expect(experienceKind?.letterSpacing).toBe("0px");
+  expect(["normal", "0px"]).toContain(sourceIndicator?.letterSpacing);
+  expect(["normal", "0px"]).toContain(experienceKind?.letterSpacing);
 });
 
 test("consumes the shared tokens instead of a second scale", async ({
