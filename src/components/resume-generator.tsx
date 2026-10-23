@@ -1219,24 +1219,10 @@ export default function ResumeGenerator({ library, source }: Props) {
               : "Choose the experience you want to include, then review the LaTeX."}
           </p>
         </div>
-        <nav className="library-source-switch" aria-label="Resume data source">
-          <Link
-            aria-current={source === "personal" ? "page" : undefined}
-            href="/generate"
-          >
-            My data
-          </Link>
-          <Link
-            aria-current={source === "demo" ? "page" : undefined}
-            href="/generate?source=demo"
-          >
-            Demo data
-          </Link>
-        </nav>
       </div>
 
-      <div className="generation-draft" aria-live="polite">
-        <div>
+      <div className="generation-draft">
+        <div className="generation-draft-details" aria-live="polite">
           <p className="generation-label">JOB DESCRIPTION</p>
           {!draftReady ? (
             <p className="generation-draft-note">Loading saved job details…</p>
@@ -1263,11 +1249,36 @@ export default function ResumeGenerator({ library, source }: Props) {
             </p>
           )}
         </div>
-        {safeJobUrl && (
-          <a href={safeJobUrl} rel="noreferrer" target="_blank">
-            Open job link
-          </a>
-        )}
+        {/*
+         * The source choice decides which library the builder loads, so it
+         * sits with the job context it applies to instead of floating in the
+         * page heading. Each segment is a real link to its own route, and
+         * the loaded one carries the current-page marker.
+         */}
+        <div className="generation-draft-source">
+          <nav
+            className="builder-source-switch"
+            aria-label="Resume data source"
+          >
+            <Link
+              aria-current={source === "personal" ? "page" : undefined}
+              href="/generate"
+            >
+              My data
+            </Link>
+            <Link
+              aria-current={source === "demo" ? "page" : undefined}
+              href="/generate?source=demo"
+            >
+              Demo data
+            </Link>
+          </nav>
+          {safeJobUrl && (
+            <a href={safeJobUrl} rel="noreferrer" target="_blank">
+              Open job link
+            </a>
+          )}
+        </div>
       </div>
       {draftNotice && (
         <p className="generation-notice" role="status">
