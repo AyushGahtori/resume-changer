@@ -1,0 +1,227 @@
+.root {
+  display: grid;
+  gap: var(--space-16);
+  min-width: 0;
+}
+
+.header {
+  display: grid;
+  gap: var(--space-8);
+  min-width: 0;
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  min-width: 0;
+}
+
+.titleIcon {
+  flex: 0 0 auto;
+  color: var(--imagination);
+}
+
+.title {
+  margin: 0;
+  color: var(--ink);
+  font-size: clamp(1.55rem, 2.4vw, 2rem);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+}
+
+.subtitle {
+  max-width: 72ch;
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
+}
+
+.notice {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-12);
+  min-width: 0;
+  padding: var(--space-12) var(--space-16);
+  border: 1px solid color-mix(in srgb, var(--imagination) 28%, var(--line));
+  border-radius: 8px;
+  background: var(--imagination-soft);
+  color: var(--ink);
+}
+
+.noticeIcon {
+  flex: 0 0 auto;
+  margin-top: 2px;
+  color: var(--imagination);
+}
+
+.noticeTitle {
+  margin: 0 0 var(--space-4);
+  color: var(--imagination-hover);
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+  font-weight: 700;
+}
+
+.noticeText {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--type-helper-size);
+  line-height: var(--type-helper-line-height);
+}
+
+.destination {
+  display: grid;
+  grid-template-columns: minmax(132px, max-content) minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-12);
+  max-width: 760px;
+  min-width: 0;
+}
+
+.destinationLabel {
+  color: var(--ink);
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+  font-weight: 600;
+}
+
+.destinationSelect {
+  width: 100%;
+  min-width: 0;
+  padding: var(--space-12);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-control);
+  background: var(--surface-soft);
+  color: var(--ink);
+  font: inherit;
+  outline-color: var(--focus);
+}
+
+.destinationSelect:focus-visible,
+.textarea:focus-visible,
+.startButton:focus-visible,
+.restoreButton:focus-visible,
+.discardButton:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.restore {
+  display: grid;
+  gap: var(--space-8);
+  min-width: 0;
+  padding: var(--space-12);
+  border: 1px solid var(--imagination);
+  border-radius: 8px;
+  background: var(--imagination-soft);
+}
+
+.restoreMessage {
+  margin: 0;
+  color: var(--ink);
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
+}
+
+.restoreActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+}
+
+.restoreButton,
+.discardButton {
+  min-height: 36px;
+  padding: 6px var(--space-12);
+  border: 1px solid var(--imagination);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--imagination-hover);
+  font: inherit;
+  cursor: pointer;
+}
+
+.discardButton {
+  border-color: var(--line-strong);
+  color: var(--ink);
+}
+
+.editor {
+  display: grid;
+  gap: var(--space-8);
+  min-width: 0;
+  padding: var(--space-16);
+  border: 1px solid var(--imagination);
+  border-radius: 8px;
+  background: var(--imagination-soft);
+}
+
+.editorTopline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+  min-width: 0;
+}
+
+.editorLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
+  color: var(--ink);
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+  font-weight: 700;
+}
+
+.editorIcon {
+  flex: 0 0 auto;
+  color: var(--imagination);
+}
+
+.startButton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-height: 32px;
+  padding: 4px;
+  border: 0;
+  background: transparent;
+  color: var(--imagination-hover);
+  font: inherit;
+  font-size: var(--type-helper-size);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.textarea {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 112px;
+  padding: var(--space-12);
+  border: 1px solid var(--imagination);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
+  resize: vertical;
+}
+
+.textarea::placeholder {
+  color: var(--muted);
+  opacity: 1;
+}
+
+@media (max-width: 700px) {
+  .destination {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-8);
+  }
+}
