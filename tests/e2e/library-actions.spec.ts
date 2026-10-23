@@ -280,6 +280,15 @@ test("presses an action without resizing it or moving its neighbours", async ({
   await expect
     .poll(() => add.evaluate((element) => getComputedStyle(element).transform))
     .not.toBe("none");
+  await expect
+    .poll(() =>
+      add.evaluate((element) => {
+        const transform = getComputedStyle(element).transform;
+        const scaleX = transform.match(/^matrix\(([^,]+)/)?.[1];
+        return scaleX ? Number(scaleX) : 1;
+      }),
+    )
+    .toBeLessThan(0.985);
 
   const pressed = await add.evaluate((element) => ({
     width: (element as HTMLElement).offsetWidth,
