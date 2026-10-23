@@ -1474,6 +1474,7 @@ a:focus-visible {
   font-size: var(--type-label-size);
   line-height: var(--type-label-line-height);
   font-weight: 600;
+  letter-spacing: 0;
 }
 
 .library-page .library-owner h2 {
@@ -1530,6 +1531,7 @@ a:focus-visible {
   font-size: var(--type-micro-label-size);
   line-height: var(--type-micro-label-line-height);
   font-weight: 700;
+  letter-spacing: 0;
 }
 
 .library-page .experience-heading h3 {
