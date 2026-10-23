@@ -35,11 +35,11 @@ test.describe("achievement library baseline", () => {
       ),
     );
     expect(order).toEqual([
-      "library-heading",
+      "library-page-header",
+      "library-notice",
       "library-overview",
       "library-controls",
-      "library-experiences",
-      "library-secondary",
+      "library-content",
     ]);
   });
 
@@ -65,7 +65,9 @@ test.describe("achievement library baseline", () => {
     await page.getByLabel("Point status").selectOption("disabled");
 
     await expect(
-      page.getByText("No achievement points match these filters."),
+      page.getByText(
+        "None of the 13 achievements in this library match the current search and filters.",
+      ),
     ).toBeVisible();
     await expect(page.getByText("0 of 13 achievement points")).toBeVisible();
     await expect(page.getByRole("definition")).toHaveText([
@@ -115,8 +117,12 @@ test.describe("achievement library baseline", () => {
     page,
   }) => {
     const details = page.locator(".library-detail");
-    await expect(details.nth(0).locator("summary span")).toHaveText("14");
-    await expect(details.nth(1).locator("summary span")).toHaveText("2");
+    await expect(details.nth(0).locator(".library-section-count")).toHaveText(
+      "14",
+    );
+    await expect(details.nth(1).locator(".library-section-count")).toHaveText(
+      "2",
+    );
 
     await details.nth(0).locator("summary").click();
     await expect(page.locator(".skill-list li")).toHaveCount(14);
@@ -144,7 +150,7 @@ test.describe("achievement library baseline", () => {
       "Example Cloud Labs",
     );
     await expect(job.locator(".experience-dates")).toHaveText(
-      /01\/2023\s+–\s+Present/,
+      /Jan 2023\s+–\s+Present/,
     );
 
     const project = page
@@ -153,7 +159,7 @@ test.describe("achievement library baseline", () => {
     await expect(project).toHaveAttribute("aria-label", "Project: QueueBoard");
     await expect(project.locator(".experience-kind")).toHaveText("PROJECT");
     await expect(project.locator(".experience-dates")).toHaveText(
-      /02\/2024\s+–\s+08\/2024/,
+      /Feb 2024\s+–\s+Aug 2024/,
     );
   });
 

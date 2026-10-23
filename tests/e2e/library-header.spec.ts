@@ -182,8 +182,8 @@ test("keeps the header type scale, spacing, and alignment in both themes", async
       expect(layout.titleFontSize).toBe(width <= 700 ? "32px" : "40px");
       expect(layout.titleLineHeight).toBe(width <= 700 ? "40px" : "48px");
       expect(layout.titleFontWeight).toBe("700");
-      expect(layout.introFontSize).toBe("16px");
-      expect(layout.introLineHeight).toBe("24px");
+      expect(layout.introFontSize).toBe("14px");
+      expect(layout.introLineHeight).toBe("20px");
       expect(layout.titleRight).toBeLessThanOrEqual(width);
 
       // The eyebrow sits above the title, and the title above the summary line.

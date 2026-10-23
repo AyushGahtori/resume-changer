@@ -345,11 +345,16 @@ test("keeps demo copy out of the personal library", async ({ page }) => {
   await expect(page.getByText("Jordan Example")).toHaveCount(0);
   await expect(page.getByText("Synthetic demo scenario")).toHaveCount(0);
 
-  const empty = page.getByText("No achievement points match these filters.", {
-    exact: true,
-  });
-  await expect(empty).toHaveText("No achievement points match these filters.");
-  await expect(empty).not.toContainText("demo");
+  const empty = page.getByText(
+    "This library is empty. Add an achievement to start filling it, or open the demo library to see a full one.",
+    {
+      exact: true,
+    },
+  );
+  await expect(empty).toHaveText(
+    "This library is empty. Add an achievement to start filling it, or open the demo library to see a full one.",
+  );
+  await expect(empty).toContainText("open the demo library");
   await expect(empty).not.toContainText("Jordan Example");
 });
 

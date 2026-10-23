@@ -304,13 +304,16 @@ test("reports the matching result count while the query changes", async ({
     "polite",
   );
 
-  await expect(count).toHaveText("13 results");
+  await expect(count).toHaveText("13 of 13 achievement points");
 
   await page
     .getByRole("searchbox", { name: "Search library" })
     .fill("no matching library content");
-  await expect(count).toHaveText("0 results of 13");
+  await expect(count).toHaveText("0 of 13 achievement points");
 
-  await page.getByRole("button", { name: "Reset filters" }).click();
-  await expect(count).toHaveText("13 results");
+  await page
+    .getByRole("region", { name: "Search and filter library" })
+    .getByRole("button", { name: "Reset filters" })
+    .click();
+  await expect(count).toHaveText("13 of 13 achievement points");
 });

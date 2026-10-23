@@ -115,7 +115,7 @@ test("marks the demo source as read-only without relying on colour alone", async
 }) => {
   await page.goto("/library?source=demo");
 
-  await expect(page.getByText("Read-only")).toBeVisible();
+  await expect(page.getByText("Read-only", { exact: true })).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Add achievement" }),
   ).toHaveCount(0);
@@ -125,7 +125,7 @@ test("marks the demo source as read-only without relying on colour alone", async
   await expect(page.getByRole("button", { name: "Edit" })).toHaveCount(0);
 
   await page.goto("/library");
-  await expect(page.getByText("Read-only")).toHaveCount(0);
+  await expect(page.getByText("Read-only", { exact: true })).toHaveCount(0);
   await expect(
     page.getByRole("button", { name: "Add achievement" }),
   ).toBeVisible();
@@ -191,7 +191,7 @@ test("keeps the source switch usable on a narrow viewport", async ({
   await page.goto("/library?source=demo");
 
   await expect(page.getByRole("link", { name: "Demo data" })).toBeVisible();
-  await expect(page.getByText("Read-only")).toBeVisible();
+  await expect(page.getByText("Read-only", { exact: true })).toBeVisible();
 
   const dimensions = await page.evaluate(() => ({
     documentWidth: document.documentElement.scrollWidth,

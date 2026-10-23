@@ -152,7 +152,7 @@ test("keeps the secondary sections in step with the query", async ({
     page.getByRole("region", { name: "Projects", exact: true }),
   ).toHaveCount(0);
   await expect(page.getByRole("status")).toHaveText(
-    "No achievement points match these filters.",
+    "None of the 13 achievements in this library match the current search and filters.",
   );
 });
 

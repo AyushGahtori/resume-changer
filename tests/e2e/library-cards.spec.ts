@@ -917,7 +917,7 @@ test("filters by tag and exposes the selected chip state", async ({ page }) => {
 
   await expect(page.getByLabel("Tag")).toHaveValue("only-this-point");
   await expect(page.locator(".library-result-count")).toContainText(
-    "1 result of",
+    "1 of 5 achievement points",
   );
   await expect(chip).toHaveAttribute("aria-pressed", "true");
 });
@@ -939,7 +939,7 @@ test("filters by a linked skill and supports keyboard activation", async ({
     "skill-card-synthetic",
   );
   await expect(page.locator(".library-result-count")).toContainText(
-    "1 result of",
+    "1 of 5 achievement points",
   );
   await expect(chip).toHaveAttribute("aria-pressed", "true");
 });

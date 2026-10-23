@@ -24,17 +24,17 @@ test("shows the matching point count apart from the summary metrics", async ({
 }) => {
   const resultCount = page.locator(".library-result-count");
 
-  await expect(resultCount).toHaveText("13 results");
+  await expect(resultCount).toHaveText("13 of 13 achievement points");
 
   // The total in the summary card stays the size of the whole library.
   await expect(page.locator(".library-counts dd").nth(2)).toHaveText("13");
 
   await page.getByLabel("Tag").selectOption("automation");
-  await expect(resultCount).toHaveText("3 results of 13");
+  await expect(resultCount).toHaveText("3 of 13 achievement points");
   await expect(page.locator(".library-counts dd").nth(2)).toHaveText("13");
 
   await page.getByLabel("Tag").selectOption("geospatial");
-  await expect(resultCount).toHaveText("1 result of 13");
+  await expect(resultCount).toHaveText("1 of 13 achievement points");
   await expect(page.locator(".library-point")).toHaveCount(1);
 });
 
@@ -42,15 +42,15 @@ test("uses singular copy when a single point matches", async ({ page }) => {
   const resultCount = page.locator(".library-result-count");
 
   await page.getByLabel("Tag").selectOption("geospatial");
-  await expect(resultCount).toHaveText("1 result of 13");
+  await expect(resultCount).toHaveText("1 of 13 achievement points");
 
   await page.getByLabel("Tag").selectOption("");
   await page
     .getByRole("searchbox", { name: "Search library" })
     .fill("no matching library content");
-  await expect(resultCount).toHaveText("0 results of 13");
+  await expect(resultCount).toHaveText("0 of 13 achievement points");
   await expect(page.getByRole("status")).toHaveText(
-    "No achievement points match these filters.",
+    "None of the 13 achievements in this library match the current search and filters.",
   );
 });
 
@@ -100,7 +100,9 @@ test("sorts the points inside a group and keeps the count", async ({
     [...texts].sort((left, right) => left.localeCompare(right)),
   );
 
-  await expect(page.locator(".library-result-count")).toHaveText("13 results");
+  await expect(page.locator(".library-result-count")).toHaveText(
+    "13 of 13 achievement points",
+  );
   await expect(page.locator(".library-point")).toHaveCount(13);
 });
 
@@ -111,7 +113,7 @@ test("keeps the sort and the count while the filters change", async ({
   await page.getByLabel("Tag").selectOption("automation");
 
   await expect(page.locator(".library-result-count")).toHaveText(
-    "3 results of 13",
+    "3 of 13 achievement points",
   );
   expect(await groupLabels(page)).toEqual([
     "Job: Software Engineer",
@@ -121,7 +123,7 @@ test("keeps the sort and the count while the filters change", async ({
 
   await page.getByLabel("Sort").selectOption("most-recent");
   await expect(page.locator(".library-result-count")).toHaveText(
-    "3 results of 13",
+    "3 of 13 achievement points",
   );
   expect(await groupLabels(page)).toEqual([
     "Job: Platform Engineer",
@@ -150,7 +152,9 @@ test("shows the reset action only while the filters are not default", async ({
     page.getByRole("searchbox", { name: "Search library" }),
   ).toHaveValue("");
   await expect(page.getByLabel("Point status")).toHaveValue("all");
-  await expect(page.locator(".library-result-count")).toHaveText("13 results");
+  await expect(page.locator(".library-result-count")).toHaveText(
+    "13 of 13 achievement points",
+  );
 });
 
 test("keeps the data source and the theme when the filters are reset", async ({

@@ -167,7 +167,7 @@ test("applies the shared tokens to the library surfaces", async ({ page }) => {
     borderRadius: "6px",
     borderTopWidth: "1px",
     borderTopStyle: "solid",
-    height: "40px",
+    height: "44px",
   });
 });
 

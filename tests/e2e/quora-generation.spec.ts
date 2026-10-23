@@ -1,5 +1,12 @@
 import { expect, test } from "@playwright/test";
+import { copyFile, mkdir } from "node:fs/promises";
+import { dirname } from "node:path";
 import { JD_DRAFT_STORAGE_KEY } from "../../src/lib/jd-draft";
+import {
+  createPersonalLibraryGuard,
+  exampleLibraryPath,
+  personalLibraryPath,
+} from "./support/personal-library";
 
 const QUORA_JOB_DESCRIPTION = String.raw`Quora operates in the knowledge sharing and artificial intelligence space, addressing the challenge of organizing and distributing collective intelligence on a global scale. The organization provides two main platforms: a knowledge sharing site with millions of monthly users, and a cloud workspace for running AI agents collaboratively. This setup supports a wide user base and integrates multiple AI models, highlighting the company's emphasis on leveraging machine learning to enhance information access and collaboration.
 
@@ -43,6 +50,20 @@ const SELECTED_POINT_IDS = [
   "achievement-cloud-deployment-platform",
   "achievement-ci-cd-pipeline",
 ];
+
+// Other library specs write synthetic personal data into the shared test root.
+// This flow must always start from the sample library that contains its three IDs.
+const personalLibrary = createPersonalLibraryGuard();
+
+test.beforeAll(async () => {
+  await personalLibrary.capture();
+  await mkdir(dirname(personalLibraryPath), { recursive: true });
+  await copyFile(exampleLibraryPath, personalLibraryPath);
+});
+
+test.afterAll(async () => {
+  await personalLibrary.restore();
+});
 
 test("uses the Quora JD to generate expected LaTeX from three selected points", async ({
   page,
