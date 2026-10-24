@@ -1,5 +1,34 @@
 import { z } from "zod";
 
+export const ACHIEVEMENT_WRITING_MODES = [
+  "make_shorter",
+  "more_technical",
+  "improve_clarity",
+  "emphasize_engineering_impact",
+  "improve_action_verbs",
+  "reduce_repetition",
+] as const;
+
+export const AchievementWritingModeSchema = z.enum(ACHIEVEMENT_WRITING_MODES);
+export type AchievementWritingMode = z.infer<
+  typeof AchievementWritingModeSchema
+>;
+
+export const ACHIEVEMENT_WRITING_MODE_DIRECTIVES = {
+  make_shorter:
+    "Reduce the word count and remove nonessential phrasing. Preserve every supported fact, attribution, technology, and numerical metric.",
+  more_technical:
+    "Use precise technical terms already present in the connected evidence. Do not add implementation details or technologies that the evidence does not state.",
+  improve_clarity:
+    "Make the statement easier to understand by clarifying cause and effect and removing ambiguity while preserving supported details.",
+  emphasize_engineering_impact:
+    "Lead with the supported engineering change and its stated effect. Do not imply scale, results, or ownership that the evidence does not state.",
+  improve_action_verbs:
+    "Prefer a direct, specific action verb grounded in the supplied work. Do not inflate the user's responsibility or ownership.",
+  reduce_repetition:
+    "Remove repeated words and overlapping clauses while retaining distinct facts, metrics, technologies, and outcomes.",
+} satisfies Record<AchievementWritingMode, string>;
+
 export const AchievementWritingInputSchema = z
   .object({
     sources: z
@@ -16,6 +45,7 @@ export const AchievementWritingInputSchema = z
     skills: z.array(z.string().max(160)).max(10),
     draftText: z.string().max(8000),
     instruction: z.string().trim().min(1).max(2000),
+    writingMode: AchievementWritingModeSchema.optional(),
     destination: z.string().max(400),
     targetLines: z.number().int().min(1).max(8).optional(),
   })

@@ -203,7 +203,7 @@ export function JobAnalysisPanel({
                         <li key={`${index}-${term}`}>
                           <strong>{term}</strong>
                           {alternatives.length > 0 && (
-                            <span>{alternatives.join(", ")}</span>
+                            <span>: {alternatives.join(", ")}</span>
                           )}
                         </li>
                       ),

@@ -1,0 +1,294 @@
+.canvas {
+  position: relative;
+  min-width: 0;
+  padding: 14px 16px 12px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background-color: var(--surface);
+  background-image: radial-gradient(
+    color-mix(in srgb, var(--imagination) 14%, transparent) 0.8px,
+    transparent 0.8px
+  );
+  background-position: 7px 7px;
+  background-size: 16px 16px;
+}
+
+.canvas:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.stage {
+  position: relative;
+  width: 100%;
+  min-height: 140px;
+}
+
+.root {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  justify-items: center;
+  text-align: center;
+}
+
+.sparkle {
+  position: relative;
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--imagination);
+  color: var(--color-text-on-violet, #fff);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--imagination) 30%, transparent);
+}
+
+.particles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.particle {
+  position: absolute;
+  top: 3px;
+  color: var(--imagination);
+  opacity: 0;
+  animation: rise-and-fade 1.8s ease-out infinite;
+  pointer-events: none;
+}
+
+.particleOne {
+  left: -13px;
+  animation-delay: 0s;
+}
+
+.particleTwo {
+  right: -15px;
+  animation-delay: 0.65s;
+}
+
+.particleThree {
+  left: 50%;
+  animation-delay: 1.25s;
+}
+
+.count {
+  margin-top: 5px;
+  color: var(--ink);
+  font-size: 12.5px;
+  font-weight: 650;
+  line-height: 17px;
+  font-variant-numeric: tabular-nums;
+}
+
+.helper {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 15px;
+}
+
+.sourceAnchor {
+  position: relative;
+  z-index: 0;
+  width: 0;
+  height: 0;
+  margin: 0 auto;
+}
+
+.connections {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.connectionPath {
+  fill: none;
+  stroke: var(--imagination);
+  stroke-linecap: round;
+  stroke-width: 1.6px;
+  opacity: 0.78;
+  vector-effect: non-scaling-stroke;
+}
+
+.connectionEnd {
+  fill: var(--imagination);
+}
+
+.items {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  min-height: 34px;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 16px auto 0;
+  max-height: 96px;
+  overflow-y: auto;
+}
+
+.chip {
+  display: flex;
+  min-width: 0;
+  max-width: min(100%, 280px);
+  min-height: 32px;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 6px 3px 10px;
+  border: 1px solid color-mix(in srgb, var(--imagination) 48%, var(--line));
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 1px 4px color-mix(in srgb, var(--ink) 6%, transparent);
+}
+
+.chipIcon {
+  flex: 0 0 auto;
+  color: var(--imagination-hover);
+}
+
+.chipLabel {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 12px;
+  line-height: 16px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.remove {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.remove:hover {
+  background: var(--imagination-soft);
+  color: var(--imagination-hover);
+}
+
+.remove:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.empty {
+  display: grid;
+  min-height: 30px;
+  place-items: center;
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 16px;
+  text-align: center;
+}
+
+.status {
+  min-height: 18px;
+  margin: 4px 0 0;
+  color: var(--imagination-hover);
+  font-size: 11.5px;
+  font-weight: 550;
+  line-height: 17px;
+  text-align: center;
+}
+.status:empty {
+  display: none;
+}
+.dragHint {
+  position: absolute;
+  top: 12px;
+  z-index: 2;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  max-width: 170px;
+  padding: 8px 10px;
+  border-radius: 8px;
+}
+.dragHint {
+  left: 12px;
+  color: var(--imagination-hover);
+  background: var(--imagination-soft);
+}
+:root[data-theme="dark"] .dragHint {
+  background: var(--imagination-soft);
+  color: var(--imagination-hover);
+}
+.dragHint svg {
+  flex-shrink: 0;
+}
+.dragHint p {
+  margin: 0;
+  font-size: 10px;
+  line-height: 14px;
+}
+.dragHint strong {
+  display: block;
+  font-weight: 650;
+}
+@media (max-width: 720px) {
+  .dragHint {
+    display: none;
+  }
+}
+
+@keyframes rise-and-fade {
+  0% {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+
+  24% {
+    opacity: 0.48;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(-13px);
+  }
+}
+
+@media (max-width: 600px) {
+  .canvas {
+    padding: 12px 10px 10px;
+  }
+
+  .stage {
+    min-height: 156px;
+  }
+
+  .items {
+    gap: 7px;
+    margin-top: 32px;
+  }
+
+  .chip {
+    max-width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .particle {
+    animation: none;
+    opacity: 0.3;
+    transform: none;
+  }
+}

@@ -1,0 +1,294 @@
+.root {
+  display: grid;
+  gap: var(--space-12);
+  min-width: 0;
+}
+
+.header {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.titleIcon {
+  flex: 0 0 auto;
+  color: var(--imagination);
+  width: 24px;
+  height: 24px;
+}
+
+.title {
+  margin: 0;
+  color: var(--ink);
+  font-size: 24px;
+  font-weight: 700;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, sans-serif;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+}
+
+.subtitle {
+  max-width: 72ch;
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.notice {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+  padding: 10px 32px 10px 14px;
+  border: 1px solid color-mix(in srgb, var(--imagination) 28%, var(--line));
+  border-radius: 8px;
+  background: var(--imagination-soft);
+  color: var(--ink);
+}
+
+.noticeIcon {
+  flex: 0 0 auto;
+  margin-top: 1px;
+  color: var(--imagination);
+  width: 18px;
+  height: 18px;
+}
+
+.noticeTitle {
+  margin: 0 0 2px;
+  color: var(--imagination-hover);
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 700;
+}
+
+.noticeText {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 15px;
+}
+
+.destination {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 760px;
+  min-width: 0;
+}
+
+.destinationLabel {
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.destinationSelect {
+  width: auto;
+  min-width: 260px;
+  max-width: 460px;
+  padding: 6px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-control);
+  background: var(--surface-soft);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  line-height: 20px;
+  outline-color: var(--focus);
+}
+
+.destinationSelect:focus-visible,
+.textarea:focus-visible,
+.startButton:focus-visible,
+.restoreButton:focus-visible,
+.discardButton:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.restore {
+  display: grid;
+  gap: var(--space-8);
+  min-width: 0;
+  padding: var(--space-12);
+  border: 1px solid var(--imagination);
+  border-radius: 8px;
+  background: var(--imagination-soft);
+}
+
+.restoreMessage {
+  margin: 0;
+  color: var(--ink);
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
+}
+
+.restoreActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+}
+
+.restoreButton,
+.discardButton {
+  min-height: 36px;
+  padding: 6px var(--space-12);
+  border: 1px solid var(--imagination);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--imagination-hover);
+  font: inherit;
+  cursor: pointer;
+}
+
+.discardButton {
+  border-color: var(--line-strong);
+  color: var(--ink);
+}
+
+.editor {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--imagination) 45%, var(--line));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--imagination-soft) 25%, var(--surface));
+}
+
+.editorTopline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+
+.editorLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 700;
+}
+
+.editorIcon {
+  flex: 0 0 auto;
+  color: var(--imagination);
+}
+
+.startButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 22px;
+  padding: 2px 4px;
+  border: 0;
+  background: transparent;
+  color: var(--imagination-hover);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.textarea {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 52px;
+  height: 56px;
+  max-height: 120px;
+  padding: 6px 10px;
+  border: 1px solid color-mix(in srgb, var(--imagination) 30%, var(--line));
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+.textarea::placeholder {
+  color: var(--muted);
+  opacity: 1;
+}
+
+@media (max-width: 700px) {
+  .destination {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+  .destinationSelect {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+.intro {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(280px, 420px);
+  align-items: start;
+  column-gap: 24px;
+  row-gap: 8px;
+}
+.intro .header {
+  grid-column: 1;
+}
+.intro .notice {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+}
+.intro .destination {
+  grid-column: 1;
+  margin-top: 4px;
+}
+.intro .restore {
+  grid-column: 1 / -1;
+}
+@media (max-width: 1050px) {
+  .intro {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .intro .header,
+  .intro .notice,
+  .intro .destination {
+    grid-column: 1;
+    grid-row: auto;
+  }
+}
+
+.dismissNotice {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: inline-flex;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--imagination-hover);
+  cursor: pointer;
+}
+.dismissNotice:focus-visible {
+  outline: var(--focus-outline);
+  outline-offset: 3px;
+}

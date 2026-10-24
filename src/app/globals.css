@@ -4523,6 +4523,11 @@ a:focus-visible {
 }
 
 @media (max-width: 700px) {
+  /* Let browser zoom reflow below the nominal 320px minimum. */
+  body {
+    min-width: 0;
+  }
+
   .jd-page {
     --type-page-title-size: 32px;
     --type-page-title-line-height: 40px;
@@ -4693,11 +4698,20 @@ a:focus-visible {
   }
 
   .topbar-leading {
+    flex: 1 1 auto;
     gap: 8px;
   }
 
   .breadcrumbs {
+    flex: 1 1 auto;
     gap: 6px;
+    overflow: hidden;
+  }
+
+  .breadcrumbs strong {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .breadcrumbs > span:first-child,
@@ -7379,4 +7393,466 @@ a:focus-visible {
 .library-switch-link {
   font-size: var(--type-body-size);
   line-height: var(--type-body-line-height);
+}
+
+/* Imagination Canvas responsive layout */
+.imagination-canvas-layout {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-24);
+  width: 100%;
+  min-width: 0;
+}
+
+.imagination-canvas-layout__columns {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr);
+  align-items: start;
+  gap: var(--space-24);
+  min-width: 0;
+}
+
+.imagination-canvas-layout__workspace,
+.imagination-canvas-layout__writing-panel,
+.imagination-canvas-layout__title,
+.imagination-canvas-layout__composer,
+.imagination-canvas-layout__connection-canvas,
+.imagination-canvas-layout__context-libraries,
+.imagination-canvas-layout__writing-controls,
+.imagination-canvas-layout__result,
+.imagination-canvas-layout__footer {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.imagination-canvas-layout__workspace,
+.imagination-canvas-layout__writing-panel {
+  display: grid;
+  align-content: start;
+  gap: var(--space-16);
+}
+
+.imagination-canvas-layout__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-16);
+  padding-block: var(--space-16);
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.imagination-canvas-layout [data-slot] {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 1100px) {
+  .imagination-canvas-layout__columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 700px) {
+  .imagination-canvas-layout {
+    gap: var(--space-16);
+  }
+
+  .imagination-canvas-layout__columns,
+  .imagination-canvas-layout__workspace,
+  .imagination-canvas-layout__writing-panel {
+    gap: var(--space-16);
+  }
+
+  .imagination-canvas-layout__footer {
+    align-items: stretch;
+    justify-content: flex-start;
+  }
+}
+
+/* The integrated canvas keeps the existing workspace chrome. */
+.imagination-canvas-page,
+.imagination-canvas-page h1,
+.imagination-canvas-page h2,
+.imagination-canvas-page h3,
+.imagination-canvas-page h4,
+.imagination-canvas-page p,
+.imagination-canvas-page span,
+.imagination-canvas-page label,
+.imagination-canvas-page input,
+.imagination-canvas-page select,
+.imagination-canvas-page textarea,
+.imagination-canvas-page button {
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, sans-serif !important;
+}
+
+.imagination-canvas-page {
+  padding: 12px 24px;
+  min-width: 0;
+  max-width: 1560px;
+  margin-inline: auto;
+}
+.imagination-canvas-page .imagination-canvas-layout {
+  gap: 12px;
+}
+.imagination-canvas-page .imagination-canvas-layout__columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(320px, 1fr);
+  align-items: start;
+  gap: 16px;
+}
+.imagination-canvas-page .imagination-canvas-layout__workspace {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.imagination-canvas-page .imagination-canvas-layout__context-libraries {
+  margin-top: 0;
+}
+.imagination-canvas-page .imagination-canvas-layout__writing-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+.imagination-canvas-page .imagination-writing-controls {
+  border: 1px solid var(--line) !important;
+  border-radius: 8px !important;
+  background: var(--surface) !important;
+  padding: 12px 14px !important;
+  gap: 8px !important;
+}
+.imagination-canvas-page .imagination-writing-controls .studio-quick-actions {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 6px 8px !important;
+  margin: 0 !important;
+}
+.imagination-canvas-page .imagination-writing-preset {
+  min-height: 28px !important;
+  padding: 4px 8px !important;
+  border: 1px solid var(--line) !important;
+  border-radius: 999px !important;
+  background: var(--surface) !important;
+  color: var(--ink) !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  line-height: 18px !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  transition: all 0.15s ease !important;
+}
+.imagination-canvas-page .imagination-writing-preset svg {
+  color: var(--imagination) !important;
+  flex-shrink: 0;
+}
+.imagination-canvas-page .imagination-writing-preset:hover:not(:disabled) {
+  border-color: var(--imagination) !important;
+  background: var(--surface-hover) !important;
+}
+.imagination-canvas-page .imagination-writing-preset[aria-pressed="true"] {
+  border-color: var(--imagination) !important;
+  background: var(--imagination-soft) !important;
+  color: var(--imagination-hover) !important;
+  font-weight: 600 !important;
+}
+.imagination-canvas-page .imagination-writing-preset:focus-visible,
+.imagination-canvas-page .imagination-writing-submit:focus-visible,
+.imagination-canvas-page .imagination-writing-cancel:focus-visible {
+  outline: var(--focus-outline);
+  outline-offset: 2px;
+}
+.imagination-canvas-page .imagination-writing-preset:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+.imagination-canvas-page .imagination-writing-controls .studio-field textarea {
+  min-height: 48px !important;
+  height: 52px !important;
+  font-size: 12px !important;
+  line-height: 1.4 !important;
+  padding: 6px 8px !important;
+  border: 1px solid var(--line) !important;
+  border-radius: 6px !important;
+  background: var(--surface-soft) !important;
+  resize: none !important;
+}
+.imagination-canvas-page .imagination-request-actions {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 8px !important;
+  margin: 0 !important;
+}
+.imagination-canvas-page .imagination-request-actions label {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+}
+.imagination-canvas-page .imagination-request-actions select {
+  min-width: 80px;
+  min-height: 30px;
+  padding: 3px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-soft);
+  color: var(--ink);
+  font-size: 12px;
+}
+.imagination-canvas-page .imagination-request-actions > span {
+  display: none;
+}
+.imagination-canvas-page .imagination-writing-submit {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  min-height: 34px !important;
+  padding: 6px 14px !important;
+  border: 1px solid var(--imagination) !important;
+  border-radius: 6px !important;
+  background: var(--imagination) !important;
+  color: #fff !important;
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+}
+.imagination-canvas-page .imagination-writing-submit:disabled {
+  opacity: 0.55 !important;
+  cursor: not-allowed !important;
+  background: var(--surface-soft) !important;
+  border-color: var(--line) !important;
+  color: var(--quiet) !important;
+}
+.imagination-canvas-page .imagination-writing-cancel {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 28px;
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 11px;
+  background: var(--surface-soft);
+  color: var(--ink);
+}
+
+.imagination-result-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+  color: var(--imagination);
+}
+.imagination-result-divider::before,
+.imagination-result-divider::after {
+  display: none !important;
+}
+
+.imagination-canvas-page .imagination-canvas-layout__result > section {
+  border: 1px solid var(--line) !important;
+  border-radius: 8px !important;
+  background: var(--surface) !important;
+  padding: 12px 14px !important;
+}
+
+.imagination-canvas-page .imagination-context-libraries {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.imagination-canvas-page .imagination-context-libraries > section {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 10px 12px;
+}
+.imagination-canvas-page .imagination-context-list {
+  max-height: 180px;
+  overflow: auto;
+}
+.imagination-canvas-page .imagination-context-panel-heading h3 {
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 700;
+}
+.imagination-canvas-page .imagination-context-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 10px;
+  margin-bottom: 6px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 11.5px;
+  line-height: 1.4;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.imagination-canvas-page .imagination-context-card svg {
+  flex-shrink: 0;
+  color: var(--quiet);
+  margin-top: 1px;
+}
+.imagination-canvas-page .imagination-context-card:hover:not(:disabled) {
+  border-color: var(--imagination);
+  background: var(--surface-hover);
+}
+.imagination-canvas-page .imagination-context-card[aria-pressed="true"] {
+  border-color: var(--imagination);
+  background: var(--imagination-soft);
+  color: var(--imagination-hover);
+}
+.imagination-canvas-page .imagination-context-card[aria-pressed="true"] svg {
+  color: var(--imagination);
+}
+.imagination-canvas-page .imagination-context-search {
+  position: relative;
+  margin-top: 6px;
+  margin-bottom: 8px;
+}
+.imagination-canvas-page .imagination-search-icon {
+  position: absolute;
+  left: 9px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--quiet);
+  pointer-events: none;
+}
+.imagination-canvas-page .imagination-context-search input {
+  width: 100%;
+  min-height: 32px;
+  padding: 4px 10px 4px 28px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-soft);
+  font-size: 12px;
+  color: var(--ink);
+}
+.imagination-canvas-page .imagination-context-list details {
+  border: 0;
+  padding: 2px 0;
+  background: transparent;
+}
+.imagination-canvas-page .imagination-context-list summary {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+  padding: 3px 0;
+  cursor: pointer;
+}
+.imagination-canvas-page .studio-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding: 4px 0 6px;
+}
+.imagination-canvas-page .studio-chip-list button {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--line) !important;
+  border-radius: 6px !important;
+  padding: 3px 8px !important;
+  min-height: 24px !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  line-height: 16px !important;
+  background: var(--surface) !important;
+  color: var(--ink) !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+}
+.imagination-canvas-page .studio-chip-list button:hover:not(:disabled) {
+  border-color: var(--imagination) !important;
+  background: var(--surface-hover) !important;
+}
+.imagination-canvas-page .studio-chip-list button[aria-pressed="true"] {
+  border-color: var(--imagination) !important;
+  background: var(--imagination-soft) !important;
+  color: var(--imagination-hover) !important;
+  font-weight: 600 !important;
+}
+
+.imagination-canvas-page .imagination-canvas-layout__footer {
+  padding: 0;
+  border: 0;
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+  background: var(--surface);
+}
+.imagination-canvas-page .imagination-canvas-layout__footer > footer {
+  position: sticky !important;
+  bottom: 0 !important;
+  z-index: 20 !important;
+  margin: 0 !important;
+  width: 100% !important;
+  padding: 10px 24px !important;
+  border-top: 1px solid var(--line) !important;
+  background: var(--surface) !important;
+  box-shadow: 0 -4px 12px color-mix(in srgb, var(--surface) 88%, transparent) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  flex-wrap: wrap !important;
+  gap: 12px !important;
+}
+.imagination-canvas-page .imagination-canvas-layout__footer button:last-child {
+  border-color: var(--imagination) !important;
+  background: var(--imagination) !important;
+  color: #fff !important;
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+  border-radius: 6px !important;
+  min-height: 36px !important;
+  padding: 6px 14px !important;
+}
+.imagination-canvas-page .imagination-canvas-layout__footer button:first-child {
+  border: 1px solid var(--line) !important;
+  border-radius: 6px !important;
+  background: var(--surface) !important;
+  color: var(--ink) !important;
+  min-height: 36px !important;
+  padding: 6px 14px !important;
+  font-size: 12.5px !important;
+}
+.imagination-canvas-page
+  .imagination-canvas-layout__footer
+  button:last-child:disabled {
+  opacity: 0.5;
+}
+
+@media (max-width: 1100px) {
+  .imagination-canvas-page .imagination-canvas-layout__columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 700px) {
+  .imagination-canvas-page {
+    padding: 12px 14px;
+  }
+  .imagination-canvas-page .imagination-context-libraries {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .imagination-canvas-page .imagination-context-list {
+    max-height: 220px;
+  }
 }

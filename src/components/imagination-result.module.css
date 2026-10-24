@@ -1,0 +1,222 @@
+.result {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.heading {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.heading h2 {
+  min-width: 0;
+  flex: 1;
+  margin: 0;
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 650;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, sans-serif;
+}
+
+.headingIcon {
+  flex: 0 0 auto;
+  color: var(--imagination);
+}
+
+.measuredBadge {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border: 1px solid #bbf7d0;
+  border-radius: 999px;
+  background: #dcfce7;
+  color: #15803d;
+  font-size: 11px;
+  line-height: 16px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+:root[data-theme="dark"] .measuredBadge {
+  border-color: rgba(34, 197, 94, 0.3);
+  background: rgba(34, 197, 94, 0.18);
+  color: #4ade80;
+}
+
+.editorLabel {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+  color: var(--ink);
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line-height);
+  font-weight: 600;
+}
+
+.editor {
+  width: 100%;
+  min-width: 0;
+  min-height: 56px;
+  height: 60px;
+  max-height: 120px;
+  resize: vertical;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-soft);
+  color: var(--ink);
+  font: inherit;
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.editor:focus-visible,
+.actionButton:focus-visible,
+.useButton:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.editor[readonly] {
+  opacity: 0.82;
+}
+
+.stateMessage,
+.loadingMessage,
+.errorMessage,
+.warning,
+.copyFeedback {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-8);
+  margin: 0;
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.stateMessage,
+.warning,
+.copyFeedback {
+  color: var(--muted);
+}
+
+.stateMessage {
+  padding: 10px 12px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 6px;
+  background: var(--surface-soft);
+}
+
+.loadingMessage {
+  align-items: center;
+  color: var(--imagination-hover);
+}
+
+.spinner {
+  flex: 0 0 auto;
+  animation: imagination-result-spin 1.2s linear infinite;
+}
+
+.errorMessage {
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--danger) 35%, var(--line));
+  border-radius: 6px;
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.errorMessage svg {
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
+.warning {
+  padding: 4px 8px;
+  border-left: 2px solid var(--line-strong);
+  color: var(--muted);
+  font-size: var(--type-helper-size);
+  line-height: var(--type-helper-line-height);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.actionButton,
+.useButton {
+  display: inline-flex;
+  min-height: 32px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.actionButton:hover:not(:disabled) {
+  border-color: var(--imagination);
+  background: var(--surface-hover);
+}
+
+.useButton {
+  margin-right: auto;
+  border-color: var(--imagination);
+  background: var(--imagination);
+  color: #fff;
+}
+
+.useButton:hover:not(:disabled) {
+  border-color: var(--imagination-hover);
+  background: var(--imagination-hover);
+  color: #fff;
+}
+
+.actionButton:disabled,
+.useButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.copyFeedback {
+  font-size: var(--type-helper-size);
+  line-height: var(--type-helper-line-height);
+  color: var(--imagination-hover);
+}
+
+@keyframes imagination-result-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+  }
+}

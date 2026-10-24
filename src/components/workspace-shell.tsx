@@ -66,6 +66,9 @@ export default function WorkspaceShell({ children }: { children: ReactNode }) {
   );
   const isSidebarCollapsed = sidebarPreference ?? isCompact;
   const [isMobileNavigationOpen, setIsMobileNavigationOpen] = useState(false);
+  const isLibraryRoute =
+    pathname === LIBRARY_ROUTE || pathname.startsWith(LIBRARY_ROUTE + "/");
+  const isImaginationRoute = pathname === LIBRARY_ROUTE + "/imagination";
   const currentPage = navigation.find((item) => item.href === pathname);
   const sidebarRef = useRef<HTMLElement>(null);
   const mobileCloseButtonRef = useRef<HTMLButtonElement>(null);
@@ -234,8 +237,8 @@ export default function WorkspaceShell({ children }: { children: ReactNode }) {
   const frameClassName = [
     "app-frame",
     pathname === "/" && "jd-workspace-frame",
-    pathname === LIBRARY_ROUTE && "library-workspace-frame",
-    pathname === LIBRARY_ROUTE && "is-library-route",
+    isLibraryRoute && "library-workspace-frame",
+    isLibraryRoute && "is-library-route",
     pathname === GENERATION_ROUTE && "is-generate-route",
     !isMobile && isSidebarCollapsed && "is-sidebar-collapsed",
     isMobile && isMobileNavigationOpen && "is-mobile-nav-open",
@@ -294,25 +297,31 @@ export default function WorkspaceShell({ children }: { children: ReactNode }) {
 
         <div className="sidebar-label">WORKSPACE</div>
         <nav aria-label="Main navigation" className="main-navigation">
-          {navigation.map((item) => (
-            <Link
-              aria-current={pathname === item.href ? "page" : undefined}
-              aria-label={item.label}
-              className={`nav-link${pathname === item.href ? " is-active" : ""}`}
-              data-label={item.label}
-              href={item.href}
-              key={item.href}
-              onClick={() => {
-                if (isMobile) closeMobileNavigation();
-              }}
-              title={isSidebarCollapsed && !isMobile ? item.label : undefined}
-            >
-              <span aria-hidden="true" className="nav-icon">
-                <SidebarIcon name={item.icon} />
-              </span>
-              <span className="nav-link-label">{item.label}</span>
-            </Link>
-          ))}
+          {navigation.map((item) => {
+            const isActive =
+              pathname === item.href ||
+              (item.href === LIBRARY_ROUTE && isLibraryRoute);
+
+            return (
+              <Link
+                aria-current={isActive ? "page" : undefined}
+                aria-label={item.label}
+                className={isActive ? "nav-link is-active" : "nav-link"}
+                data-label={item.label}
+                href={item.href}
+                key={item.href}
+                onClick={() => {
+                  if (isMobile) closeMobileNavigation();
+                }}
+                title={isSidebarCollapsed && !isMobile ? item.label : undefined}
+              >
+                <span aria-hidden="true" className="nav-icon">
+                  <SidebarIcon name={item.icon} />
+                </span>
+                <span className="nav-link-label">{item.label}</span>
+              </Link>
+            );
+          })}
         </nav>
 
         <div className="sidebar-bottom">
@@ -359,9 +368,17 @@ export default function WorkspaceShell({ children }: { children: ReactNode }) {
             <nav aria-label="Breadcrumb" className="breadcrumbs">
               <span>Workspace</span>
               <span aria-hidden="true">/</span>
-              <strong aria-current="page">
-                {currentPage?.label ?? "Workspace"}
-              </strong>
+              {isImaginationRoute ? (
+                <>
+                  <span>Achievement library</span>
+                  <span aria-hidden="true">/</span>
+                  <strong aria-current="page">Imagination Canvas</strong>
+                </>
+              ) : (
+                <strong aria-current="page">
+                  {currentPage?.label ?? "Workspace"}
+                </strong>
+              )}
             </nav>
           </div>
           <div className="topbar-actions">
