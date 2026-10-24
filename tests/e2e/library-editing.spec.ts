@@ -84,7 +84,7 @@ test("saves a manual point through the shared Imagination Canvas", async ({
     .getByRole("button", { name: "Add achievement", exact: true })
     .click();
   await page
-    .getByLabel("Achievement text")
+    .getByRole("textbox", { name: "New achievement" })
     .fill("A user-verified achievement created in the shared canvas.");
   const saved = page.waitForResponse(
     (response) =>
@@ -95,7 +95,7 @@ test("saves a manual point through the shared Imagination Canvas", async ({
     .getByRole("button", { name: "Save achievement", exact: true })
     .click();
   expect((await saved).ok()).toBe(true);
-  await expect(page.getByText("Saved to your local library.")).toBeVisible();
+  await expect(page).toHaveURL(/\/library$/);
   await page.reload();
   await expect(
     page.getByText(
@@ -252,7 +252,7 @@ test("returns focus to the add control when the Imagination Canvas closes", asyn
   await expect(
     page.getByRole("heading", { name: "Imagination Canvas" }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Close editor" }).click();
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
 
   await expect(
     page.getByRole("heading", { name: "Imagination Canvas" }),
@@ -277,7 +277,9 @@ test("keeps the detailed editor within a narrow viewport", async ({ page }) => {
   ).toBeVisible();
 });
 
-test("keeps the point editor within a narrow viewport", async ({ page }) => {
+test("keeps the shared Imagination Canvas within a narrow viewport", async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole("button", { name: "Add achievement" }).click();
   await expect(
@@ -290,7 +292,9 @@ test("keeps the point editor within a narrow viewport", async ({ page }) => {
   expect(dimensions.documentWidth).toBeLessThanOrEqual(
     dimensions.viewportWidth,
   );
-  await expect(page.getByLabel("Achievement text")).toBeVisible();
+  await expect(
+    page.getByRole("textbox", { name: "New achievement" }),
+  ).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Save achievement" }),
   ).toBeVisible();

@@ -4523,6 +4523,11 @@ a:focus-visible {
 }
 
 @media (max-width: 700px) {
+  /* Let browser zoom reflow below the nominal 320px minimum. */
+  body {
+    min-width: 0;
+  }
+
   .jd-page {
     --type-page-title-size: 32px;
     --type-page-title-line-height: 40px;
@@ -4693,11 +4698,20 @@ a:focus-visible {
   }
 
   .topbar-leading {
+    flex: 1 1 auto;
     gap: 8px;
   }
 
   .breadcrumbs {
+    flex: 1 1 auto;
     gap: 6px;
+    overflow: hidden;
+  }
+
+  .breadcrumbs strong {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .breadcrumbs > span:first-child,

@@ -59,6 +59,8 @@ type InlineEditorState = {
   handlers: EditorHandlers;
 };
 
+const IMAGINATION_RETURN_FOCUS_KEY = "resume-changer.library.return-focus";
+
 type GroupKind = "job" | "project";
 
 function groupKey(kind: GroupKind, id: string) {
@@ -215,6 +217,7 @@ export default function AchievementLibrary({ library, source }: Props) {
   const DetailedEntryIcon = detailedEntryAction.icon;
   const editorTriggerRef = useRef<HTMLElement | null>(null);
   const pendingEditorFocusRef = useRef<HTMLElement | null>(null);
+  const addAchievementRef = useRef<HTMLButtonElement>(null);
   const detailedEntryRef = useRef<HTMLButtonElement>(null);
   const filtered = useMemo(
     () => filterAchievementLibrary(library, filters),
@@ -275,6 +278,24 @@ export default function AchievementLibrary({ library, source }: Props) {
     pendingEditorFocusRef.current = null;
     trigger?.focus();
   }, [editor]);
+
+  useEffect(() => {
+    try {
+      if (
+        window.sessionStorage.getItem(IMAGINATION_RETURN_FOCUS_KEY) !==
+        "add-achievement"
+      ) {
+        return;
+      }
+      window.sessionStorage.removeItem(IMAGINATION_RETURN_FOCUS_KEY);
+    } catch {
+      return;
+    }
+
+    window.requestAnimationFrame(() =>
+      addAchievementRef.current?.focus({ preventScroll: true }),
+    );
+  }, []);
 
   function closeEditor() {
     setEditor(null);
@@ -363,8 +384,17 @@ export default function AchievementLibrary({ library, source }: Props) {
                     className="ui-button ui-button--primary library-action library-action--primary"
                     onClick={() => {
                       setSaveMessage("");
+                      try {
+                        window.sessionStorage.setItem(
+                          IMAGINATION_RETURN_FOCUS_KEY,
+                          "add-achievement",
+                        );
+                      } catch {
+                        // Navigation still works when session storage is unavailable.
+                      }
                       router.push("/library/imagination");
                     }}
+                    ref={addAchievementRef}
                     type="button"
                   >
                     <AddIcon
