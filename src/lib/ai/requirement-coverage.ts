@@ -17,6 +17,12 @@ export type CoverageStatus =
   | "no-evidence-found";
 export type CoverageAssessment = {
   requirement: string;
+  priority: "required" | "responsibility" | "preferred";
+  facets: Array<{
+    label: string;
+    alternatives: string[];
+    matchedBy: string[];
+  }>;
   coveredByAchievementIds: string[];
   availableAchievementIds: string[];
   status: CoverageStatus;
@@ -171,6 +177,20 @@ const CONCEPTS: Record<string, string[]> = {
     "documentation",
   ],
 };
+const ACTIONS: Record<string, string[]> = {
+  design: ["design", "designed", "architected"],
+  train: ["train", "trained", "training"],
+  optimize: ["optimize", "optimized", "tuned", "improved"],
+  collect: ["collect", "collected", "gathered"],
+  clean: ["clean", "cleaned", "preprocess", "preprocessed"],
+  analyze: ["analyze", "analyzed", "analysed"],
+  develop: ["develop", "developed", "built", "implemented"],
+  build: ["build", "built", "developed", "implemented"],
+  deploy: ["deploy", "deployed", "served", "shipped"],
+  monitor: ["monitor", "monitored", "tracked"],
+  document: ["document", "documented", "authored"],
+  collaborate: ["collaborate", "collaborated", "partnered"],
+};
 const STOP = new Set(
   "a an the and or in on of to for with using such as strong proficiency experience familiarity knowledge understanding techniques basic related field fields ability years".split(
     " ",
@@ -222,6 +242,42 @@ function alternativeKeys(requirement: string, keys: string[]) {
   return keys.filter((key) =>
     CONCEPTS[key].some((alias) => includesPhrase(tail, alias)),
   );
+}
+
+/** The smallest claims a JD sentence asks the resume to demonstrate. */
+export function buildRequirementFacets(requirement: string) {
+  const keys = requirementComponents(requirement);
+  const alternatives = alternativeKeys(requirement, keys);
+  const facets = keys
+    .filter((key) => !alternatives.includes(key))
+    .map((key) => ({ label: key, alternatives: CONCEPTS[key] }));
+  if (alternatives.length)
+    facets.push({
+      label: alternatives.join(" or "),
+      alternatives: alternatives.flatMap((key) => CONCEPTS[key]),
+    });
+
+  // Responsibilities often contain several verbs, each of which is a distinct
+  // claim. A technology name alone cannot prove that work was performed.
+  const lead = requirement.split(
+    /\b(?:machine learning|ml|models?|datasets?|systems?|pipelines?|services?|through|using|with|for)\b/i,
+  )[0];
+  for (const [action, aliases] of Object.entries(ACTIONS)) {
+    if (new RegExp(`\\b${action}\\b`, "i").test(lead))
+      facets.push({ label: action, alternatives: aliases });
+  }
+  return facets.length
+    ? facets
+    : [{ label: requirement, alternatives: [requirement] }];
+}
+
+export function requirementPriority(
+  analysis: JobAnalysisResult,
+  requirement: string,
+): CoverageAssessment["priority"] {
+  if (analysis.requiredQualifications.includes(requirement)) return "required";
+  if (analysis.responsibilities.includes(requirement)) return "responsibility";
+  return "preferred";
 }
 
 function componentCoverage(
@@ -327,6 +383,8 @@ export function assessRequirementCoverage(
   return (options.requirements ?? getCoverageRequirements(input.analysis)).map(
     (requirement) => {
       const keys = requirementComponents(requirement);
+      const priority = requirementPriority(input.analysis, requirement);
+      const facetDefinitions = buildRequirementFacets(requirement);
       const degree = /bachelor|master|doctorate|degree/i.test(requirement);
       const practical =
         /^(design|develop|build|deploy|monitor|document|collect|experiment|collaborate)\b/i.test(
@@ -358,6 +416,18 @@ export function assessRequirementCoverage(
               (a.inferred ? 0 : strength[a.kind]),
         );
       const active = matches.filter((s) => s.selected);
+      const facets = facetDefinitions.map((facet) => ({
+        ...facet,
+        matchedBy: active
+          .filter((source) =>
+            facet.alternatives.some((alias) =>
+              facetDefinitions.length === 1 && !keys.length
+                ? semanticMatchScore(source.quote, alias) >= 0.75
+                : includesPhrase(source.quote, alias),
+            ),
+          )
+          .map((source) => source.id),
+      }));
       const covered = (pool: CoverageEvidence[]) =>
         keys.length
           ? keys.filter((k) =>
@@ -387,6 +457,22 @@ export function assessRequirementCoverage(
       }
       if (degree && active.some((s) => /in progress/.test(s.quote)))
         full = false;
+      if (facets.some((facet) => facet.matchedBy.length === 0)) full = false;
+      if (priority === "responsibility") {
+        const actions = facets.filter((facet) => facet.label in ACTIONS);
+        const terms = facets.filter((facet) => !(facet.label in ACTIONS));
+        if (
+          actions.length &&
+          terms.length &&
+          !active.some(
+            (source) =>
+              (source.kind === "job" || source.kind === "project") &&
+              actions.every((facet) => facet.matchedBy.includes(source.id)) &&
+              terms.some((facet) => facet.matchedBy.includes(source.id)),
+          )
+        )
+          full = false;
+      }
       // A related application is not proof of training or operating a complete ML lifecycle.
       if (
         /deploy(?:ing)?\s+(?:machine learning|ml)\s+models?/i.test(requirement)
@@ -436,7 +522,14 @@ export function assessRequirementCoverage(
               : matches.length
                 ? "evidence-not-selected"
                 : "no-evidence-found";
-      const missingComponents = components.missing;
+      const missingComponents = [
+        ...new Set([
+          ...components.missing,
+          ...facets
+            .filter((facet) => !facet.matchedBy.length)
+            .map((facet) => facet.label),
+        ]),
+      ];
       const useful = active.length ? active : matches;
       const reason =
         status === "supported"
@@ -450,6 +543,8 @@ export function assessRequirementCoverage(
                 : "No supporting evidence was found; add facts or confirm relevant experience.";
       return {
         requirement,
+        priority,
+        facets,
         status,
         evidence: useful,
         missingComponents,

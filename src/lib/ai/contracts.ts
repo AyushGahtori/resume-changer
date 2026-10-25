@@ -132,6 +132,19 @@ export const AchievementSelectionItemSchema = z
 export const RequirementCoverageSchema = z
   .object({
     requirement: shortText,
+    priority: z.enum(["required", "responsibility", "preferred"]).optional(),
+    facets: z
+      .array(
+        z
+          .object({
+            label: shortText,
+            alternatives: z.array(shortText).max(30),
+            matchedBy: z.array(StableIdSchema).max(500),
+          })
+          .strict(),
+      )
+      .max(30)
+      .optional(),
     coveredByAchievementIds: z.array(StableIdSchema).max(100),
     status: CoverageStatusSchema.optional(),
     evidence: z.array(CoverageEvidenceSchema).max(500).optional(),
@@ -167,6 +180,21 @@ export const AchievementSelectionResponseSchema = z
         z
           .object({
             requirement: shortText,
+            priority: z
+              .enum(["required", "responsibility", "preferred"])
+              .optional(),
+            facets: z
+              .array(
+                z
+                  .object({
+                    label: shortText,
+                    alternatives: z.array(shortText).max(30),
+                    matchedBy: z.array(StableIdSchema).max(500),
+                  })
+                  .strict(),
+              )
+              .max(30)
+              .optional(),
             availableAchievementIds: z.array(StableIdSchema).max(500),
             coveredByAchievementIds: z.array(StableIdSchema).optional(),
             status: CoverageStatusSchema.optional(),

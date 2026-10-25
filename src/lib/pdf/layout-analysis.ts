@@ -109,11 +109,16 @@ export function layoutFromPageTextBoxes(
   layout: PdfLayout;
   text: string;
   firstPageText: string;
+  topThirdText: string;
   overflowText: string;
   overflowWordCount: number;
 } {
   const firstPage = boxesByPage[0] ?? [];
   const firstPageText = firstPage.map((box) => box.text).join(" ");
+  const topThirdText = firstPage
+    .filter((box) => box.y >= (height * 2) / 3)
+    .map((box) => box.text)
+    .join(" ");
   const overflowText = boxesByPage
     .slice(1)
     .flatMap((boxes) => boxes.map((box) => box.text))
@@ -124,6 +129,7 @@ export function layoutFromPageTextBoxes(
       .flatMap((boxes) => boxes.map((box) => box.text))
       .join(" "),
     firstPageText,
+    topThirdText,
     overflowText,
     overflowWordCount: overflowText.split(/\s+/).filter(Boolean).length,
   };
@@ -133,6 +139,7 @@ export async function analyzePdfLayout(pdf: Uint8Array): Promise<{
   layout: PdfLayout;
   text: string;
   firstPageText: string;
+  topThirdText: string;
   overflowText: string;
   overflowWordCount: number;
 }> {

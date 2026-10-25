@@ -4387,6 +4387,27 @@ a:focus-visible {
   margin: 0;
   font-size: 13px;
 }
+.metric-opportunities p {
+  margin: 0 0 var(--space-8);
+  color: var(--muted);
+  font-size: 12px;
+}
+.metric-opportunities ul {
+  display: grid;
+  gap: var(--space-8);
+  margin: 0;
+  padding-left: var(--space-16);
+}
+.metric-opportunities li {
+  font-size: 12px;
+}
+.metric-opportunities li button {
+  margin-left: var(--space-8);
+}
+.metric-opportunities small {
+  display: block;
+  color: var(--muted);
+}
 .metric-fields {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -6429,6 +6450,27 @@ a:focus-visible {
 
 .generation-origin {
   margin-bottom: 10px;
+}
+.generation-quality {
+  margin: 0 0 var(--space-12);
+  padding: var(--space-12);
+  border: var(--border-default);
+  border-radius: var(--radius-control);
+  font-size: var(--type-body-size);
+}
+.generation-quality summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+.generation-quality h4 {
+  margin: var(--space-12) 0 var(--space-4);
+}
+.generation-quality ul {
+  margin: 0;
+  padding-left: var(--space-16);
+}
+.generation-quality li + li {
+  margin-top: var(--space-4);
 }
 
 /*

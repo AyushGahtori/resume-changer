@@ -54,6 +54,34 @@ const layout = (utilization: number): PdfLayout => ({
 });
 
 describe("bounded measured resume fitting", () => {
+  it("keeps unique required evidence when pruning an overflowing role", async () => {
+    const selectedIds = ids.slice(0, 4);
+    const compile = vi
+      .fn()
+      .mockRejectedValueOnce(
+        new PdfCompileError("Overflow", "PAGE_LIMIT_EXCEEDED"),
+      )
+      .mockResolvedValue({ pdf: Buffer.from("%PDF-test"), pageCount: 1 });
+    const result = await fitResumeToPage({
+      library: sample,
+      request: { ...request, selectedAchievementIds: selectedIds },
+      input,
+      scores: new Map([
+        [selectedIds[0], 1],
+        [selectedIds[1], 0],
+        [selectedIds[2], 2],
+        [selectedIds[3], 2],
+      ]),
+      compile,
+      measure: async () => ({ layout: layout(0.97), text: "" }),
+    });
+    expect(result.generation.metadata.selectedAchievementIds).toContain(
+      selectedIds[1],
+    );
+    expect(result.generation.metadata.selectedAchievementIds).not.toContain(
+      selectedIds[0],
+    );
+  });
   it("adds relevant source evidence until measured fill is sufficient and returns final coverage", async () => {
     const compile = vi.fn(async () => ({
       pdf: Buffer.from("%PDF-test"),

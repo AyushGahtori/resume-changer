@@ -387,6 +387,29 @@ test("Auto Tailor reports wording repair and exposes summary, partial coverage a
               decisions: [],
               status: "filled",
             },
+            qualityReport: {
+              machine: [
+                {
+                  id: "identity",
+                  status: "pass",
+                  message: "Name and email are readable.",
+                },
+              ],
+              recruiter: [
+                {
+                  id: "top-third-relevance",
+                  status: "review",
+                  message: "Move AWS evidence into the visible opening.",
+                },
+              ],
+              credibility: [
+                {
+                  id: "inference",
+                  status: "review",
+                  message: "Confirm inferred TensorFlow use.",
+                },
+              ],
+            },
             finalCoverage: [
               {
                 requirement: "AWS provisioning",
@@ -413,6 +436,13 @@ test("Auto Tailor reports wording repair and exposes summary, partial coverage a
     page.getByText(
       "PDF ready · 1 page · 97% page fill. Wording repair used 1 time.",
     ),
+  ).toBeVisible();
+  await page.getByText("Final resume checks · 2 need review").click();
+  await expect(
+    page.getByText("Move AWS evidence into the visible opening."),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Confirm inferred TensorFlow use."),
   ).toBeVisible();
   await page.getByRole("button", { name: "Job match", exact: true }).click();
   await expect(

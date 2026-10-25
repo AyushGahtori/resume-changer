@@ -248,8 +248,9 @@ function emptyResult(summary: string): AchievementSelectionResult {
 
 function selectBalancedCandidates(
   ranked: ScoredCandidate[],
-  availableLines: number,
+  input: AchievementSelectionInput,
 ): Candidate[] {
+  const availableLines = input.contentBudgetLines;
   const selected: Candidate[] = [];
   const groupKey = (item: ScoredCandidate) =>
     `${item.candidate.evidence.section}:${item.candidate.evidence.groupId}`;
@@ -289,28 +290,10 @@ function selectBalancedCandidates(
     }
   }
 
-  // Representation is a floor when relevant evidence fits, never a role cap.
-  for (let round = 1; round < 3; round++) {
-    for (const items of experienceGroups) {
-      const best = [...items].sort((a, b) => b.score - a.score);
-      for (const item of best) {
-        if (addIfFits(item)) break;
-      }
-    }
-  }
-
   while (true) {
-    const covered = new Set(
-      selected.flatMap((candidate) =>
-        Array.from(
-          ranked
-            .find(
-              (item) => item.candidate.evidence.id === candidate.evidence.id,
-            )
-            ?.matches.keys() ?? [],
-        ),
-      ),
-    );
+    const currentIds = selected.map(({ evidence }) => evidence.id);
+    const currentValue = coverageUtility(input, currentIds);
+    const usedLines = budgetCost(selected);
     const groupCounts = new Map<string, number>();
     for (const candidate of selected) {
       const key = `${candidate.evidence.section}:${candidate.evidence.groupId}`;
@@ -325,19 +308,20 @@ function selectBalancedCandidates(
       )
       .map((item) => {
         const count = groupCounts.get(groupKey(item)) ?? 0;
-        const newCoverage = [...item.matches.entries()].reduce(
-          (sum, [requirement, score]) =>
-            sum + (covered.has(requirement) ? 0 : score * 2),
+        const nextLines = budgetCost([...selected, item.candidate]);
+        const gain = Math.max(
           0,
+          coverageUtility(input, [...currentIds, item.candidate.evidence.id]) -
+            currentValue,
         );
         const target = item.candidate.evidence.section === "projects" ? 2 : 4;
         return {
           item,
           value:
-            item.score +
-            newCoverage +
-            (count === 0 ? 3 : 0) -
-            Math.max(0, count - target + 1) * 4,
+            (gain * 10) / Math.max(1, nextLines - usedLines) +
+            Math.min(item.score, 15) * 0.08 +
+            (count === 0 ? 1 : 0) -
+            Math.max(0, count - target + 1) * 1.5,
         };
       })
       .sort((left, right) => right.value - left.value)[0];
@@ -346,11 +330,55 @@ function selectBalancedCandidates(
   return selected;
 }
 
+/** Value one grounded resume earns from the JD, including evidence strength. */
+export function coverageUtility(
+  input: AchievementSelectionInput,
+  selectedIds: string[],
+  options: {
+    renderedTexts?: Map<string, string>;
+    renderedSkillIds?: string[];
+    summary?: string;
+  } = {},
+): number {
+  const statusCredit = {
+    supported: 1,
+    partial: 0.4,
+    uncertain: 0.2,
+    "evidence-not-selected": 0,
+    "no-evidence-found": 0,
+  } as const;
+  const sourceCredit = {
+    job: 1,
+    project: 0.8,
+    education: 0.75,
+    credential: 0.4,
+    skill: 0.25,
+  } as const;
+  const priorityWeight = { required: 5, responsibility: 3, preferred: 1 };
+  return assessRequirementCoverage(input, selectedIds, options).reduce(
+    (sum, row) => {
+      const strongest = Math.max(
+        0,
+        ...row.evidence
+          .filter((source) => source.selected)
+          .map((source) => (source.inferred ? 0.1 : sourceCredit[source.kind])),
+      );
+      return (
+        sum +
+        priorityWeight[row.priority] *
+          statusCredit[row.status] *
+          (0.5 + 0.5 * strongest)
+      );
+    },
+    0,
+  );
+}
+
 function makeFallbackResult(
   input: AchievementSelectionInput,
 ): AchievementSelectionResult {
   const ranked = scoredCandidates(input);
-  const selected = selectBalancedCandidates(ranked, input.contentBudgetLines);
+  const selected = selectBalancedCandidates(ranked, input);
   const selectedIds = new Set(selected.map(({ evidence }) => evidence.id));
   const coverageRequirements = getRequirements(input.analysis);
 
@@ -459,7 +487,7 @@ function normalizeAiResult(
       verifiedModelCoverage.length * 3;
     return [{ candidate, matches, score }];
   });
-  const selected = selectBalancedCandidates(eligible, input.contentBudgetLines);
+  const selected = selectBalancedCandidates(eligible, input);
   const selectedIds = new Set(selected.map(({ evidence }) => evidence.id));
   const matchedSelectionIds = new Set(
     result.selections
