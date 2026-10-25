@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { copyFile, mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { chooseLibraryOption } from "./support/library-select";
 import {
   createPersonalLibraryGuard,
   exampleLibraryPath,
@@ -206,7 +207,7 @@ test.describe("achievement library group headers", () => {
     const job = group(page, "Platform Engineer");
     await expect(job.locator(".experience-count")).toHaveText("4 achievements");
 
-    await page.getByLabel("Point source").selectOption("project-document");
+    await chooseLibraryOption(page, "Point source", "project-document");
 
     const remaining = group(page, "Platform Engineer");
     await expect(remaining.locator(".experience-count")).toHaveText(
@@ -215,9 +216,11 @@ test.describe("achievement library group headers", () => {
   });
 
   test("omits a group that has no matching point", async ({ page }) => {
-    await page
-      .getByLabel("Job or project")
-      .selectOption("project:project-queueboard");
+    await chooseLibraryOption(
+      page,
+      "Job or project",
+      "project:project-queueboard",
+    );
 
     await expect(page.locator(".experience-group")).toHaveCount(1);
     await expect(page.locator(".experience-group")).toContainText("QueueBoard");
@@ -286,9 +289,11 @@ test.describe("achievement library group headers", () => {
      * mounted again when the filter is cleared. The state the reader gave
      * it has to survive that.
      */
-    await page
-      .getByLabel("Job or project")
-      .selectOption("job:job-example-cloud-labs");
+    await chooseLibraryOption(
+      page,
+      "Job or project",
+      "job:job-example-cloud-labs",
+    );
     await expect(page.locator(".experience-group")).toHaveCount(1);
 
     await page.getByRole("button", { name: "Reset filters" }).click();

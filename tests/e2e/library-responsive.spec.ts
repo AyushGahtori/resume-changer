@@ -45,7 +45,7 @@ for (const width of WIDTHS) {
     expect(searchBox!.height).toBeLessThanOrEqual(44);
 
     for (const label of FACETS) {
-      const facet = page.getByLabel(label);
+      const facet = page.getByRole("combobox", { name: label });
       await expect(facet).toBeVisible();
       const facetBox = await facet.boundingBox();
       expect(facetBox!.x).toBeGreaterThanOrEqual(0);
@@ -77,7 +77,9 @@ test("wraps the filter row before it can crowd the page", async ({ page }) => {
 
     const rows = await page.evaluate(() => {
       const selects = Array.from(
-        document.querySelectorAll(".library-filter-grid select"),
+        document.querySelectorAll(
+          ".library-filter-grid .library-select-trigger",
+        ),
       );
       return new Set(
         selects.map((select) => Math.round(select.getBoundingClientRect().top)),
@@ -93,6 +95,6 @@ test("wraps the filter row before it can crowd the page", async ({ page }) => {
       expect(rows).toBeGreaterThan(1);
     }
 
-    await expect(page.getByLabel("Sort")).toBeVisible();
+    await expect(page.getByRole("combobox", { name: "Sort" })).toBeVisible();
   }
 });

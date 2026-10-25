@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { chooseLibraryOption } from "./support/library-select";
 import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
@@ -258,9 +259,11 @@ test("keeps the total counts when a search facet hides results", async ({
   const before = await metrics(page).locator("dd").allTextContents();
   expect(before).toEqual(["2", "2", "13", "14", "2"]);
 
-  await page
-    .getByLabel("Job or project")
-    .selectOption("job:job-example-cloud-labs");
+  await chooseLibraryOption(
+    page,
+    "Job or project",
+    "job:job-example-cloud-labs",
+  );
 
   // The workbench reports the narrowed result set.
   await expect(page.locator(".library-filter-summary")).toContainText(

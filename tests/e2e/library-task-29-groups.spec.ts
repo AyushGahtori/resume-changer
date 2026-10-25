@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { chooseLibraryOption } from "./support/library-select";
 
 /**
  * Task 29 coverage for the way the library groups its points.
@@ -78,9 +79,11 @@ test("shows a finished role with the month it ended", async ({ page }) => {
 });
 
 test("leaves out a group that has no matching point", async ({ page }) => {
-  await page
-    .getByLabel("Job or project")
-    .selectOption("project:project-queueboard");
+  await chooseLibraryOption(
+    page,
+    "Job or project",
+    "project:project-queueboard",
+  );
 
   await expect(page.locator(".experience-group")).toHaveCount(1);
   await expect(

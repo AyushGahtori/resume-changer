@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { chooseLibraryOption } from "./support/library-select";
 
 /**
  * Task 14 "The sticky search and filter workbench".
@@ -241,12 +242,12 @@ test("keeps the filter dropdowns on top of the sticky surface", async ({
   await scrollIntoStickyRange(page);
 
   const workbench = page.locator(".library-workbench");
-  const tag = page.getByLabel("Tag");
+  const tag = page.getByRole("combobox", { name: "Tag" });
 
   const overflow = await workbench.evaluate(
     (element) => getComputedStyle(element).overflow,
   );
-  // A clipped surface would cut the native dropdown off.
+  // A clipped surface would cut the custom listbox off.
   expect(overflow).toBe("visible");
 
   const box = await tag.boundingBox();
@@ -258,13 +259,15 @@ test("keeps the filter dropdowns on top of the sticky surface", async ({
     },
     { x: box!.x + box!.width / 2, y: box!.y + box!.height / 2 },
   );
-  expect(topElement).toBe("select");
+  expect(topElement).toBe("button");
 
-  // The native select keeps its own keyboard behaviour while it is stuck.
-  const before = await tag.inputValue();
-  await tag.focus();
-  await page.keyboard.press("ArrowDown");
-  await expect.poll(() => tag.inputValue()).not.toBe(before);
+  await tag.click();
+  await expect(
+    page.getByRole("listbox", { name: "Options for Tag" }),
+  ).toBeVisible();
+  await expect(page.getByRole("option", { name: "aws" })).toBeVisible();
+  await page.getByRole("option", { name: "aws" }).click();
+  await expect(tag).toHaveAttribute("data-value", "aws");
 });
 
 test("keeps every control in the normal flow on a narrow viewport", async ({
@@ -289,7 +292,7 @@ test("keeps every control in the normal flow on a narrow viewport", async ({
     "Linked skill",
     "Tag",
   ]) {
-    await expect(page.getByLabel(label)).toBeVisible();
+    await expect(page.getByRole("combobox", { name: label })).toBeVisible();
   }
   await expect(page.locator(".library-result-count")).toBeVisible();
 });
@@ -384,7 +387,7 @@ test("keeps the search name and adds the magnifier and a conditional clear actio
 
 test("clears the query without clearing the other facets", async ({ page }) => {
   const search = page.getByRole("searchbox", { name: "Search library" });
-  await page.getByLabel("Tag").selectOption({ label: "aws" });
+  await chooseLibraryOption(page, "Tag", "aws");
   await search.fill("python");
   await expect(page.locator(".library-result-count")).toContainText("0 of 13");
 
@@ -392,7 +395,10 @@ test("clears the query without clearing the other facets", async ({ page }) => {
 
   await expect(search).toHaveValue("");
   // The facet that was chosen is untouched.
-  await expect(page.getByLabel("Tag")).toHaveValue("aws");
+  await expect(page.getByRole("combobox", { name: "Tag" })).toHaveAttribute(
+    "data-value",
+    "aws",
+  );
   await expect(page.locator(".library-result-count")).toContainText("1 of 13");
 });
 
@@ -462,13 +468,13 @@ test("updates the results as the query is typed, with no hidden delay", async ({
 test("composes the query with the other facets", async ({ page }) => {
   const count = page.locator(".library-result-count");
 
-  await page.getByLabel("Linked skill").selectOption({ label: "Python" });
+  await chooseLibraryOption(page, "Linked skill", "skill-python");
   await expect(count).toContainText("2 of 13");
 
   await page.getByRole("searchbox", { name: "Search library" }).fill("python");
   await expect(count).toContainText("2 of 13");
 
-  await page.getByLabel("Tag").selectOption({ label: "aws" });
+  await chooseLibraryOption(page, "Tag", "aws");
   await expect(count).toContainText("0 of 13");
 });
 

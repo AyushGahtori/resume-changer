@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { chooseLibraryOption } from "./support/library-select";
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/library?source=demo");
@@ -24,13 +25,15 @@ test("shows a grouped fictional library and its source details", async ({
 });
 
 test("searches and combines facets, then resets them", async ({ page }) => {
-  await page
-    .getByLabel("Job or project")
-    .selectOption("job:job-example-cloud-labs");
-  await page.getByLabel("Point source").selectOption("project-document");
-  await page.getByLabel("Point status").selectOption("enabled");
-  await page.getByLabel("Linked skill").selectOption("skill-github-actions");
-  await page.getByLabel("Tag").selectOption("automation");
+  await chooseLibraryOption(
+    page,
+    "Job or project",
+    "job:job-example-cloud-labs",
+  );
+  await chooseLibraryOption(page, "Point source", "project-document");
+  await chooseLibraryOption(page, "Point status", "enabled");
+  await chooseLibraryOption(page, "Linked skill", "skill-github-actions");
+  await chooseLibraryOption(page, "Tag", "automation");
 
   await expect(page.getByText("achievement-ci-cd-pipeline")).toBeVisible();
   await expect(
@@ -40,7 +43,9 @@ test("searches and combines facets, then resets them", async ({ page }) => {
   await expect(
     page.getByText("achievement-cloud-deployment-platform"),
   ).toBeVisible();
-  await expect(page.getByLabel("Job or project")).toHaveValue("");
+  await expect(
+    page.getByRole("combobox", { name: "Job or project" }),
+  ).toHaveAttribute("data-value", "");
 });
 
 test("shows an empty state and supports searching credentials", async ({
@@ -79,7 +84,7 @@ test("keeps the library usable on a narrow viewport without horizontal overflow"
     dimensions.viewportWidth,
   );
   await expect(page.getByLabel("Search library")).toBeVisible();
-  await expect(page.getByLabel("Tag")).toBeVisible();
+  await expect(page.getByRole("combobox", { name: "Tag" })).toBeVisible();
 });
 
 test("offers explicit personal and demo source navigation", async ({

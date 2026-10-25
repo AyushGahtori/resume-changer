@@ -187,7 +187,10 @@ test("applies the shared type scale to the library hierarchy", async ({
   const chip = await readType(page, ".facet-chip");
   const sectionTitle = await readType(page, ".library-detail summary");
   const searchInput = await readType(page, ".library-search input");
-  const filterLabel = await readType(page, ".library-filter-grid label > span");
+  const filterControl = await readType(
+    page,
+    ".library-filter-grid .library-select-trigger",
+  );
 
   // The serif title treatment and the sans-serif UI treatment are preserved.
   expect(title?.fontFamily).toContain("Georgia");
@@ -236,7 +239,10 @@ test("applies the shared type scale to the library hierarchy", async ({
     page.getByRole("searchbox", { name: "Search library" }),
   ).toBeVisible();
   expect(searchInput).toMatchObject({ fontSize: "14px", lineHeight: "20px" });
-  expect(filterLabel).toMatchObject({ fontSize: "12px", lineHeight: "16px" });
+  expect(filterControl).toMatchObject({
+    fontSize: "14px",
+    lineHeight: "20px",
+  });
 
   // Counts and metric values compare by column, so they use tabular numerals.
   expect(metricValue?.fontVariantNumeric).toContain("tabular-nums");

@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { chooseLibraryOption } from "./support/library-select";
 
 /**
  * Task 29 coverage for the library summary.
@@ -43,7 +44,7 @@ test("keeps the summary total while the count line follows the filters", async (
   const pointCount = summary.locator(".library-counts dd").nth(2);
   await expect(pointCount).toHaveText("13");
 
-  await page.getByLabel("Point source").selectOption("project-document");
+  await chooseLibraryOption(page, "Point source", "project-document");
 
   /*
    * The number in the summary is the size of the library, so it does not

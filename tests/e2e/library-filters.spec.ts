@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { contrastRatio } from "./support/color";
+import { chooseLibraryOption } from "./support/library-select";
 
 /**
  * The library counts the achievement points that are actually visible and
@@ -30,11 +31,11 @@ test("shows the matching point count apart from the summary metrics", async ({
   // The total in the summary card stays the size of the whole library.
   await expect(page.locator(".library-counts dd").nth(2)).toHaveText("13");
 
-  await page.getByLabel("Tag").selectOption("automation");
+  await chooseLibraryOption(page, "Tag", "automation");
   await expect(resultCount).toHaveText("3 of 13 achievement points");
   await expect(page.locator(".library-counts dd").nth(2)).toHaveText("13");
 
-  await page.getByLabel("Tag").selectOption("geospatial");
+  await chooseLibraryOption(page, "Tag", "geospatial");
   await expect(resultCount).toHaveText("1 of 13 achievement points");
   await expect(page.locator(".library-point")).toHaveCount(1);
 });
@@ -42,10 +43,10 @@ test("shows the matching point count apart from the summary metrics", async ({
 test("uses singular copy when a single point matches", async ({ page }) => {
   const resultCount = page.locator(".library-result-count");
 
-  await page.getByLabel("Tag").selectOption("geospatial");
+  await chooseLibraryOption(page, "Tag", "geospatial");
   await expect(resultCount).toHaveText("1 of 13 achievement points");
 
-  await page.getByLabel("Tag").selectOption("");
+  await chooseLibraryOption(page, "Tag", "");
   await page
     .getByRole("searchbox", { name: "Search library" })
     .fill("no matching library content");
@@ -56,8 +57,8 @@ test("uses singular copy when a single point matches", async ({ page }) => {
 });
 
 test("reorders the groups for every sort option", async ({ page }) => {
-  const sort = page.getByLabel("Sort");
-  await expect(sort).toHaveValue("most-recent");
+  const sort = page.getByRole("combobox", { name: "Sort" });
+  await expect(sort).toHaveAttribute("data-value", "most-recent");
 
   // The most recent order puts the ongoing role first and the finished
   // roles in the order they ended.
@@ -68,7 +69,7 @@ test("reorders the groups for every sort option", async ({ page }) => {
     "Project: FieldNotes",
   ]);
 
-  await sort.selectOption("oldest");
+  await chooseLibraryOption(page, "Sort", "oldest");
   expect(await groupLabels(page)).toEqual([
     "Job: Software Engineer",
     "Job: Platform Engineer",
@@ -76,7 +77,7 @@ test("reorders the groups for every sort option", async ({ page }) => {
     "Project: QueueBoard",
   ]);
 
-  await sort.selectOption("alphabetical");
+  await chooseLibraryOption(page, "Sort", "alphabetical");
   expect(await groupLabels(page)).toEqual([
     "Job: Platform Engineer",
     "Job: Software Engineer",
@@ -88,7 +89,7 @@ test("reorders the groups for every sort option", async ({ page }) => {
 test("sorts the points inside a group and keeps the count", async ({
   page,
 }) => {
-  await page.getByLabel("Sort").selectOption("alphabetical");
+  await chooseLibraryOption(page, "Sort", "alphabetical");
 
   const firstGroupPoints = page
     .locator(".experience-group")
@@ -110,8 +111,8 @@ test("sorts the points inside a group and keeps the count", async ({
 test("keeps the sort and the count while the filters change", async ({
   page,
 }) => {
-  await page.getByLabel("Sort").selectOption("oldest");
-  await page.getByLabel("Tag").selectOption("automation");
+  await chooseLibraryOption(page, "Sort", "oldest");
+  await chooseLibraryOption(page, "Tag", "automation");
 
   await expect(page.locator(".library-result-count")).toHaveText(
     "3 of 13 achievement points",
@@ -122,7 +123,7 @@ test("keeps the sort and the count while the filters change", async ({
     "Project: FieldNotes",
   ]);
 
-  await page.getByLabel("Sort").selectOption("most-recent");
+  await chooseLibraryOption(page, "Sort", "most-recent");
   await expect(page.locator(".library-result-count")).toHaveText(
     "3 of 13 achievement points",
   );
@@ -144,7 +145,7 @@ test("shows the reset action only while the filters are not default", async ({
     .fill("automation");
   await expect(reset).toBeVisible();
 
-  await page.getByLabel("Point status").selectOption("enabled");
+  await chooseLibraryOption(page, "Point status", "enabled");
   await expect(reset).toBeVisible();
 
   await reset.click();
@@ -152,7 +153,9 @@ test("shows the reset action only while the filters are not default", async ({
   await expect(
     page.getByRole("searchbox", { name: "Search library" }),
   ).toHaveValue("");
-  await expect(page.getByLabel("Point status")).toHaveValue("all");
+  await expect(
+    page.getByRole("combobox", { name: "Point status" }),
+  ).toHaveAttribute("data-value", "all");
   await expect(page.locator(".library-result-count")).toHaveText(
     "13 of 13 achievement points",
   );
@@ -164,7 +167,7 @@ test("keeps the data source and the theme when the filters are reset", async ({
   await page.getByRole("button", { name: "Switch to dark mode" }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
 
-  await page.getByLabel("Tag").selectOption("automation");
+  await chooseLibraryOption(page, "Tag", "automation");
   await page.getByRole("button", { name: "Reset filters" }).click();
 
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
@@ -177,10 +180,11 @@ test("backs every advanced facet with real choices and current results", async (
 }) => {
   const count = page.locator(".library-result-count");
   const experience = await page
-    .getByLabel("Job or project")
-    .locator("option")
+    .getByRole("combobox", { name: "Job or project" })
+    .locator("xpath=..")
+    .locator(".library-select-option")
     .evaluateAll((options) =>
-      options.map((option) => (option as HTMLOptionElement).value),
+      options.map((option) => option.getAttribute("data-value")),
     );
   expect(experience).toEqual([
     "",
@@ -191,18 +195,20 @@ test("backs every advanced facet with real choices and current results", async (
   ]);
 
   const sourceValues = await page
-    .getByLabel("Point source")
-    .locator("option")
+    .getByRole("combobox", { name: "Point source" })
+    .locator("xpath=..")
+    .locator(".library-select-option")
     .evaluateAll((options) =>
-      options.map((option) => (option as HTMLOptionElement).value),
+      options.map((option) => option.getAttribute("data-value")),
     );
   expect(sourceValues).toEqual(["", "project-document", "user-notes"]);
 
   const statusValues = await page
-    .getByLabel("Point status")
-    .locator("option")
+    .getByRole("combobox", { name: "Point status" })
+    .locator("xpath=..")
+    .locator(".library-select-option")
     .evaluateAll((options) =>
-      options.map((option) => (option as HTMLOptionElement).value),
+      options.map((option) => option.getAttribute("data-value")),
     );
   expect(statusValues).toEqual(["all", "enabled", "disabled"]);
 
@@ -220,7 +226,7 @@ test("backs every advanced facet with real choices and current results", async (
   ];
 
   for (const facet of cases) {
-    await page.getByLabel(facet.label).selectOption(facet.value);
+    await chooseLibraryOption(page, facet.label, facet.value);
     const visiblePointCount = await page.locator(".library-point").count();
     expect(visiblePointCount).toBeLessThan(13);
     expect(visiblePointCount === 0).toBe(facet.zero);
@@ -251,13 +257,17 @@ test("keeps long selected facet values usable on a narrow screen", async ({
   await page.setViewportSize({ width: 320, height: 740 });
   await page.reload();
 
-  await page
-    .getByLabel("Job or project")
-    .selectOption("job:job-sampleworks-studio");
-  await page
-    .getByLabel("Linked skill")
-    .selectOption("skill-infrastructure-as-code");
-  await page.getByLabel("Tag").selectOption("developer-experience");
+  await chooseLibraryOption(
+    page,
+    "Job or project",
+    "job:job-sampleworks-studio",
+  );
+  await chooseLibraryOption(
+    page,
+    "Linked skill",
+    "skill-infrastructure-as-code",
+  );
+  await chooseLibraryOption(page, "Tag", "developer-experience");
 
   const dimensions = await page.evaluate(() => ({
     documentWidth: document.documentElement.scrollWidth,
@@ -266,20 +276,23 @@ test("keeps long selected facet values usable on a narrow screen", async ({
   expect(dimensions.documentWidth).toBeLessThanOrEqual(
     dimensions.viewportWidth,
   );
-  await expect(page.getByLabel("Job or project")).toHaveValue(
-    "job:job-sampleworks-studio",
+  await expect(
+    page.getByRole("combobox", { name: "Job or project" }),
+  ).toHaveAttribute("data-value", "job:job-sampleworks-studio");
+  await expect(
+    page.getByRole("combobox", { name: "Linked skill" }),
+  ).toHaveAttribute("data-value", "skill-infrastructure-as-code");
+  await expect(page.getByRole("combobox", { name: "Tag" })).toHaveAttribute(
+    "data-value",
+    "developer-experience",
   );
-  await expect(page.getByLabel("Linked skill")).toHaveValue(
-    "skill-infrastructure-as-code",
-  );
-  await expect(page.getByLabel("Tag")).toHaveValue("developer-experience");
 });
 
 test("keeps active facets visibly distinct in both themes after focus leaves", async ({
   page,
 }) => {
-  const tag = page.getByLabel("Tag");
-  const status = page.getByLabel("Point status");
+  const tag = page.getByRole("combobox", { name: "Tag" });
+  const status = page.getByRole("combobox", { name: "Point status" });
 
   async function colors(select: import("@playwright/test").Locator) {
     return select.evaluate((element) => {
@@ -292,15 +305,34 @@ test("keeps active facets visibly distinct in both themes after focus leaves", a
     });
   }
 
+  async function waitForStableColors(
+    select: import("@playwright/test").Locator,
+  ) {
+    let previous: string | undefined;
+    let stableSamples = 0;
+    await expect
+      .poll(
+        async () => {
+          const current = JSON.stringify(await colors(select));
+          stableSamples = current === previous ? stableSamples + 1 : 0;
+          previous = current;
+          return stableSamples;
+        },
+        { intervals: [100, 100, 100, 150, 200], timeout: 3000 },
+      )
+      .toBeGreaterThanOrEqual(2);
+  }
+
   for (const theme of ["light", "dark"] as const) {
     if (theme === "dark") {
       await page.getByRole("button", { name: "Switch to dark mode" }).click();
       await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+      await waitForStableColors(tag);
     }
 
     const neutral = await colors(tag);
     const inactive = await colors(status);
-    await tag.selectOption("automation");
+    await chooseLibraryOption(page, "Tag", "automation");
     await tag.blur();
 
     const active = await colors(tag);
@@ -317,7 +349,7 @@ test("keeps active facets visibly distinct in both themes after focus leaves", a
       .getByRole("button", { name: "Reset filters" })
       .click();
     expect(await tag.getAttribute("data-active")).toBeNull();
-    expect(await colors(tag)).toEqual(neutral);
+    await expect.poll(() => colors(tag)).toEqual(neutral);
 
     if (theme === "dark") {
       await page.getByRole("button", { name: "Switch to light mode" }).click();

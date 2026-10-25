@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { chooseLibraryOption } from "./support/library-select";
 import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -107,9 +108,11 @@ test("keeps empty parent sections navigable when none of their points match", as
 }) => {
   await page.goto("/library?source=demo");
 
-  await page
-    .getByLabel("Job or project")
-    .selectOption("job:job-example-cloud-labs");
+  await chooseLibraryOption(
+    page,
+    "Job or project",
+    "job:job-example-cloud-labs",
+  );
 
   const jobs = page.getByRole("region", { name: "Jobs", exact: true });
   await expect(jobs.locator(".library-section-count")).toHaveText("1");
