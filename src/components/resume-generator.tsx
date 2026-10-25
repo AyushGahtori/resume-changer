@@ -1,7 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { Search } from "lucide-react";
+import {
+  ArrowUpRight,
+  BriefcaseBusiness,
+  Check,
+  CircleX,
+  FileText,
+  FolderKanban,
+  Search,
+  Sparkles,
+} from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, FormEvent, KeyboardEvent, ReactNode } from "react";
 import {
@@ -10,8 +19,6 @@ import {
   CircleDashed,
   CircleHelp,
   CircleMinus,
-  CircleX,
-  FileText,
   Info,
   LoaderCircle,
   Maximize2,
@@ -1414,10 +1421,17 @@ export default function ResumeGenerator({ library, source }: Props) {
 
   return (
     <section className="generation-page" aria-labelledby="page-title">
+      <div className="generation-page-atmosphere" aria-hidden="true">
+        <span className="generation-bubble generation-bubble-large" />
+        <span className="generation-bubble generation-bubble-small" />
+        <span className="generation-bubble generation-bubble-ring" />
+        <span className="generation-bubble-orbit" />
+      </div>
       <div className="generation-heading page-heading-row">
         <div>
           <p className="eyebrow">
-            MANUAL GENERATION <span>02 / 04</span>
+            MANUAL GENERATION{" "}
+            <span className="generation-step-chip">02 / 04</span>
           </p>
           <h1 id="page-title">
             {result ? "Your next chapter." : "Build your resume."}
@@ -1431,6 +1445,9 @@ export default function ResumeGenerator({ library, source }: Props) {
       </div>
 
       <div className="generation-draft">
+        <span aria-hidden="true" className="generation-context-icon">
+          <BriefcaseBusiness size={19} strokeWidth={1.8} />
+        </span>
         <div className="generation-draft-details" aria-live="polite">
           <p className="generation-label">JOB DESCRIPTION</p>
           {!draftReady ? (
@@ -1447,6 +1464,7 @@ export default function ResumeGenerator({ library, source }: Props) {
               <p className="generation-draft-meta">
                 {draft.company && <span>{draft.company}</span>}
                 <span className="generation-draft-count">
+                  <FileText aria-hidden="true" size={13} />
                   {draft.jobDescription.length.toLocaleString()} description
                   characters
                 </span>
@@ -1465,6 +1483,7 @@ export default function ResumeGenerator({ library, source }: Props) {
          * the loaded one carries the current-page marker.
          */}
         <div className="generation-draft-source">
+          <span className="generation-source-caption">RESUME DATA</span>
           <nav
             className="builder-source-switch"
             aria-label="Resume data source"
@@ -1565,92 +1584,120 @@ export default function ResumeGenerator({ library, source }: Props) {
               result ? "Resume editing workspace" : "Choose achievements"
             }
           >
+            <div aria-hidden="true" className="generation-selection-atmosphere">
+              <span className="selection-bubble selection-bubble-one" />
+              <span className="selection-bubble selection-bubble-two" />
+              <span className="selection-bubble selection-bubble-three" />
+            </div>
             {(!result || showGenerationSettings) && (
               <>
                 <div className="generation-section-heading">
-                  <div>
-                    <h2 id="selection-title">Choose achievements</h2>
-                    <p>
-                      {selectedIds.length} selected · {enabledIds.length}{" "}
-                      enabled
-                    </p>
+                  <div className="generation-selection-title">
+                    <span
+                      aria-hidden="true"
+                      className="generation-selection-icon"
+                    >
+                      <FileText size={18} strokeWidth={1.8} />
+                    </span>
+                    <div>
+                      <span className="generation-selection-eyebrow">
+                        YOUR EVIDENCE
+                      </span>
+                      <h2 id="selection-title">Choose achievements</h2>
+                      <div className="generation-selection-helper">
+                        Pick the details you want to bring into this resume.
+                      </div>
+                      <p className="generation-selection-count">
+                        {selectedIds.length} selected · {enabledIds.length}{" "}
+                        enabled
+                      </p>
+                    </div>
                   </div>
                   <div className="generation-selection-actions">
-                    <button
-                      className="generation-ai-button"
-                      disabled={
-                        !draftReady ||
-                        !hasJobDescription ||
-                        !analysis ||
-                        isRecommending ||
-                        isTailoring ||
-                        isAutoTailoring ||
-                        enabledIds.length === 0
-                      }
-                      onClick={handleRecommend}
-                      type="button"
-                    >
-                      {isRecommending
-                        ? "Finding matches…"
-                        : selectionError
-                          ? "Retry suggestions"
-                          : "Suggest points"}
-                    </button>
-                    <button
-                      className="generation-ai-button"
-                      disabled={
-                        !draftReady ||
-                        !hasJobDescription ||
-                        !analysis ||
-                        isRecommending ||
-                        isTailoring ||
-                        isAutoTailoring ||
-                        selectedIds.length === 0 ||
-                        selectedIds.length > 100
-                      }
-                      onClick={handleTailorSelected}
-                      type="button"
-                    >
-                      {isTailoring
-                        ? "Drafting wording…"
-                        : tailoringError
-                          ? "Retry Guided Tailor"
-                          : "Guided Tailor"}
-                    </button>
-                    <button
-                      className="generation-ai-button"
-                      disabled={
-                        !draftReady ||
-                        !hasJobDescription ||
-                        !analysis ||
-                        isRecommending ||
-                        isTailoring ||
-                        isAutoTailoring ||
-                        enabledIds.length === 0
-                      }
-                      onClick={handleAutoTailor}
-                      type="button"
-                    >
-                      {isAutoTailoring ? "Auto tailoring…" : "Auto Tailor"}
-                    </button>
-                    <button
-                      disabled={
-                        isRecommending || isTailoring || isAutoTailoring
-                      }
-                      type="button"
-                      onClick={selectAll}
-                    >
-                      Select all
-                    </button>
-                    <button
-                      disabled={
-                        isRecommending || isTailoring || isAutoTailoring
-                      }
-                      type="button"
-                      onClick={clearSelection}
-                    >
-                      Clear
-                    </button>
+                    <div className="generation-ai-actions">
+                      <button
+                        className="generation-ai-button"
+                        disabled={
+                          !draftReady ||
+                          !hasJobDescription ||
+                          !analysis ||
+                          isRecommending ||
+                          isTailoring ||
+                          isAutoTailoring ||
+                          enabledIds.length === 0
+                        }
+                        onClick={handleRecommend}
+                        type="button"
+                      >
+                        <Sparkles aria-hidden="true" size={14} />
+                        {isRecommending
+                          ? "Finding matches…"
+                          : selectionError
+                            ? "Retry suggestions"
+                            : "Suggest points"}
+                      </button>
+                      <button
+                        className="generation-ai-button"
+                        disabled={
+                          !draftReady ||
+                          !hasJobDescription ||
+                          !analysis ||
+                          isRecommending ||
+                          isTailoring ||
+                          isAutoTailoring ||
+                          selectedIds.length === 0 ||
+                          selectedIds.length > 100
+                        }
+                        onClick={handleTailorSelected}
+                        type="button"
+                      >
+                        <Sparkles aria-hidden="true" size={14} />
+                        {isTailoring
+                          ? "Drafting wording…"
+                          : tailoringError
+                            ? "Retry Guided Tailor"
+                            : "Guided Tailor"}
+                      </button>
+                      <button
+                        className="generation-ai-button"
+                        disabled={
+                          !draftReady ||
+                          !hasJobDescription ||
+                          !analysis ||
+                          isRecommending ||
+                          isTailoring ||
+                          isAutoTailoring ||
+                          enabledIds.length === 0
+                        }
+                        onClick={handleAutoTailor}
+                        type="button"
+                      >
+                        <Sparkles aria-hidden="true" size={14} />
+                        {isAutoTailoring ? "Auto tailoring…" : "Auto Tailor"}
+                      </button>
+                    </div>
+                    <div className="generation-selection-utilities">
+                      <button
+                        disabled={
+                          isRecommending || isTailoring || isAutoTailoring
+                        }
+                        type="button"
+                        onClick={selectAll}
+                      >
+                        <Check aria-hidden="true" size={14} />
+                        Select all
+                      </button>
+                      <button
+                        disabled={
+                          isRecommending || isTailoring || isAutoTailoring
+                        }
+                        type="button"
+                        onClick={clearSelection}
+                      >
+                        <CircleX aria-hidden="true" size={14} />
+                        Clear
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -1665,7 +1712,10 @@ export default function ResumeGenerator({ library, source }: Props) {
                   aria-label="Job analysis"
                 >
                   <div className="selection-analysis-heading">
-                    <div>
+                    <div className="selection-analysis-title">
+                      <span aria-hidden="true">
+                        <Info size={15} strokeWidth={2} />
+                      </span>
                       <h3>Job analysis</h3>
                     </div>
                     <span
@@ -1715,8 +1765,11 @@ export default function ResumeGenerator({ library, source }: Props) {
                   )}
                   {jobAnalysisState === "absent" && hasJobDescription && (
                     <p className="selection-analysis-detail">
-                      <Link href="/">Analyze this job description</Link> before
-                      requesting AI recommendations.
+                      <Link className="selection-analysis-action" href="/">
+                        Analyze this job description
+                        <ArrowUpRight aria-hidden="true" size={14} />
+                      </Link>
+                      <span>to unlock evidence suggestions.</span>
                     </p>
                   )}
                 </section>
@@ -2441,9 +2494,26 @@ export default function ResumeGenerator({ library, source }: Props) {
                   {visibleGroups.map((group) => (
                     <fieldset className="generation-group" key={group.id}>
                       <legend>
-                        <span>{group.kind}</span>
+                        <span
+                          className={`generation-group-kind is-${group.kind.toLowerCase()}`}
+                        >
+                          {group.kind === "JOB" ? (
+                            <BriefcaseBusiness aria-hidden="true" size={13} />
+                          ) : (
+                            <FolderKanban aria-hidden="true" size={13} />
+                          )}
+                          {group.kind}
+                        </span>
                         <strong>{group.title}</strong>
-                        {group.subtitle && <small>{group.subtitle}</small>}
+                        {group.subtitle && (
+                          <small className="generation-group-subtitle">
+                            {group.subtitle}
+                          </small>
+                        )}
+                        <span className="generation-group-count">
+                          {group.points.length}{" "}
+                          {group.points.length === 1 ? "point" : "points"}
+                        </span>
                       </legend>
                       <div className="generation-points">
                         {group.points.map((point) => (

@@ -207,7 +207,7 @@ export default function GenerationHistory() {
       <div className="history-toolbar">
         <div className="history-search-group">
           <label className="history-search-label" htmlFor="history-search">
-            Find a saved resume
+            Search generation history
           </label>
           <div className="history-search-field">
             <Search aria-hidden="true" size={18} />
@@ -237,7 +237,11 @@ export default function GenerationHistory() {
           onClick={() => void refreshEntries()}
           type="button"
         >
-          <RefreshCw aria-hidden="true" className={loading ? "is-spinning" : ""} size={16} />
+          <RefreshCw
+            aria-hidden="true"
+            className={loading ? "is-spinning" : ""}
+            size={16}
+          />
           <span>{loading ? "Refreshing" : "Refresh"}</span>
         </button>
       </div>
@@ -284,7 +288,11 @@ export default function GenerationHistory() {
       <div className="history-layout">
         <section aria-label="Saved generations" className="history-list">
           {loading ? (
-            <div className="history-loading" role="status" aria-label="Loading saved generations">
+            <div
+              className="history-loading"
+              role="status"
+              aria-label="Loading saved generations"
+            >
               <span />
               <span />
               <span />
@@ -341,7 +349,11 @@ export default function GenerationHistory() {
           ) : (
             <div className="history-empty" role="status">
               <span className="history-empty-icon" aria-hidden="true">
-                {query || filter !== "all" ? <Search size={21} /> : <Archive size={21} />}
+                {query || filter !== "all" ? (
+                  <Search size={21} />
+                ) : (
+                  <Archive size={21} />
+                )}
               </span>
               <strong>
                 {query || filter !== "all"
@@ -444,7 +456,11 @@ export default function GenerationHistory() {
                 <Sparkles size={23} />
               </span>
               <p className="source-indicator">YOUR RESUME ARCHIVE</p>
-              <strong>{entries.length ? "Pick up where you left off" : "A home for every version"}</strong>
+              <strong>
+                {entries.length
+                  ? "Pick up where you left off"
+                  : "A home for every version"}
+              </strong>
               <p>
                 {entries.length
                   ? "Select a saved resume to preview its PDF, review the LaTeX, or download a copy."
