@@ -2488,7 +2488,12 @@ a:focus-visible {
   right: 54px;
   width: 172px;
   height: 172px;
-  background: radial-gradient(circle at 35% 32%, color-mix(in srgb, var(--accent) 28%, transparent), color-mix(in srgb, var(--accent) 4%, transparent) 68%, transparent 72%);
+  background: radial-gradient(
+    circle at 35% 32%,
+    color-mix(in srgb, var(--accent) 28%, transparent),
+    color-mix(in srgb, var(--accent) 4%, transparent) 68%,
+    transparent 72%
+  );
 }
 
 .history-orb-two {
@@ -2496,7 +2501,12 @@ a:focus-visible {
   right: 203px;
   width: 132px;
   height: 132px;
-  background: radial-gradient(circle at 38% 33%, color-mix(in srgb, var(--imagination) 25%, transparent), color-mix(in srgb, var(--imagination) 3%, transparent) 70%, transparent 74%);
+  background: radial-gradient(
+    circle at 38% 33%,
+    color-mix(in srgb, var(--imagination) 25%, transparent),
+    color-mix(in srgb, var(--imagination) 3%, transparent) 70%,
+    transparent 74%
+  );
   animation-delay: -3.2s;
 }
 
@@ -2622,7 +2632,10 @@ a:focus-visible {
   border-radius: 9px;
   background: var(--surface);
   color: var(--quiet);
-  transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    background 160ms ease;
 }
 
 .history-search-field:focus-within {
@@ -2693,7 +2706,10 @@ a:focus-visible {
   padding-inline: 14px;
   border-radius: 9px;
   font-weight: 600;
-  transition: background 160ms ease, transform 160ms ease, opacity 160ms ease;
+  transition:
+    background 160ms ease,
+    transform 160ms ease,
+    opacity 160ms ease;
 }
 
 .history-refresh:hover:not(:disabled) {
@@ -2737,7 +2753,11 @@ a:focus-visible {
   font-size: 11px;
   font-weight: 600;
   cursor: pointer;
-  transition: background 160ms ease, border-color 160ms ease, color 160ms ease, transform 160ms ease;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
 }
 
 .history-filter:hover {
@@ -2928,7 +2948,10 @@ a:focus-visible {
   background: transparent;
   color: var(--danger);
   opacity: 0.68;
-  transition: opacity 150ms ease, background 150ms ease, transform 150ms ease;
+  transition:
+    opacity 150ms ease,
+    background 150ms ease,
+    transform 150ms ease;
 }
 
 .history-entry:hover .history-delete,
@@ -3002,7 +3025,11 @@ a:focus-visible {
   padding-inline: 12px;
   border-radius: 8px;
   font-weight: 600;
-  transition: background 150ms ease, border-color 150ms ease, color 150ms ease, transform 150ms ease;
+  transition:
+    background 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease,
+    transform 150ms ease;
 }
 
 .history-detail-actions button:hover,
@@ -3127,7 +3154,9 @@ a:focus-visible {
   font-size: 11px;
   font-weight: 650;
   text-decoration: none;
-  transition: transform 150ms ease, background 150ms ease;
+  transition:
+    transform 150ms ease,
+    background 150ms ease;
 }
 
 .history-empty a:hover {
@@ -3202,7 +3231,12 @@ a:focus-visible {
   height: 84px;
   margin: 8px 10px;
   border-radius: 9px;
-  background: linear-gradient(100deg, var(--surface) 20%, var(--surface-soft) 45%, var(--surface) 70%);
+  background: linear-gradient(
+    100deg,
+    var(--surface) 20%,
+    var(--surface-soft) 45%,
+    var(--surface) 70%
+  );
   background-size: 220% 100%;
   animation: history-shimmer 1.5s ease-in-out infinite;
 }
@@ -3231,31 +3265,55 @@ a:focus-visible {
 }
 
 @keyframes history-page-enter {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes history-card-enter {
-  from { opacity: 0; transform: translateY(9px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(9px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes history-orb-float {
-  0%, 100% { transform: translate3d(0, 0, 0); }
-  50% { transform: translate3d(-10px, 13px, 0); }
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(-10px, 13px, 0);
+  }
 }
 
 @keyframes history-icon-float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-5px); }
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
 }
 
 @keyframes history-spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes history-shimmer {
-  to { background-position: -220% 0; }
+  to {
+    background-position: -220% 0;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -6227,7 +6285,9 @@ a:focus-visible {
   isolation: isolate;
   overflow: hidden;
   box-shadow: var(--shadow-xs);
-  transition: border-color 180ms ease, box-shadow 180ms ease;
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease;
   background: linear-gradient(
     180deg,
     color-mix(in srgb, var(--imagination-soft) 22%, var(--surface)) 0,
@@ -7448,7 +7508,9 @@ a:focus-visible {
   cursor: pointer;
   font-size: var(--type-body-size);
   line-height: var(--type-body-line-height);
-  transition: background 140ms ease, box-shadow 140ms ease;
+  transition:
+    background 140ms ease,
+    box-shadow 140ms ease;
 }
 
 .generation-point:last-child {
@@ -7480,7 +7542,10 @@ a:focus-visible {
   border-radius: 5px;
   background: var(--surface);
   cursor: pointer;
-  transition: background 130ms ease, border-color 130ms ease, transform 130ms ease;
+  transition:
+    background 130ms ease,
+    border-color 130ms ease,
+    transform 130ms ease;
 }
 
 .generation-point input::after {

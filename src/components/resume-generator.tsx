@@ -1592,10 +1592,7 @@ export default function ResumeGenerator({ library, source }: Props) {
               result ? "Resume editing workspace" : "Choose achievements"
             }
           >
-            <div
-              aria-hidden="true"
-              className="generation-selection-atmosphere"
-            >
+            <div aria-hidden="true" className="generation-selection-atmosphere">
               <span className="selection-bubble selection-bubble-one" />
               <span className="selection-bubble selection-bubble-two" />
               <span className="selection-bubble selection-bubble-three" />
