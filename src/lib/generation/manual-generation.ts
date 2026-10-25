@@ -93,6 +93,7 @@ export type ManualGenerationMetadata = {
     inferredTerms?: string[];
   }>;
   finalCoverage?: import("../ai/requirement-coverage").CoverageAssessment[];
+  qualityReport?: import("./resume-quality").ResumeQualityReport;
   layout?: import("../pdf/layout-analysis").PdfLayout;
   fitting?: {
     attempts: number;

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { LIBRARY_ACTIONS } from "@/lib/ui/library-actions";
+import { metricOpportunities } from "@/lib/ai/metric-opportunities";
 import type {
   AchievementPoint,
   AchievementSource,
@@ -77,6 +78,11 @@ export default function AchievementPointEditor({
   const [metrics, setMetrics] = useState<MetricDraft[]>(
     initialPoint?.metrics ?? [],
   );
+  const opportunities = metricOpportunities({
+    text,
+    context: initialPoint?.context,
+    metrics,
+  });
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const closeAction = LIBRARY_ACTIONS["close-editor"];
@@ -334,6 +340,37 @@ export default function AchievementPointEditor({
             {addMetricAction.label}
           </button>
         </div>
+        {opportunities.length > 0 && (
+          <div className="metric-opportunities">
+            <p>Possible measurements to check in your records:</p>
+            <ul>
+              {opportunities.map((opportunity) => (
+                <li key={opportunity.id}>
+                  <span>{opportunity.question}</span>{" "}
+                  <button
+                    className="ui-button ui-button--tertiary ui-button--compact"
+                    onClick={() =>
+                      setMetrics((current) => [
+                        ...current,
+                        {
+                          id: `metric-${crypto.randomUUID().slice(0, 8)}`,
+                          label: opportunity.label,
+                          value: "",
+                          evidence: "",
+                          context: "",
+                        },
+                      ])
+                    }
+                    type="button"
+                  >
+                    Add verified metric
+                  </button>
+                  <small>{opportunity.evidenceHint}</small>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         {metrics.map((metric, index) => (
           <fieldset className="metric-fields" key={metric.id}>
             <legend>Metric {index + 1}</legend>
@@ -371,7 +408,7 @@ export default function AchievementPointEditor({
               />
             </label>
             <label className="editor-field">
-              <span>Context</span>
+              <span>Context (baseline, timeframe, and outcome)</span>
               <input
                 onChange={(event) =>
                   updateMetric(index, "context", event.target.value)

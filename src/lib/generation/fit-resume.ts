@@ -4,6 +4,7 @@ import type {
   AchievementSelectionInput,
 } from "../ai/contracts";
 import { assessRequirementCoverage } from "../ai/requirement-coverage";
+import { coverageUtility } from "../ai/achievement-selection";
 import { buildSkillEvidence } from "../ai/evidence";
 import { buildEvidenceSummary, enrichSourceText } from "../ai/draft-quality";
 import { compileLatexToPdf, PdfCompileError } from "../pdf/compile-service";
@@ -14,6 +15,7 @@ import {
   type ManualGenerationResult,
 } from "./manual-generation";
 import type { ResumeLibrary } from "../schemas/resume-data";
+import { assessResumeQuality } from "./resume-quality";
 
 export const MAX_AI_REPAIR_OVERFLOW_WORDS = 40;
 const MAX_AI_REPAIR_ATTEMPTS = 1;
@@ -24,6 +26,7 @@ type Measure = (pdf: Uint8Array) => Promise<{
   layout: PdfLayout;
   text: string;
   firstPageText?: string;
+  topThirdText?: string;
   overflowText?: string;
   overflowWordCount?: number;
 }>;
@@ -262,6 +265,11 @@ export async function fitResumeToPage(args: {
           ],
           status: "measurement-unavailable",
         };
+        generation.metadata.qualityReport = assessResumeQuality({
+          library: args.library,
+          input: args.input,
+          metadata: generation.metadata,
+        });
         return { generation, pdf: compiled.pdf };
       }
       generation.metadata.layout = measured.layout;
@@ -287,6 +295,14 @@ export async function fitResumeToPage(args: {
           ),
         },
       );
+      generation.metadata.qualityReport = assessResumeQuality({
+        library: args.library,
+        input: args.input,
+        metadata: generation.metadata,
+        pdfText: measured.firstPageText ?? measured.text,
+        topThirdText: measured.topThirdText,
+        layout: measured.layout,
+      });
       const overflows =
         compiled.pageCount !== 1 ||
         measured.layout.pageCount !== 1 ||
@@ -344,6 +360,27 @@ export async function fitResumeToPage(args: {
         };
         return { generation, pdf: compiled.pdf };
       }
+      const presentValue = coverageUtility(
+        args.input,
+        request.selectedAchievementIds,
+      );
+      reserve.sort((a, b) => {
+        const value = (point: typeof a) => {
+          const gain =
+            coverageUtility(args.input, [
+              ...request.selectedAchievementIds,
+              point.id,
+            ]) - presentValue;
+          const estimatedLines = Math.max(
+            1,
+            wordCount(enrichSourceText(point)) / 19,
+          );
+          return (
+            gain / estimatedLines + (args.scores.get(point.id) ?? 0) * 0.01
+          );
+        };
+        return value(b) - value(a);
+      });
       const next = reserve.shift();
       if (!next) {
         log(
@@ -385,6 +422,32 @@ export async function fitResumeToPage(args: {
         const point = evidence.get(bullet.achievementId)!;
         groups.set(point.groupId, (groups.get(point.groupId) ?? 0) + 1);
       }
+      const coverageOptions = {
+        renderedTexts: new Map(
+          generation.metadata.generatedBullets.flatMap((bullet) =>
+            bullet.sourceAchievementIds.map((id) => [id, bullet.text] as const),
+          ),
+        ),
+        renderedSkillIds: generation.metadata.renderedSkillIds,
+        summary: generation.metadata.resumeSummary,
+      };
+      const currentValue = coverageUtility(
+        args.input,
+        request.selectedAchievementIds,
+        coverageOptions,
+      );
+      const coverageLossPerLine = (
+        bullet: (typeof generation.metadata.generatedBullets)[number],
+      ) => {
+        const without = request.selectedAchievementIds.filter(
+          (id) => !bullet.sourceAchievementIds.includes(id),
+        );
+        return (
+          (currentValue -
+            coverageUtility(args.input, without, coverageOptions)) /
+          Math.max(1, wordCount(bullet.text) / 19)
+        );
+      };
       const sorted = [...generation.metadata.generatedBullets].sort((a, b) => {
         const left = evidence.get(a.achievementId)!,
           right = evidence.get(b.achievementId)!;
@@ -396,6 +459,7 @@ export async function fitResumeToPage(args: {
           (right.section === "experience" ? 3 : 1);
         return (
           Number(leftProtected) - Number(rightProtected) ||
+          coverageLossPerLine(a) - coverageLossPerLine(b) ||
           (args.scores.get(a.achievementId) ?? 0) -
             (args.scores.get(b.achievementId) ?? 0)
         );

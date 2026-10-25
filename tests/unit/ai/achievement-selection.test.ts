@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   buildAchievementSelectionInput,
+  coverageUtility,
   estimateAchievementContentBudget,
   recommendAchievements,
 } from "../../../src/lib/ai/achievement-selection";
@@ -65,6 +66,53 @@ function aiResult(
 }
 
 describe("AI achievement selection service", () => {
+  it("values distinct required evidence above a redundant point", () => {
+    const base = makeInput();
+    const template = base.achievements[0];
+    const input = makeInput({
+      analysis: {
+        ...analysis,
+        requiredQualifications: ["AWS", "Docker"],
+        responsibilities: [],
+        preferredQualifications: [],
+      },
+      achievements: [
+        {
+          ...template,
+          id: "point-aws",
+          text: "Deployed an AWS service.",
+          context: undefined,
+          tags: [],
+          supportedSkills: [],
+          metrics: [],
+        },
+        {
+          ...template,
+          id: "point-docker",
+          text: "Built Docker containers.",
+          context: undefined,
+          tags: [],
+          supportedSkills: [],
+          metrics: [],
+        },
+        {
+          ...template,
+          id: "point-aws-repeat",
+          text: "Configured AWS routing.",
+          context: undefined,
+          tags: [],
+          supportedSkills: [],
+          metrics: [],
+        },
+      ],
+      skills: [],
+    });
+    expect(
+      coverageUtility(input, ["point-aws", "point-docker"]),
+    ).toBeGreaterThan(
+      coverageUtility(input, ["point-aws", "point-aws-repeat"]),
+    );
+  });
   it("sends only enabled job and project evidence with validated skill provenance", () => {
     const input = makeInput();
     const enabledIds = new Set(

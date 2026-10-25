@@ -76,6 +76,24 @@ test("creates a point with a metric and persists it after reload", async ({
   await expect(page.getByText("Test coverage")).toBeVisible();
 });
 
+test("offers evidence-first metric questions without inventing a value", async ({
+  page,
+}) => {
+  await page.getByRole("button", { name: "Detailed entry" }).click();
+  await page
+    .getByLabel("Achievement text")
+    .fill("Trained a CNN classifier on an image dataset.");
+  const suggestion = page
+    .locator(".metric-opportunities li")
+    .filter({ hasText: "accuracy, F1" });
+  await expect(suggestion).toContainText("baseline");
+  await suggestion.getByRole("button", { name: "Add verified metric" }).click();
+  await expect(page.locator(".metric-fields").getByLabel("Label")).toHaveValue(
+    "Model quality",
+  );
+  await expect(page.locator(".metric-fields").getByLabel("Value")).toBeEmpty();
+});
+
 test("saves a manual point through the shared Imagination Canvas", async ({
   page,
 }) => {

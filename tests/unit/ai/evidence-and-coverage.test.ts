@@ -8,6 +8,8 @@ import {
   evidenceText,
 } from "../../../src/lib/ai/evidence";
 import {
+  assessRequirementCoverage,
+  buildRequirementFacets,
   getCoverageRequirements,
   includesPhrase,
   normalizeEvidence,
@@ -99,6 +101,77 @@ describe("requirementComponents", () => {
     expect(
       requirementComponents("Strong stakeholder relationship management"),
     ).toEqual([]);
+  });
+});
+
+describe("testable requirement facets", () => {
+  it("keeps AND components separate while accepting an OR alternative", () => {
+    const facets = buildRequirementFacets(
+      "Build REST APIs with Python and PyTorch or TensorFlow",
+    );
+    expect(facets.map((facet) => facet.label)).toEqual(
+      expect.arrayContaining([
+        "REST APIs",
+        "python",
+        "pytorch or tensorflow",
+        "build",
+      ]),
+    );
+    expect(
+      facets.find((facet) => facet.label === "pytorch or tensorflow")
+        ?.alternatives,
+    ).toContain("tf");
+  });
+
+  it("does not call a responsibility fully supported when action and tool occur in unrelated jobs", () => {
+    const analysis = {
+      targetTitle: "Engineer",
+      seniority: "Early",
+      requiredQualifications: [],
+      responsibilities: ["Deploy machine learning models using AWS"],
+      preferredQualifications: [],
+      toolsAndPlatforms: [],
+      domainConcepts: [],
+      atsTerms: [],
+      inferredContext: [],
+      terminology: [],
+    };
+    const base = buildAchievementEvidence(library)[0];
+    const input = {
+      jobDescription: analysis.responsibilities[0],
+      analysis,
+      achievements: [
+        {
+          ...base,
+          id: "point-model",
+          groupId: "job-model",
+          text: "Trained a machine learning classifier.",
+          context: undefined,
+          tags: [],
+          supportedSkills: [],
+        },
+        {
+          ...base,
+          id: "point-cloud",
+          groupId: "job-cloud",
+          text: "Deployed AWS backend services.",
+          context: undefined,
+          tags: [],
+          supportedSkills: [],
+        },
+      ],
+      skills: [],
+      contentBudgetLines: 40,
+    };
+    const [row] = assessRequirementCoverage(input, [
+      "point-model",
+      "point-cloud",
+    ]);
+    expect(row.priority).toBe("responsibility");
+    expect(row.status).toBe("partial");
+    expect(
+      row.facets.find((facet) => facet.label === "deploy")?.matchedBy,
+    ).toContain("point-cloud");
   });
 });
 

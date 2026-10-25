@@ -1331,6 +1331,8 @@ export default function ResumeGenerator({ library, source }: Props) {
       availableIds,
       selectedEvidenceIds,
       evidence: item.evidence ?? details?.evidence ?? [],
+      facets: item.facets ?? details?.facets ?? [],
+      priority: item.priority ?? details?.priority,
       reason: item.reason ?? details?.reason,
       status:
         item.status ??
@@ -1838,6 +1840,18 @@ export default function ResumeGenerator({ library, source }: Props) {
                                                     .join("; ")}`
                                                 : "No supporting achievement was identified in the enabled library."}
                                           </p>
+                                          {item.facets.length > 0 && (
+                                            <ul>
+                                              {item.facets.map((facet) => (
+                                                <li key={facet.label}>
+                                                  {facet.matchedBy.length
+                                                    ? "Evidence found"
+                                                    : "Needs evidence"}
+                                                  : {facet.label}
+                                                </li>
+                                              ))}
+                                            </ul>
+                                          )}
                                         </details>
                                       </li>
                                     );
@@ -2738,6 +2752,50 @@ export default function ResumeGenerator({ library, source }: Props) {
                     )}
                   </div>
                 </div>
+                {result.metadata.qualityReport && (
+                  <details className="generation-quality">
+                    <summary>
+                      Final resume checks ·{" "}
+                      {
+                        Object.values(result.metadata.qualityReport)
+                          .flat()
+                          .filter((check) => check.status !== "pass").length
+                      }{" "}
+                      need review
+                    </summary>
+                    {(
+                      [
+                        [
+                          "PDF readability",
+                          result.metadata.qualityReport.machine,
+                        ],
+                        [
+                          "Recruiter skim",
+                          result.metadata.qualityReport.recruiter,
+                        ],
+                        [
+                          "Claim credibility",
+                          result.metadata.qualityReport.credibility,
+                        ],
+                      ] as const
+                    ).map(([title, checks]) => (
+                      <section key={title}>
+                        <h4>{title}</h4>
+                        <ul>
+                          {checks.map((check) => (
+                            <li key={check.id}>
+                              <strong>
+                                {check.status === "pass" ? "Checked" : "Review"}
+                                :
+                              </strong>{" "}
+                              {check.message}
+                            </li>
+                          ))}
+                        </ul>
+                      </section>
+                    ))}
+                  </details>
+                )}
                 {omittedSkillCount > 0 ? (
                   <StatusBanner
                     tone="caution"

@@ -100,10 +100,26 @@ describe("PDF content measurements", () => {
     expect(result).toMatchObject({
       layout: { pageCount: 2, visibleWordCount: 3 },
       firstPageText: "First page content",
+      topThirdText: "First page content",
       overflowText: "Words left for page two",
       overflowWordCount: 5,
       text: "First page content Words left for page two",
     });
+  });
+
+  it("separates visible opening content from text lower on the page", () => {
+    const result = layoutFromPageTextBoxes(
+      [
+        [
+          { text: "Jordan Example AWS", x: 40, y: 700, width: 180, height: 12 },
+          { text: "Unrelated footer", x: 40, y: 80, width: 180, height: 12 },
+        ],
+      ],
+      612,
+      792,
+    );
+    expect(result.topThirdText).toBe("Jordan Example AWS");
+    expect(result.firstPageText).toContain("Unrelated footer");
   });
 
   it("loads PDF.js and extracts text without a local TeX toolchain", async () => {
