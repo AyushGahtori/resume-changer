@@ -6419,24 +6419,17 @@ a:focus-visible {
 }
 
 .generation-section-heading .generation-selection-count {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 7px;
   margin: 6px 0 0;
-  color: var(--muted);
-  font-size: 11px;
-  line-height: 16px;
-  font-variant-numeric: tabular-nums;
-}
-
-.generation-selection-count strong {
-  padding: 2px 7px;
+  padding: 2px 8px;
   border-radius: 999px;
   background: var(--imagination-soft);
   color: var(--imagination-hover);
-  font-size: 10px;
-  font-weight: 700;
+  font-size: 11px;
+  line-height: 16px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
 }
 
 .generation-selection-actions,

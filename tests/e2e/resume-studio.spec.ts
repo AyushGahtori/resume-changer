@@ -207,7 +207,7 @@ test("AI edits remain suggestions until accepted and expose service failures", a
   ).toBeVisible();
 });
 
-test("connects achievements by drag, preserves merge provenance, and supports undo", async ({
+test("connects achievements from their handles, preserves merge provenance, and supports undo", async ({
   page,
 }) => {
   await openStudio(page);
@@ -221,9 +221,8 @@ test("connects achievements by drag, preserves merge provenance, and supports un
       }),
     }),
   );
-  await page
-    .getByLabel(`Connect achievement ${pointId} for merging`)
-    .dragTo(page.getByLabel(`Connect achievement ${secondId} for merging`));
+  await page.getByLabel(`Connect achievement ${pointId} for merging`).click();
+  await page.getByLabel(`Connect achievement ${secondId} for merging`).click();
   await expect(page.locator(".studio-merge-svg path")).toHaveCount(2);
   await page.getByRole("button", { name: "Merge with Imagination ✦" }).click();
   await page.getByRole("button", { name: "✦ Ask Imagination" }).click();

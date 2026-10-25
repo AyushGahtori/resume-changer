@@ -1608,9 +1608,8 @@ export default function ResumeGenerator({ library, source }: Props) {
                         Pick the details you want to bring into this resume.
                       </div>
                       <p className="generation-selection-count">
-                        <strong>{selectedIds.length} selected</strong>
-                        <span aria-hidden="true">·</span>
-                        <span>{enabledIds.length} enabled</span>
+                        {selectedIds.length} selected · {enabledIds.length}{" "}
+                        enabled
                       </p>
                     </div>
                   </div>
