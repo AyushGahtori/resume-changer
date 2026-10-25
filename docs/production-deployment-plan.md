@@ -203,3 +203,8 @@ destination identity and private-storage access have been verified.
 - The owner backup is still local only. Remaining release work is candidate
   deployment, actual function/Blob verification, account sign-in and verified owner
   import, GitHub release gates, and promotion of the tested build.
+- Candidate verification caught an upload exclusion bug before publication:
+  unanchored `data/` removed application modules under `src/lib/data`, and local
+  build caches were not explicitly excluded. Anchored private-data exclusions at
+  the repository root, excluded all local build outputs, and added a packaging
+  regression that checks both sensitive exclusions and required source inputs.
