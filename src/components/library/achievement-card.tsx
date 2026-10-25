@@ -115,7 +115,11 @@ export default function AchievementCard({
   );
 
   return (
-    <article className="library-point" aria-labelledby={headingId}>
+    <article
+      className="library-point"
+      aria-labelledby={headingId}
+      data-kind={kind}
+    >
       <header className="library-point-header">
         <span
           aria-label={CATEGORY_NAME[kind]}

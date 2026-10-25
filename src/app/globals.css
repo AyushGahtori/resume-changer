@@ -9152,3 +9152,165 @@ a:focus-visible {
     max-height: 220px;
   }
 }
+
+/* A little motion and color make the library feel considered without
+   competing with the evidence itself. The bubbles sit behind the heading,
+   and the cards only move when the user points at or focuses them. */
+.library-page-header {
+  position: relative;
+  isolation: isolate;
+}
+
+.library-page-atmosphere {
+  position: absolute;
+  z-index: 0;
+  top: -14px;
+  right: 0;
+  width: min(100%, 440px);
+  height: 210px;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.library-heading {
+  position: relative;
+  z-index: 1;
+}
+
+.library-bubble {
+  position: absolute;
+  display: block;
+  border-radius: 50%;
+  animation: library-bubble-float 8s ease-in-out infinite;
+}
+
+.library-bubble--warm {
+  top: 30px;
+  right: 36px;
+  width: 34px;
+  height: 34px;
+  background: color-mix(
+    in srgb,
+    var(--color-orange-strong) 17%,
+    var(--color-surface)
+  );
+}
+
+.library-bubble--cool {
+  top: 96px;
+  right: 142px;
+  width: 15px;
+  height: 15px;
+  background: color-mix(
+    in srgb,
+    var(--color-violet-strong) 23%,
+    var(--color-surface)
+  );
+  animation-delay: -2.5s;
+}
+
+.library-bubble--ring {
+  top: 23px;
+  right: 222px;
+  width: 48px;
+  height: 48px;
+  border: 2px solid
+    color-mix(in srgb, var(--color-violet-strong) 25%, transparent);
+  animation-delay: -4s;
+}
+
+.library-bubble--small {
+  top: 137px;
+  right: 66px;
+  width: 11px;
+  height: 11px;
+  background: color-mix(
+    in srgb,
+    var(--color-orange-strong) 22%,
+    var(--color-surface)
+  );
+  animation-delay: -1s;
+}
+
+.library-point {
+  --point-accent: var(--color-category-job-text);
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    background-color 160ms ease;
+}
+
+.library-point[data-kind="project"] {
+  --point-accent: var(--color-category-project-text);
+}
+
+.library-point:hover,
+.library-point:focus-within {
+  transform: translateY(-2px);
+  border-color: color-mix(
+    in srgb,
+    var(--point-accent) 42%,
+    var(--color-border)
+  );
+  background: color-mix(in srgb, var(--point-accent) 2%, var(--color-surface));
+  box-shadow: 0 6px 16px
+    color-mix(in srgb, var(--color-text-primary) 8%, transparent);
+}
+
+.library-point-text {
+  border-left-color: var(--point-accent);
+  font-weight: 500;
+}
+
+@keyframes library-bubble-float {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, -8px, 0);
+  }
+}
+
+@media (max-width: 700px) {
+  .library-page-atmosphere {
+    right: -8px;
+    width: min(100%, 290px);
+    height: 150px;
+  }
+
+  .library-bubble--warm {
+    right: 18px;
+  }
+
+  .library-bubble--cool {
+    right: 95px;
+  }
+
+  .library-bubble--ring {
+    right: 154px;
+    width: 38px;
+    height: 38px;
+  }
+
+  .library-bubble--small {
+    top: 116px;
+    right: 40px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .library-bubble {
+    animation: none !important;
+  }
+
+  .library-point {
+    transition: none !important;
+  }
+
+  .library-point:hover,
+  .library-point:focus-within {
+    transform: none;
+  }
+}
