@@ -1,6 +1,8 @@
 "use client";
+import { apiFetch as fetch } from "@/lib/cloud/api-fetch";
+import { useWorkspaceStorage } from "./account-session";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { AnalysisState } from "@/components/home/job-analysis-panel";
 import { ATSAnalysisPreview } from "@/components/home/ats-analysis-preview";
 import {
@@ -40,6 +42,7 @@ export default function JDWorkspace({
 }: {
   pasteFromUrlAvailable?: boolean;
 }) {
+  const getWorkspaceStorage = useWorkspaceStorage();
   const [draft, setDraft] = useState<JobDescriptionDraft>(EMPTY_DRAFT);
   const [errors, setErrors] = useState<DraftErrors>({});
   const [isReady, setIsReady] = useState(false);
@@ -65,9 +68,9 @@ export default function JDWorkspace({
   }
 
   // Storage access itself can throw, before the storage helpers can catch it.
-  function localStorageOrUnavailable(): Storage {
+  const localStorageOrUnavailable = useCallback((): Storage => {
     try {
-      return window.localStorage;
+      return getWorkspaceStorage();
     } catch {
       return {
         getItem() {
@@ -81,7 +84,7 @@ export default function JDWorkspace({
         },
       } as unknown as Storage;
     }
-  }
+  }, [getWorkspaceStorage]);
 
   const [metricsAnnouncement, setMetricsAnnouncement] = useState("");
   const characterCount = draft.jobDescription.length;
@@ -122,7 +125,7 @@ export default function JDWorkspace({
           ? "saved"
           : "idle",
     );
-  }, []);
+  }, [localStorageOrUnavailable]);
 
   useEffect(() => {
     if (!isReady || !draftChanged.current) return;
@@ -143,7 +146,7 @@ export default function JDWorkspace({
       if (autosaveTimeout.current !== null)
         window.clearTimeout(autosaveTimeout.current);
     };
-  }, [draft, isReady]);
+  }, [draft, isReady, localStorageOrUnavailable]);
 
   function updateField(field: keyof DraftFields, value: string) {
     draftChanged.current = true;

@@ -1,3 +1,5 @@
+import { AccountAccessError } from "@/lib/cloud/security";
+import { protectAccountRoute } from "@/lib/cloud/protect-route";
 import { NextResponse } from "next/server";
 import {
   deleteGenerationHistoryItem,
@@ -10,6 +12,11 @@ export const runtime = "nodejs";
 type RouteContext = { params: Promise<{ id: string }> };
 
 function failureResponse(error: unknown) {
+  if (error instanceof AccountAccessError)
+    return NextResponse.json(
+      { error: error.message, code: error.code },
+      { status: error.status },
+    );
   if (error instanceof GenerationHistoryError) {
     const status =
       error.code === "not-found"
@@ -25,7 +32,7 @@ function failureResponse(error: unknown) {
   );
 }
 
-export async function GET(_request: Request, context: RouteContext) {
+async function GETForAccount(_request: Request, context: RouteContext) {
   try {
     const { id } = await context.params;
     return NextResponse.json(await getGenerationHistoryItem(id));
@@ -34,7 +41,7 @@ export async function GET(_request: Request, context: RouteContext) {
   }
 }
 
-export async function DELETE(_request: Request, context: RouteContext) {
+async function DELETEForAccount(_request: Request, context: RouteContext) {
   try {
     const { id } = await context.params;
     return NextResponse.json(await deleteGenerationHistoryItem(id));
@@ -42,3 +49,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
     return failureResponse(error);
   }
 }
+
+export const GET = protectAccountRoute(GETForAccount);
+
+export const DELETE = protectAccountRoute(DELETEForAccount);

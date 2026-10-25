@@ -17,6 +17,7 @@ import {
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
+import { AccountControl, useWorkspaceAccount } from "./account-session";
 
 const THEME_STORAGE_KEY = "resume-changer.theme.v1";
 
@@ -57,6 +58,7 @@ function readTheme(): "light" | "dark" {
 }
 
 export default function WorkspaceShell({ children }: { children: ReactNode }) {
+  const account = useWorkspaceAccount();
   const pathname = usePathname();
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [isMobile, setIsMobile] = useState(false);
@@ -328,7 +330,9 @@ export default function WorkspaceShell({ children }: { children: ReactNode }) {
           <span className="local-indicator" aria-hidden="true" />
           <div>
             <p className="sidebar-bottom-title">Private workspace</p>
-            <p className="sidebar-bottom-copy">Saved on this device</p>
+            <p className="sidebar-bottom-copy">
+              {account ? "Saved to your account" : "Saved on this device"}
+            </p>
           </div>
         </div>
       </aside>
@@ -382,9 +386,7 @@ export default function WorkspaceShell({ children }: { children: ReactNode }) {
             </nav>
           </div>
           <div className="topbar-actions">
-            <span className="local-status">
-              <span aria-hidden="true" /> Local mode
-            </span>
+            <AccountControl />
             <button
               aria-label={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
               className="theme-toggle"

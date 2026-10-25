@@ -1,3 +1,4 @@
+import { protectAccountRoute } from "@/lib/cloud/protect-route";
 import { NextResponse } from "next/server";
 import { loadResumeLibrary } from "@/lib/data/loaders";
 import { measureSkillWidths } from "@/lib/pdf/skill-measurements";
@@ -5,7 +6,7 @@ import { PdfCompileError } from "@/lib/pdf/compile-service";
 
 export const runtime = "nodejs";
 
-export async function GET(request: Request) {
+async function GETForAccount(request: Request) {
   const source = new URL(request.url).searchParams.get("source");
   if (source !== "personal" && source !== "demo")
     return NextResponse.json(
@@ -29,3 +30,5 @@ export async function GET(request: Request) {
     );
   }
 }
+
+export const GET = protectAccountRoute(GETForAccount);

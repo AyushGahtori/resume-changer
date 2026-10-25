@@ -1,4 +1,5 @@
 import "server-only";
+import { remainingRequestTime } from "../cloud/request-budget";
 import { GoogleGenAI } from "@google/genai";
 import { z } from "zod";
 import {
@@ -456,7 +457,7 @@ export function createGeminiProvider(
       const client = new GoogleGenAI({
         apiKey,
         httpOptions: {
-          timeout: requestTimeoutMs,
+          timeout: Math.max(1, remainingRequestTime(requestTimeoutMs, 40_000)),
           retryOptions: { attempts: 1 },
         },
       });
@@ -464,6 +465,9 @@ export function createGeminiProvider(
         model: requestedModel,
         contents: prompt,
         config: {
+          abortSignal: AbortSignal.timeout(
+            Math.max(1, remainingRequestTime(requestTimeoutMs, 40_000)),
+          ),
           responseMimeType: "application/json",
           responseJsonSchema: outputSchema,
           maxOutputTokens: 8_192,
@@ -577,6 +581,12 @@ export function createGeminiProvider(
     modelLoop: for (const [index, requestedModel] of models.entries()) {
       for (let attempt = 1; attempt <= MAX_MODEL_ATTEMPTS; attempt += 1) {
         try {
+          if (remainingRequestTime(60_000, 40_000) < 5_000)
+            throw new AiProviderError(
+              "The request reached its processing limit. Please try again.",
+              "REQUEST_TIMEOUT",
+              false,
+            );
           const responseText = await request({
             model: requestedModel,
             prompt,
@@ -612,7 +622,9 @@ export function createGeminiProvider(
           // The total budget bounds the whole walk. Once it is spent the
           // request stops rather than starting another attempt that would
           // outlast the caller waiting for it.
-          const budgetSpent = Date.now() - startedAt >= TOTAL_REQUEST_BUDGET_MS;
+          const budgetSpent =
+            Date.now() - startedAt >= TOTAL_REQUEST_BUDGET_MS ||
+            remainingRequestTime(60_000, 40_000) < 5_000;
           // A grounding violation means the model produced a well-formed but
           // unusable answer, so the same model is asked again before the
           // request falls back to a different one.
@@ -647,7 +659,12 @@ export function createGeminiProvider(
               model: requestedModel,
               diagnostic: providerError.diagnosticCode ?? providerError.code,
             });
-            await sleep(TRANSIENT_RETRY_BACKOFF_MS * attempt);
+            await sleep(
+              Math.min(
+                TRANSIENT_RETRY_BACKOFF_MS * attempt,
+                remainingRequestTime(60_000, 40_000),
+              ),
+            );
             continue;
           }
           // A rate limit is never a fault in the request, so the same model
@@ -660,7 +677,13 @@ export function createGeminiProvider(
             const upstreamDelayMs =
               (providerError.retryAfterSeconds ?? 0) * 1_000;
             const waitMs = upstreamDelayMs || RATE_LIMIT_BACKOFF_MS * attempt;
-            if (!dailyQuota && waitMs <= MAX_RATE_LIMIT_WAIT_MS) {
+            if (
+              !dailyQuota &&
+              !budgetSpent &&
+              waitMs <= MAX_RATE_LIMIT_WAIT_MS &&
+              waitMs + 5_000 <
+                remainingRequestTime(TOTAL_REQUEST_BUDGET_MS, 40_000)
+            ) {
               console.warn("Gemini request waiting out a rate limit.", {
                 task,
                 attempt,

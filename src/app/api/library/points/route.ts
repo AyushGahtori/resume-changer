@@ -1,3 +1,5 @@
+import { AccountAccessError } from "@/lib/cloud/security";
+import { protectAccountRoute } from "@/lib/cloud/protect-route";
 import { NextResponse } from "next/server";
 import { DataLoadError } from "@/lib/data/loaders";
 import {
@@ -9,6 +11,11 @@ import {
 export const runtime = "nodejs";
 
 function failureResponse(error: unknown) {
+  if (error instanceof AccountAccessError)
+    return Response.json(
+      { error: error.message, code: error.code },
+      { status: error.status },
+    );
   if (error instanceof LibraryWriteError) {
     const status =
       error.code === "not-found"
@@ -29,7 +36,7 @@ function failureResponse(error: unknown) {
   );
 }
 
-export async function POST(request: Request) {
+async function POSTForAccount(request: Request) {
   let body: unknown;
   try {
     body = await request.json();
@@ -61,3 +68,5 @@ export async function POST(request: Request) {
     return failureResponse(error);
   }
 }
+
+export const POST = protectAccountRoute(POSTForAccount);

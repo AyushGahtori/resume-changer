@@ -1,4 +1,6 @@
 "use client";
+import { apiFetch as fetch } from "@/lib/cloud/api-fetch";
+import { useWorkspaceStorage } from "./account-session";
 
 import Link from "next/link";
 import {
@@ -278,6 +280,7 @@ function CoverageStatusIcon({ status }: { status: CoverageStatus }) {
 }
 
 export default function ResumeGenerator({ library, source }: Props) {
+  const getWorkspaceStorage = useWorkspaceStorage();
   const [studioSession, setStudioSession] = useState(0);
   const [draft, setDraft] = useState<JobDescriptionDraft>(EMPTY_DRAFT);
   const [draftReady, setDraftReady] = useState(false);
@@ -424,9 +427,9 @@ export default function ResumeGenerator({ library, source }: Props) {
   }
 
   useEffect(() => {
-    const saved = readDraft(window.localStorage);
+    const saved = readDraft(getWorkspaceStorage());
     const cachedAnalysis = readJobAnalysisCache(
-      window.localStorage,
+      getWorkspaceStorage(),
       saved.draft,
     );
     setDraft(saved.draft);
@@ -439,7 +442,7 @@ export default function ResumeGenerator({ library, source }: Props) {
           : "",
     );
     setDraftReady(true);
-  }, []);
+  }, [getWorkspaceStorage]);
 
   useEffect(() => {
     return () => {
@@ -452,7 +455,9 @@ export default function ResumeGenerator({ library, source }: Props) {
     try {
       setSavedSession(
         parseStudioSession(
-          localStorage.getItem(`resume-changer.resume-session.v1.${source}`),
+          getWorkspaceStorage().getItem(
+            `resume-changer.resume-session.v1.${source}`,
+          ),
           JSON.stringify([
             draft.company,
             draft.roleTitle,
@@ -465,12 +470,12 @@ export default function ResumeGenerator({ library, source }: Props) {
       /* Storage can be unavailable without blocking generation. */
     }
     setSessionReady(true);
-  }, [draftReady, sessionReady, source, draft]);
+  }, [draftReady, sessionReady, source, draft, getWorkspaceStorage]);
 
   useEffect(() => {
     if (!sessionReady || !result || savedSession) return;
     try {
-      localStorage.setItem(
+      getWorkspaceStorage().setItem(
         `resume-changer.resume-session.v1.${source}`,
         JSON.stringify({
           jobSignature: JSON.stringify([
@@ -485,7 +490,15 @@ export default function ResumeGenerator({ library, source }: Props) {
     } catch {
       /* The studio separately reports draft-storage failures. */
     }
-  }, [result, pdfBase64, draft, source, sessionReady, savedSession]);
+  }, [
+    result,
+    pdfBase64,
+    draft,
+    source,
+    sessionReady,
+    savedSession,
+    getWorkspaceStorage,
+  ]);
 
   useEffect(() => {
     function syncFullscreenState() {
@@ -1560,7 +1573,7 @@ export default function ResumeGenerator({ library, source }: Props) {
             onClick={() => {
               setSavedSession(null);
               try {
-                localStorage.removeItem(
+                getWorkspaceStorage().removeItem(
                   `resume-changer.resume-session.v1.${source}`,
                 );
               } catch {}

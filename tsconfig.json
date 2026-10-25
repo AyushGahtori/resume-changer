@@ -25,10 +25,18 @@
   "include": [
     "**/*.ts",
     "**/*.tsx",
+    ".next-imagination-preview/types/**/*.ts",
     ".next/dev/types/**/*.ts",
     ".next/types/**/*.ts",
     "next-env.d.ts",
-    ".next-imagination-preview/types/**/*.ts"
+    ".next-cloud-test/types/**/*.ts"
   ],
-  "exclude": ["node_modules", ".next-test", "storage"]
+  "exclude": [
+    "node_modules",
+    ".next-test",
+    "storage",
+    ".next-cloud-test",
+    ".runtime",
+    ".vercel"
+  ]
 }

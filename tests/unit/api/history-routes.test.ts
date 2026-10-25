@@ -92,7 +92,7 @@ describe("GET /api/history", () => {
       }),
     );
 
-    const response = await GET();
+    const response = await GET(new Request("http://localhost/api/history"));
     const payload = await response.json();
 
     expect(response.status).toBe(200);
@@ -103,7 +103,7 @@ describe("GET /api/history", () => {
   });
 
   it("returns an empty list when no generation has been saved", async () => {
-    const response = await GET();
+    const response = await GET(new Request("http://localhost/api/history"));
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({ entries: [] });
@@ -116,7 +116,7 @@ describe("GET /api/history", () => {
       join(root, "data", "generation-history.json"),
     );
     // The demo library is not a generation history document.
-    const response = await GET();
+    const response = await GET(new Request("http://localhost/api/history"));
 
     expect(response.status).toBe(409);
     const payload = await response.json();
@@ -344,7 +344,7 @@ describe("generation history error handling", () => {
       JSON.stringify(duplicate),
     );
 
-    const response = await GET();
+    const response = await GET(new Request("http://localhost/api/history"));
 
     expect(response.status).toBe(409);
     const payload = await response.json();

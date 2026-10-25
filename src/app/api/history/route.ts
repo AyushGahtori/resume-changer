@@ -1,4 +1,6 @@
+import { protectAccountRoute } from "@/lib/cloud/protect-route";
 import { NextResponse } from "next/server";
+import { AccountAccessError, getAppMode } from "@/lib/cloud/security";
 import {
   GenerationHistoryError,
   listGenerationHistory,
@@ -8,6 +10,11 @@ import {
 export const runtime = "nodejs";
 
 function failureResponse(error: unknown) {
+  if (error instanceof AccountAccessError)
+    return NextResponse.json(
+      { error: error.message, code: error.code },
+      { status: error.status },
+    );
   if (error instanceof GenerationHistoryError) {
     const status =
       error.code === "not-found"
@@ -27,15 +34,23 @@ function failureResponse(error: unknown) {
   );
 }
 
-export async function GET() {
+async function GETForAccount(request: Request) {
   try {
+    if (getAppMode() === "firebase") {
+      const { listCloudHistory } = await import("@/lib/cloud/history-store");
+      return NextResponse.json(
+        await listCloudHistory(
+          new URL(request.url).searchParams.get("cursor") ?? undefined,
+        ),
+      );
+    }
     return NextResponse.json({ entries: await listGenerationHistory() });
   } catch (error) {
     return failureResponse(error);
   }
 }
 
-export async function POST(request: Request) {
+async function POSTForAccount(request: Request) {
   let body: unknown;
   try {
     body = await request.json();
@@ -53,3 +68,7 @@ export async function POST(request: Request) {
     return failureResponse(error);
   }
 }
+
+export const GET = protectAccountRoute(GETForAccount);
+
+export const POST = protectAccountRoute(POSTForAccount);

@@ -1,3 +1,4 @@
+import { protectAccountRoute } from "@/lib/cloud/protect-route";
 import { NextResponse } from "next/server";
 import { DataLoadError, loadResumeLibrary } from "@/lib/data/loaders";
 import {
@@ -8,7 +9,7 @@ import { ResumeRenderError } from "@/lib/latex/render-resume";
 
 export const runtime = "nodejs";
 
-export async function POST(request: Request) {
+async function POSTForAccount(request: Request) {
   let body: unknown;
   try {
     body = await request.json();
@@ -49,3 +50,5 @@ export async function POST(request: Request) {
     );
   }
 }
+
+export const POST = protectAccountRoute(POSTForAccount);

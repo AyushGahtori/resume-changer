@@ -1,4 +1,6 @@
 "use client";
+import { apiFetch as fetch } from "@/lib/cloud/api-fetch";
+import { useWorkspaceStorage } from "./account-session";
 
 import { useEffect, useRef, useState } from "react";
 import { ArrowDown } from "lucide-react";
@@ -37,6 +39,7 @@ export default function ImaginationCanvas({
   onClose: () => void;
 }) {
   const [groupId, setGroupId] = useState(studioGroups(library)[0]?.id ?? "");
+  const getWorkspaceStorage = useWorkspaceStorage();
   const [text, setText] = useState("");
   const [instruction, setInstruction] = useState(
     DEFAULT_IMAGINATION_INSTRUCTION,
@@ -86,7 +89,10 @@ export default function ImaginationCanvas({
   useEffect(() => {
     try {
       setSavedDraft(
-        parseImaginationDraft(localStorage.getItem(storageKey), library),
+        parseImaginationDraft(
+          getWorkspaceStorage().getItem(storageKey),
+          library,
+        ),
       );
     } catch {
       setStorageError(
@@ -94,11 +100,11 @@ export default function ImaginationCanvas({
       );
     }
     setStorageReady(true);
-  }, [storageKey, library]);
+  }, [storageKey, library, getWorkspaceStorage]);
   useEffect(() => {
     if (!storageReady || savedDraft) return;
     try {
-      localStorage.setItem(
+      getWorkspaceStorage().setItem(
         storageKey,
         JSON.stringify({
           groupId,
@@ -126,6 +132,8 @@ export default function ImaginationCanvas({
     skillIds,
     targetLines,
     writingMode,
+    ,
+    getWorkspaceStorage,
   ]);
 
   function invalidateSuggestion() {
@@ -259,7 +267,7 @@ export default function ImaginationCanvas({
       if (!response.ok)
         throw new Error(payload.error ?? "The achievement could not be saved.");
       try {
-        localStorage.removeItem(storageKey);
+        getWorkspaceStorage().removeItem(storageKey);
       } catch {
         /* Saving to the library already succeeded. */
       }

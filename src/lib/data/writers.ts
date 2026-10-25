@@ -13,6 +13,7 @@ import {
 } from "../schemas/resume-data";
 import { DataLoadError } from "./loaders";
 import { getPersonalDataRoot } from "./root";
+import { getAppMode } from "../cloud/security";
 
 const UpdateChangesSchema = z
   .object({
@@ -131,6 +132,12 @@ async function commitPointChange(
   change: (library: ResumeLibrary) => ResumeLibrary,
   options: WriteOptions = {},
 ) {
+  if (getAppMode() === "firebase") {
+    if (options.rootDir !== undefined)
+      throw new Error("Hosted account writes cannot use a filesystem root.");
+    const { changeCloudLibrary } = await import("../cloud/library-store");
+    return changeCloudLibrary(change);
+  }
   const rootDir = getPersonalDataRoot(options.rootDir);
   const lockPath = join(rootDir, "data", "resume-library.json.lock");
   await mkdir(dirname(lockPath), { recursive: true });

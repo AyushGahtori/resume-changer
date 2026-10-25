@@ -1,3 +1,4 @@
+import { protectAccountRoute } from "@/lib/cloud/protect-route";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import {
@@ -24,7 +25,7 @@ const SelectionRequestSchema = z
   })
   .strict();
 
-export async function POST(request: Request) {
+async function POSTForAccount(request: Request) {
   let body: unknown;
   try {
     body = await request.json();
@@ -116,3 +117,5 @@ export async function POST(request: Request) {
     );
   }
 }
+
+export const POST = protectAccountRoute(POSTForAccount);

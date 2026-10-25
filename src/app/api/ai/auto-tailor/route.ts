@@ -1,3 +1,4 @@
+import { protectAccountRoute } from "@/lib/cloud/protect-route";
 import { fitResumeToPage } from "@/lib/generation/fit-resume";
 import { PdfCompileError } from "@/lib/pdf/compile-service";
 import { NextResponse } from "next/server";
@@ -39,7 +40,7 @@ const AutoTailorRequestSchema = z
   })
   .strict();
 
-export async function POST(request: Request) {
+async function POSTForAccount(request: Request) {
   let body: unknown;
   try {
     body = await request.json();
@@ -335,3 +336,5 @@ export async function POST(request: Request) {
     );
   }
 }
+
+export const POST = protectAccountRoute(POSTForAccount);

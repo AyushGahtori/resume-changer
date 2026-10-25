@@ -1,0 +1,18 @@
+{
+  "score": 4,
+  "summary": "Owner isolation, authority checks, matching create/update validators, immutable revisions, bounded records, atomic quota enforcement and deletion tombstones are covered by real emulator attack tests. Runtime and deployed configuration must also be verified before release.",
+  "findings": [
+    {
+      "check": "Business Logic vs. Rules",
+      "severity": "minor",
+      "issue": "Firestore rules bound the library's JSON envelope but cannot validate the nested JSON schema. An authenticated user can submit malformed content into their own bounded record through the direct SDK; application reads reject it.",
+      "recommendation": "Keep full validation before every application use and retain backups. If future cross-user sharing is added, replace opaque payloads with independently validated records before allowing shared reads."
+    },
+    {
+      "check": "Resource Exhaustion/DoS",
+      "severity": "minor",
+      "issue": "Per-account limits and bounded queries do not cap the number of new Google accounts or all direct read traffic against shared free quotas.",
+      "recommendation": "Monitor shared usage and add attestation and global abuse budgets before promoting the app broadly. Free quota exhaustion must remain a visible availability failure."
+    }
+  ]
+}

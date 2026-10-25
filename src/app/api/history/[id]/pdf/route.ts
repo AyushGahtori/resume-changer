@@ -1,3 +1,5 @@
+import { AccountAccessError } from "@/lib/cloud/security";
+import { protectAccountRoute } from "@/lib/cloud/protect-route";
 import { NextResponse } from "next/server";
 import {
   GenerationHistoryError,
@@ -6,7 +8,7 @@ import {
 
 export const runtime = "nodejs";
 
-export async function GET(
+async function GETForAccount(
   request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
@@ -25,6 +27,11 @@ export async function GET(
       },
     });
   } catch (error) {
+    if (error instanceof AccountAccessError)
+      return NextResponse.json(
+        { error: error.message, code: error.code },
+        { status: error.status },
+      );
     const status =
       error instanceof GenerationHistoryError && error.code === "not-found"
         ? 404
@@ -43,3 +50,5 @@ export async function GET(
     );
   }
 }
+
+export const GET = protectAccountRoute(GETForAccount);

@@ -1,3 +1,4 @@
+import { protectAccountRoute } from "@/lib/cloud/protect-route";
 import { NextResponse } from "next/server";
 import { createHash } from "node:crypto";
 import {
@@ -8,7 +9,7 @@ import {
 
 export const runtime = "nodejs";
 
-export async function POST(request: Request) {
+async function POSTForAccount(request: Request) {
   const startedAt = Date.now();
   let body: unknown;
   try {
@@ -68,3 +69,5 @@ export async function POST(request: Request) {
     );
   }
 }
+
+export const POST = protectAccountRoute(POSTForAccount);

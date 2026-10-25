@@ -1,6 +1,8 @@
 node_modules
-.next
-.next-test
+.vercel
+.firebase
+.runtime
+.next*
 storage
 coverage
 playwright-report

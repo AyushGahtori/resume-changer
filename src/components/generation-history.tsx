@@ -1,4 +1,6 @@
 "use client";
+import { apiFetch as fetch } from "@/lib/cloud/api-fetch";
+import { useWorkspaceAccount } from "./account-session";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
@@ -37,6 +39,9 @@ function formatDate(value: string) {
 }
 
 export default function GenerationHistory() {
+  const account = useWorkspaceAccount();
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [entries, setEntries] = useState<GenerationHistoryEntry[]>([]);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<HistoryFilter>("all");
@@ -56,10 +61,12 @@ export default function GenerationHistory() {
       const payload = (await response.json()) as {
         entries?: GenerationHistoryEntry[];
         error?: string;
+        nextCursor?: string | null;
       };
       if (!response.ok || !payload.entries)
         throw new Error(payload.error ?? "History could not be loaded.");
       setEntries(payload.entries);
+      setNextCursor(payload.nextCursor ?? null);
     } catch (loadError) {
       setError(
         loadError instanceof Error
@@ -70,6 +77,32 @@ export default function GenerationHistory() {
       setLoading(false);
     }
   }, []);
+
+  async function loadMore() {
+    if (!nextCursor || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const response = await fetch(
+        `/api/history?cursor=${encodeURIComponent(nextCursor)}`,
+        { cache: "no-store" },
+      );
+      const payload = await response.json();
+      if (!response.ok || !Array.isArray(payload.entries))
+        throw new Error(payload.error ?? "Older resumes could not be loaded.");
+      setEntries((current) =>
+        Array.from(
+          new Map(
+            [...current, ...payload.entries].map((entry) => [entry.id, entry]),
+          ).values(),
+        ),
+      );
+      setNextCursor(payload.nextCursor ?? null);
+    } catch {
+      setError("Older resumes could not be loaded. Please try again.");
+    } finally {
+      setLoadingMore(false);
+    }
+  }
 
   useEffect(() => {
     void refreshEntries();
@@ -146,7 +179,10 @@ export default function GenerationHistory() {
         `/api/history/${encodeURIComponent(entry.id)}`,
         { method: "DELETE" },
       );
-      const payload = (await response.json()) as { error?: string };
+      const payload = (await response.json()) as {
+        error?: string;
+        cleanupPending?: boolean;
+      };
       if (!response.ok)
         throw new Error(
           payload.error ?? "This generation could not be deleted.",
@@ -156,7 +192,11 @@ export default function GenerationHistory() {
         setSelectedId(null);
         setDetail(null);
       }
-      setNotice("Saved generation and its files deleted.");
+      setNotice(
+        payload.cleanupPending
+          ? "Saved generation removed. Private file cleanup is queued and retried when you reopen history."
+          : "Saved generation and its files deleted.",
+      );
     } catch (deleteError) {
       setError(
         deleteError instanceof Error
@@ -372,6 +412,16 @@ export default function GenerationHistory() {
               )}
             </div>
           )}
+          {nextCursor && (
+            <button
+              className="account-history-more"
+              type="button"
+              disabled={loadingMore}
+              onClick={loadMore}
+            >
+              {loadingMore ? "Loading…" : "Load older resumes"}
+            </button>
+          )}
         </section>
 
         <section aria-label="Saved resume output" className="history-detail">
@@ -468,7 +518,11 @@ export default function GenerationHistory() {
               </p>
               <div className="history-preview-hint">
                 <Clock3 aria-hidden="true" size={15} />
-                <span>Saved locally on this device</span>
+                <span>
+                  {account
+                    ? "Saved to your private account"
+                    : "Saved locally on this device"}
+                </span>
               </div>
             </div>
           )}

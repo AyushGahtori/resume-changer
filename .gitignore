@@ -1,6 +1,6 @@
 # Dependencies and build output
 node_modules/
-.next/
+.next*/
 .next-test/
 /out/
 /build/
@@ -8,6 +8,12 @@ node_modules/
 /coverage/
 /playwright-report/
 /test-results/
+.vercel/
+.firebase/
+.runtime/
+firebase-debug.log*
+firestore-debug.log*
+ui-debug.log*
 
 # Local environment and user data
 .env*

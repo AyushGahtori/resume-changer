@@ -1,4 +1,6 @@
 "use client";
+import { apiFetch as fetch } from "@/lib/cloud/api-fetch";
+import { useWorkspaceStorage } from "./account-session";
 import { useEffect, useRef, useState } from "react";
 import StudioDialog from "./studio-dialog";
 import { groupSkillsForReview } from "@/lib/generation/review-draft";
@@ -53,6 +55,7 @@ export default function AchievementImagination({
   onLibrarySaved,
 }: Props) {
   const groups = studioGroups(library);
+  const getWorkspaceStorage = useWorkspaceStorage();
   const [groupId, setGroupId] = useState(
     destinationGroupId ?? groups[0]?.id ?? "",
   );
@@ -130,17 +133,20 @@ export default function AchievementImagination({
     if (operation !== "create") return;
     try {
       setSavedDraft(
-        parseImaginationDraft(localStorage.getItem(storageKey), library),
+        parseImaginationDraft(
+          getWorkspaceStorage().getItem(storageKey),
+          library,
+        ),
       );
     } catch {
       /* Writing remains available without browser storage. */
     }
     setStorageReady(true);
-  }, [operation, storageKey, library]);
+  }, [operation, storageKey, library, getWorkspaceStorage]);
   useEffect(() => {
     if (operation !== "create" || !storageReady || savedDraft) return;
     try {
-      localStorage.setItem(
+      getWorkspaceStorage().setItem(
         storageKey,
         JSON.stringify({
           groupId,
@@ -165,6 +171,8 @@ export default function AchievementImagination({
     selectedIds,
     skillIds,
     targetLines,
+    ,
+    getWorkspaceStorage,
   ]);
 
   function invalidateSuggestion() {
@@ -308,7 +316,7 @@ export default function AchievementImagination({
         });
       if (operation === "create") {
         try {
-          localStorage.removeItem(storageKey);
+          getWorkspaceStorage().removeItem(storageKey);
         } catch {
           /* No browser storage available. */
         }

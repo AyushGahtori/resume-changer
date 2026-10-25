@@ -35,7 +35,10 @@ const eslintConfig = defineConfig([
     },
   },
   globalIgnores([
-    ".next/**",
+    ".next*/**",
+    ".runtime/**",
+    ".firebase/**",
+    ".vercel/**",
     ".next-test/**",
     "storage/**",
     "out/**",
