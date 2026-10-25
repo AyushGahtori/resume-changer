@@ -18,7 +18,7 @@ vi.mock("@/lib/ai/provider-factory", () => ({
   createAiProvider: () => ({ name: "gemini", writeAchievement: mocks.write }),
 }));
 
-import { POST as writeAchievement } from "@/app/api/ai/achievement/route";
+import { POST as writeAchievement } from "@/app/api/ai/achievement/handler";
 import { studioLibrary } from "../../helpers/studio-fixtures";
 
 const destination = studioLibrary.jobs[0];

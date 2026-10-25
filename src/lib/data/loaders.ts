@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { z } from "zod";
 import { getPersonalDataRoot } from "./root";
+import { getAppMode } from "../cloud/security";
 import {
   GenerationHistorySchema,
   ResumeLibrarySchema,
@@ -136,6 +137,12 @@ export async function loadResumeLibrary({
   source = "personal",
   rootDir,
 }: ResumeLibraryLoadOptions = {}) {
+  if (source === "personal" && getAppMode() === "firebase") {
+    if (rootDir !== undefined)
+      throw new Error("Hosted account reads cannot use a filesystem root.");
+    const { getCloudLibrary } = await import("../cloud/library-store");
+    return getCloudLibrary();
+  }
   const dataRoot =
     source === "personal"
       ? getPersonalDataRoot(rootDir)
@@ -173,6 +180,15 @@ export function loadTemplateMetadata({
 }
 
 export async function loadGenerationHistory({ rootDir }: RootOptions = {}) {
+  if (getAppMode() === "firebase") {
+    if (rootDir !== undefined)
+      throw new Error("Hosted history cannot use a filesystem root.");
+    const { listCloudHistory } = await import("../cloud/history-store");
+    return {
+      schemaVersion: 1 as const,
+      entries: (await listCloudHistory()).entries,
+    };
+  }
   try {
     return await loadValidatedFile(
       "data/generation-history.json",

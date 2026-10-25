@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:vercel": "node scripts/prepare-pdf-runtime.mjs && next build",
     "start": "next start",
     "lint": "eslint .",
     "format": "prettier --write .",
@@ -13,19 +14,26 @@
     "test": "vitest run",
     "test:ai-live": "node scripts/test-gemini-live.mjs",
     "test:pdf-live": "node scripts/test-pdf-live.mjs",
-    "test:e2e": "playwright test"
+    "test:pdf-bundled": "node scripts/test-pdf-bundled.mjs",
+    "test:e2e": "playwright test",
+    "test:security": "npx -y firebase-tools@15.34.1 emulators:exec --only auth,firestore --project demo-resume-changer-security --config firebase.security.json \"node node_modules/vitest/vitest.mjs run --config vitest.security.config.ts && node scripts/test-account-http.mjs\""
   },
   "dependencies": {
     "@google/genai": "^2.29.1",
+    "@vercel/blob": "^2.8.2",
+    "firebase": "^13.1.0",
+    "jose": "^6.2.13",
     "lucide-react": "^1.60.0",
-    "next": "^15.5.6",
+    "next": "^15.5.28",
     "pdfjs-dist": "^6.4.299",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
-    "zod": "^4.6.5"
+    "server-only": "^0.0.1",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
-    "@next/eslint-plugin-next": "^15.5.6",
+    "@firebase/rules-unit-testing": "^6.0.0",
+    "@next/eslint-plugin-next": "^15.5.28",
     "@playwright/test": "^1.56.1",
     "@tailwindcss/postcss": "^4.1.14",
     "@types/jsdom": "^30.0.0",
@@ -37,13 +45,20 @@
     "eslint-plugin-jsx-a11y": "^6.10.2",
     "eslint-plugin-react": "^7.37.2",
     "eslint-plugin-react-hooks": "^5.2.0",
+    "ignore": "^7.0.14",
     "jsdom": "^21.1.2",
     "prettier": "^3.6.2",
     "tailwindcss": "^4.1.14",
+    "tsx": "^4.23.15",
     "typescript": "^5.9.3",
-    "vitest": "^3.2.4"
+    "vitest": "^5.0.5"
   },
   "engines": {
     "node": ">=22.13.0"
+  },
+  "overrides": {
+    "zod": "$zod",
+    "postcss": "8.5.31",
+    "@grpc/grpc-js": "1.14.6"
   }
 }

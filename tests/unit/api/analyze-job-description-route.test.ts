@@ -8,7 +8,7 @@ vi.mock("@/lib/ai/provider-factory", () => ({
   createAiProvider: () => ({ analyzeJobDescription }),
 }));
 
-import { POST } from "@/app/api/ai/analyze-job-description/route";
+import { POST } from "@/app/api/ai/analyze-job-description/handler";
 import { AiProviderError } from "@/lib/ai/provider";
 
 const result = {

@@ -1,12 +1,12 @@
 # Resume Changer
 
-Resume Changer is a local-first workspace for tailoring a resume to a specific job description (JD). It is designed around an Achievement Points Hashmap: a structured library of verified experience that the app can select from when preparing a targeted resume. The goal is to improve relevance while keeping every statement grounded in the user's real work.
+Resume Changer is a workspace for tailoring a resume to a specific job description (JD), with a hosted account mode and local development mode. Its achievement library organizes source evidence so selected and rewritten resume content remains traceable to the user's work.
 
-The planned workflow is to provide a JD, analyze its requirements, select relevant points from the achievement library, review the proposed content, render it in a Jake-style LaTeX template, compile a PDF, and export the result. The planned AI integration starts with Gemini behind a provider interface so another provider, such as DeepSeek, can be added later.
+Provide a JD, analyze its requirements, select and tailor relevant achievements, review the proposed content, and export a verified one-page PDF. Gemini sits behind a provider interface, with explicit handling when AI is unavailable.
 
 ## Current Status
 
-The app includes a local achievement library, job-description workspace, Gemini-powered JD analysis and evidence-based achievement suggestions, deterministic LaTeX generation, and local PDF preview. AI suggestions are reviewed and can be overridden before manual resume generation. See the [project plan](docs/project-plan.md) for the implementation sequence.
+The app includes Google sign-in, private account libraries and history, JD analysis, Auto Tailor, a review/editing studio, PDF preview, and import/export. Hosted data uses account-scoped Firestore records and private PDF storage; local mode retains the JSON workflow. See the [production runbook](docs/production-runbook.md) for deployment, security boundaries, quotas, and recovery, and the [project plan](docs/project-plan.md) for the implementation sequence.
 
 ## Quick Start
 
@@ -42,13 +42,15 @@ npm test             # Run Vitest unit tests
 npm run test:e2e     # Run Playwright browser tests
 npm run test:ai-live # Verify the real Gemini API (needs GEMINI_API_KEY)
 npm run test:pdf-live # Verify the real Tectonic and pdfinfo toolchain
+npm run test:security # Firebase rule attacks and account flows (Java 21 + Chromium)
+npm run test:pdf-bundled # Verify the prepared Linux production PDF runtime
 ```
 
 ## Product Principles
 
 - Preserve truth: AI may select and rewrite supported facts, but must not invent experience, dates, skills, certificates, or metrics.
 - Keep generated content traceable to achievement IDs so the user can verify its source.
-- Keep the first version local-first, with JSON as the planned source of truth.
+- Keep local development explicit and hosted account data isolated by verified user identity.
 - Keep AI providers behind a shared interface rather than coupling product logic to one vendor.
 - Keep the Jake-style LaTeX structure controlled by the application.
 

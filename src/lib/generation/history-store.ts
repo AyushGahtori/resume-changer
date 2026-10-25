@@ -3,6 +3,7 @@ import { mkdir, open, readFile, rename, rm } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { z } from "zod";
 import { getPersonalDataRoot } from "../data/root";
+import { getAppMode } from "../cloud/security";
 import {
   GenerationHistoryEntrySchema,
   GenerationHistoryEntryFieldsSchema,
@@ -15,7 +16,7 @@ import {
 const DATA_PATH = "data/generation-history.json";
 const MAX_PDF_BYTES = 4 * 1024 * 1024;
 
-const SaveGenerationSchema = GenerationHistoryEntryFieldsSchema.omit({
+export const SaveGenerationSchema = GenerationHistoryEntryFieldsSchema.omit({
   texPath: true,
   pdfPath: true,
 })
@@ -193,6 +194,12 @@ async function removeOldArtifacts(
 export async function listGenerationHistory(
   options: { rootDir?: string } = {},
 ) {
+  if (getAppMode() === "firebase") {
+    if (options.rootDir !== undefined)
+      throw new Error("Hosted history cannot use a filesystem root.");
+    const { listCloudHistory } = await import("../cloud/history-store");
+    return (await listCloudHistory()).entries;
+  }
   const history = await readHistory(getRoot(options.rootDir));
   return [...history.entries].sort((a, b) =>
     b.createdAt.localeCompare(a.createdAt),
@@ -203,6 +210,12 @@ export async function getGenerationHistoryItem(
   id: string,
   options: { rootDir?: string } = {},
 ) {
+  if (getAppMode() === "firebase") {
+    if (options.rootDir !== undefined)
+      throw new Error("Hosted history cannot use a filesystem root.");
+    const { getCloudHistoryItem } = await import("../cloud/history-store");
+    return getCloudHistoryItem(id);
+  }
   const parsedId = StableIdSchema.safeParse(id);
   if (!parsedId.success)
     throw new GenerationHistoryError("not-found", "Generation not found.");
@@ -234,6 +247,12 @@ export async function readGenerationHistoryPdf(
   id: string,
   options: { rootDir?: string } = {},
 ) {
+  if (getAppMode() === "firebase") {
+    if (options.rootDir !== undefined)
+      throw new Error("Hosted history cannot use a filesystem root.");
+    const { getCloudHistoryPdf } = await import("../cloud/history-store");
+    return getCloudHistoryPdf(id);
+  }
   const parsedId = StableIdSchema.safeParse(id);
   if (!parsedId.success)
     throw new GenerationHistoryError("not-found", "Generation not found.");
@@ -257,7 +276,7 @@ export async function readGenerationHistoryPdf(
 
 export async function saveGenerationHistoryItem(
   input: unknown,
-  options: { rootDir?: string } = {},
+  options: { rootDir?: string; importOnly?: boolean } = {},
 ) {
   const parsed = SaveGenerationSchema.safeParse(input);
   if (!parsed.success) {
@@ -279,6 +298,24 @@ export async function saveGenerationHistoryItem(
         "The generated PDF could not be saved because it is not a valid PDF file.",
       );
     }
+  }
+  if (getAppMode() === "firebase") {
+    if (options.rootDir !== undefined)
+      throw new Error("Hosted history cannot use a filesystem root.");
+    const { saveCloudHistory } = await import("../cloud/history-store");
+    const { latex, pdfBase64: _pdfBase64, ...metadata } = parsed.data;
+    const latexHash = createHash("sha256").update(latex).digest("hex");
+    const pdfHash = pdf
+      ? createHash("sha256").update(pdf).digest("hex")
+      : undefined;
+    const entry = GenerationHistoryEntrySchema.parse({
+      ...metadata,
+      texPath: artifactPath(metadata.id, latexHash, "tex"),
+      ...(pdfHash
+        ? { pdfPath: artifactPath(metadata.id, pdfHash, "pdf") }
+        : {}),
+    });
+    return saveCloudHistory(entry, latex, pdf, options.importOnly);
   }
   const rootDir = getRoot(options.rootDir);
   return withHistoryLock(rootDir, async () => {
@@ -322,6 +359,12 @@ export async function deleteGenerationHistoryItem(
   id: string,
   options: { rootDir?: string } = {},
 ) {
+  if (getAppMode() === "firebase") {
+    if (options.rootDir !== undefined)
+      throw new Error("Hosted history cannot use a filesystem root.");
+    const { deleteCloudHistory } = await import("../cloud/history-store");
+    return deleteCloudHistory(id);
+  }
   const parsedId = StableIdSchema.safeParse(id);
   if (!parsedId.success)
     throw new GenerationHistoryError("not-found", "Generation not found.");

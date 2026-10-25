@@ -1,0 +1,17 @@
+/.runtime/
+/.firebase/
+/.vercel/
+/.git
+/node_modules/
+/.next*/
+**/.env*
+/data/
+/storage/
+/test-results/
+/playwright-report/
+/coverage/
+/docs/
+/tests/
+/firebase-debug.log*
+/firestore-debug.log*
+/ui-debug.log*

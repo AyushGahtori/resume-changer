@@ -1,0 +1,38 @@
+{
+  "firestore": [
+    {
+      "database": "resume-changer",
+      "location": "europe-west3",
+      "rules": "firestore.rules",
+      "indexes": "firestore.indexes.json",
+      "edition": "enterprise"
+    }
+  ],
+  "auth": {
+    "authorizedDomains": [
+      "resume-changer-ayush-prod.firebaseapp.com",
+      "resume-changer-lime.vercel.app",
+      "resume-changer-ayushs-projects-ab23dbca.vercel.app"
+    ],
+    "providers": {
+      "googleSignIn": {
+        "oAuthBrandDisplayName": "Resume Changer",
+        "supportEmail": "gahtoriayush24@gmail.com"
+      }
+    }
+  },
+  "emulators": {
+    "auth": {
+      "host": "127.0.0.1",
+      "port": 9099
+    },
+    "firestore": {
+      "host": "127.0.0.1",
+      "port": 8080
+    },
+    "ui": {
+      "enabled": false
+    },
+    "singleProjectMode": true
+  }
+}

@@ -47,9 +47,8 @@ function warmTectonicPackageCache() {
     const render = spawnSync(
       process.execPath,
       [
-        fileURLToPath(
-          new URL("../node_modules/vite-node/vite-node.mjs", import.meta.url),
-        ),
+        "--import",
+        "tsx",
         fileURLToPath(new URL("./warm-tectonic-cache.mjs", import.meta.url)),
         texPath,
       ],

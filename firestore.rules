@@ -1,0 +1,175 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Account model (all records are private; no public profile collection):
+    // accounts/{uid}: uid/email/displayName strings, immutable createdAt and updatedAt timestamps.
+    // libraries/current: uid, revision (1..1e9), payload JSON string <=512000 chars,
+    //   immutable createdAt and updatedAt timestamps. Full JSON validation is also performed by the app.
+    // generations/{id}: uid, revision, payload JSON string <=160000 chars,
+    //   pdfHash empty or SHA-256, sortDate ISO timestamp,
+    //   immutable createdAt and updatedAt timestamps. PDF bytes live in private Vercel Blob.
+    // generations/{id}/content/latex: uid, revision, latex <=150000 chars,
+    //   sha256, immutable createdAt and updatedAt timestamps.
+    // usage/{action}: uid, action, count, windowStart and updatedAt timestamps.
+    function owns(uid) {
+      return request.auth != null && request.auth.uid == uid
+        && request.auth.token.email_verified == true
+        && request.auth.token.firebase.sign_in_provider == 'google.com';
+    }
+    function parentExists(uid) {
+      return exists(/databases/$(database)/documents/accounts/$(uid));
+    }
+    function parentAfterWrite(uid) {
+      return getAfter(/databases/$(database)/documents/accounts/$(uid)).data.uid == uid;
+    }
+    function validAccount(uid) {
+      let d = request.resource.data;
+      return d.keys().hasAll(['uid', 'email', 'displayName', 'createdAt', 'updatedAt'])
+        && d.keys().hasOnly(['uid', 'email', 'displayName', 'createdAt', 'updatedAt'])
+        && d.uid is string && d.uid == uid && d.uid.size() <= 128
+        && d.email is string && d.email.size() > 0 && d.email.size() <= 320
+        && d.email == request.auth.token.email
+        && d.displayName is string && d.displayName.size() <= 200
+        && d.createdAt is timestamp && d.updatedAt == request.time;
+    }
+    function validLibrary(uid) {
+      let d = request.resource.data;
+      return d.keys().hasAll(['uid', 'revision', 'payload', 'createdAt', 'updatedAt'])
+        && d.keys().hasOnly(['uid', 'revision', 'payload', 'createdAt', 'updatedAt'])
+        && d.uid is string && d.uid == uid && d.uid.size() <= 128
+        && d.revision is int && d.revision >= 1 && d.revision <= 1000000000
+        && d.payload is string && d.payload.size() > 0 && d.payload.size() <= 512000
+        && d.createdAt is timestamp && d.updatedAt == request.time;
+    }
+    function validGeneration(uid) {
+      let d = request.resource.data;
+      return d.keys().hasAll(['uid', 'revision', 'payload', 'pdfHash', 'sortDate', 'createdAt', 'updatedAt'])
+        && d.keys().hasOnly(['uid', 'revision', 'payload', 'pdfHash', 'sortDate', 'createdAt', 'updatedAt'])
+        && d.uid is string && d.uid == uid && d.uid.size() <= 128
+        && d.revision is int && d.revision >= 1 && d.revision <= 1000000000
+        && d.payload is string && d.payload.size() > 0 && d.payload.size() <= 160000
+        && d.pdfHash is string && (d.pdfHash == '' || d.pdfHash.matches('^[a-f0-9]{64}$'))
+        && d.sortDate is string && d.sortDate.size() == 24
+        && d.sortDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}[.][0-9]{3}Z$')
+        && d.createdAt is timestamp && d.updatedAt == request.time;
+    }
+    function validContent(uid) {
+      let d = request.resource.data;
+      return d.keys().hasAll(['uid', 'revision', 'latex', 'sha256', 'createdAt', 'updatedAt'])
+        && d.keys().hasOnly(['uid', 'revision', 'latex', 'sha256', 'createdAt', 'updatedAt'])
+        && d.uid is string && d.uid == uid && d.uid.size() <= 128
+        && d.revision is int && d.revision >= 1 && d.revision <= 1000000000
+        && d.latex is string && d.latex.size() > 0 && d.latex.size() <= 150000
+        && d.sha256 is string && d.sha256.matches('^[a-f0-9]{64}$')
+        && d.createdAt is timestamp && d.updatedAt == request.time;
+    }
+    function consumed(uid, action, targetId) {
+      let path = /databases/$(database)/documents/accounts/$(uid)/usage/$(action);
+      let next = getAfter(path).data;
+      return next.targetId == targetId && next.updatedAt == request.time
+        && (!exists(path) || next.count != get(path).data.count || next.windowStart != get(path).data.windowStart);
+    }
+    function deleted(uid, id) {
+      return exists(/databases/$(database)/documents/accounts/$(uid)/deletedGenerations/$(id));
+    }
+    function validDeletion(uid) {
+      let d = request.resource.data;
+      return d.keys().hasAll(['uid', 'createdAt']) && d.keys().hasOnly(['uid', 'createdAt'])
+        && d.uid is string && d.uid == uid && d.createdAt == request.time;
+    }
+    function usageMaximum(action) {
+      return action == 'ai' ? 20 : action == 'compile' ? 60 : action == 'library' ? 120 : action == 'history' ? 60 : action == 'files' ? 30 : 0;
+    }
+    function validUsage(uid, action) {
+      let d = request.resource.data;
+      return d.keys().hasAll(['uid', 'action', 'targetId', 'count', 'windowStart', 'updatedAt'])
+        && d.keys().hasOnly(['uid', 'action', 'targetId', 'count', 'windowStart', 'updatedAt'])
+        && d.uid is string && d.uid == uid && d.uid.size() <= 128
+        && d.targetId is string && d.targetId.size() > 0 && d.targetId.size() <= 200 && d.targetId.matches('^[a-z0-9]+(-[a-z0-9]+)*$')
+        && d.action is string && d.action == action && d.action.size() <= 10
+        && usageMaximum(action) > 0 && d.count is int && d.count >= 1 && d.count <= usageMaximum(action)
+        && d.windowStart is timestamp && d.updatedAt == request.time;
+    }
+
+    match /accounts/{uid} {
+      allow get: if owns(uid);
+      allow list, delete: if false;
+      allow create: if owns(uid) && validAccount(uid) && request.resource.data.createdAt == request.time;
+      allow update: if false;
+
+      match /libraries/{id} {
+        allow get: if id == 'current' && owns(uid) && parentExists(uid);
+        allow list, delete: if false;
+        allow create: if id == 'current' && owns(uid) && parentAfterWrite(uid) && validLibrary(uid) && consumed(uid, 'library', 'current')
+          && request.resource.data.revision == 1 && request.resource.data.createdAt == request.time;
+        allow update: if id == 'current' && owns(uid) && parentAfterWrite(uid) && validLibrary(uid) && consumed(uid, 'library', 'current')
+          && request.resource.data.revision == resource.data.revision + 1
+          && request.resource.data.createdAt == resource.data.createdAt;
+      }
+      match /generations/{id} {
+        allow get: if owns(uid) && parentExists(uid);
+        // Core queries are intentional: Pipeline rules cannot enforce request.query.limit.
+        allow list: if owns(uid) && parentExists(uid) && request.query.limit > 0 && request.query.limit <= 50;
+        allow create: if owns(uid) && parentAfterWrite(uid) && validGeneration(uid) && consumed(uid, 'history', id) && !deleted(uid, id)
+          && id.matches('^[a-z0-9]+(-[a-z0-9]+)*$') && id.size() <= 200
+          && getAfter(/databases/$(database)/documents/accounts/$(uid)/generations/$(id)/content/latex).data.revision == request.resource.data.revision
+          && request.resource.data.revision == 1 && request.resource.data.createdAt == request.time;
+        allow update: if owns(uid) && parentAfterWrite(uid) && validGeneration(uid) && consumed(uid, 'history', id) && !deleted(uid, id)
+          && getAfter(/databases/$(database)/documents/accounts/$(uid)/generations/$(id)/content/latex).data.revision == request.resource.data.revision
+          && request.resource.data.revision == resource.data.revision + 1
+          && request.resource.data.createdAt == resource.data.createdAt;
+        allow delete: if owns(uid) && parentExists(uid) && consumed(uid, 'history', id)
+          && getAfter(/databases/$(database)/documents/accounts/$(uid)/deletedGenerations/$(id)).data.uid == uid
+          && getAfter(/databases/$(database)/documents/accounts/$(uid)/pendingDeletions/$(id)).data.uid == uid
+          && !existsAfter(/databases/$(database)/documents/accounts/$(uid)/generations/$(id)/content/latex);
+        match /content/{artifact} {
+          allow get: if artifact == 'latex' && owns(uid) && parentExists(uid)
+            && exists(/databases/$(database)/documents/accounts/$(uid)/generations/$(id));
+          allow list: if false;
+          allow create: if artifact == 'latex' && owns(uid) && parentAfterWrite(uid) && validContent(uid) && consumed(uid, 'history', id) && !deleted(uid, id)
+            && getAfter(/databases/$(database)/documents/accounts/$(uid)/generations/$(id)).data.revision == request.resource.data.revision
+            && request.resource.data.revision == 1 && request.resource.data.createdAt == request.time;
+          allow update: if artifact == 'latex' && owns(uid) && parentAfterWrite(uid) && validContent(uid) && consumed(uid, 'history', id) && !deleted(uid, id)
+            && getAfter(/databases/$(database)/documents/accounts/$(uid)/generations/$(id)).data.revision == request.resource.data.revision
+            && request.resource.data.revision == resource.data.revision + 1
+            && request.resource.data.createdAt == resource.data.createdAt;
+          allow delete: if artifact == 'latex' && owns(uid) && parentExists(uid) && consumed(uid, 'history', id)
+            && !existsAfter(/databases/$(database)/documents/accounts/$(uid)/generations/$(id));
+        }
+      }
+      match /deletedGenerations/{id} {
+        allow get: if owns(uid) && parentExists(uid);
+        allow list, update, delete: if false;
+        allow create: if owns(uid) && parentExists(uid) && validDeletion(uid)
+          && consumed(uid, 'history', id)
+          && exists(/databases/$(database)/documents/accounts/$(uid)/generations/$(id))
+          && !existsAfter(/databases/$(database)/documents/accounts/$(uid)/generations/$(id));
+      }
+      match /pendingDeletions/{id} {
+        allow get: if owns(uid) && parentExists(uid);
+        allow list: if owns(uid) && parentExists(uid) && request.query.limit > 0 && request.query.limit <= 1;
+        allow update: if false;
+        allow create: if owns(uid) && parentExists(uid) && validDeletion(uid) && consumed(uid, 'history', id)
+          && getAfter(/databases/$(database)/documents/accounts/$(uid)/deletedGenerations/$(id)).data.uid == uid
+          && !existsAfter(/databases/$(database)/documents/accounts/$(uid)/generations/$(id));
+        allow delete: if owns(uid) && parentExists(uid) && consumed(uid, 'history', id)
+          && deleted(uid, id) && !exists(/databases/$(database)/documents/accounts/$(uid)/generations/$(id));
+      }
+      match /usage/{action} {
+        allow get: if owns(uid) && parentExists(uid);
+        allow list, delete: if false;
+        allow create: if owns(uid) && parentAfterWrite(uid) && validUsage(uid, action)
+          && request.resource.data.count == 1 && request.resource.data.windowStart == request.time;
+        allow update: if owns(uid) && parentAfterWrite(uid) && validUsage(uid, action)
+          && ((request.time < resource.data.windowStart + duration.value(1, 'd')
+            && request.resource.data.windowStart == resource.data.windowStart
+            && request.resource.data.count == resource.data.count + 1)
+          || (request.time >= resource.data.windowStart + duration.value(1, 'd')
+            && request.resource.data.windowStart == request.time && request.resource.data.count == 1));
+      }
+    }
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

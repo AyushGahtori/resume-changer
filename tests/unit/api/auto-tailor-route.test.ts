@@ -28,7 +28,7 @@ vi.mock("@/lib/data/loaders", async (importOriginal) => {
 });
 
 import sampleLibrary from "../../../examples/sample-resume-library.json";
-import { POST } from "@/app/api/ai/auto-tailor/route";
+import { POST } from "@/app/api/ai/auto-tailor/handler";
 import { createJobContextId } from "@/lib/ai/job-context";
 import { AiProviderError } from "@/lib/ai/provider";
 import type { LatexRepairInput, LatexRepairResult } from "@/lib/ai/contracts";

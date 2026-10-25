@@ -1,4 +1,6 @@
 "use client";
+import { apiFetch as fetch } from "@/lib/cloud/api-fetch";
+import { useWorkspaceStorage } from "./account-session";
 import {
   useEffect,
   useLayoutEffect,
@@ -267,6 +269,7 @@ export default function ResumeStudio({
   onSetup,
 }: Props) {
   const router = useRouter();
+  const getWorkspaceStorage = useWorkspaceStorage();
   const [initial] = useState(() => documentFromGeneration(generation, library));
   const [initialLatex] = useState(generation.latex);
   const [baseline, setBaseline] = useState(initial);
@@ -353,7 +356,9 @@ export default function ResumeStudio({
 
   useEffect(() => {
     try {
-      const saved = JSON.parse(localStorage.getItem(storageKey) ?? "null");
+      const saved = JSON.parse(
+        getWorkspaceStorage().getItem(storageKey) ?? "null",
+      );
       const parsed = StudioHistorySchema.safeParse(saved?.history);
       if (
         saved?.baselineLatex === initialLatex &&
@@ -365,12 +370,12 @@ export default function ResumeStudio({
       /* A damaged saved draft never replaces the valid document. */
     }
     setStorageReady(true);
-  }, [initial, initialLatex, storageKey]);
+  }, [initial, initialLatex, storageKey, getWorkspaceStorage]);
 
   useEffect(() => {
     if (!storageReady || restore) return;
     try {
-      localStorage.setItem(
+      getWorkspaceStorage().setItem(
         storageKey,
         JSON.stringify({
           baselineLatex,
@@ -383,7 +388,14 @@ export default function ResumeStudio({
         "Browser storage is full or unavailable. Keep this page open to preserve pending edits.",
       );
     }
-  }, [storageReady, restore, history, baselineLatex, storageKey]);
+  }, [
+    storageReady,
+    restore,
+    history,
+    baselineLatex,
+    storageKey,
+    getWorkspaceStorage,
+  ]);
 
   useEffect(() => {
     const handler = (event: BeforeUnloadEvent) => {

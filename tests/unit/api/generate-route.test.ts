@@ -9,7 +9,7 @@ vi.mock("@/lib/data/loaders", async (importOriginal) => {
   return { ...actual, loadResumeLibrary: mocks.load };
 });
 
-import { POST } from "@/app/api/generate/route";
+import { POST } from "@/app/api/generate/handler";
 import sampleLibrary from "../../../examples/sample-resume-library.json";
 import { DataLoadError } from "@/lib/data/loaders";
 import type { ResumeLibrary } from "@/lib/schemas/resume-data";

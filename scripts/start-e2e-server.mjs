@@ -49,6 +49,7 @@ const build = spawnSync(process.execPath, [nextCli, "build"], {
   cwd: projectRoot,
   env: {
     ...process.env,
+    RESUME_APP_MODE: "local",
     NEXT_DIST_DIR: distDir,
     NEXT_TSCONFIG: tsconfig,
     NEXT_TELEMETRY_DISABLED: "1",
@@ -66,6 +67,7 @@ const server = spawn(process.execPath, [nextCli, "start", "--port", port], {
   cwd: projectRoot,
   env: {
     ...process.env,
+    RESUME_APP_MODE: "local",
     RESUME_LIBRARY_ROOT: fixtureRoot,
     NEXT_DIST_DIR: distDir,
     NEXT_TSCONFIG: tsconfig,

@@ -1,0 +1,35 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "generations",
+      "queryScope": "COLLECTION",
+      "density": "DENSE",
+      "fields": [
+        {
+          "fieldPath": "sortDate",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "pendingDeletions",
+      "queryScope": "COLLECTION",
+      "density": "DENSE",
+      "fields": [
+        {
+          "fieldPath": "createdAt",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
+        }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

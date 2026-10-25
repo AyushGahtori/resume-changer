@@ -2,9 +2,9 @@ import { copyFile, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { GET, POST } from "@/app/api/history/route";
-import { DELETE, GET as getOne } from "@/app/api/history/[id]/route";
-import { GET as getPdf } from "@/app/api/history/[id]/pdf/route";
+import { GET, POST } from "@/app/api/history/handler";
+import { DELETE, GET as getOne } from "@/app/api/history/[id]/handler";
+import { GET as getPdf } from "@/app/api/history/[id]/pdf/handler";
 import {
   GenerationHistoryError,
   listGenerationHistory,
@@ -92,7 +92,7 @@ describe("GET /api/history", () => {
       }),
     );
 
-    const response = await GET();
+    const response = await GET(new Request("http://localhost/api/history"));
     const payload = await response.json();
 
     expect(response.status).toBe(200);
@@ -103,7 +103,7 @@ describe("GET /api/history", () => {
   });
 
   it("returns an empty list when no generation has been saved", async () => {
-    const response = await GET();
+    const response = await GET(new Request("http://localhost/api/history"));
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({ entries: [] });
@@ -116,7 +116,7 @@ describe("GET /api/history", () => {
       join(root, "data", "generation-history.json"),
     );
     // The demo library is not a generation history document.
-    const response = await GET();
+    const response = await GET(new Request("http://localhost/api/history"));
 
     expect(response.status).toBe(409);
     const payload = await response.json();
@@ -344,7 +344,7 @@ describe("generation history error handling", () => {
       JSON.stringify(duplicate),
     );
 
-    const response = await GET();
+    const response = await GET(new Request("http://localhost/api/history"));
 
     expect(response.status).toBe(409);
     const payload = await response.json();

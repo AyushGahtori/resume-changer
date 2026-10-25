@@ -8,7 +8,7 @@ vi.mock("@/lib/pdf/compile-service", async (importOriginal) => {
   return { ...actual, compileLatexToPdf: compileMock };
 });
 
-import { POST } from "@/app/api/compile/route";
+import { POST } from "@/app/api/compile/handler";
 import sampleLibrary from "../../../examples/sample-resume-library.json";
 import { renderResumeLatex } from "@/lib/latex/render-resume";
 import type { ResumeLibrary } from "@/lib/schemas/resume-data";
