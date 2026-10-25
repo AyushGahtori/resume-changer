@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { chooseLibraryOption } from "./support/library-select";
 
 /**
  * Task 01 baseline coverage for the Achievement Library.
@@ -62,7 +63,7 @@ test.describe("achievement library baseline", () => {
     ]);
     await expect(page.getByText("13 of 13 achievement points")).toBeVisible();
 
-    await page.getByLabel("Point status").selectOption("disabled");
+    await chooseLibraryOption(page, "Point status", "disabled");
 
     await expect(
       page.getByText(
@@ -108,9 +109,9 @@ test.describe("achievement library baseline", () => {
     await point
       .getByRole("button", { name: "Filter by skill System Design" })
       .click();
-    await expect(page.getByLabel("Linked skill")).toHaveValue(
-      "skill-system-design",
-    );
+    await expect(
+      page.getByRole("combobox", { name: "Linked skill" }),
+    ).toHaveAttribute("data-value", "skill-system-design");
   });
 
   test("lists skills and credentials with their real counts", async ({

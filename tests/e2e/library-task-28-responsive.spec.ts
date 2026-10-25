@@ -168,7 +168,7 @@ test("keeps the summary and the filters on one row at 1440", async ({
   expect(new Set(metricTops).size).toBe(1);
   expect(metricTops).toHaveLength(5);
 
-  const filterTops = await rowTops(page, ".library-filter-grid > label");
+  const filterTops = await rowTops(page, ".library-filter-grid > div");
   expect(new Set(filterTops).size).toBe(1);
   expect(filterTops).toHaveLength(5);
 });
@@ -183,7 +183,7 @@ test("wraps the metrics and the filters at 1024 and 768", async ({ page }) => {
     expect(new Set(metricTops).size).toBeGreaterThan(1);
 
     // The filters wrap too.
-    const filterTops = await rowTops(page, ".library-filter-grid > label");
+    const filterTops = await rowTops(page, ".library-filter-grid > div");
     expect(new Set(filterTops).size).toBeGreaterThan(1);
 
     // Every section keeps the full width of the page.
@@ -226,7 +226,7 @@ test("stacks everything on a phone without hiding an action", async ({
     expect(heading.sourceTop).toBeGreaterThanOrEqual(heading.titleBottom - 1);
 
     // The filters are one column, so nothing is squeezed.
-    const filterTops = await rowTops(page, ".library-filter-grid > label");
+    const filterTops = await rowTops(page, ".library-filter-grid > div");
     expect(new Set(filterTops).size).toBe(5);
 
     // The card keeps its state and its edit action.
@@ -236,7 +236,7 @@ test("stacks everything on a phone without hiding an action", async ({
 
     // The search and every filter stay reachable.
     await expect(page.getByLabel("Search library")).toBeVisible();
-    await expect(page.getByLabel("Tag")).toBeVisible();
+    await expect(page.getByRole("combobox", { name: "Tag" })).toBeVisible();
   }
 });
 

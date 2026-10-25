@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { chooseLibraryOption } from "./support/library-select";
 
 /**
  * Task 29 coverage for the library filters.
@@ -14,9 +15,11 @@ test.beforeEach(async ({ page }) => {
 });
 
 test("narrows the list to one job", async ({ page }) => {
-  await page
-    .getByLabel("Job or project")
-    .selectOption("job:job-sampleworks-studio");
+  await chooseLibraryOption(
+    page,
+    "Job or project",
+    "job:job-sampleworks-studio",
+  );
 
   await expect(
     page.getByRole("heading", { name: "Software Engineer" }),
@@ -30,7 +33,7 @@ test("narrows the list to one job", async ({ page }) => {
 });
 
 test("narrows the list to one point source", async ({ page }) => {
-  await page.getByLabel("Point source").selectOption("user-notes");
+  await chooseLibraryOption(page, "Point source", "user-notes");
 
   await expect(page.locator(".library-filter-summary span")).toHaveText(
     "4 of 13 achievement points",
@@ -44,7 +47,7 @@ test("narrows the list to one point source", async ({ page }) => {
 });
 
 test("narrows the list to one linked skill", async ({ page }) => {
-  await page.getByLabel("Linked skill").selectOption("skill-docker");
+  await chooseLibraryOption(page, "Linked skill", "skill-docker");
 
   await expect(page.locator(".library-filter-summary span")).toHaveText(
     "1 of 13 achievement points",
@@ -55,7 +58,7 @@ test("narrows the list to one linked skill", async ({ page }) => {
 });
 
 test("narrows the list to one tag", async ({ page }) => {
-  await page.getByLabel("Tag").selectOption("accessibility");
+  await chooseLibraryOption(page, "Tag", "accessibility");
 
   await expect(page.locator(".library-filter-summary span")).toHaveText(
     "2 of 13 achievement points",
@@ -73,7 +76,10 @@ test("applies the tag facet when a tag chip is clicked", async ({ page }) => {
 
   await point.getByRole("button", { name: "#automation" }).click();
 
-  await expect(page.getByLabel("Tag")).toHaveValue("automation");
+  await expect(page.getByRole("combobox", { name: "Tag" })).toHaveAttribute(
+    "data-value",
+    "automation",
+  );
   await expect(page.locator(".library-filter-summary span")).toHaveText(
     "3 of 13 achievement points",
   );
@@ -89,9 +95,9 @@ test("applies the skill facet when a skill chip is clicked", async ({
 
   await point.getByRole("button", { name: "GitHub Actions" }).click();
 
-  await expect(page.getByLabel("Linked skill")).toHaveValue(
-    "skill-github-actions",
-  );
+  await expect(
+    page.getByRole("combobox", { name: "Linked skill" }),
+  ).toHaveAttribute("data-value", "skill-github-actions");
   await expect(page.locator(".library-filter-summary span")).toHaveText(
     "2 of 13 achievement points",
   );
@@ -103,27 +109,33 @@ test("offers the reset action only while a filter is active", async ({
   const reset = page.getByRole("button", { name: "Reset filters" });
   await expect(reset).toHaveCount(0);
 
-  await page.getByLabel("Tag").selectOption("accessibility");
+  await chooseLibraryOption(page, "Tag", "accessibility");
   await expect(reset).toBeVisible();
 
   await reset.click();
 
   await expect(reset).toHaveCount(0);
-  await expect(page.getByLabel("Tag")).toHaveValue("");
+  await expect(page.getByRole("combobox", { name: "Tag" })).toHaveAttribute(
+    "data-value",
+    "",
+  );
   await expect(page.locator(".library-filter-summary span")).toHaveText(
     "13 of 13 achievement points",
   );
 });
 
 test("keeps the facets reachable from the keyboard", async ({ page }) => {
-  const tag = page.getByLabel("Tag");
+  const tag = page.getByRole("combobox", { name: "Tag" });
   await tag.focus();
   await expect(tag).toBeFocused();
   expect(
     await tag.evaluate((element) => element.matches(":focus-visible")),
   ).toBe(true);
 
-  await tag.selectOption("observability");
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("Enter");
+  await expect(tag).toHaveAttribute("data-value", "accessibility");
   await expect(page.locator(".library-filter-summary span")).toHaveText(
     "2 of 13 achievement points",
   );

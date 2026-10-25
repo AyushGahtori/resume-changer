@@ -7,6 +7,7 @@ import type {
   ResumeLibrary,
 } from "../../src/lib/schemas/resume-data";
 import { createPersonalLibraryGuard } from "./support/personal-library";
+import { chooseLibraryOption } from "./support/library-select";
 
 /**
  * The card renders real library data, so the tests build their own libraries
@@ -915,7 +916,10 @@ test("filters by tag and exposes the selected chip state", async ({ page }) => {
   const chip = card.getByRole("button", { name: "Filter by #only-this-point" });
   await chip.click();
 
-  await expect(page.getByLabel("Tag")).toHaveValue("only-this-point");
+  await expect(page.getByRole("combobox", { name: "Tag" })).toHaveAttribute(
+    "data-value",
+    "only-this-point",
+  );
   await expect(page.locator(".library-result-count")).toContainText(
     "1 of 5 achievement points",
   );
@@ -935,9 +939,9 @@ test("filters by a linked skill and supports keyboard activation", async ({
   await chip.focus();
   await chip.press("Enter");
 
-  await expect(page.getByLabel("Linked skill")).toHaveValue(
-    "skill-card-synthetic",
-  );
+  await expect(
+    page.getByRole("combobox", { name: "Linked skill" }),
+  ).toHaveAttribute("data-value", "skill-card-synthetic");
   await expect(page.locator(".library-result-count")).toContainText(
     "1 of 5 achievement points",
   );
@@ -992,7 +996,7 @@ test("keeps an active filtered chip visible when it exceeds the collapsed limit"
   const tags = Array.from({ length: 7 }, (_, index) => `tag-${index}`);
   await writePersonalLibrary(libraryWithChips(tags, ["skill-card-synthetic"]));
   await page.goto("/library");
-  await page.getByRole("combobox", { name: "Tag" }).selectOption("tag-6");
+  await chooseLibraryOption(page, "Tag", "tag-6");
 
   const card = cards(page).first();
   const selected = card.getByRole("button", { name: "Filter by #tag-6" });

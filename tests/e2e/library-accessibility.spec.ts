@@ -72,7 +72,9 @@ test("returns the keyboard to the edit action that opened the editor", async ({
   await expect(edit).toBeFocused();
 });
 
-test("shows a visible focus ring on the search field", async ({ page }) => {
+test("moves from search to the first custom filter with a visible focus ring", async ({
+  page,
+}) => {
   await page.goto("/library");
 
   const search = page.getByRole("searchbox", { name: "Search library" });
@@ -87,10 +89,12 @@ test("shows a visible focus ring on the search field", async ({ page }) => {
       outlineStyle: computed.outlineStyle,
       outlineWidth: computed.outlineWidth,
       tag: active.tagName,
+      role: active.getAttribute("role"),
     };
   });
 
-  expect(focused?.tag).toBe("SELECT");
+  expect(focused?.tag).toBe("BUTTON");
+  expect(focused?.role).toBe("combobox");
   expect(focused?.outlineStyle).not.toBe("none");
   expect(Number.parseFloat(focused?.outlineWidth ?? "0")).toBeGreaterThan(0);
 });

@@ -321,6 +321,12 @@ export default function AchievementLibrary({ library, source }: Props) {
   return (
     <div className="library-page">
       <header className="library-page-header">
+        <div className="library-page-atmosphere" aria-hidden="true">
+          <span className="library-bubble library-bubble--warm" />
+          <span className="library-bubble library-bubble--cool" />
+          <span className="library-bubble library-bubble--ring" />
+          <span className="library-bubble library-bubble--small" />
+        </div>
         <div className="library-heading">
           <div className="library-heading-copy">
             <p className="eyebrow">YOUR EXPERIENCE</p>

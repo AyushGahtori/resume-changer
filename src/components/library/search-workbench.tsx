@@ -1,8 +1,9 @@
 "use client";
 
 import { Search, X } from "lucide-react";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import CategoryNavigation from "@/components/library/category-navigation";
+import LibrarySelect from "@/components/library/library-select";
 import {
   formatLibraryResultCount,
   LIBRARY_SORT_OPTIONS,
@@ -46,6 +47,7 @@ export default function SearchWorkbench({
   onReset,
 }: Props) {
   const workbenchRef = useRef<HTMLElement | null>(null);
+  const [isStuck, setIsStuck] = useState(false);
   const sourceTypes = useMemo(
     () =>
       Array.from(
@@ -79,17 +81,31 @@ export default function SearchWorkbench({
     const desktop = window.matchMedia(STICKY_BREAKPOINT);
 
     function measure() {
-      root.style.setProperty(
-        "--library-workbench-height",
-        `${workbench.offsetHeight}px`,
-      );
+      const workbenchHeight = `${workbench.offsetHeight}px`;
+      if (
+        root.style.getPropertyValue("--library-workbench-height") !==
+        workbenchHeight
+      ) {
+        root.style.setProperty("--library-workbench-height", workbenchHeight);
+      }
       const topbarIsPinned =
         desktop.matches &&
         topbar !== null &&
         getComputedStyle(topbar).position === "sticky";
-      root.style.setProperty(
-        "--library-topbar-height",
-        topbarIsPinned ? `${topbar.offsetHeight}px` : "0px",
+      const topbarHeight =
+        topbarIsPinned && topbar ? `${topbar.offsetHeight}px` : "0px";
+      if (
+        root.style.getPropertyValue("--library-topbar-height") !== topbarHeight
+      ) {
+        root.style.setProperty("--library-topbar-height", topbarHeight);
+      }
+      const stickyOffset = topbarIsPinned ? topbar.offsetHeight : 0;
+      const nextIsStuck =
+        topbarIsPinned &&
+        window.scrollY > 0 &&
+        workbench.getBoundingClientRect().top <= stickyOffset + 1;
+      setIsStuck((current) =>
+        current === nextIsStuck ? current : nextIsStuck,
       );
     }
 
@@ -97,11 +113,13 @@ export default function SearchWorkbench({
     observer.observe(workbench);
     if (topbar) observer.observe(topbar);
     desktop.addEventListener("change", measure);
+    window.addEventListener("scroll", measure, { passive: true });
     measure();
 
     return () => {
       observer.disconnect();
       desktop.removeEventListener("change", measure);
+      window.removeEventListener("scroll", measure);
       root.style.removeProperty("--library-workbench-height");
       root.style.removeProperty("--library-topbar-height");
     };
@@ -111,6 +129,7 @@ export default function SearchWorkbench({
     <section
       aria-label="Search and filter library"
       className="library-controls library-workbench"
+      data-stuck={isStuck ? "true" : undefined}
       ref={workbenchRef}
     >
       <div className="library-search">
@@ -142,115 +161,96 @@ export default function SearchWorkbench({
 
       <div className="library-filter-row">
         <div className="library-filter-grid">
-          <label>
-            <span className="visually-hidden">Job or project</span>
-            <select
-              onChange={(event) =>
-                onFilterChange("experienceId", event.target.value)
-              }
+          <div>
+            <LibrarySelect
+              aria-label="Job or project"
+              onChange={(value) => onFilterChange("experienceId", value)}
+              options={[
+                { label: "All experience", value: "" },
+                ...library.jobs.map((job) => ({
+                  label: `${job.title} · ${job.company}`,
+                  value: `job:${job.id}`,
+                })),
+                ...library.projects.map((project) => ({
+                  label: project.name,
+                  value: `project:${project.id}`,
+                })),
+              ]}
               value={filters.experienceId}
-              data-active={filters.experienceId ? "true" : undefined}
-            >
-              <option value="">All experience</option>
-              {library.jobs.map((job) => (
-                <option key={job.id} value={`job:${job.id}`}>
-                  {job.title} · {job.company}
-                </option>
-              ))}
-              {library.projects.map((project) => (
-                <option key={project.id} value={`project:${project.id}`}>
-                  {project.name}
-                </option>
-              ))}
-            </select>
-          </label>
+              active={Boolean(filters.experienceId)}
+            />
+          </div>
 
-          <label>
-            <span className="visually-hidden">Point source</span>
-            <select
-              onChange={(event) =>
-                onFilterChange("sourceType", event.target.value)
-              }
+          <div>
+            <LibrarySelect
+              aria-label="Point source"
+              onChange={(value) => onFilterChange("sourceType", value)}
+              options={[
+                { label: "All sources", value: "" },
+                ...sourceTypes.map((type) => ({ label: type, value: type })),
+              ]}
               value={filters.sourceType}
-              data-active={filters.sourceType ? "true" : undefined}
-            >
-              <option value="">All sources</option>
-              {sourceTypes.map((type) => (
-                <option key={type} value={type}>
-                  {type}
-                </option>
-              ))}
-            </select>
-          </label>
+              active={Boolean(filters.sourceType)}
+            />
+          </div>
 
-          <label>
-            <span className="visually-hidden">Point status</span>
-            <select
-              onChange={(event) =>
-                onFilterChange(
-                  "status",
-                  event.target.value as LibraryFilters["status"],
-                )
+          <div>
+            <LibrarySelect
+              aria-label="Point status"
+              onChange={(value) =>
+                onFilterChange("status", value as LibraryFilters["status"])
               }
+              options={[
+                { label: "All statuses", value: "all" },
+                { label: "Enabled", value: "enabled" },
+                { label: "Disabled", value: "disabled" },
+              ]}
               value={filters.status}
-              data-active={filters.status !== "all" ? "true" : undefined}
-            >
-              <option value="all">All statuses</option>
-              <option value="enabled">Enabled</option>
-              <option value="disabled">Disabled</option>
-            </select>
-          </label>
+              active={filters.status !== "all"}
+            />
+          </div>
 
-          <label>
-            <span className="visually-hidden">Linked skill</span>
-            <select
-              onChange={(event) =>
-                onFilterChange("skillId", event.target.value)
-              }
+          <div>
+            <LibrarySelect
+              aria-label="Linked skill"
+              onChange={(value) => onFilterChange("skillId", value)}
+              options={[
+                { label: "All skills", value: "" },
+                ...options.skills.map((skill) => ({
+                  label: skill.name,
+                  value: skill.id,
+                })),
+              ]}
               value={filters.skillId}
-              data-active={filters.skillId ? "true" : undefined}
-            >
-              <option value="">All skills</option>
-              {options.skills.map((skill) => (
-                <option key={skill.id} value={skill.id}>
-                  {skill.name}
-                </option>
-              ))}
-            </select>
-          </label>
+              active={Boolean(filters.skillId)}
+            />
+          </div>
 
-          <label>
-            <span className="visually-hidden">Tag</span>
-            <select
-              onChange={(event) => onFilterChange("tag", event.target.value)}
+          <div>
+            <LibrarySelect
+              aria-label="Tag"
+              onChange={(value) => onFilterChange("tag", value)}
+              options={[
+                { label: "All tags", value: "" },
+                ...options.tags.map((tag) => ({ label: tag, value: tag })),
+              ]}
               value={filters.tag}
-              data-active={filters.tag ? "true" : undefined}
-            >
-              <option value="">All tags</option>
-              {options.tags.map((tag) => (
-                <option key={tag} value={tag}>
-                  {tag}
-                </option>
-              ))}
-            </select>
-          </label>
+              active={Boolean(filters.tag)}
+            />
+          </div>
         </div>
-        <label className="library-sort">
+        <div className="library-sort">
           <span>Sort</span>
-          <select
+          <LibrarySelect
             aria-label="Sort"
-            onChange={(event) =>
-              onSortChange(event.target.value as LibrarySort)
-            }
+            onChange={(value) => onSortChange(value as LibrarySort)}
+            options={LIBRARY_SORT_OPTIONS.map((option) => ({
+              label: option.label,
+              value: option.value,
+            }))}
             value={sort}
-          >
-            {LIBRARY_SORT_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
+          />
+        </div>
       </div>
 
       <div className="library-workbench-footer">

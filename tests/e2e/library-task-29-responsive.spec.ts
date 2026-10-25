@@ -31,11 +31,19 @@ for (const viewport of VIEWPORTS) {
     await expect(
       page.getByRole("searchbox", { name: "Search library" }),
     ).toBeVisible();
-    await expect(page.getByLabel("Job or project")).toBeVisible();
-    await expect(page.getByLabel("Point source")).toBeVisible();
-    await expect(page.getByLabel("Point status")).toBeVisible();
-    await expect(page.getByLabel("Linked skill")).toBeVisible();
-    await expect(page.getByLabel("Tag")).toBeVisible();
+    await expect(
+      page.getByRole("combobox", { name: "Job or project" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("combobox", { name: "Point source" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("combobox", { name: "Point status" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("combobox", { name: "Linked skill" }),
+    ).toBeVisible();
+    await expect(page.getByRole("combobox", { name: "Tag" })).toBeVisible();
     await expect(
       page.getByRole("region", { name: "Library summary" }),
     ).toBeVisible();
@@ -58,10 +66,10 @@ test("keeps the filter row on one line while it fits", async ({ page }) => {
   await page.goto("/library?source=demo");
 
   const first = await page
-    .getByText("Job or project", { exact: true })
+    .getByRole("combobox", { name: "Job or project" })
     .boundingBox();
   const second = await page
-    .getByText("Point source", { exact: true })
+    .getByRole("combobox", { name: "Point source" })
     .boundingBox();
 
   expect(first).not.toBeNull();
@@ -74,10 +82,10 @@ test("stacks the filter row on a narrow viewport", async ({ page }) => {
   await page.goto("/library?source=demo");
 
   const first = await page
-    .getByText("Job or project", { exact: true })
+    .getByRole("combobox", { name: "Job or project" })
     .boundingBox();
   const second = await page
-    .getByText("Point source", { exact: true })
+    .getByRole("combobox", { name: "Point source" })
     .boundingBox();
 
   expect(first).not.toBeNull();
