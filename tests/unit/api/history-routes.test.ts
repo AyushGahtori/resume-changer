@@ -2,9 +2,9 @@ import { copyFile, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { GET, POST } from "@/app/api/history/route";
-import { DELETE, GET as getOne } from "@/app/api/history/[id]/route";
-import { GET as getPdf } from "@/app/api/history/[id]/pdf/route";
+import { GET, POST } from "@/app/api/history/handler";
+import { DELETE, GET as getOne } from "@/app/api/history/[id]/handler";
+import { GET as getPdf } from "@/app/api/history/[id]/pdf/handler";
 import {
   GenerationHistoryError,
   listGenerationHistory,

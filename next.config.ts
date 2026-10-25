@@ -12,10 +12,7 @@ const nextConfig: NextConfig = {
   outputFileTracingRoot: path.resolve(process.cwd()),
   serverExternalPackages: ["pdfjs-dist", "@napi-rs/canvas"],
   outputFileTracingIncludes: {
-    "/api/compile": pdfAssets,
-    "/api/ai/auto-tailor": pdfAssets,
-    "/api/resume/edit": pdfAssets,
-    "/api/resume/skills": pdfAssets,
+    "/api/[...path]": pdfAssets,
   },
 };
 

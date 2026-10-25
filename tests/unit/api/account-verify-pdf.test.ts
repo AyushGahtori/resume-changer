@@ -4,7 +4,7 @@ vi.mock("../../../src/lib/pdf/compile-service", async (original) => ({
   ...(await original<typeof import("../../../src/lib/pdf/compile-service")>()),
   compileLatexToPdf: mocks.compile,
 }));
-import { POST } from "../../../src/app/api/compile/route";
+import { POST } from "../../../src/app/api/compile/handler";
 import { PdfCompileError } from "../../../src/lib/pdf/compile-service";
 beforeEach(() => {
   vi.clearAllMocks();

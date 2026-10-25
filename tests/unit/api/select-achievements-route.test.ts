@@ -15,7 +15,7 @@ vi.mock("@/lib/data/loaders", async (importOriginal) => {
 });
 
 import sampleLibrary from "../../../examples/sample-resume-library.json";
-import { POST } from "@/app/api/ai/select-achievements/route";
+import { POST } from "@/app/api/ai/select-achievements/handler";
 import { AiProviderError } from "@/lib/ai/provider";
 
 const analysis = {

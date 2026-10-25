@@ -15,7 +15,7 @@ vi.mock("@/lib/data/loaders", async (importOriginal) => {
 });
 
 import sampleLibrary from "../../../examples/sample-resume-library.json";
-import { POST } from "@/app/api/ai/tailor-achievements/route";
+import { POST } from "@/app/api/ai/tailor-achievements/handler";
 import { AiProviderError } from "@/lib/ai/provider";
 import { createJobContextId } from "@/lib/ai/job-context";
 

@@ -229,3 +229,5 @@ destination identity and private-storage access have been verified.
 - The separate readiness route exceeded Hobby's 12-function deployment limit. Moved the same authenticated, quota-bound fictional check into the existing POST compiler endpoint. The real bundled Linux compiler verifies this exact fixture; no paid upgrade is required.
 
 - Removed the blanket per-route maxDuration override after Vercel's deployment check still hit the Hobby function-packaging cap. Hobby Fluid Compute already defaults to 300 seconds, matching the app's 250-second request budget; leaving routes unconfigured lets Next.js/Vercel bundle compatible routes together.
+
+- The next Vercel preview still exceeded Hobby's 12-function cap. Consolidated the public API boundary into one Next.js catch-all route while keeping each endpoint's handler in its own module and preserving its existing URL, method, authorization, and focused tests. The dispatcher uses an explicit route/method allowlist, validates decoded path segments, and forwards dynamic IDs as route context. The local optimized build now reports one API route; a Vercel preview must still confirm its deployed function bundle count.

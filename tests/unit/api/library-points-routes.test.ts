@@ -2,8 +2,8 @@ import { copyFile, mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { POST } from "@/app/api/library/points/route";
-import { PATCH } from "@/app/api/library/points/[id]/route";
+import { POST } from "@/app/api/library/points/handler";
+import { PATCH } from "@/app/api/library/points/[id]/handler";
 import type { ResumeLibrary } from "@/lib/schemas/resume-data";
 
 const roots: string[] = [];

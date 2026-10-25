@@ -26,9 +26,9 @@ vi.mock("@/lib/pdf/layout-analysis", async (original) => ({
 vi.mock("@/lib/ai/provider-factory", () => ({
   createAiProvider: () => ({ name: "gemini", writeAchievement: mocks.write }),
 }));
-import { POST as apply } from "@/app/api/resume/edit/route";
-import { GET as skills } from "@/app/api/resume/skills/route";
-import { POST as write } from "@/app/api/ai/achievement/route";
+import { POST as apply } from "@/app/api/resume/edit/handler";
+import { GET as skills } from "@/app/api/resume/skills/handler";
+import { POST as write } from "@/app/api/ai/achievement/handler";
 import { PdfCompileError } from "@/lib/pdf/compile-service";
 import {
   studioApplyInput,
