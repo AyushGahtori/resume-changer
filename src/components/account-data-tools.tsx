@@ -53,8 +53,10 @@ export default function AccountDataTools() {
     setCheckingPdf(true);
     setPdfNotice("");
     try {
-      const response = await apiFetch("/api/account/verify-pdf", {
+      const response = await apiFetch("/api/compile", {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ checkService: true }),
       });
       const result = await response.json();
       if (!response.ok || !result.ready || result.pageCount !== 1)

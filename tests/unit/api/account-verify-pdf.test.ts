@@ -1,18 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import example from "../../../examples/sample-resume-library.json";
-const mocks = vi.hoisted(() => ({ load: vi.fn(), compile: vi.fn() }));
-vi.mock("../../../src/lib/data/loaders", () => ({
-  loadResumeLibrary: mocks.load,
-}));
+const mocks = vi.hoisted(() => ({ compile: vi.fn() }));
 vi.mock("../../../src/lib/pdf/compile-service", async (original) => ({
   ...(await original<typeof import("../../../src/lib/pdf/compile-service")>()),
   compileLatexToPdf: mocks.compile,
 }));
-import { POST } from "../../../src/app/api/account/verify-pdf/route";
+import { POST } from "../../../src/app/api/compile/route";
 import { PdfCompileError } from "../../../src/lib/pdf/compile-service";
 beforeEach(() => {
   vi.clearAllMocks();
-  mocks.load.mockResolvedValue(example);
   mocks.compile.mockResolvedValue({
     pdf: Buffer.from("%PDF-fictional"),
     pageCount: 1,
@@ -21,13 +16,14 @@ beforeEach(() => {
 describe("authenticated PDF service diagnostic", () => {
   it("compiles fictional evidence and returns only readiness metadata", async () => {
     const response = await POST(
-      new Request("http://localhost/api/account/verify-pdf", {
+      new Request("http://localhost/api/compile", {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ checkService: true }),
       }),
     );
     expect(await response.json()).toEqual({ ready: true, pageCount: 1 });
-    expect(mocks.load).toHaveBeenCalledWith({ source: "demo" });
-    expect(mocks.compile.mock.calls[0][0]).toContain("Jordan Example");
+    expect(mocks.compile.mock.calls[0][0]).toContain("Fictional sample");
   });
   it("reports a controlled compiler failure without exposing diagnostics", async () => {
     mocks.compile.mockRejectedValue(
@@ -39,8 +35,10 @@ describe("authenticated PDF service diagnostic", () => {
       ),
     );
     const response = await POST(
-      new Request("http://localhost/api/account/verify-pdf", {
+      new Request("http://localhost/api/compile", {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ checkService: true }),
       }),
     );
     expect(response.status).toBe(503);

@@ -1,6 +1,8 @@
 import { protectAccountRoute } from "@/lib/cloud/protect-route";
 import { NextResponse } from "next/server";
 import { createHash } from "node:crypto";
+import { z } from "zod";
+import { buildPdfServiceCheckLatex } from "@/lib/pdf/service-check";
 import {
   CompileRequestSchema,
   compileLatexToPdf,
@@ -21,7 +23,15 @@ async function POSTForAccount(request: Request) {
     );
   }
 
-  const parsed = CompileRequestSchema.safeParse(body);
+  // Share the existing authenticated, quota-bound compiler function so free
+  // hosting does not need an additional serverless endpoint for diagnostics.
+  const serviceCheck = z
+    .object({ checkService: z.literal(true) })
+    .strict()
+    .safeParse(body).success;
+  const parsed = CompileRequestSchema.safeParse(
+    serviceCheck ? { latex: buildPdfServiceCheckLatex() } : body,
+  );
   if (!parsed.success) {
     return NextResponse.json(
       {
@@ -37,6 +47,7 @@ async function POSTForAccount(request: Request) {
 
   try {
     const { pdf, pageCount } = await compileLatexToPdf(parsed.data.latex);
+    if (serviceCheck) return NextResponse.json({ ready: true, pageCount });
     const pdfBytes = Buffer.from(pdf);
     return new Response(new Uint8Array(pdf), {
       headers: {
@@ -55,7 +66,9 @@ async function POSTForAccount(request: Request) {
         {
           error: error.message,
           code: error.code,
-          diagnostics: error.diagnostics || undefined,
+          ...(serviceCheck
+            ? { ready: false }
+            : { diagnostics: error.diagnostics || undefined }),
         },
         { status: error.status },
       );

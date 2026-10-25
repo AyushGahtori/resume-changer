@@ -4,11 +4,19 @@ import type { ResumeLibrary } from "../../src/lib/schemas/resume-data";
 import { renderResumeLatex } from "../../src/lib/latex/render-resume";
 import { compileLatexToPdf } from "../../src/lib/pdf/compile-service";
 import { analyzePdfLayout } from "../../src/lib/pdf/layout-analysis";
+import { buildPdfServiceCheckLatex } from "../../src/lib/pdf/service-check";
 
 const library = example as ResumeLibrary;
 const ids = library.jobs.flatMap((job) => job.points.map((point) => point.id));
 
 describe("packaged production PDF runtime", () => {
+  it("compiles the fixed service readiness sample without loading personal data", async () => {
+    const compiled = await compileLatexToPdf(buildPdfServiceCheckLatex());
+    expect(compiled.pageCount).toBe(1);
+    expect((await analyzePdfLayout(compiled.pdf)).text).toContain(
+      "Fictional sample",
+    );
+  });
   it("compiles the approved template offline and measures its real one-page output", async () => {
     const latex = renderResumeLatex({
       library,

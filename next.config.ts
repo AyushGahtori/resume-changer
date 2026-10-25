@@ -12,7 +12,6 @@ const nextConfig: NextConfig = {
   outputFileTracingRoot: path.resolve(process.cwd()),
   serverExternalPackages: ["pdfjs-dist", "@napi-rs/canvas"],
   outputFileTracingIncludes: {
-    "/api/account/verify-pdf": pdfAssets,
     "/api/compile": pdfAssets,
     "/api/ai/auto-tailor": pdfAssets,
     "/api/resume/edit": pdfAssets,
