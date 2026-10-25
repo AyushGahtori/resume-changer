@@ -208,3 +208,20 @@ destination identity and private-storage access have been verified.
   build caches were not explicitly excluded. Anchored private-data exclusions at
   the repository root, excluded all local build outputs, and added a packaging
   regression that checks both sensitive exclusions and required source inputs.
+
+- The owner signed into the staged production app. The import UI verified the
+  exact destination email, imported all 25 points/100 skills/3 credentials and
+  three saved resumes, and verified authenticated library/LaTeX/PDF read-back
+  hashes. Original JSON hashes are unchanged. The receipt and screenshot are in
+  ignored `.runtime` files, and no personal records entered Git or CI.
+- A real anonymous Firestore request for the imported library was denied (403).
+  Signed-out app API requests are denied (401). The deployed functions execute in
+  Frankfurt; candidate bundle metadata reports roughly 41–43 MB function outputs.
+- A browser console check caught Firebase's unapplied OAuth domain list despite
+  a successful provider deployment. Applied the exact owned domains through the
+  CLI's authenticated management client, then independently read them back.
+  Added a pinned, repeatable domain-sync/check command and regressions.
+- Added a bounded authenticated PDF readiness check in Settings. It compiles only
+  fictional fixture evidence, returns readiness metadata, and leaves history
+  unchanged. This enables verification of the actual hosted compiler without
+  creating test resumes in the owner's account.

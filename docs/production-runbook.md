@@ -36,6 +36,19 @@ data to previews. Database rules/indexes need their own verified deployment:
 npx -y firebase-tools@15.34.1 deploy --only firestore --project resume-changer-ayush-prod
 ```
 
+Firebase CLI 15.34.1 enables the provider but does not apply `authorizedDomains`
+from `firebase.json`. Apply and verify the exact website domains explicitly:
+
+```powershell
+npm exec --yes --package=firebase-tools@15.34.1 -- node scripts/sync-auth-domains.mjs --project resume-changer-ayush-prod --apply
+```
+
+Omit `--apply` for a read-only configuration check. This command uses the pinned
+CLI's existing login and refuses a project that differs from `.firebaserc`. It
+reads the backend setting back and fails if the requested list was not applied.
+The production website and protected project alias must both be authorized;
+preview deployments receive no production Firebase configuration.
+
 This administrative operation uses the operator's CLI login. No administrator
 key is stored in the application or repository. Rule changes require
 `npm run test:security` first. Enterprise indexes use explicit dense indexes,
@@ -86,6 +99,12 @@ directories, the fixed template and a formatting-command allowlist, Tectonic's
 untrusted/offline mode, bounded output, and time limits. Files are removed after
 each request. Hosted requests share a 250-second processing budget inside the
 300-second function limit.
+
+The Settings page also provides **Check PDF service**. It compiles a fictional
+one-page sample through the actual hosted runtime, consumes the account's compile
+allowance, and leaves saved history and private source data unchanged. Use it
+before promoting a candidate; a successful build alone does not verify runtime
+asset tracing or compiler execution.
 
 ## Migration and recovery
 

@@ -45,7 +45,35 @@ export default function AccountDataTools() {
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
+  const [checkingPdf, setCheckingPdf] = useState(false);
+  const [pdfNotice, setPdfNotice] = useState("");
   if (!account) return null;
+
+  async function checkPdfService() {
+    setCheckingPdf(true);
+    setPdfNotice("");
+    try {
+      const response = await apiFetch("/api/account/verify-pdf", {
+        method: "POST",
+      });
+      const result = await response.json();
+      if (!response.ok || !result.ready || result.pageCount !== 1)
+        throw new Error(
+          result.error ?? "The PDF service check could not finish.",
+        );
+      setPdfNotice(
+        "PDF service ready. A one-page sample compiled successfully; your saved resumes were unchanged.",
+      );
+    } catch (reason) {
+      setPdfNotice(
+        reason instanceof Error
+          ? reason.message
+          : "The PDF service is temporarily unavailable.",
+      );
+    } finally {
+      setCheckingPdf(false);
+    }
+  }
 
   async function importFile() {
     if (!file || !account) return;
@@ -241,8 +269,16 @@ export default function AccountDataTools() {
             <Download aria-hidden="true" size={17} />
             Export my library
           </button>
+          <button
+            disabled={busy || checkingPdf}
+            type="button"
+            onClick={checkPdfService}
+          >
+            {checkingPdf ? "Checking PDF service…" : "Check PDF service"}
+          </button>
         </div>
         {notice && <p role="status">{notice}</p>}
+        {pdfNotice && <p role="status">{pdfNotice}</p>}
         {error && (
           <p role="alert" className="account-entry-error">
             {error}

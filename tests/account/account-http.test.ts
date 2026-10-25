@@ -109,6 +109,7 @@ describe("actual authenticated HTTP and database flow", () => {
       ["/api/resume/edit", "POST"],
       ["/api/resume/skills", "GET"],
       ["/api/account/library", "GET"],
+      ["/api/account/verify-pdf", "POST"],
     ];
     for (const [route, method] of routes) {
       const response = await call(
