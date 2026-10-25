@@ -5995,7 +5995,7 @@ a:focus-visible {
   gap: 10px;
   font-size: var(--type-label-size);
   line-height: var(--type-label-line-height);
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
 }
 
 .generation-heading .eyebrow > span.generation-step-chip {
@@ -6007,41 +6007,28 @@ a:focus-visible {
   border: 1px solid color-mix(in srgb, var(--imagination) 22%, var(--line));
   border-radius: 999px;
   background: color-mix(in srgb, var(--surface) 78%, var(--imagination-soft));
-  color: var(--imagination-hover);
+  color: var(--quiet);
   font-size: 10px;
   font-variant-numeric: tabular-nums;
   font-weight: 650;
   letter-spacing: 0.03em;
 }
 
-.generation-step-track {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-}
-
-.generation-heading .eyebrow .generation-step-track {
-  margin: 0;
-  color: inherit;
-  font-size: inherit;
-  font-weight: inherit;
-  letter-spacing: normal;
-}
-
-.generation-step-track i {
-  width: 9px;
+.generation-heading .eyebrow > span.generation-step-chip::before {
+  width: 36px;
   height: 3px;
   border-radius: 999px;
-  background: var(--line-strong);
-}
-
-.generation-step-track i:first-child {
-  background: var(--accent);
-}
-
-.generation-step-track i:nth-child(2) {
-  width: 15px;
-  background: var(--imagination);
+  background: linear-gradient(
+    90deg,
+    var(--accent) 0 8px,
+    transparent 8px 11px,
+    var(--imagination) 11px 22px,
+    transparent 22px 25px,
+    var(--line-strong) 25px 30px,
+    transparent 30px 33px,
+    var(--line-strong) 33px 36px
+  );
+  content: "";
 }
 
 .generation-heading .page-intro {
@@ -6389,10 +6376,10 @@ a:focus-visible {
 
 .generation-section-heading h2 {
   margin: 0;
-  font-size: 22px;
-  line-height: 1.25;
-  font-weight: 650;
-  letter-spacing: -0.02em;
+  font-size: var(--type-section-heading-size);
+  line-height: var(--type-section-heading-line-height);
+  font-weight: 600;
+  letter-spacing: 0;
 }
 
 .generation-selection-title {
@@ -6415,6 +6402,7 @@ a:focus-visible {
 }
 
 .generation-selection-eyebrow {
+  display: block;
   margin: 0 0 2px;
   color: var(--accent-hover);
   font-size: 9px;
@@ -7541,6 +7529,7 @@ a:focus-visible {
   border: 1.5px solid var(--line-strong);
   border-radius: 5px;
   background: var(--surface);
+  accent-color: var(--imagination);
   cursor: pointer;
   transition:
     background 130ms ease,

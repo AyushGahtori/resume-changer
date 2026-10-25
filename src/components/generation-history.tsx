@@ -207,7 +207,7 @@ export default function GenerationHistory() {
       <div className="history-toolbar">
         <div className="history-search-group">
           <label className="history-search-label" htmlFor="history-search">
-            Find a saved resume
+            Search generation history
           </label>
           <div className="history-search-field">
             <Search aria-hidden="true" size={18} />

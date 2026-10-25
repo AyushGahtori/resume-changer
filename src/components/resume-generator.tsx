@@ -1431,15 +1431,7 @@ export default function ResumeGenerator({ library, source }: Props) {
         <div>
           <p className="eyebrow">
             MANUAL GENERATION{" "}
-            <span className="generation-step-chip">
-              <span aria-hidden="true" className="generation-step-track">
-                <i />
-                <i />
-                <i />
-                <i />
-              </span>
-              02 / 04
-            </span>
+            <span className="generation-step-chip">02 / 04</span>
           </p>
           <h1 id="page-title">
             {result ? "Your next chapter." : "Build your resume."}
@@ -1608,17 +1600,17 @@ export default function ResumeGenerator({ library, source }: Props) {
                       <FileText size={18} strokeWidth={1.8} />
                     </span>
                     <div>
-                      <p className="generation-selection-eyebrow">
+                      <span className="generation-selection-eyebrow">
                         YOUR EVIDENCE
-                      </p>
+                      </span>
                       <h2 id="selection-title">Choose achievements</h2>
-                      <p className="generation-selection-helper">
+                      <div className="generation-selection-helper">
                         Pick the details you want to bring into this resume.
-                      </p>
+                      </div>
                       <p className="generation-selection-count">
                         <strong>{selectedIds.length} selected</strong>
                         <span aria-hidden="true">·</span>
-                        <span>{enabledIds.length} available</span>
+                        <span>{enabledIds.length} enabled</span>
                       </p>
                     </div>
                   </div>
