@@ -3,8 +3,5 @@
   "framework": "nextjs",
   "buildCommand": "npm run build:vercel",
   "installCommand": "npm ci",
-  "regions": ["fra1"],
-  "functions": {
-    "src/app/api/**/route.ts": { "maxDuration": 300 }
-  }
+  "regions": ["fra1"]
 }
