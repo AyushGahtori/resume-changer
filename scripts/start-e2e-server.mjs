@@ -69,6 +69,7 @@ const server = spawn(process.execPath, [nextCli, "start", "--port", port], {
     ...process.env,
     RESUME_APP_MODE: "local",
     RESUME_LIBRARY_ROOT: fixtureRoot,
+    GITHUB_IMPORT_E2E_HARNESS: "1",
     NEXT_DIST_DIR: distDir,
     NEXT_TSCONFIG: tsconfig,
     NEXT_TELEMETRY_DISABLED: "1",
