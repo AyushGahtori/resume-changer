@@ -23,7 +23,7 @@ import {
   notificationsProps,
   setupProps,
   trustRailProps,
-} from "../../../../tests/fixtures/github/gate0";
+} from "./fixtures";
 import type {
   AchievementReviewProps,
   AnalysisStatusProps,

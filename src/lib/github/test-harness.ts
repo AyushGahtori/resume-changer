@@ -4,6 +4,7 @@ export function isGithubImportHarnessEnabled(
   environment: Record<string, string | undefined>,
 ) {
   return (
+    environment.VERCEL !== "1" &&
     environment[GITHUB_IMPORT_HARNESS_ENV] === "1" &&
     environment.RESUME_APP_MODE === "local"
   );

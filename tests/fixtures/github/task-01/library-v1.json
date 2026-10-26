@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "profile": {
+    "id": "profile-synthetic",
+    "fullName": "Synthetic Candidate",
+    "links": [],
+    "education": []
+  },
+  "jobs": [
+    {
+      "id": "job-synthetic",
+      "company": "Example Labs",
+      "title": "Engineer",
+      "employmentType": "full-time",
+      "startDate": "2022-01",
+      "endDate": null,
+      "points": []
+    }
+  ],
+  "projects": [
+    {
+      "id": "project-synthetic",
+      "name": "Synthetic Project",
+      "role": "Project maintainer",
+      "url": "https://demo.example/project-home",
+      "description": "Historical synthetic project description.",
+      "startDate": "2021-05",
+      "endDate": "2021-11",
+      "points": [
+        {
+          "id": "achievement-synthetic",
+          "text": "Reduced response time in a synthetic service.",
+          "tags": ["performance", "backend"],
+          "skillIds": ["skill-typescript"],
+          "metrics": [
+            {
+              "id": "metric-synthetic-response-time",
+              "label": "Response time reduction",
+              "value": "120",
+              "unit": "ms",
+              "context": "Synthetic benchmark run",
+              "evidence": "The synthetic benchmark records 120 ms lower response time."
+            }
+          ],
+          "source": {
+            "type": "user-notes",
+            "label": "Synthetic fixture"
+          },
+          "enabled": false,
+          "context": "Historical synthetic context"
+        }
+      ]
+    }
+  ],
+  "skills": [
+    {
+      "id": "skill-typescript",
+      "name": "TypeScript",
+      "aliases": ["TS"],
+      "sources": ["user-notes"],
+      "isListedOnCurrentResume": false,
+      "evidenceAchievementIds": ["achievement-synthetic"]
+    }
+  ],
+  "credentials": [],
+  "preferences": {
+    "sectionOrder": ["experience", "projects", "education", "skills"],
+    "maxPages": 1
+  }
+}

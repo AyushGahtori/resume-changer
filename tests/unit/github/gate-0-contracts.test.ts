@@ -162,6 +162,13 @@ describe("GitHub import Gate 0 contracts", () => {
   });
 
   it("accepts only the explicit local E2E flag for the component harness", () => {
+    expect(
+      isGithubImportHarnessEnabled({
+        VERCEL: "1",
+        GITHUB_IMPORT_E2E_HARNESS: "1",
+        RESUME_APP_MODE: "local",
+      }),
+    ).toBe(false);
     expect(isGithubImportHarnessEnabled({})).toBe(false);
     expect(
       isGithubImportHarnessEnabled({
