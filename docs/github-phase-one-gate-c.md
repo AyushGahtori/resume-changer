@@ -57,6 +57,17 @@ A fixture-only success is not a live GitHub connection. Missing credentials or h
 
 ## Delivery boundary
 
+### Interactive sign-in follow-up
+
+The initial HTTP 200 check verified that the sign-in page rendered; it did not
+verify Google's origin authorization. The shared immutable Preview hostname and
+the stable `phase-one` hostname were missing from Firebase's authorized domains.
+They are now explicit entries in `firebase.json`, with an administrative apply
+and backend read-back through the existing pinned domain-sync tool. Production
+entries and database rules stay intact. Regression tests cover the approved
+Preview addresses, wildcard exclusion and safe, specific unauthorized-domain
+feedback. A real Google login still requires the user's interaction.
+
 Verified code commit: `329ac6de45228c9bc1dace4b9a18a06072e99c09`.
 [Preview](https://resume-changer-1a9nxylqw-ayushs-projects-ab23dbca.vercel.app) is READY; authenticated deployment checks returned sign-in 200, E2E harness 404 and unauthenticated job API 401 with `AUTH_REQUIRED`.
 [Quality checks](https://github.com/AyushGahtori/resume-changer/actions/runs/40597705330): all eight jobs passed, including four browser shards, account security, hosted PDF, assembled GitHub journey and local quality.
