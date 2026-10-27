@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "node scripts/run-local.mjs dev",
     "build": "node scripts/build-github-worker.mjs && next build",
-    "build:vercel": "node scripts/prepare-pdf-runtime.mjs && node scripts/build-github-worker.mjs && next build",
+    "build:vercel": "node scripts/check-hosted-account-config.mjs && node scripts/prepare-pdf-runtime.mjs && node scripts/build-github-worker.mjs && next build",
     "start": "node scripts/run-local.mjs start",
     "worker:build": "node scripts/build-github-worker.mjs",
     "test:worker-smoke": "node scripts/test-github-worker-smoke.mjs",

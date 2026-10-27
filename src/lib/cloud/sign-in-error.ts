@@ -3,6 +3,8 @@ export function signInErrorMessage(reason: unknown): string {
   const code =
     reason && typeof reason === "object" && "code" in reason ? reason.code : "";
   switch (code) {
+    case "app/account-config-incomplete":
+      return "Sign-in is not configured for this deployment. Please contact the app owner.";
     case "auth/unauthorized-domain":
       return "Google sign-in is not configured for this website address. Open the approved workspace link or contact the app owner.";
     case "auth/popup-blocked":

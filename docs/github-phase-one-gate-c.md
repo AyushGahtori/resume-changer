@@ -68,6 +68,13 @@ entries and database rules stay intact. Regression tests cover the approved
 Preview addresses, wildcard exclusion and safe, specific unauthorized-domain
 feedback. A real Google login still requires the user's interaction.
 
+The next interactive attempt exposed a second cause: all Vercel Firebase variables
+were Production-only. Inspecting the deployed sign-in bundle confirmed unresolved
+client configuration. The seven account/origin settings are now scoped to Preview
+and `phase-one` only. A fresh build must capture them. The hosted build command now
+rejects incomplete account configuration, with regressions for missing values,
+hosted/local isolation, emulator rejection and specific browser feedback.
+
 Verified code commit: `329ac6de45228c9bc1dace4b9a18a06072e99c09`.
 [Preview](https://resume-changer-1a9nxylqw-ayushs-projects-ab23dbca.vercel.app) is READY; authenticated deployment checks returned sign-in 200, E2E harness 404 and unauthenticated job API 401 with `AUTH_REQUIRED`.
 [Quality checks](https://github.com/AyushGahtori/resume-changer/actions/runs/40597705330): all eight jobs passed, including four browser shards, account security, hosted PDF, assembled GitHub journey and local quality.

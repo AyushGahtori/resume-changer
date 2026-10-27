@@ -57,6 +57,14 @@ The previously shared `resume-changer-1a9nxylqw-ayushs-projects-ab23dbca.vercel.
 is retained explicitly so that link works too. New Preview builds under the
 stable branch hostname do not require another Firebase domain change.
 
+Firebase domains alone are insufficient: Vercel environment variables are scoped
+separately. The approved `phase-one` branch has the five public Firebase settings,
+`RESUME_APP_MODE=firebase` and its exact `RESUME_APP_ORIGIN` configured for Preview
+only, restricted to that branch. Production settings are unchanged. Rebuild after
+changing these values because Next embeds public settings at build time. Other
+Preview branches must receive their own approved configuration; the hosted build
+guard rejects missing account settings rather than publishing a broken sign-in page.
+
 This administrative operation uses the operator's CLI login. No administrator
 key is stored in the application or repository. Rule changes require
 `npm run test:security` first. Enterprise indexes use explicit dense indexes,

@@ -1,0 +1,67 @@
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { checkHostedAccountConfig } from "../../../scripts/check-hosted-account-config.mjs";
+import { signInErrorMessage } from "../../../src/lib/cloud/sign-in-error";
+import { getFirebaseClientConfig } from "../../../src/lib/cloud/config";
+
+afterEach(() => vi.unstubAllEnvs());
+
+const configured = {
+  VERCEL: "1",
+  RESUME_APP_MODE: "firebase",
+  NEXT_PUBLIC_FIREBASE_API_KEY: "fictional-public-key",
+  NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: "example.firebaseapp.com",
+  NEXT_PUBLIC_FIREBASE_PROJECT_ID: "example",
+  NEXT_PUBLIC_FIREBASE_APP_ID: "fictional-app",
+  NEXT_PUBLIC_FIREBASE_DATABASE_ID: "resume-changer",
+};
+describe("hosted sign-in configuration", () => {
+  it("tags incomplete browser config so sign-in can explain the real failure", () => {
+    vi.stubEnv("NEXT_PUBLIC_FIREBASE_API_KEY", "");
+    try {
+      getFirebaseClientConfig();
+      expect.fail("Missing configuration must fail before Google sign-in.");
+    } catch (error) {
+      expect(error).toMatchObject({ code: "app/account-config-incomplete" });
+      expect(signInErrorMessage(error)).toContain(
+        "not configured for this deployment",
+      );
+    }
+  });
+  it("rejects the empty Preview configuration that previously produced a broken sign-in page", () => {
+    expect(() =>
+      checkHostedAccountConfig({ VERCEL: "1", VERCEL_ENV: "preview" }),
+    ).toThrow(/NEXT_PUBLIC_FIREBASE_API_KEY/);
+    for (const key of Object.keys(configured).filter((key) =>
+      key.startsWith("NEXT_PUBLIC_"),
+    )) {
+      expect(() =>
+        checkHostedAccountConfig({ ...configured, [key]: "" }),
+      ).toThrow(key);
+    }
+  });
+  it("accepts complete hosted configuration and keeps local builds independent", () => {
+    expect(() => checkHostedAccountConfig(configured)).not.toThrow();
+    expect(() => checkHostedAccountConfig({})).not.toThrow();
+  });
+  it("rejects local auth mode and emulator access in hosted builds", () => {
+    expect(() =>
+      checkHostedAccountConfig({ ...configured, RESUME_APP_MODE: "local" }),
+    ).toThrow(/mode/);
+    expect(() =>
+      checkHostedAccountConfig({
+        ...configured,
+        NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST: "127.0.0.1:9099",
+      }),
+    ).toThrow(/emulators/);
+  });
+  it("explains missing deployment configuration without revealing its values", () => {
+    expect(
+      signInErrorMessage({
+        code: "app/account-config-incomplete",
+        message: "secret",
+      }),
+    ).toBe(
+      "Sign-in is not configured for this deployment. Please contact the app owner.",
+    );
+  });
+});
