@@ -8,8 +8,15 @@ import type {
   ResumeDraftInput,
   ResumeDraftResult,
 } from "./contracts";
+import type {
+  RepositoryExtractionGenerationInput,
+  RepositoryExtractionGenerationResult,
+} from "./repository-extraction";
 
 export interface AiProvider {
+  extractRepositoryAchievements(
+    input: RepositoryExtractionGenerationInput,
+  ): Promise<RepositoryExtractionGenerationResult>;
   writeAchievement?(
     operation: import("./achievement-writing").AchievementWritingOperation,
     input: import("./achievement-writing").AchievementWritingInput,

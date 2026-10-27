@@ -54,6 +54,7 @@ export function createUnavailableRepositoryInspector(): RepositoryInspectorPort 
   return {
     resolveSnapshot: unavailableAsync,
     inventory: unavailableAsync,
+    readSelectedFiles: unavailableAsync,
   };
 }
 
@@ -85,8 +86,12 @@ export function createUnavailableImportStore(): ImportStorePort {
   return {
     create: unavailableAsync,
     get: unavailableAsync,
+    completePreparation: unavailableAsync,
+    completeAnalysis: unavailableAsync,
+    discard: unavailableAsync,
     updateExpectedVersion: unavailableAsync,
     cacheGet: unavailableAsync,
+    cacheGetByKey: unavailableAsync,
     cachePut: unavailableAsync,
     expire: async (): Promise<Result<ImportStoreExpirySummary>> =>
       unavailable(),
@@ -106,6 +111,7 @@ export function createUnavailableDeferredMeasurementTaskStore(): DeferredMeasure
 export function createUnavailableJobStore(): JobStorePort {
   return {
     enqueue: unavailableAsync,
+    getByRunId: unavailableAsync,
     claim: unavailableAsync,
     renew: unavailableAsync,
     checkpoint: unavailableAsync,
@@ -136,6 +142,7 @@ export function createUnavailableMeasurementPort(): MeasurementPort {
 
 export function createUnavailableMeasurementService(): MeasurementServicePort {
   return {
+    review: unavailableAsync,
     questions: unavailableAsync,
     answer: unavailableAsync,
     defer: unavailableAsync,

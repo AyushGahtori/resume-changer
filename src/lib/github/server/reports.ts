@@ -1,5 +1,2 @@
-import { createUnavailableReportParser } from "./unavailable";
-import type { ReportParserPort } from "../ports";
-
-export const createReportParser: () => ReportParserPort =
-  createUnavailableReportParser;
+import "server-only";
+export * from "./reports-core";

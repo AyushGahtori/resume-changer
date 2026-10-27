@@ -341,6 +341,15 @@ export type BudgetSummary = z.infer<typeof BudgetSummarySchema>;
 
 export const PreparedSelectionSchema = z
   .object({
+    snapshot: z
+      .object({
+        treeSha: sha,
+        observedAt: utc,
+        upstreamBytes: z.number().int().nonnegative().optional(),
+        maxFetchedFileBytes: z.number().int().nonnegative().optional(),
+      })
+      .strict()
+      .optional(),
     importId: id,
     runId: id,
     version: z.number().int().positive(),
@@ -441,6 +450,12 @@ export const ImportRecordSchema = z
       "expired",
     ]),
     activeRunId: id.nullable(),
+    pinnedFileIds: z
+      .array(id)
+      .max(GITHUB_IMPORT_POLICY.filesPerRequest)
+      .default([]),
+    removedFileIds: z.array(id).max(2_000).default([]),
+    candidateInventoryRef: sha256.nullable().default(null),
     consent: z
       .object({
         reference: id,
@@ -452,8 +467,31 @@ export const ImportRecordSchema = z
       .nullable(),
     preparedSelectionRef: sha256.nullable(),
     resultRef: sha256.nullable(),
+    resultRunId: id.nullable().default(null),
+    approvalKeyHash: sha256.nullable().default(null),
     draftRefs: z.array(id).max(100),
     draftEdits: z.array(DraftEditSchema).max(GITHUB_IMPORT_POLICY.draftPoints),
+    reviewHistory: z
+      .array(
+        z
+          .object({
+            runId: id,
+            selectionVersion: z.number().int().positive(),
+            selectionHash: sha256,
+            preparedSelectionRef: sha256.nullable(),
+            resultRef: sha256.nullable(),
+            draftRefs: z.array(id).max(100),
+            draftEdits: z
+              .array(DraftEditSchema)
+              .max(GITHUB_IMPORT_POLICY.draftPoints),
+            destinationProjectId: id,
+            savedIds: z.array(id).max(100),
+            createdAt: utc,
+          })
+          .strict(),
+      )
+      .max(20)
+      .default([]),
     savedIds: z.array(id).max(100),
     retentionDeadline: utc,
     createdAt: utc,
@@ -504,7 +542,9 @@ export const JobRecordSchema = z
     id,
     runId: id,
     importId: id,
+    projectId: id,
     importVersion: z.number().int().positive(),
+    selectionVersion: z.number().int().positive(),
     idempotencyKeyHash: sha256,
     kind: z.enum(["prepare", "analyze"]),
     state: z.enum([
@@ -673,6 +713,17 @@ export type AnalysisResult = z.infer<typeof AnalysisResultSchema>;
 export const ImportCacheIdentitySchema = z.discriminatedUnion("kind", [
   z
     .object({
+      kind: z.literal("inventory"),
+      repositoryId: z.string().regex(/^\d{1,30}$/),
+      commitSha: sha,
+      scope: RepositoryScopeSchema,
+      inputHash: sha256,
+      selectorVersion: shortText.max(100),
+      safetyPolicyVersion: shortText.max(100),
+    })
+    .strict(),
+  z
+    .object({
       kind: z.literal("safe-content"),
       repositoryId: z.string().regex(/^\d{1,30}$/),
       blobSha: sha,
@@ -685,11 +736,8 @@ export const ImportCacheIdentitySchema = z.discriminatedUnion("kind", [
       kind: z.literal("selected-bundle"),
       repositoryId: z.string().regex(/^\d{1,30}$/),
       commitSha: sha,
-      sourceHashes: z.array(sha).min(1).max(100),
-      selectedFileIds: z
-        .array(id)
-        .min(1)
-        .max(GITHUB_IMPORT_POLICY.filesPerRequest),
+      sourceHashes: z.array(sha).max(100),
+      selectedFileIds: z.array(id).max(GITHUB_IMPORT_POLICY.filesPerRequest),
       selectionHash: sha256,
       scope: RepositoryScopeSchema,
       contributionContextHash: sha256,
@@ -718,6 +766,14 @@ export const ImportCacheIdentitySchema = z.discriminatedUnion("kind", [
 export type ImportCacheIdentity = z.infer<typeof ImportCacheIdentitySchema>;
 
 export const ImportCacheValueSchema = z.discriminatedUnion("kind", [
+  z
+    .object({
+      kind: z.literal("inventory"),
+      candidates: z.array(FileCandidateSchema).max(2_000),
+      completeness: z.enum(["complete", "partial"]),
+      limitations: z.array(z.string().max(500)).max(100),
+    })
+    .strict(),
   z
     .object({
       kind: z.literal("safe-content"),
@@ -783,10 +839,12 @@ export interface BudgetLedgerRef {
   reserve(input: {
     operation: string;
     amount: number;
+    selection?: PreparedSelection;
   }): Promise<Result<{ reservationId: string }>>;
   commitUsage(input: {
     reservationId: string;
     actual: number | null;
+    providerUsage?: AnalysisResult["usage"];
   }): Promise<Result<BudgetSnapshot>>;
   checkSelection(input: {
     files: number;
@@ -831,6 +889,27 @@ export const ImportReviewStateSchema = z
     import: ImportRecordSchema,
     prepared: PreparedSelectionSchema.nullable(),
     result: AnalysisResultSchema.nullable(),
+    candidates: z.array(FileCandidateSchema).max(2_000).default([]),
+    priorReviews: z
+      .array(
+        z
+          .object({
+            runId: id,
+            selectionVersion: z.number().int().positive(),
+            selectionHash: sha256,
+            destinationProjectId: id,
+            prepared: PreparedSelectionSchema.nullable(),
+            result: AnalysisResultSchema.nullable(),
+            draftEdits: z
+              .array(DraftEditSchema)
+              .max(GITHUB_IMPORT_POLICY.draftPoints),
+            savedIds: z.array(id).max(100),
+            createdAt: utc,
+          })
+          .strict(),
+      )
+      .max(20)
+      .default([]),
     questions: z.array(ImportQuestionSchema).max(40),
     measurementResults: z.array(MeasurementResultSchema).max(40),
     canSaveDraftIds: z.array(id).max(8),

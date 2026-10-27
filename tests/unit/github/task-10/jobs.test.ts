@@ -154,6 +154,28 @@ afterEach(async () => {
 });
 
 describe("GitHub durable job store", () => {
+  it("rejects an oversized checkpoint without corrupting durable job state", async () => {
+    const runtime = await makeRuntime();
+    await enqueue(runtime.store);
+    const job = await claim(runtime.store);
+    const file = join(runtime.rootDir, "data", "github-jobs", "jobs.json");
+    const before = await readFile(file, "utf8");
+    expectError(
+      await runtime.store.checkpoint({
+        jobId: job.id,
+        workerId: job.lease!.ownerId,
+        fence: job.executionFence,
+        expectedCheckpointVersion: job.checkpoint.version,
+        checkpoint: { stage: "running", providerState: "not-started" },
+        runnerData: { oversized: "x".repeat(33 * 1024 * 1024) },
+      }),
+      "limit-exceeded",
+    );
+    expect(await readFile(file, "utf8")).toBe(before);
+    expect(unwrap(await runtime.store.get({ jobId: job.id })).version).toBe(
+      job.version,
+    );
+  });
   it("deduplicates identical enqueue requests and rejects key reuse with changed inputs", async () => {
     const { store } = await makeRuntime();
     const first = await enqueue(store);

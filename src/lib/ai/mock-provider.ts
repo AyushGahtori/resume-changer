@@ -8,6 +8,31 @@ import type { AiProvider } from "./provider";
 
 export const mockAiProvider: AiProvider = {
   name: "mock",
+  async extractRepositoryAchievements(input) {
+    if (!input.prompt.trim()) {
+      throw new Error("Repository extraction prompt cannot be empty.");
+    }
+    return {
+      text: JSON.stringify({
+        projectSummary: "",
+        claims: [],
+        drafts: [],
+        questionSuggestions: [],
+        limitations: [
+          "The mock provider does not produce repository recommendations.",
+        ],
+      }),
+      model: "mock",
+      finishReason: "STOP",
+      usage: {
+        promptTokens: null,
+        cachedTokens: null,
+        outputTokens: null,
+        reasoningTokens: null,
+        totalTokens: null,
+      },
+    };
+  },
   async analyzeJobDescription(input) {
     JobAnalysisInputSchema.parse(input);
     return {

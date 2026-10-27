@@ -132,6 +132,7 @@ export const JobRecordSchema = z
     initialAllowance: InitialAllowanceSchema,
     usageLedger: UsageLedgerSchema,
     checkpoint: JobCheckpointSchema,
+    runnerData: z.record(z.string(), z.unknown()).default({}),
     executionFence: z.number().int().min(0),
     lease: LeaseSchema.nullable(),
     cancelRequestedAt: IsoDateSchema.nullable(),
@@ -283,6 +284,7 @@ const EnqueueInputSchema = z
 
 const ClaimInputSchema = z
   .object({
+    jobId: SafeIdSchema.optional(),
     workerId: SafeIdSchema,
     kinds: z.array(JobKindSchema).min(1).max(2).optional(),
     leaseDurationMs: z.number().int().positive().max(MAX_LEASE_MS).optional(),
@@ -298,6 +300,7 @@ const FencedInputSchema = z
   .strict();
 
 const CheckpointInputSchema = FencedInputSchema.extend({
+  runnerData: z.record(z.string(), z.unknown()).optional(),
   expectedCheckpointVersion: z.number().int().min(0),
   checkpoint: z
     .object({
@@ -329,7 +332,7 @@ const CancelInputSchema = z.object({ jobId: SafeIdSchema }).strict();
 const CompleteInputSchema = FencedInputSchema.extend({
   resultRef: SafeIdSchema,
   resultExpiresAt: IsoDateSchema.optional(),
-  eventType: z.enum(["ready-to-review", "needs-input"]).optional(),
+  eventType: z.enum(["ready-to-review", "needs-input", "prepared"]).optional(),
 }).strict();
 
 const FailInputSchema = FencedInputSchema.extend({
@@ -576,13 +579,14 @@ export function createJobStore(dependencies: JobStoreDependencies) {
     if (!parsed.success) {
       throw fault("io-error", "The GitHub job update failed validation.");
     }
-    try {
-      await writeLocalState(
-        rootDir,
-        storePath,
-        `${JSON.stringify(parsed.data, null, 2)}\n`,
-        renameFile,
+    const serialized = `${JSON.stringify(parsed.data, null, 2)}\n`;
+    if (Buffer.byteLength(serialized, "utf8") > 32 * 1024 * 1024)
+      throw fault(
+        "limit-exceeded",
+        "Saved GitHub job data exceeds its storage limit.",
       );
+    try {
+      await writeLocalState(rootDir, storePath, serialized, renameFile);
     } catch (error) {
       if (error instanceof JobStoreFault) throw error;
       throw fault(
@@ -650,6 +654,16 @@ export function createJobStore(dependencies: JobStoreDependencies) {
   }
 
   return {
+    get(input: { jobId: string }): Promise<Result<JobRecord>> {
+      return asResult(async () => findJob(await readStore(), input.jobId));
+    },
+    getByRunId(input: { runId: string }): Promise<Result<JobRecord | null>> {
+      return asResult(
+        async () =>
+          (await readStore()).jobs.find((job) => job.runId === input.runId) ??
+          null,
+      );
+    },
     isImportRunActive(input: {
       importId: string;
       runId: string;
@@ -733,6 +747,7 @@ export function createJobStore(dependencies: JobStoreDependencies) {
             updatedAt: timestamp,
           };
           const job: JobRecord = {
+            runnerData: {},
             id,
             runId,
             importId: data.importId,
@@ -816,6 +831,7 @@ export function createJobStore(dependencies: JobStoreDependencies) {
             .filter(
               (candidate) =>
                 candidate.state === "queued" &&
+                (!parsed.data.jobId || candidate.id === parsed.data.jobId) &&
                 (!kinds || kinds.includes(candidate.kind)),
             )
             .sort(
@@ -944,6 +960,7 @@ export function createJobStore(dependencies: JobStoreDependencies) {
             );
           }
           job.checkpoint = checked.data;
+          if (parsed.data.runnerData) job.runnerData = parsed.data.runnerData;
           job.usageLedger = {
             ...usage,
             uncertain:
@@ -1007,10 +1024,11 @@ export function createJobStore(dependencies: JobStoreDependencies) {
           if (
             (job.state === "completed" || job.state === "needs-input") &&
             job.resultRef === parsed.data.resultRef &&
-            job.outboxEvents.some(
-              (event) =>
-                event.type === eventType && event.resultRef === job.resultRef,
-            )
+            (eventType === "prepared" ||
+              job.outboxEvents.some(
+                (event) =>
+                  event.type === eventType && event.resultRef === job.resultRef,
+              ))
           ) {
             return { value: job, changed: false };
           }
@@ -1042,19 +1060,24 @@ export function createJobStore(dependencies: JobStoreDependencies) {
             new Date(
               Date.parse(timestamp) + DEFAULT_RESULT_TTL_MS,
             ).toISOString();
-          const event = createJobOutboxEvent({
-            type: eventType,
-            jobId: job.id,
-            runId: job.runId,
-            importId: job.importId,
-            projectId: job.projectId,
-            createdAt: timestamp,
-            resultRef: parsed.data.resultRef,
-            resultExpiresAt: expiry,
-            failureCode: null,
-          });
+          const event =
+            eventType === "prepared"
+              ? null
+              : createJobOutboxEvent({
+                  type: eventType,
+                  jobId: job.id,
+                  runId: job.runId,
+                  importId: job.importId,
+                  projectId: job.projectId,
+                  createdAt: timestamp,
+                  resultRef: parsed.data.resultRef,
+                  resultExpiresAt: expiry,
+                  failureCode: null,
+                });
           job.state =
-            eventType === "ready-to-review" ? "completed" : "needs-input";
+            eventType === "ready-to-review" || eventType === "prepared"
+              ? "completed"
+              : "needs-input";
           job.resultRef = parsed.data.resultRef;
           job.resultExpiresAt = expiry;
           job.failureCode = null;
@@ -1064,7 +1087,7 @@ export function createJobStore(dependencies: JobStoreDependencies) {
           job.updatedAt = timestamp;
           job.version += 1;
           job.usageLedger = { ...job.usageLedger, uncertain: false };
-          job.outboxEvents = appendEvent(job, event);
+          if (event) job.outboxEvents = appendEvent(job, event);
           return { value: job, changed: true };
         });
       });

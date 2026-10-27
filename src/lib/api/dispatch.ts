@@ -28,6 +28,7 @@ import { POST as createPoint } from "@/app/api/library/points/handler";
 import { PATCH as updatePoint } from "@/app/api/library/points/[id]/handler";
 import { POST as editResume } from "@/app/api/resume/edit/handler";
 import { GET as measureSkills } from "@/app/api/resume/skills/handler";
+import { resolveGithubApiRoute } from "./github-routes";
 
 type ApiMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 type RouteContext = { params: Promise<{ id: string }> };
@@ -106,6 +107,8 @@ export function resolveApiRequest(pathname: string): ApiRouteMatch | null {
     return null;
 
   const routePath = segments.slice(1);
+  const github = resolveGithubApiRoute(routePath);
+  if (github) return { methods: github.methods, context: emptyContext };
   const staticKey = routePath.join("/");
   if (Object.hasOwn(staticRoutes, staticKey))
     return { methods: staticRoutes[staticKey], context: emptyContext };

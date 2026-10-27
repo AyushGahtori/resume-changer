@@ -392,7 +392,7 @@ export const GithubContributionClaimSchema = z
 export const GithubConfirmedMetricEvidenceSchema = z
   .object({
     metricId: StableIdSchema,
-    evidenceIds: z.array(StableIdSchema).min(1).max(64),
+    evidenceIds: z.array(StableIdSchema).max(64),
     status: z.enum(["measured", "user-attested"]),
     context: nonEmptyText.max(1_000).optional(),
     confirmed: z.literal(true),
@@ -401,6 +401,17 @@ export const GithubConfirmedMetricEvidenceSchema = z
   })
   .strict()
   .superRefine((metricEvidence, context) => {
+    if (
+      metricEvidence.evidenceIds.length === 0 &&
+      (metricEvidence.status === "measured" || !metricEvidence.context?.trim())
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["evidenceIds"],
+        message:
+          "Measured metrics require source evidence; user-attested metrics require a measurement description.",
+      });
+    }
     if (!uniqueStrings(metricEvidence.evidenceIds)) {
       context.addIssue({
         code: "custom",

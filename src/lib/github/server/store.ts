@@ -21,7 +21,7 @@ import type {
   ImportStoreFactory,
   ImportRecordPatch,
 } from "../ports";
-import { inspectFileContent, getPathExclusionReason } from "./file-policy";
+import { inspectFileContent, getPathExclusionReason } from "./file-policy-core";
 import {
   readLocalState,
   withLocalStateLock,
@@ -162,8 +162,17 @@ export function createImportStore(
     const keys = new Set<string>();
     for (const r of doc.imports)
       if (await active(r, deps))
-        for (const k of [r.preparedSelectionRef, r.resultRef])
+        for (const k of [
+          r.preparedSelectionRef,
+          r.resultRef,
+          r.candidateInventoryRef,
+        ])
           if (k) keys.add(k);
+    for (const r of doc.imports)
+      if (await active(r, deps))
+        for (const revision of r.reviewHistory)
+          for (const k of [revision.preparedSelectionRef, revision.resultRef])
+            if (k) keys.add(k);
     return keys;
   }
   function trimCache(doc: Document, protectedEntries: Set<string>) {
@@ -209,8 +218,14 @@ export function createImportStore(
           consent: null,
           preparedSelectionRef: null,
           resultRef: null,
+          resultRunId: null,
+          approvalKeyHash: null,
           draftRefs: [],
           draftEdits: [],
+          pinnedFileIds: [],
+          removedFileIds: [],
+          candidateInventoryRef: null,
+          reviewHistory: [],
           savedIds: [],
           createdAt: now.toISOString(),
           updatedAt: now.toISOString(),
@@ -236,12 +251,172 @@ export function createImportStore(
             ...r,
             lifecycle: "expired" as const,
             resultRef: null,
+            resultRunId: null,
             preparedSelectionRef: null,
+            candidateInventoryRef: null,
             draftRefs: [],
             draftEdits: [],
+            reviewHistory: [],
+            pinnedFileIds: [],
+            removedFileIds: [],
             consent: null,
           };
         return r;
+      });
+    },
+    completePreparation(input, context) {
+      return db.run(context, true, async (doc, ns, now) => {
+        const record = db.find(doc, input.id, ns, context);
+        if (record.version !== input.expectedVersion)
+          fault(
+            "version-conflict",
+            "This import changed before preparation completed.",
+          );
+        if (record.lifecycle !== "preparing" || !record.activeRunId)
+          fault(
+            "version-conflict",
+            "This preparation run is no longer active.",
+          );
+        if (record.activeRunId !== input.runId)
+          fault(
+            "version-conflict",
+            "A newer preparation run owns this import.",
+          );
+        if (record.selectionVersion !== input.selectionVersion)
+          fault(
+            "version-conflict",
+            "The evidence selection changed during preparation.",
+          );
+        if (!deps.isJobActive)
+          fault("unavailable", "Preparation job fencing is not configured.");
+        if (
+          !(await deps.isJobActive({
+            importId: record.id,
+            runId: input.runId,
+          }))
+        )
+          fault(
+            "cancelled",
+            "The preparation run was cancelled before it completed.",
+          );
+        if (
+          !/^[a-f0-9]{64}$/i.test(input.selectionHash) ||
+          !/^[a-f0-9]{64}$/i.test(input.preparedSelectionRef) ||
+          !/^[a-f0-9]{64}$/i.test(input.candidateInventoryRef)
+        )
+          fault("invalid-input", "Prepared evidence references are invalid.");
+        if (
+          record.selectionHash === input.selectionHash &&
+          record.preparedSelectionRef === input.preparedSelectionRef &&
+          record.candidateInventoryRef === input.candidateInventoryRef
+        )
+          return record;
+        const next = ImportRecordSchema.parse({
+          ...record,
+          selectionHash: input.selectionHash,
+          preparedSelectionRef: input.preparedSelectionRef,
+          candidateInventoryRef: input.candidateInventoryRef,
+          version: record.version + 1,
+          updatedAt: now.toISOString(),
+        });
+        doc.imports[doc.imports.indexOf(record)] = next;
+        return next;
+      });
+    },
+    completeAnalysis(input, context) {
+      return db.run(context, true, async (doc, ns, now) => {
+        const record = db.find(doc, input.id, ns, context);
+        if (record.version !== input.expectedVersion)
+          fault(
+            "version-conflict",
+            "This import changed before analysis completed.",
+          );
+        if (
+          record.activeRunId !== input.runId ||
+          record.selectionVersion !== input.selectionVersion ||
+          record.selectionHash !== input.selectionHash ||
+          !record.consent ||
+          record.consent.selectionVersion !== input.selectionVersion ||
+          record.consent.selectionHash !== input.selectionHash
+        )
+          fault(
+            "version-conflict",
+            "The analysis run no longer owns the consented selection.",
+          );
+        if (!deps.isJobActive)
+          fault("unavailable", "Analysis job fencing is not configured.");
+        if (
+          !(await deps.isJobActive({
+            importId: record.id,
+            runId: input.runId,
+          }))
+        )
+          fault(
+            "cancelled",
+            "The analysis run was cancelled before it completed.",
+          );
+        if (!/^[a-f0-9]{64}$/i.test(input.resultRef))
+          fault("invalid-input", "The analysis result reference is invalid.");
+        const next = ImportRecordSchema.parse({
+          ...record,
+          resultRef: input.resultRef,
+          resultRunId: input.runId,
+          draftRefs: input.draftRefs,
+          draftEdits: [],
+          reviewHistory: input.reviewHistory,
+          lifecycle: "analyzing",
+          version: record.version + 1,
+          updatedAt: now.toISOString(),
+        });
+        doc.imports[doc.imports.indexOf(record)] = next;
+        return next;
+      });
+    },
+    discard({ id, expectedVersion }, context) {
+      return db.run(context, true, async (doc, ns) => {
+        const record = db.find(doc, id, ns, context);
+        if (record.version !== expectedVersion)
+          fault(
+            "version-conflict",
+            "This import changed. Reload before discarding it.",
+          );
+        if (record.lifecycle === "approved" || record.savedIds.length > 0)
+          fault(
+            "forbidden",
+            "Saved achievements cannot be discarded with their import.",
+          );
+        doc.imports = doc.imports.filter((entry) => entry.id !== id);
+        const stillImported = doc.imports.some(
+          (entry) =>
+            entry.authorizationNamespaceHash === ns &&
+            entry.scope.repositoryId === record.scope.repositoryId,
+        );
+        if (!stillImported) {
+          doc.cache = doc.cache.filter(
+            (entry) =>
+              entry.identity.repositoryId !== record.scope.repositoryId,
+          );
+        } else {
+          const referenced = new Set(
+            doc.imports
+              .flatMap((entry) => [
+                entry.preparedSelectionRef,
+                entry.resultRef,
+                entry.candidateInventoryRef,
+                ...entry.reviewHistory.flatMap((revision) => [
+                  revision.preparedSelectionRef,
+                  revision.resultRef,
+                ]),
+              ])
+              .filter((key): key is string => key !== null),
+          );
+          doc.cache = doc.cache.filter(
+            (entry) =>
+              entry.identity.repositoryId !== record.scope.repositoryId ||
+              referenced.has(entry.key),
+          );
+        }
+        return { discarded: true as const };
       });
     },
     updateExpectedVersion(input, context) {
@@ -267,9 +442,15 @@ export function createImportStore(
           "consent",
           "preparedSelectionRef",
           "resultRef",
+          "resultRunId",
+          "approvalKeyHash",
           "draftRefs",
           "draftEdits",
           "savedIds",
+          "pinnedFileIds",
+          "removedFileIds",
+          "candidateInventoryRef",
+          "reviewHistory",
         ];
         if (
           Object.keys(input.patch).some(
@@ -283,10 +464,23 @@ export function createImportStore(
         const changedScope =
           input.patch.scope &&
           canonical(input.patch.scope) !== canonical(r.scope);
+        const changedManualSelection =
+          (input.patch.pinnedFileIds !== undefined &&
+            canonical(input.patch.pinnedFileIds) !==
+              canonical(r.pinnedFileIds)) ||
+          (input.patch.removedFileIds !== undefined &&
+            canonical(input.patch.removedFileIds) !==
+              canonical(r.removedFileIds));
+        const changedDestination =
+          input.patch.destinationProjectId !== undefined &&
+          input.patch.destinationProjectId !== r.destinationProjectId;
         const changedSelection =
-          changedScope ||
-          (input.patch.selectionHash !== undefined &&
-            input.patch.selectionHash !== r.selectionHash);
+          changedScope || changedManualSelection || changedDestination;
+        if (changedSelection && r.lifecycle === "approved")
+          fault(
+            "version-conflict",
+            "Approved imports cannot change their evidence scope.",
+          );
         const next = {
           ...r,
           ...input.patch,
@@ -306,10 +500,13 @@ export function createImportStore(
             );
           Object.assign(next, {
             selectionVersion: r.selectionVersion + 1,
-            selectionHash: changedScope ? null : next.selectionHash,
+            selectionHash: null,
             consent: null,
             preparedSelectionRef: null,
+            candidateInventoryRef: null,
             resultRef: null,
+            resultRunId: null,
+            approvalKeyHash: null,
             draftRefs: [],
             draftEdits: [],
             savedIds: [],
@@ -341,6 +538,32 @@ export function createImportStore(
         return found;
       });
     },
+    cacheGetByKey({ key }, context) {
+      return db.run(context, false, async (doc, ns, now) => {
+        if (!/^[a-f0-9]{64}$/i.test(key))
+          fault("invalid-input", "The cache reference is invalid.");
+        const found = doc.cache.find(
+          (entry) =>
+            entry.key === key.toLowerCase() &&
+            entry.authorizationNamespaceHash === ns,
+        );
+        if (
+          !found ||
+          !context.access.grantedRepositoryIds.includes(
+            found.identity.repositoryId,
+          )
+        )
+          return null;
+        if (
+          Date.parse(found.expiresAt) <= now.getTime() &&
+          !(await protectedKeys(doc)).has(found.key)
+        )
+          return null;
+        if (hash(canonical(found.value)) !== found.valueHash)
+          fault("io-error", "Cached evidence failed integrity validation.");
+        return found;
+      });
+    },
     cachePut(input, context) {
       return db.run(context, true, async (doc, ns, now) => {
         const identity = ImportCacheIdentitySchema.parse(input.identity);
@@ -348,6 +571,21 @@ export function createImportStore(
         db.requireGrant(context, identity.repositoryId);
         if (identity.kind !== value.kind)
           fault("invalid-input", "Cache identity and value kinds differ.");
+        if (
+          identity.kind === "inventory" &&
+          value.kind === "inventory" &&
+          (identity.scope.repositoryId !== identity.repositoryId ||
+            identity.scope.commitSha !== identity.commitSha ||
+            value.candidates.some(
+              (candidate) => candidate.selected || candidate.pinned,
+            ) ||
+            new Set(value.candidates.map((candidate) => candidate.id)).size !==
+              value.candidates.length)
+        )
+          fault(
+            "invalid-evidence",
+            "Cached inventory does not match its pinned revision.",
+          );
         if (
           value.kind === "safe-content" &&
           identity.kind === "safe-content" &&
@@ -452,9 +690,15 @@ export function createImportStore(
             updatedAt: now.toISOString(),
             consent: null,
             preparedSelectionRef: null,
+            candidateInventoryRef: null,
             resultRef: null,
+            resultRunId: null,
+            approvalKeyHash: null,
             draftRefs: [],
             draftEdits: [],
+            reviewHistory: [],
+            pinnedFileIds: [],
+            removedFileIds: [],
             activeRunId: null,
           });
           expiredImports++;
@@ -488,9 +732,15 @@ export function createImportStore(
               updatedAt: now.toISOString(),
               consent: null,
               preparedSelectionRef: null,
+              candidateInventoryRef: null,
               resultRef: null,
+              resultRunId: null,
+              approvalKeyHash: null,
               draftRefs: [],
               draftEdits: [],
+              reviewHistory: [],
+              pinnedFileIds: [],
+              removedFileIds: [],
               activeRunId: null,
             });
         return { removedEntries };

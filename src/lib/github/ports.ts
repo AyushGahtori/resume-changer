@@ -139,6 +139,20 @@ export interface RepositoryInspectorPort {
       limitations: string[];
     }>
   >;
+  readSelectedFiles(input: {
+    snapshot: RepositorySnapshot;
+    candidates: FileCandidate[];
+    context: ExecutionContext;
+  }): Promise<
+    Result<{
+      files: Array<{
+        fileId: string;
+        path: string;
+        blobSha: string;
+        content: string;
+      }>;
+    }>
+  >;
 }
 export type RepositorySnapshot = {
   snapshotId: string;
@@ -188,6 +202,7 @@ export interface EvidenceSelectorPort {
     scope: RepositoryScope;
     prContext: PullRequestSummary[];
     pinnedFileIds: string[];
+    removedFileIds?: string[];
     context: ExecutionContext;
   }): Promise<
     Result<{
@@ -197,8 +212,13 @@ export interface EvidenceSelectorPort {
     }>
   >;
   pack(input: {
+    importId: string;
+    selectionVersion: number;
+    scope: RepositoryScope;
     selected: FileCandidate[];
     contentByFileId: Record<string, string>;
+    limitations: string[];
+    completeness: PreparedSelection["completeness"];
     context: ExecutionContext;
   }): Promise<Result<PreparedSelection>>;
 }
@@ -242,6 +262,35 @@ export interface ImportStorePort {
     input: { id: string },
     context: ExecutionContext,
   ): Promise<Result<ImportRecord>>;
+  completePreparation(
+    input: {
+      id: string;
+      expectedVersion: number;
+      runId: string;
+      selectionVersion: number;
+      selectionHash: string;
+      preparedSelectionRef: string;
+      candidateInventoryRef: string;
+    },
+    context: ExecutionContext,
+  ): Promise<Result<ImportRecord>>;
+  completeAnalysis(
+    input: {
+      id: string;
+      expectedVersion: number;
+      runId: string;
+      selectionVersion: number;
+      selectionHash: string;
+      resultRef: string;
+      draftRefs: string[];
+      reviewHistory: ImportRecord["reviewHistory"];
+    },
+    context: ExecutionContext,
+  ): Promise<Result<ImportRecord>>;
+  discard(
+    input: { id: string; expectedVersion: number },
+    context: ExecutionContext,
+  ): Promise<Result<{ discarded: true }>>;
   updateExpectedVersion(
     input: {
       id: string;
@@ -252,6 +301,10 @@ export interface ImportStorePort {
   ): Promise<Result<ImportRecord>>;
   cacheGet(
     input: { identity: ImportCacheIdentity },
+    context: ExecutionContext,
+  ): Promise<Result<ImportCacheEntry | null>>;
+  cacheGetByKey(
+    input: { key: string },
     context: ExecutionContext,
   ): Promise<Result<ImportCacheEntry | null>>;
   cachePut(
@@ -293,9 +346,15 @@ export type ImportRecordPatch = Partial<
     | "consent"
     | "preparedSelectionRef"
     | "resultRef"
+    | "resultRunId"
+    | "approvalKeyHash"
     | "draftRefs"
     | "draftEdits"
     | "savedIds"
+    | "pinnedFileIds"
+    | "removedFileIds"
+    | "candidateInventoryRef"
+    | "reviewHistory"
   >
 >;
 
@@ -338,7 +397,9 @@ export interface JobStorePort {
     input: {
       idempotencyKey: string;
       importId: string;
+      projectId: string;
       importVersion: number;
+      selectionVersion: number;
       kind: "prepare" | "analyze";
       inputHash: string;
       consentHash: string | null;
@@ -347,6 +408,10 @@ export interface JobStorePort {
     },
     context: ExecutionContext,
   ): Promise<Result<JobRecord>>;
+  getByRunId(
+    input: { runId: string },
+    context: ExecutionContext,
+  ): Promise<Result<JobRecord | null>>;
   claim(
     input: { jobId: string; workerId: string; leaseMs: number },
     context: ExecutionContext,
@@ -450,6 +515,16 @@ export interface MeasurementPort {
 }
 
 export interface MeasurementServicePort {
+  review(
+    input: { importId: string; expectedVersion?: number },
+    context: ExecutionContext,
+  ): Promise<
+    Result<{
+      questions: ImportQuestion[];
+      measurementResults: MeasurementResult[];
+      draftResultIds?: Record<string, string[]>;
+    }>
+  >;
   questions(
     input: { importId: string; draftId?: string; expectedVersion?: number },
     context: ExecutionContext,
@@ -547,6 +622,8 @@ export interface ImportServicePort {
       expectedVersion: number;
       scope: RepositoryScope;
       pinnedFileIds: string[];
+      removedFileIds?: string[];
+      destinationProjectId?: string;
     },
     context: ExecutionContext,
   ): Promise<Result<ImportRecord>>;
@@ -556,6 +633,7 @@ export interface ImportServicePort {
       expectedVersion: number;
       selectionHash: string;
       consentReference: string;
+      idempotencyKey: string;
     },
     context: ExecutionContext,
   ): Promise<Result<JobRecord>>;
@@ -577,6 +655,9 @@ export interface ImportServicePort {
       draftId: string;
       expectedVersion: number;
       text: string;
+      selectedForSave?: boolean;
+      contributionConfirmed?: boolean;
+      confirmedMetricResultIds?: string[];
     },
     context: ExecutionContext,
   ): Promise<Result<Draft>>;
@@ -605,6 +686,7 @@ export type ImportServiceFactory = (deps: {
   pullRequests: PrContextReaderPort;
   selector: EvidenceSelectorPort;
   extractor: RepositoryExtractorPort;
+  catalog: readonly MeasurementDefinition[];
   measurements: MeasurementServicePort;
   approve: ApprovalPort;
   now: () => Date;
@@ -661,6 +743,11 @@ export interface ImportClientPort {
     draftId: string,
     expectedVersion: number,
     text: string,
+    review?: {
+      selectedForSave?: boolean;
+      contributionConfirmed?: boolean;
+      confirmedMetricResultIds?: string[];
+    },
   ): Promise<Result<Draft>>;
   approve(
     importId: string,

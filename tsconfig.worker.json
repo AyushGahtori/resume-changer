@@ -1,0 +1,30 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM"],
+    "types": ["node"],
+    "strict": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "rootDir": "src",
+    "outDir": ".runtime/github-worker",
+    "sourceMap": true,
+    "noEmitOnError": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+    "jsx": "react-jsx",
+    "resolveJsonModule": true
+  },
+  "include": [
+    "src/lib/github/server/jobs/runner.ts",
+    "src/workers/**/*.ts",
+    "src/lib/github/server/backend-runtime.ts",
+    "src/lib/ai/provider-factory-core.ts",
+    "src/lib/github/server/access-port.ts"
+  ]
+}
