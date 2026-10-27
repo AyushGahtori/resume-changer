@@ -14,7 +14,7 @@ Scope: integrate Tasks 21–30 with the Tasks 1–20 backend on `phase-one`; kee
 - [x] Audit the assembled setup and expanded review in both themes at 1440/1024/768/390/320px. Check horizontal overflow and inspect rendered screenshots; related browser cases cover errors/expired notifications.
 - [x] Run focused/full tests, lint, typecheck, production and worker builds, browser checks and formatting.
 - [x] Push batch integration `81e83b2` to `phase-one` and verify its READY Vercel Preview (sign-in 200, harness 404, unauthenticated API 401).
-- [ ] Push the follow-up hardening and verify its matching Preview and CI checks.
+- [x] Push follow-up hardening `329ac6d` and verify its matching READY Preview and all eight CI jobs.
 
 ## Feature acceptance
 
@@ -56,6 +56,11 @@ A fixture-only success is not a live GitHub connection. Missing credentials or h
 - Production/worker build, startup smoke, lint, typecheck and formatting passed. The reproducible `npm run test:github-journey` command also passed after its own isolated production build (1 assembled browser journey). Preview verification follows the branch push.
 
 ## Delivery boundary
+
+Verified code commit: `329ac6de45228c9bc1dace4b9a18a06072e99c09`.
+[Preview](https://resume-changer-1a9nxylqw-ayushs-projects-ab23dbca.vercel.app) is READY; authenticated deployment checks returned sign-in 200, E2E harness 404 and unauthenticated job API 401 with `AUTH_REQUIRED`.
+[Quality checks](https://github.com/AyushGahtori/resume-changer/actions/runs/40597705330): all eight jobs passed, including four browser shards, account security, hosted PDF, assembled GitHub journey and local quality.
+The documentation-only completion commit does not change the verified application code.
 
 All three batches are assembled on `phase-one`, based on `ccd8b8b` for this batch. Original task worktrees are unchanged. `main` and `origin/main` were verified at `4fc28cd`; neither is a merge target here. The final push updates only `phase-one` and its Preview.
 
