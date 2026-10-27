@@ -5,7 +5,7 @@ Scope: integrate Tasks 21–30 with the Tasks 1–20 backend on `phase-one`; kee
 ## Progress
 
 - [x] Read all ten referenced task chats and Batch C requirements.
-- [x] Import 54 task-owned source/test/handoff files; preserve original screenshots in their worktrees for comparison.
+- [x] Import 55 task-owned source/test/handoff files; preserve original screenshots in their worktrees for comparison.
 - [x] Identify controller defects: duplicate status streams, draft/import version confusion, empty PR list, placeholder fallback UI, blocked first save, missing inline metric confirmation and persisted-answer restoration.
 - [x] Fix controller, shared status, PR loading, measurements and final save contracts.
 - [x] Verify the assembled browser/API/worker/approval journey with fictional external boundaries; test consent, Back versus cancellation, scope changes and stale-version rejection. Safe OAuth return destinations have route regressions.
@@ -13,7 +13,8 @@ Scope: integrate Tasks 21–30 with the Tasks 1–20 backend on `phase-one`; kee
 - [ ] Configure and verify a real App exchange, encrypted vault and hosted durable worker/persistence adapters. Registration alone does not implement those bindings; the hosted default remains unavailable.
 - [x] Audit the assembled setup and expanded review in both themes at 1440/1024/768/390/320px. Check horizontal overflow and inspect rendered screenshots; related browser cases cover errors/expired notifications.
 - [x] Run focused/full tests, lint, typecheck, production and worker builds, browser checks and formatting.
-- [ ] Push the reviewed integration to `phase-one` and verify the matching Vercel Preview commit.
+- [x] Push batch integration `81e83b2` to `phase-one` and verify its READY Vercel Preview (sign-in 200, harness 404, unauthenticated API 401).
+- [ ] Push the follow-up hardening and verify its matching Preview and CI checks.
 
 ## Feature acceptance
 
@@ -36,8 +37,18 @@ A fixture-only success is not a live GitHub connection. Missing credentials or h
 
 ## Verification evidence
 
-- Full suite after integration: **1,251 passed, 3 optional live tests skipped**, across 137 files (`npm test -- --maxWorkers=2`).
-- Related browser run: **8 passed**: actual worker journey, controller consent/scope/save/conflict/cancel cases, library notifications and harness registration.
+### Follow-up findings from CI and repeated Windows journeys
+
+- Disabled shell subscriptions when no real runtime is configured and in demo mode; reset activity on account changes. This fixes unrelated home/library browser regressions caused by background 503 responses, without masking failed requests in tests.
+- Restored Task 21's HTML fixture omitted by the original source-file copy filter. Scoped the fixture selector's minimum width so native select sizing cannot overflow the 320px test viewport.
+- Repeated separate-process runs exposed Windows `EPERM` during atomic replacement of staged JSON. Bounded reads and atomic rename now retry transient Windows sharing errors for at most 1.27 seconds; it never deletes the existing target. Permanent failures preserve old state and remove the temporary file. Deterministic tests cover recovery and exhaustion.
+- A separate regression forces seven-byte filesystem reads: the reader now assembles all chunks within its original size bound and rejects truncation/growth. Both new read cases failed before the correction and pass afterward.
+- The assembled browser journey now also fails on any GitHub API error response, including an error recovered by later polling.
+- Final clean production/worker build: passed. Ten consecutive assembled separate-worker journeys: **10 passed with zero GitHub API error responses**. Temporary exception logging was removed before this run.
+- Responsive component suite: **19 passed**. Home/library/controller/notification regressions: **32 passed**. Lint, typecheck, formatting and worker build/start/shutdown smoke passed.
+
+- Full suite after integration: **1,257 passed, 3 optional live tests skipped**, across 140 files (`npm test -- --maxWorkers=2`).
+- Original related browser run: **8 passed**: actual worker journey, controller consent/scope/save/conflict/cancel cases, library notifications and harness registration.
 - Twenty assembled-page captures cover setup and expanded review, both themes and all five target widths, with no horizontal page overflow. Captures are generated under ignored `.runtime/github-gate-c/` and uploaded by the dedicated CI job.
 - New regressions cover PR authorization, new App settings, first-save readiness, stale local overrides, safe OAuth return paths, local-origin isolation, metric invalidation and asynchronous failure feedback.
 - The synthetic backend is gated by local mode, explicit test flags, a dedicated temporary root and a Vercel exclusion. It substitutes external GitHub/AI responses only; real internal stores, selection, extraction validation, queue, separate worker and approval writer run.

@@ -634,6 +634,15 @@ export function configureGithubServices(factory: GithubServicesFactory): void {
   servicesPromise = undefined;
 }
 
+/** Public capability only; callers never receive credentials or a fake ready worker. */
+export function isGithubImportRuntimeConfigured(): boolean {
+  return (
+    Boolean(configuredFactory) ||
+    (isGithubImportHarnessEnabled(process.env) &&
+      process.env.GITHUB_IMPORT_E2E_BACKEND === "1")
+  );
+}
+
 export function getGithubServices(): Promise<GithubServerServices> {
   if (!configuredFactory) {
     if (

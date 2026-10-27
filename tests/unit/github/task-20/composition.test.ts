@@ -15,6 +15,7 @@ import {
   configureGithubServices,
   createGithubServicesFactory,
   getGithubServices,
+  isGithubImportRuntimeConfigured,
   resetGithubServicesForTests,
 } from "../../../../src/lib/github/server/composition";
 import { JobRecordSchema } from "../../../../src/lib/github/server/jobs/store";
@@ -250,6 +251,7 @@ afterEach(() => resetGithubServicesForTests());
 
 describe("GitHub server composition", () => {
   it("reports the missing worker as unavailable instead of succeeding", async () => {
+    expect(isGithubImportRuntimeConfigured()).toBe(false);
     const services = await getGithubServices();
     const result = await services.worker.run({
       signal: new AbortController().signal,
@@ -269,6 +271,7 @@ describe("GitHub server composition", () => {
     });
     configureGithubServices(factory);
     configureGithubServices(factory);
+    expect(isGithubImportRuntimeConfigured()).toBe(true);
 
     const first = await getGithubServices();
     const second = await getGithubServices();

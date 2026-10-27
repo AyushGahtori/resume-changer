@@ -14,7 +14,7 @@ import {
   Sun,
   Moon,
 } from "lucide-react";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { AccountControl, useWorkspaceAccount } from "./account-session";
@@ -431,9 +431,20 @@ function WorkspaceShellContent({ children }: { children: ReactNode }) {
   );
 }
 
-export default function WorkspaceShell({ children }: { children: ReactNode }) {
+export default function WorkspaceShell({
+  children,
+  githubImportsAvailable = false,
+}: {
+  children: ReactNode;
+  githubImportsAvailable?: boolean;
+}) {
+  const account = useWorkspaceAccount();
+  const query = useSearchParams();
   return (
-    <ImportStatusProvider>
+    <ImportStatusProvider
+      key={account?.uid ?? "local"}
+      enabled={githubImportsAvailable && query.get("source") !== "demo"}
+    >
       <WorkspaceShellContent>{children}</WorkspaceShellContent>
     </ImportStatusProvider>
   );

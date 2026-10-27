@@ -34,6 +34,32 @@ export async function readLocalState(
   target: string,
   maxBytes: number,
 ) {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await readLocalStateOnce(root, target, maxBytes);
+    } catch (error) {
+      if (!isTransientSharingError(error) || attempt >= 7) throw error;
+      await sharingBackoff(attempt);
+    }
+  }
+}
+
+function isTransientSharingError(error: unknown) {
+  const code = (error as NodeJS.ErrnoException).code;
+  return (
+    process.platform === "win32" &&
+    (code === "EPERM" || code === "EACCES" || code === "EBUSY")
+  );
+}
+
+const sharingBackoff = (attempt: number) =>
+  new Promise((done) => setTimeout(done, 10 * 2 ** attempt));
+
+async function readLocalStateOnce(
+  root: string,
+  target: string,
+  maxBytes: number,
+) {
   await assertLocalStatePath(root, target);
   const handle = await open(
     target,
@@ -44,10 +70,19 @@ export async function readLocalState(
     if (!info.isFile() || info.size > maxBytes)
       throw new Error("State file exceeds its limit.");
     const data = Buffer.alloc(info.size + 1);
-    const read = await handle.read(data, 0, data.length, 0);
-    if (read.bytesRead > info.size)
-      throw new Error("State changed during read.");
-    return data.subarray(0, read.bytesRead).toString("utf8");
+    let offset = 0;
+    while (offset < data.length) {
+      const { bytesRead } = await handle.read(
+        data,
+        offset,
+        data.length - offset,
+        offset,
+      );
+      if (bytesRead === 0) break;
+      offset += bytesRead;
+    }
+    if (offset !== info.size) throw new Error("State changed during read.");
+    return data.subarray(0, offset).toString("utf8");
   } finally {
     await handle.close();
   }
@@ -68,7 +103,17 @@ export async function writeLocalState(
     await handle.writeFile(text, "utf8");
     await handle.sync();
     await handle.close();
-    await renameFile(temporary, target);
+    // Windows can briefly deny replacement while another process closes a reader.
+    // Retry only the atomic rename; never unlink the existing state to make room.
+    for (let attempt = 0; ; attempt++) {
+      try {
+        await renameFile(temporary, target);
+        break;
+      } catch (error) {
+        if (!isTransientSharingError(error) || attempt >= 7) throw error;
+        await sharingBackoff(attempt);
+      }
+    }
   } finally {
     await handle.close().catch(() => undefined);
     await rm(temporary, { force: true });

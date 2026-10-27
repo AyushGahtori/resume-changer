@@ -42,7 +42,7 @@ async function audit(page: Page, state: string) {
 
 test("runs the assembled import through the separate worker and saves only confirmed drafts", async ({
   page,
-}) => {
+}, testInfo) => {
   test.skip(
     process.env.GITHUB_IMPORT_E2E_BACKEND !== "1",
     "Requires the isolated synthetic external-boundary backend.",
@@ -67,13 +67,9 @@ test("runs the assembled import through the separate worker and saves only confi
     },
   );
   await page.goto("/library/github/new");
-  page.on("response", async (response) => {
+  page.on("response", (response) => {
     if (response.url().includes("/api/github/") && response.status() >= 400)
-      console.log(
-        response.status(),
-        new URL(response.url()).pathname,
-        await response.text(),
-      );
+      failures.push(`${response.status()} ${new URL(response.url()).pathname}`);
   });
   await page
     .getByRole("button", { name: "Connect GitHub", exact: true })
@@ -96,7 +92,7 @@ test("runs the assembled import through the separate worker and saves only confi
     .fill(
       "I implemented publishing input validation and the regression tests.",
     );
-  await audit(page, "setup");
+  if (testInfo.repeatEachIndex === 0) await audit(page, "setup");
   await page
     .getByRole("button", { name: "Prepare selected evidence", exact: true })
     .click();
@@ -139,7 +135,7 @@ test("runs the assembled import through the separate worker and saves only confi
   await page
     .getByRole("button", { name: "Add a measurement", exact: true })
     .click();
-  await audit(page, "review-expanded");
+  if (testInfo.repeatEachIndex === 0) await audit(page, "review-expanded");
   const selection = page.getByRole("checkbox", {
     name: "Select draft 1 for save",
   });

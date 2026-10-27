@@ -287,6 +287,41 @@ describe("GitHub import notifications", () => {
     expect(client.close).not.toHaveBeenCalled();
   });
 
+  it("makes no activity requests when the server says imports are unavailable and reconnects when enabled", async () => {
+    const client = fakeClient([notification()]);
+    const host = document.createElement("div");
+    document.body.append(host);
+    const root = createRoot(host);
+    mountedRoots.push({ root, host });
+    const render = (enabled: boolean) =>
+      act(() => {
+        root.render(
+          createElement(
+            ImportStatusProvider,
+            { client: client.client, enabled },
+            createElement(ActivityConsumer),
+          ),
+        );
+      });
+    render(false);
+    await flushEffects();
+    expect(client.listNotifications).not.toHaveBeenCalled();
+    expect(client.subscribeStatus).not.toHaveBeenCalled();
+    render(true);
+    await flushEffects();
+    expect(client.subscribeStatus).toHaveBeenCalledTimes(1);
+    expect(
+      host.querySelector('[data-testid="unread-count"]')?.textContent,
+    ).toBe("1");
+    render(false);
+    await flushEffects();
+    expect(client.close).toHaveBeenCalledTimes(1);
+    expect(
+      host.querySelector('[data-testid="unread-count"]')?.textContent,
+    ).toBe("0");
+    expect(host.textContent).not.toContain("Long Example Platform Project");
+  });
+
   it("fans one app stream out to the active import and removes route listeners on navigation", async () => {
     const client = fakeClient();
     const observed = vi.fn();

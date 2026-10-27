@@ -99,9 +99,11 @@ function createDefaultClient(): ImportStatusClient {
 export function ImportStatusProvider({
   children,
   client: injectedClient,
+  enabled = true,
 }: {
   children?: ReactNode;
   client?: ImportStatusClient;
+  enabled?: boolean;
 }) {
   const [client] = useState(() => injectedClient ?? createDefaultClient());
   const [notifications, setNotifications] = useState<ImportNotificationItem[]>(
@@ -134,6 +136,7 @@ export function ImportStatusProvider({
   const storageRevision = useRef(0);
 
   const refreshNotifications = useCallback(async () => {
+    if (!enabled) return;
     const sequence = ++refreshSequence.current;
     if (!client.listNotifications) {
       setLoadState("unavailable");
@@ -162,7 +165,7 @@ export function ImportStatusProvider({
       setLoadState("error");
       setErrorMessage("We could not load GitHub import activity.");
     }
-  }, [client]);
+  }, [client, enabled]);
 
   const updateRunningImport = useCallback(
     (state: ImportReviewState) => {
@@ -266,6 +269,15 @@ export function ImportStatusProvider({
   );
 
   useEffect(() => {
+    if (!enabled) {
+      refreshSequence.current += 1;
+      setNotifications([]);
+      setRunningByImportId(new Map());
+      setLoadState("unavailable");
+      setErrorMessage(null);
+      setActionError(null);
+      return;
+    }
     let active = true;
     void refreshNotifications();
 
@@ -293,10 +305,10 @@ export function ImportStatusProvider({
       refreshSequence.current += 1;
       if (subscription?.ok) subscription.value.close();
     };
-  }, [client, refreshNotifications, updateRunningImport]);
+  }, [client, enabled, refreshNotifications, updateRunningImport]);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (!enabled || typeof window === "undefined") return;
 
     const onStorage = (event: StorageEvent) => {
       if (event.key === NOTIFICATION_STORAGE_KEY) void refreshNotifications();
@@ -331,7 +343,7 @@ export function ImportStatusProvider({
       storageSyncRef.current = false;
       window.removeEventListener("storage", onStorage);
     };
-  }, [refreshNotifications]);
+  }, [enabled, refreshNotifications]);
 
   const runningImports = useMemo(
     () =>
@@ -351,10 +363,10 @@ export function ImportStatusProvider({
 
   const value = useMemo<ImportStatusContextValue>(
     () => ({
-      notifications,
-      runningImports,
-      unreadCount,
-      loadState,
+      notifications: enabled ? notifications : [],
+      runningImports: enabled ? runningImports : [],
+      unreadCount: enabled ? unreadCount : 0,
+      loadState: enabled ? loadState : "unavailable",
       errorMessage,
       actionError,
       watchImport,
@@ -363,6 +375,7 @@ export function ImportStatusProvider({
       review,
     }),
     [
+      enabled,
       notifications,
       runningImports,
       unreadCount,

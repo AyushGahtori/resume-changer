@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import styles from "./harness.module.css";
 import { AchievementReview } from "../achievement-review";
 import { AnalysisStatus } from "../analysis-status";
 import { EvidencePanel } from "../evidence-panel";
@@ -369,7 +370,7 @@ export function ImportComponentHarness() {
   if (!selected) return <p>No fixture cases are registered.</p>;
 
   return (
-    <main data-testid="github-import-harness-root">
+    <main className={styles.harness} data-testid="github-import-harness-root">
       <h1>GitHub import component harness</h1>
       <p>
         Synthetic fixtures only. No GitHub, provider, filesystem, or approval
@@ -378,6 +379,7 @@ export function ImportComponentHarness() {
       <label>
         Fixture case
         <select
+          className={styles.selector}
           aria-label="Choose GitHub import fixture"
           value={selected.id}
           onChange={(event) => setSelectedId(event.currentTarget.value)}
@@ -390,6 +392,7 @@ export function ImportComponentHarness() {
         </select>
       </label>
       <section
+        className={styles.fixture}
         data-testid="github-import-harness-case"
         data-case-id={selected.id}
       >
