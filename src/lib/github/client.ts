@@ -4,6 +4,7 @@ import { z } from "zod";
 import { apiFetch } from "../cloud/api-fetch";
 import {
   DraftSchema,
+  PullRequestSummarySchema,
   DomainErrorSchema,
   ImportRecordSchema,
   ImportReviewStateSchema,
@@ -123,6 +124,13 @@ export type ImportClientTransport = {
 };
 
 export type GithubImportClient = Omit<ImportClientPort, "subscribeStatus"> & {
+  listPullRequests(repositoryId: string): Promise<
+    Result<{
+      candidates: import("./contracts").PullRequestSummary[];
+      completeness: "complete" | "partial";
+      limitations: string[];
+    }>
+  >;
   previewMeasurementDraft(input: {
     importId: string;
     draftId: string;
@@ -612,6 +620,19 @@ export function createImportClient(
         `/api/github/imports/${idSegment(importId)}/drafts/${idSegment(draftId)}`,
         { expectedVersion, text, ...review },
         DraftResponseSchema,
+      );
+    },
+    listPullRequests(repositoryId) {
+      return request(
+        `/api/github/repositories/${idSegment(repositoryId)}/pull-requests`,
+        { method: "GET" },
+        z
+          .object({
+            candidates: z.array(PullRequestSummarySchema).max(30),
+            completeness: z.enum(["complete", "partial"]),
+            limitations: z.array(z.string()).max(100),
+          })
+          .strict(),
       );
     },
     previewMeasurementDraft({ importId, draftId, measurementResultId }) {

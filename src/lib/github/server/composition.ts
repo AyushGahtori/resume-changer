@@ -1,3 +1,4 @@
+import { isGithubImportHarnessEnabled } from "../test-harness";
 import { createHash, randomUUID } from "node:crypto";
 import { isAbsolute, join, resolve } from "node:path";
 import { z } from "zod";
@@ -88,6 +89,7 @@ export type GithubRuntimeBindings = {
 };
 
 export type GithubServerServices = Omit<GithubServices, "notifications"> & {
+  pullRequests: import("../ports").PrContextReaderPort;
   measurements: MeasurementServicePort;
   deferredTasks: DeferredMeasurementTaskStorePort;
   runner: ImportJobRunnerPort;
@@ -416,6 +418,7 @@ export function composeGithubServices(
 
   return {
     imports: ports.service,
+    pullRequests: ports.pullRequests,
     jobs: ports.jobs,
     access: ports.access,
     measurements: ports.measurementService,
@@ -633,6 +636,18 @@ export function configureGithubServices(factory: GithubServicesFactory): void {
 
 export function getGithubServices(): Promise<GithubServerServices> {
   if (!configuredFactory) {
+    if (
+      isGithubImportHarnessEnabled(process.env) &&
+      process.env.GITHUB_IMPORT_E2E_BACKEND === "1"
+    ) {
+      servicesPromise ??= import("./testing/e2e-runtime").then((m) =>
+        m.createE2eGithubServices({
+          personalRoot: getPersonalDataRoot(),
+          now: () => new Date(),
+        }),
+      );
+      return servicesPromise;
+    }
     if (!servicesPromise)
       servicesPromise = Promise.resolve(unavailableServices());
     return servicesPromise;

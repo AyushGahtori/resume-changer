@@ -12,6 +12,7 @@ import {
 } from "../import-primitives";
 import { ImportLayout } from "../import-layout";
 import { ImportNotifications } from "../../library/import-notifications";
+import type { ImportProgressItem } from "../../library/import-status-provider";
 import { MeasurementFields } from "../measurement-fields";
 import { RepositorySetup } from "../repository-setup";
 import { ImportTrustRail } from "../trust-rail";
@@ -84,11 +85,68 @@ type HarnessCase =
       id: string;
       title: string;
       component: "notifications";
-      props: ImportNotificationsProps;
+      props: ImportNotificationsProps & {
+        projectNames?: Readonly<Record<string, string>>;
+        runningImports?: ImportProgressItem[];
+      };
     }
   | { id: string; title: string; component: "layout"; state: ImportStep };
 
 function buildCases(): HarnessCase[] {
+  const baseNotifications = notificationsProps("unread");
+  const baseNotification = baseNotifications.items[0];
+  const multipleNotifications = baseNotification
+    ? {
+        ...baseNotifications,
+        items: [
+          {
+            ...baseNotification,
+            id: "task-28-ready-long-project",
+            importId: "task-28-ready-run",
+            projectId: "task-28-long-project",
+          },
+          {
+            ...baseNotification,
+            id: "task-28-read-long-project",
+            importId: "task-28-read-run",
+            projectId: "task-28-long-project",
+            readAt: "2026-10-26T12:00:00.000Z",
+          },
+          {
+            ...baseNotification,
+            id: "task-28-failed-long-project",
+            importId: "task-28-failed-run",
+            projectId: "task-28-long-project",
+            type: "failed" as const,
+          },
+          {
+            ...baseNotification,
+            id: "task-28-expired-long-project",
+            importId: "task-28-expired-run",
+            projectId: "task-28-long-project",
+            type: "expired" as const,
+          },
+        ],
+        unreadCount: 3,
+        projectNames: {
+          "task-28-long-project": "Long Cross Platform Data Processing Project",
+        },
+        runningImports: [
+          {
+            importId: "task-28-running-one",
+            projectId: "task-28-long-project",
+            lifecycle: "queued" as const,
+            updatedAt: "2026-10-27T11:58:00.000Z",
+          },
+          {
+            importId: "task-28-running-two",
+            projectId: "task-28-long-project",
+            lifecycle: "analyzing" as const,
+            updatedAt: "2026-10-27T11:59:00.000Z",
+          },
+        ],
+      }
+    : baseNotifications;
   const cases: HarnessCase[] = [
     {
       id: "primitives-ready",
@@ -227,6 +285,12 @@ function buildCases(): HarnessCase[] {
       title: "Task 28 · expired result",
       component: "notifications",
       props: notificationsProps("expired"),
+    },
+    {
+      id: "notifications-multiple",
+      title: "Task 28 · multiple runs and long project name",
+      component: "notifications",
+      props: multipleNotifications,
     },
     {
       id: "layout-setup",

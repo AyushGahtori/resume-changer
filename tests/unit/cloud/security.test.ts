@@ -40,6 +40,27 @@ describe("hosted account security boundaries", () => {
       expect(() => assertSameOrigin(value)).toThrow();
   });
 
+  it("allows local loopback aliases only on the same port and never on hosted accounts", () => {
+    vi.stubEnv("VERCEL", "");
+    vi.stubEnv("RESUME_APP_MODE", "local");
+    const request = (origin: string) =>
+      new Request("http://localhost:3010/api/github/connection/start", {
+        headers: { origin, "sec-fetch-site": "same-origin" },
+      });
+    expect(() =>
+      assertSameOrigin(request("http://127.0.0.1:3010")),
+    ).not.toThrow();
+    for (const origin of [
+      "http://127.0.0.1:3011",
+      "http://attacker.example:3010",
+      "https://127.0.0.1:3010",
+    ])
+      expect(() => assertSameOrigin(request(origin))).toThrow();
+    vi.stubEnv("VERCEL", "1");
+    vi.stubEnv("RESUME_APP_MODE", "firebase");
+    expect(() => assertSameOrigin(request("http://127.0.0.1:3010"))).toThrow();
+  });
+
   it("bounds streamed bodies even when content length is omitted or forged", async () => {
     await expect(
       readBoundedBody(

@@ -413,6 +413,85 @@ describe("local GitHub measurement interview", () => {
     expect(measurementPortCalls).toHaveBeenCalled();
   });
 
+  it.each(["skip", "defer"] as const)(
+    "removes an inserted metric and invalidates contribution confirmation on %s",
+    async (mode) => {
+      const questions = await service.questions(
+        { importId: record.id },
+        context,
+      );
+      if (!questions.ok) throw new Error("Missing questions");
+      const question = questions.value[0];
+      const initial = await service.answer(
+        {
+          importId: record.id,
+          questionId: question.id,
+          expectedVersion: record.version,
+          answer: answerFor(question.id, question.version),
+        },
+        context,
+      );
+      if (!initial.ok || !initial.value.result)
+        throw new Error("Missing result");
+      const preview = await service.preview(
+        {
+          importId: record.id,
+          draftId: "draft-one",
+          measurementResultId: initial.value.result.id,
+        },
+        context,
+      );
+      if (!preview.ok) throw new Error("Missing preview");
+      const original = record.draftEdits[0].text;
+      record.draftEdits[0] = {
+        ...record.draftEdits[0],
+        text: preview.value.text,
+        confirmedMetricResultIds: [initial.value.result.id],
+      };
+      const currentQuestions = await service.questions(
+        { importId: record.id },
+        context,
+      );
+      if (!currentQuestions.ok) throw new Error("Missing current question");
+      const result =
+        mode === "defer"
+          ? await service.defer(
+              {
+                importId: record.id,
+                questionId: question.id,
+                expectedVersion: record.version,
+              },
+              context,
+            )
+          : await service.answer(
+              {
+                importId: record.id,
+                questionId: question.id,
+                expectedVersion: record.version,
+                answer: answerFor(
+                  question.id,
+                  currentQuestions.value[0].version,
+                  {
+                    mode: "skip",
+                    definitionId: null,
+                    statistic: null,
+                    originalValues: [],
+                    originalUnits: [],
+                    context: {},
+                    sourceEvidenceIds: [],
+                    attestation: "none",
+                  },
+                ),
+              },
+              context,
+            );
+      expect(result.ok).toBe(true);
+      expect(record.draftEdits[0].text).toBe(original);
+      expect(record.draftEdits[0].confirmedMetricResultIds).toEqual([]);
+      expect(record.draftEdits[0].contributionConfirmed).toBe(false);
+    },
+  );
+
   it("rejects an ML metric when the selected task is regression", async () => {
     const questions = await service.questions({ importId: record.id }, context);
     if (!questions.ok) throw new Error("Questions were unavailable.");

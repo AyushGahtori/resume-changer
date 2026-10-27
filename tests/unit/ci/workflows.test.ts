@@ -21,7 +21,8 @@ describe("quality workflow", () => {
   it("runs every quality gate on pull requests and on main", () => {
     expect(quality).toContain("pull_request:");
     expect(quality).toContain("push:");
-    expect(quality).toContain("branches: [main]");
+    expect(quality).toMatch(/branches: \[main, phase-one\]/);
+    expect(quality).toContain("npm run test:github-journey");
   });
 
   it("installs dependencies before running any check", () => {

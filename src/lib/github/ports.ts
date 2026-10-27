@@ -523,6 +523,7 @@ export interface MeasurementServicePort {
       questions: ImportQuestion[];
       measurementResults: MeasurementResult[];
       draftResultIds?: Record<string, string[]>;
+      answers?: Record<string, MeasurementAnswer>;
     }>
   >;
   questions(

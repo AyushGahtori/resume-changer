@@ -1,3 +1,4 @@
+import { GET as pullRequests } from "@/app/api/github/repositories/[repositoryId]/pull-requests/handler";
 import { GET as preview } from "@/app/api/github/imports/[id]/drafts/[draftId]/preview/handler";
 import * as imports from "@/app/api/github/imports/handler";
 import { GET as job } from "@/app/api/github/jobs/[jobId]/handler";
@@ -33,6 +34,18 @@ export function resolveGithubApiRoute(parts: string[]): Match | null {
   };
   if (Object.hasOwn(direct, key)) return { methods: direct[key]! };
   const [root, section, id, operation, child] = parts;
+  if (
+    root === "github" &&
+    section === "repositories" &&
+    operation === "pull-requests" &&
+    parts.length === 4
+  )
+    return {
+      methods: {
+        GET: (r) =>
+          pullRequests(r, { params: Promise.resolve({ repositoryId: id! }) }),
+      },
+    };
   if (root === "github" && section === "jobs" && parts.length === 3)
     return {
       methods: {

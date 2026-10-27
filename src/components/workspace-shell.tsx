@@ -18,6 +18,11 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { AccountControl, useWorkspaceAccount } from "./account-session";
+import {
+  ImportStatusProvider,
+  useImportStatus,
+} from "./library/import-status-provider";
+import importNotificationStyles from "./library/import-notifications.module.css";
 
 const THEME_STORAGE_KEY = "resume-changer.theme.v1";
 
@@ -57,9 +62,10 @@ function readTheme(): "light" | "dark" {
   }
 }
 
-export default function WorkspaceShell({ children }: { children: ReactNode }) {
+function WorkspaceShellContent({ children }: { children: ReactNode }) {
   const account = useWorkspaceAccount();
   const pathname = usePathname();
+  const { unreadCount } = useImportStatus();
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [isMobile, setIsMobile] = useState(false);
   const [isCompact, setIsCompact] = useState(false);
@@ -303,11 +309,16 @@ export default function WorkspaceShell({ children }: { children: ReactNode }) {
             const isActive =
               pathname === item.href ||
               (item.href === LIBRARY_ROUTE && isLibraryRoute);
+            const hasUnreadImports =
+              item.href === LIBRARY_ROUTE && unreadCount > 0;
+            const accessibleLabel = hasUnreadImports
+              ? `${item.label}, ${unreadCount} unread GitHub import${unreadCount === 1 ? "" : "s"}`
+              : item.label;
 
             return (
               <Link
                 aria-current={isActive ? "page" : undefined}
-                aria-label={item.label}
+                aria-label={accessibleLabel}
                 className={isActive ? "nav-link is-active" : "nav-link"}
                 data-label={item.label}
                 href={item.href}
@@ -321,6 +332,14 @@ export default function WorkspaceShell({ children }: { children: ReactNode }) {
                   <SidebarIcon name={item.icon} />
                 </span>
                 <span className="nav-link-label">{item.label}</span>
+                {hasUnreadImports ? (
+                  <span
+                    aria-hidden="true"
+                    className={importNotificationStyles.navBadge}
+                  >
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </span>
+                ) : null}
               </Link>
             );
           })}
@@ -380,7 +399,9 @@ export default function WorkspaceShell({ children }: { children: ReactNode }) {
                 </>
               ) : (
                 <strong aria-current="page">
-                  {currentPage?.label ?? "Workspace"}
+                  {pathname.startsWith("/library/github/")
+                    ? "GitHub import"
+                    : (currentPage?.label ?? "Workspace")}
                 </strong>
               )}
             </nav>
@@ -407,5 +428,13 @@ export default function WorkspaceShell({ children }: { children: ReactNode }) {
         </main>
       </div>
     </div>
+  );
+}
+
+export default function WorkspaceShell({ children }: { children: ReactNode }) {
+  return (
+    <ImportStatusProvider>
+      <WorkspaceShellContent>{children}</WorkspaceShellContent>
+    </ImportStatusProvider>
   );
 }

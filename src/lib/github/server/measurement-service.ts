@@ -726,6 +726,11 @@ export const createMeasurementService: MeasurementServiceFactory = (deps) => ({
         );
         return ok({
           questions: state.questions.map(publicQuestion),
+          answers: Object.fromEntries(
+            state.questions
+              .filter((q) => q.answer)
+              .map((q) => [q.id, q.answer!]),
+          ),
           measurementResults: state.questions.flatMap((q) =>
             q.result ? [q.result] : [],
           ),
@@ -829,7 +834,18 @@ export const createMeasurementService: MeasurementServiceFactory = (deps) => ({
           }
         }
         const updated = await deps.store.updateExpectedVersion(
-          { id: record.id, expectedVersion: record.version, patch: {} },
+          {
+            id: record.id,
+            expectedVersion: record.version,
+            patch: {
+              draftEdits: invalidateInsertedMetric(
+                record,
+                question,
+                deps.measurements,
+                deps.now(),
+              ),
+            },
+          },
           context,
         );
         if (!updated.ok) return updated;
@@ -913,7 +929,18 @@ export const createMeasurementService: MeasurementServiceFactory = (deps) => ({
         );
         if (!created.ok) return created;
         const updated = await deps.store.updateExpectedVersion(
-          { id: record.id, expectedVersion: record.version, patch: {} },
+          {
+            id: record.id,
+            expectedVersion: record.version,
+            patch: {
+              draftEdits: invalidateInsertedMetric(
+                record,
+                question,
+                deps.measurements,
+                deps.now(),
+              ),
+            },
+          },
           context,
         );
         if (!updated.ok) {
@@ -1042,7 +1069,9 @@ export const createMeasurementService: MeasurementServiceFactory = (deps) => ({
         }
 
         const text =
-          clause && result ? draft.edit.text + " " + clause : draft.edit.text;
+          clause && result && !draft.edit.text.includes(clause)
+            ? draft.edit.text + " " + clause
+            : draft.edit.text;
         if (text.length > 8_000) {
           serviceFault(
             "limit-exceeded",
@@ -1086,6 +1115,40 @@ export const createMeasurementService: MeasurementServiceFactory = (deps) => ({
     }
   },
 });
+
+/** An inserted metric loses its wording and confirmation when its answer changes. */
+function invalidateInsertedMetric(
+  record: ImportRecord,
+  question: QuestionState,
+  measurements: MeasurementPort,
+  now: Date,
+): DraftEdit[] {
+  if (!question.result) return record.draftEdits;
+  const result = question.result;
+  const rendered = measurements.renderMetricClause({ result });
+  if (!rendered.ok)
+    serviceFault(
+      "invalid-evidence",
+      "The previous measurement wording could not be verified.",
+    );
+  return record.draftEdits.map((edit) => {
+    if (
+      edit.draftId !== question.draftId ||
+      !edit.confirmedMetricResultIds.includes(result.id)
+    )
+      return edit;
+    return {
+      ...edit,
+      text: edit.text.replace(rendered.value.clause, "").trim(),
+      version: edit.version + 1,
+      contributionConfirmed: false,
+      confirmedMetricResultIds: edit.confirmedMetricResultIds.filter(
+        (id) => id !== result.id,
+      ),
+      updatedAt: now.toISOString(),
+    };
+  });
+}
 
 /** Trusted local answer records used by approval; never read from request bodies. */
 export async function readReviewedMeasurements(

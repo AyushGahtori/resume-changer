@@ -911,6 +911,9 @@ export const ImportReviewStateSchema = z
       .max(20)
       .default([]),
     questions: z.array(ImportQuestionSchema).max(40),
+    measurementAnswers: z
+      .record(z.string(), MeasurementAnswerSchema)
+      .optional(),
     measurementResults: z.array(MeasurementResultSchema).max(40),
     canSaveDraftIds: z.array(id).max(8),
     expired: z.boolean(),
@@ -991,16 +994,28 @@ export interface AchievementReviewProps {
 }
 
 export interface MeasurementFieldsProps {
+  initiallyExpanded?: boolean;
   questions: ImportQuestion[];
   answers: Record<string, MeasurementAnswer | undefined>;
   validation: Record<string, string[] | undefined>;
   previews: Record<string, MeasurementResult | undefined>;
-  onAnswer(questionId: string, answer: MeasurementAnswer): void;
-  onSkip(questionId: string, version: number): void;
-  onDefer(questionId: string, version: number): void;
+  onAnswer(
+    questionId: string,
+    answer: MeasurementAnswer,
+  ): void | Promise<void | boolean>;
+  onSkip(questionId: string, version: number): void | Promise<void | boolean>;
+  onDefer(questionId: string, version: number): void | Promise<void | boolean>;
 }
 
 export interface ImportTrustRailProps {
+  runDetails?: {
+    repository: string | null;
+    inspectedAt: string | null;
+    excerpts: number | null;
+    pullRequests: number | null;
+    model: string | null;
+    savedIds: string[];
+  };
   safetySummary: string[];
   runIdentity: { importId: string; runId: string | null; revision: string };
   budget: BudgetSummary;
@@ -1014,7 +1029,7 @@ export interface ImportTrustRailProps {
   saveState: SaveState;
   errors: DomainError[];
   onSave(): void;
-  onDiscard(): void;
+  onDiscard(): void | Promise<void | boolean>;
   onBack(): void;
 }
 

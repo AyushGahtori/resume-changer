@@ -88,6 +88,12 @@ const server = spawn(
       RESUME_APP_MODE: "local",
       RESUME_LIBRARY_ROOT: fixtureRoot,
       GITHUB_IMPORT_E2E_HARNESS: "1",
+      ...(process.env.GITHUB_IMPORT_E2E_BACKEND === "1"
+        ? {
+            GITHUB_APP_CLIENT_ID: "e2e-github-app",
+            GITHUB_APP_CALLBACK_URL: `http://127.0.0.1:${port}/api/github/connection/callback`,
+          }
+        : {}),
       NEXT_DIST_DIR: distDir,
       NEXT_TSCONFIG: tsconfig,
       NEXT_TELEMETRY_DISABLED: "1",

@@ -64,7 +64,7 @@ export function assertSameOrigin(request: Request): void {
     if (process.env.RESUME_APP_ORIGIN)
       allowed.add(new URL(process.env.RESUME_APP_ORIGIN).origin);
   } else if (
-    assertSafeEmulator() &&
+    (getAppMode() === "local" || assertSafeEmulator()) &&
     ["localhost", "127.0.0.1"].includes(url.hostname)
   ) {
     // Next's development middleware normalizes the loopback hostname.

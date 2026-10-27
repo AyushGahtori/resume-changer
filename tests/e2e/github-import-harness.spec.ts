@@ -15,7 +15,7 @@ test("the explicit E2E harness registers fixed GitHub import UI cases", async ({
   const selector = page.getByRole("combobox", {
     name: "Choose GitHub import fixture",
   });
-  await expect(selector.locator("option")).toHaveCount(26);
+  await expect(selector.locator("option")).toHaveCount(27);
 
   for (const caseId of [
     "setup-private-denied",
@@ -24,12 +24,17 @@ test("the explicit E2E harness registers fixed GitHub import UI cases", async ({
     "measurement-target",
     "status-interrupted",
     "notifications-expired",
+    "notifications-multiple",
     "layout-review",
   ]) {
     await selector.selectOption(caseId);
     await expect(
       page.getByTestId("github-import-harness-case"),
     ).toHaveAttribute("data-case-id", caseId);
-    await expect(page.getByTestId("github-import-placeholder")).toBeVisible();
+    if (caseId.startsWith("notifications-")) {
+      await expect(
+        page.getByTestId("github-import-notifications"),
+      ).toBeVisible();
+    }
   }
 });

@@ -18,6 +18,7 @@
     "test:pdf-live": "node scripts/test-pdf-live.mjs",
     "test:pdf-bundled": "node scripts/test-pdf-bundled.mjs",
     "test:e2e": "playwright test",
+    "test:github-journey": "node scripts/test-github-journey.mjs",
     "test:security": "npx -y firebase-tools@15.34.1 emulators:exec --only auth,firestore --project demo-resume-changer-security --config firebase.security.json \"node node_modules/vitest/vitest.mjs run --config vitest.security.config.ts && node scripts/test-account-http.mjs\""
   },
   "dependencies": {

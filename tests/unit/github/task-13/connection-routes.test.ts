@@ -204,6 +204,39 @@ describe("GitHub connection routes", () => {
     expect(response.headers.get("referrer-policy")).toBe("no-referrer");
   });
 
+  it.each([
+    "/library/github/import-one",
+    "/library/github/new?projectId=project-one",
+    "https://attacker.example/",
+    "//attacker.example/library/github/new",
+    "/generate",
+    "/library/github/new?redirect=https://attacker.example",
+  ])("restores only safe import destinations: %s", async (returnTo) => {
+    const { handlers } = createHandlers();
+    const started = await handlers.start(startRequest({ returnTo }));
+    expect(started.status).toBe(200);
+    const completed = await handlers.callback(
+      new Request(CALLBACK_URL + "?code=fictional-code&state=" + STATE, {
+        headers: { cookie: cookieHeader(started) },
+      }),
+    );
+    const destination = new URL(completed.headers.get("location")!);
+    expect(destination.origin).toBe(APP_ORIGIN);
+    const expected =
+      returnTo.startsWith("/library/github/") && !returnTo.includes("redirect=")
+        ? returnTo
+        : "/library/github/new";
+    expect(
+      destination.pathname +
+        (destination.searchParams.has("projectId")
+          ? "?projectId=" + destination.searchParams.get("projectId")
+          : ""),
+    ).toBe(expected);
+    expect(completed.headers.get("set-cookie")).toContain(
+      "github_return_to=; Path=/; Max-Age=0",
+    );
+  });
+
   it("blocks cross-origin connection starts before calling the access port", async () => {
     const access = createAccess();
     const handlers = createGithubConnectionHandlers({
@@ -261,7 +294,7 @@ describe("GitHub connection routes", () => {
 
     expect(first.status).toBe(303);
     expect(firstLocation.origin).toBe(APP_ORIGIN);
-    expect(firstLocation.pathname).toBe("/");
+    expect(firstLocation.pathname).toBe("/library/github/new");
     expect(firstLocation.searchParams.get("githubConnection")).toBe(
       "connected",
     );

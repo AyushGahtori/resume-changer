@@ -81,6 +81,19 @@ function loopback(hostname: string) {
   return ["localhost", "127.0.0.1", "[::1]"].includes(hostname);
 }
 
+function matchesCallbackOrigin(request: Request, callback: URL) {
+  const actual = new URL(request.url);
+  return (
+    actual.origin === callback.origin ||
+    (process.env.VERCEL !== "1" &&
+      getAppMode() === "local" &&
+      loopback(actual.hostname) &&
+      loopback(callback.hostname) &&
+      actual.protocol === callback.protocol &&
+      actual.port === callback.port)
+  );
+}
+
 function secureRequest(request: Request) {
   return new URL(request.url).protocol === "https:";
 }
@@ -90,6 +103,7 @@ function names(secure: boolean) {
     session: secure ? SECURE_SESSION_COOKIE : SESSION_COOKIE,
     state: secure ? SECURE_STATE_COOKIE : STATE_COOKIE,
     oauthState: secure ? SECURE_OAUTH_STATE_COOKIE : OAUTH_STATE_COOKIE,
+    returnTo: secure ? "__Host-github_return_to" : "github_return_to",
   };
 }
 
@@ -512,12 +526,35 @@ function clearedConnectionCookies(
   ];
 }
 
+function safeReturnTo(value: unknown): string {
+  if (typeof value !== "string" || value.length > 512)
+    return "/library/github/new";
+  let parsed: URL;
+  try {
+    parsed = new URL(value, "https://return.invalid");
+  } catch {
+    return "/library/github/new";
+  }
+  return parsed.origin === "https://return.invalid" &&
+    /^\/library\/github\/(?:new|[a-z0-9]+(?:-[a-z0-9]+)*)$/.test(
+      parsed.pathname,
+    ) &&
+    !parsed.hash &&
+    [...parsed.searchParams.keys()].every((key) => key === "projectId") &&
+    parsed.searchParams.getAll("projectId").length <= 1 &&
+    (!parsed.searchParams.has("projectId") ||
+      /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(parsed.searchParams.get("projectId")!))
+    ? parsed.pathname + parsed.search
+    : "/library/github/new";
+}
+
 function redirectFromCallback(
   callbackUrl: URL,
   state: "connected" | "denied" | "expired" | "unavailable",
   cookies: string[] = [],
+  returnTo = "/library/github/new",
 ) {
-  const destination = new URL("/", callbackUrl);
+  const destination = new URL(safeReturnTo(returnTo), callbackUrl);
   destination.searchParams.set("githubConnection", state);
   const headers = new Headers({
     Location: destination.href,
@@ -617,7 +654,7 @@ export function createGithubConnectionHandlers(
         );
       deps.assertMutationOrigin(request);
       const callback = configuredCallbackUrl(deps.getCallbackUrl());
-      if (new URL(request.url).origin !== callback.origin)
+      if (!matchesCallbackOrigin(request, callback))
         throw failure(
           "invalid-input",
           "Open the app at the same origin configured for the GitHub callback.",
@@ -631,10 +668,22 @@ export function createGithubConnectionHandlers(
           401,
         );
 
+      const body = await readBoundedBody(request, 1024);
+      let payload: unknown;
+      try {
+        payload = JSON.parse(new TextDecoder().decode(body) || "{}");
+      } catch {
+        throw failure("invalid-input", "Use a valid connection request.", 400);
+      }
+      const returnTo = safeReturnTo(
+        payload && typeof payload === "object" && "returnTo" in payload
+          ? payload.returnTo
+          : undefined,
+      );
       const result = await (
         await deps.getAccess()
       ).beginConnection(
-        { returnTo: "/" },
+        { returnTo },
         deps.createContext(request, session, deps.now()),
       );
       if (!result.ok) {
@@ -673,6 +722,12 @@ export function createGithubConnectionHandlers(
           ...(session.setSessionCookie ? [session.setSessionCookie] : []),
           stateCookie(request, "connecting"),
           oauthStateCookie(request, result.value.state),
+          serializeCookie(
+            names(secureRequest(request)).returnTo,
+            encodeURIComponent(returnTo),
+            secureRequest(request),
+            OAUTH_STATE_MAX_AGE,
+          ),
         ],
       );
     } catch (error) {
@@ -707,10 +762,37 @@ export function createGithubConnectionHandlers(
     } catch (error) {
       return unexpected(error);
     }
+    let returnTo = "/library/github/new";
+    try {
+      returnTo = safeReturnTo(
+        decodeURIComponent(
+          readCookie(request, names(secureRequest(request)).returnTo) ?? "",
+        ),
+      );
+    } catch {}
+    const redirect = (
+      target: URL,
+      state: "connected" | "denied" | "expired" | "unavailable",
+      cookies: string[],
+    ) =>
+      redirectFromCallback(
+        target,
+        state,
+        [
+          ...cookies,
+          serializeCookie(
+            names(secureRequest(request)).returnTo,
+            "",
+            secureRequest(request),
+            0,
+          ),
+        ],
+        returnTo,
+      );
     const url = new URL(request.url);
     if (
       request.method !== "GET" ||
-      url.origin !== callback.origin ||
+      !matchesCallbackOrigin(request, callback) ||
       url.pathname !== callback.pathname
     )
       return privateJson(
@@ -728,14 +810,10 @@ export function createGithubConnectionHandlers(
     try {
       session = await deps.resolveSession(request, false);
     } catch {
-      return redirectFromCallback(callback, "expired", [
-        clearedOauthStateCookie(request),
-      ]);
+      return redirect(callback, "expired", [clearedOauthStateCookie(request)]);
     }
     if (!session)
-      return redirectFromCallback(callback, "expired", [
-        clearedOauthStateCookie(request),
-      ]);
+      return redirect(callback, "expired", [clearedOauthStateCookie(request)]);
 
     const query = callbackQuery(request);
     const expectedState = readCookie(
@@ -747,12 +825,12 @@ export function createGithubConnectionHandlers(
       !expectedState ||
       query.state !== expectedState
     )
-      return redirectFromCallback(callback, "expired", [
+      return redirect(callback, "expired", [
         stateCookie(request, "expired"),
         clearedOauthStateCookie(request),
       ]);
     if (query.kind === "denied")
-      return redirectFromCallback(callback, "denied", [
+      return redirect(callback, "denied", [
         stateCookie(request, "denied"),
         clearedOauthStateCookie(request),
       ]);
@@ -765,18 +843,18 @@ export function createGithubConnectionHandlers(
         deps.createContext(request, session, deps.now()),
       );
       if (result.ok)
-        return redirectFromCallback(callback, "connected", [
+        return redirect(callback, "connected", [
           stateCookie(request, "connected"),
           clearedOauthStateCookie(request),
         ]);
       const error = portFailure(result.error);
       const state = callbackFailureState(error.error);
-      return redirectFromCallback(callback, state, [
+      return redirect(callback, state, [
         stateCookie(request, state),
         clearedOauthStateCookie(request),
       ]);
     } catch {
-      return redirectFromCallback(callback, "unavailable", [
+      return redirect(callback, "unavailable", [
         stateCookie(request, "unavailable"),
         clearedOauthStateCookie(request),
       ]);

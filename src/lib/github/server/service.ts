@@ -1526,6 +1526,10 @@ export const createImportService: ImportServiceFactory = (deps) => {
         candidates: candidates.value,
         priorReviews,
         questions: measurementReview.value.questions,
+        measurementAnswers:
+          "answers" in measurementReview.value
+            ? (measurementReview.value.answers ?? {})
+            : {},
         measurementResults: measurementReview.value.measurementResults,
         canSaveDraftIds: drafts
           .filter((draft) => draft.approvalEligible)
