@@ -11,7 +11,7 @@ Scope: owner-managed GitHub App and hosted execution on the existing `phase-one`
 - [x] Bind background jobs to verified Firebase accounts and dispatch opaque job IDs through Vercel Workflow.
 - [x] Provision a least-privilege Firebase service account for Preview and verify Firestore plus Auth lookup access without changing billing.
 - [x] Add emulator security tests, provisioning tests and GitHub exchange tests.
-- [ ] Owner creates the GitHub App and installs it on selected repositories.
+- [x] Owner creates the GitHub App and installs it on selected repositories; live connect, repository selection, revision pinning and PR loading verified on 29 October 2026.
 - [ ] Rebuild Preview with the App secrets and verify the real connect → import → approve → save journey.
 
 ## Design boundaries
@@ -24,4 +24,4 @@ Firestore state is gzip-compressed and capped at 700,000 compressed bytes per re
 
 ## Validation
 
-Automated unit tests use synthetic values. Emulator security tests exercise account isolation, ownership, encrypted credentials, stale workers, and browser-denied internal collections. The Vercel Preview service identity's Firestore transaction and Firebase Auth lookup were also tested against fictional probes, then the probes were removed. These checks do not prove the GitHub App has been created or installed; the two unchecked owner and Preview acceptance steps remain required.
+Automated unit tests use synthetic values. Emulator security tests exercise account isolation, ownership, encrypted credentials, stale workers, and browser-denied internal collections. The Vercel Preview service identity's Firestore transaction and Firebase Auth lookup were also tested against fictional probes, then the probes were removed. Live App authorization and repository setup are now confirmed separately in [GitHub App setup](github-app-setup.md#live-reconnect-verification--29-october-2026). The complete live import → approve → save acceptance step remains unchecked.

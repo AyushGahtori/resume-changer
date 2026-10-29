@@ -1,6 +1,6 @@
 # GitHub App setup for phase-one
 
-The hosted GitHub runtime is implemented on `phase-one` Preview. Main and Production remain unchanged. The remaining live step is creating an owner-managed GitHub App and installing it on selected repositories.
+The hosted GitHub runtime and owner-managed GitHub App are configured on `phase-one` Preview. Live connection, repository selection, revision pinning and pull-request loading were verified on 29 October 2026. Main and Production remain unchanged. The full analyze → review → approve → save journey still needs live acceptance.
 
 ## Start the local setup helper on Windows
 
@@ -37,5 +37,16 @@ Firebase Admin 14 loads `jwks-rsa` 4, which synchronously requires the ESM-only 
 The live callback diagnostics showed a returned code, a present state cookie and an exact state match, but the parser rejected additional query parameters before consuming the pending authorization. No GitHub connection or token had been created: this was callback parsing, not token expiry. The parser now ignores unused response parameters as required by [OAuth 2.0 section 4.1.2](https://www.rfc-editor.org/rfc/rfc6749#section-4.1.2). They are never forwarded to the access service or reflected in the redirect. Session binding, exact state matching, duplicate-parameter rejection, callback origin validation, PKCE and single-use pending authorization remain enforced.
 
 The OAuth token and refresh requests explicitly negotiate `Accept: application/json`, as [GitHub documents](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps). The REST API media type remains on REST requests. A credential-free probe with fictional client credentials returned plain text for the REST media type and JSON for `application/json`; the regression checks the OAuth request's content negotiation. This was a separate interoperability issue found while tracing the exchange.
+
+### Live reconnect verification — 29 October 2026
+
+Verified application commit: `d870cbfc17c42c9fb44b820fe6611180259423ec`, following callback fix `477cc351d2f1f0fabdedb08ef251d1f0307d6faa`. Its Vercel Preview deployment `dpl_7vPTwm8zWyGEiAsfg1qQQMST48i4` reached READY after a successful production build.
+
+- Authenticated runtime requests: connection start returned 200, callback returned 303, repository listing returned 200 and repository selection returned 200.
+- Read-only metadata checks confirmed a newly created connection and a present encrypted credential record; no token, verifier, cookie or credential value was printed.
+- The owner confirmed the connected UI, selected `AyushGahtori/resume-changer`, pinned `main` revision `4fc28cd`, and loaded pull-request choices.
+- Full unit/integration suite: 1,302 passed, 3 optional live tests skipped. After the OAuth media-type correction, the 34 focused exchange/connection-route tests passed; typecheck, lint and changed-file formatting checks passed.
+
+This verifies the connection and repository setup flow. It does not claim that a live analysis or library save has been performed.
 
 See [Vercel's Node configuration](https://vercel.com/docs/functions/runtimes/node-js/advanced-node-configuration#experimental-nodejs-require-of-es-module) and the [jwks-rsa v4 release notes](https://github.com/auth0/node-jwks-rsa/blob/master/CHANGELOG.md).
