@@ -25,6 +25,7 @@
     "@google/genai": "^2.29.1",
     "@vercel/blob": "^2.8.2",
     "firebase": "^13.1.0",
+    "firebase-admin": "14.5.0",
     "jose": "^6.2.13",
     "lucide-react": "^1.60.0",
     "next": "^15.5.28",
@@ -32,6 +33,7 @@
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "server-only": "^0.0.1",
+    "workflow": "5.2.3",
     "zod": "^4.6.7"
   },
   "devDependencies": {
@@ -62,6 +64,7 @@
   "overrides": {
     "zod": "$zod",
     "postcss": "8.5.31",
-    "@grpc/grpc-js": "1.14.6"
+    "@grpc/grpc-js": "1.14.6",
+    "undici": "7.30.1"
   }
 }

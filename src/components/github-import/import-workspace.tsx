@@ -32,6 +32,7 @@ export type ImportWorkspacePageProps = {
   initialState: import("../../lib/github/contracts").ImportReviewState | null;
   projects: ProjectOption[];
   initialProjectId?: string;
+  installationUrl?: string;
 };
 
 function errorText(error: { message: string } | null) {
@@ -72,6 +73,8 @@ export function ImportWorkspace(props: ImportWorkspacePageProps) {
   const visibleError = workspace.actionError ?? workspace.connectionError;
 
   const setupProps: ComponentProps<typeof RepositorySetup> = {
+    installationUrl:
+      props.source === "personal" ? props.installationUrl : undefined,
     repositoryRevision: workspace.repositoryScope
       ? {
           ref: workspace.repositoryScope.ref,

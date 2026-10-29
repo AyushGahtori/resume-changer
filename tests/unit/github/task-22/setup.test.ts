@@ -335,6 +335,33 @@ describe("RepositorySetup", () => {
     ).toBe("ready");
   });
 
+  it("offers repository selection with read-only guidance and no automatic permission grant", () => {
+    const onConnect = vi.fn();
+    const props = baseProps({
+      ...task22DisconnectedProps(),
+      onConnect,
+      installationUrl:
+        "https://github.com/apps/resume-changer-preview/installations/new",
+    });
+    const host = mount(props);
+    const link = host.querySelector<HTMLAnchorElement>(
+      'a[href$="/installations/new"]',
+    );
+    expect(link?.textContent).toContain("Choose repositories");
+    expect(link?.target).toBe("_blank");
+    expect(link?.rel).toContain("noopener");
+    expect(host.textContent).toContain("one or more repositories");
+    expect(host.textContent).toContain("read-only access");
+    expect(onConnect).not.toHaveBeenCalled();
+    const unsafe = mount(
+      baseProps({
+        ...task22DisconnectedProps(),
+        installationUrl: "https://evil.example/installations/new",
+      }),
+    );
+    expect(unsafe.querySelector('a[href*="evil.example"]')).toBeNull();
+  });
+
   it("caps selected PRs, retains long labels, and rejects unsafe repository links", () => {
     const host = mount(
       baseProps({

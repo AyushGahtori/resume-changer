@@ -1,11 +1,11 @@
 import { createHash } from "node:crypto";
 import { join } from "node:path";
 import {
-  assertLocalStatePath,
-  readLocalState,
-  writeLocalState,
-  withLocalStateLock,
-} from "./local-state";
+  assertStatePath,
+  readState as readStoredState,
+  writeState as writeStoredState,
+  withStateLock,
+} from "./state";
 import { z } from "zod";
 import {
   AnalysisResultSchema,
@@ -635,7 +635,7 @@ async function pathsFor(
     hashValue(context.access.authorizationNamespace),
     importId + ".json",
   );
-  await assertLocalStatePath(root, file);
+  await assertStatePath(root, file);
   return { root, file };
 }
 async function withInterviewLock<T>(
@@ -644,7 +644,7 @@ async function withInterviewLock<T>(
   run: (paths: InterviewPaths) => Promise<T>,
 ): Promise<T> {
   const paths = await pathsFor(context, importId);
-  return withLocalStateLock(paths.root, paths.file, async () => {
+  return withStateLock(paths.root, paths.file, async () => {
     checkContext(context);
     return run(paths);
   });
@@ -654,7 +654,7 @@ async function readState(
 ): Promise<InterviewState | null> {
   try {
     return interviewStateSchema.parse(
-      JSON.parse(await readLocalState(paths.root, paths.file, 1024 * 1024)),
+      JSON.parse(await readStoredState(paths.root, paths.file, 1024 * 1024)),
     );
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
@@ -668,7 +668,7 @@ async function writeState(
   const text = JSON.stringify(interviewStateSchema.parse(state));
   if (Buffer.byteLength(text) > 1024 * 1024)
     serviceFault("limit-exceeded", "Measurement state exceeds its limit.");
-  await writeLocalState(paths.root, paths.file, text);
+  await writeStoredState(paths.root, paths.file, text);
 }
 
 async function readReconciledState(

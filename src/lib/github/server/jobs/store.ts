@@ -3,11 +3,11 @@ import { rename } from "node:fs/promises";
 import { isAbsolute, join, resolve } from "node:path";
 import { z } from "zod";
 import {
-  assertLocalStatePath,
-  withLocalStateLock,
-  readLocalState,
-  writeLocalState,
-} from "../local-state";
+  assertStatePath,
+  withStateLock,
+  readState,
+  writeState,
+} from "../state";
 import {
   createJobOutboxEvent,
   JobFailureCodeSchema,
@@ -526,7 +526,7 @@ export function createJobStore(dependencies: JobStoreDependencies) {
   const maxActiveJobs = dependencies.maxActiveJobs ?? DEFAULT_MAX_ACTIVE_JOBS;
   const defaultLeaseMs = dependencies.leaseDurationMs ?? DEFAULT_LEASE_MS;
   const lockWaitMs = dependencies.lockWaitMs ?? DEFAULT_LOCK_WAIT_MS;
-  const renameFile = dependencies.renameFile ?? rename;
+  const renameFile = dependencies.renameFile;
 
   if (
     !Number.isSafeInteger(maxQueuedJobs) ||
@@ -547,7 +547,7 @@ export function createJobStore(dependencies: JobStoreDependencies) {
 
   async function readStore(): Promise<JobStoreDocument> {
     try {
-      const raw = await readLocalState(rootDir, storePath, 32 * 1024 * 1024);
+      const raw = await readState(rootDir, storePath, 32 * 1024 * 1024);
       let value: unknown;
       try {
         value = JSON.parse(raw);
@@ -586,7 +586,7 @@ export function createJobStore(dependencies: JobStoreDependencies) {
         "Saved GitHub job data exceeds its storage limit.",
       );
     try {
-      await writeLocalState(rootDir, storePath, serialized, renameFile);
+      await writeState(rootDir, storePath, serialized, renameFile);
     } catch (error) {
       if (error instanceof JobStoreFault) throw error;
       throw fault(
@@ -606,8 +606,8 @@ export function createJobStore(dependencies: JobStoreDependencies) {
       changed: boolean;
     },
   ) {
-    await assertLocalStatePath(rootDir, lockPath);
-    return withLocalStateLock(
+    await assertStatePath(rootDir, lockPath);
+    return withStateLock(
       rootDir,
       storePath,
       async () => {

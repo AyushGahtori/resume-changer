@@ -1,32 +1,27 @@
 # GitHub App setup for phase-one
 
-The integrated page is on `phase-one`. Main and Production are unchanged. Real imports require your own GitHub App; the Codex GitHub connection is separate and cannot provide the website's credentials.
+The hosted GitHub runtime is implemented on `phase-one` Preview. Main and Production remain unchanged. The remaining live step is creating an owner-managed GitHub App and installing it on selected repositories.
 
-## Prepared registration
+## Start the local setup helper on Windows
 
-Run `node scripts/prepare-github-app.mjs https://YOUR-STABLE-PREVIEW-ORIGIN "Resume Changer Preview"`. Open the returned `registrationUrl` in your signed-in GitHub browser. This prepares the form; it does not create an App or print credentials.
+Run PowerShell from the repository checkout, not `C:\Users\Ayush`:
 
-[Open the prepared phase-one Preview registration form](https://github.com/settings/apps/new?name=Resume+Changer+Preview&description=Import+selected+repository+evidence+into+reviewed+resume+achievements.&url=https%3A%2F%2Fresume-changer-git-phase-one-ayushs-projects-ab23dbca.vercel.app&callback_urls%5B%5D=https%3A%2F%2Fresume-changer-git-phase-one-ayushs-projects-ab23dbca.vercel.app%2Fapi%2Fgithub%2Fconnection%2Fcallback&public=false&webhook_active=false&request_oauth_on_install=false&contents=read&pull_requests=read&metadata=read). Check these settings in your GitHub account before creating the App.
+```powershell
+Set-Location 'C:\Users\Ayush\.codex\worktrees\github-phase-one\re_changer'
+$vercelCli = 'C:\Users\Ayush\AppData\Local\npm-cache\_npx\67eb4586ca667318\node_modules\vercel\dist\index.js'
+node scripts/setup-github-app.mjs --vercel-cli $vercelCli
+```
 
-The form requests repository **Contents: read**, **Pull requests: read**, and **Metadata: read**. No write permissions or account administration are needed. Webhooks are disabled. The callback is exactly `/api/github/connection/callback` on that Preview origin. Begin authorization from the website's Connect button, so the session, state and PKCE checks exist before the callback.
+The helper prints a temporary `http://127.0.0.1:<port>` address. Open it on this computer, click **Create App on GitHub**, and confirm the App in your GitHub account. GitHub returns the generated credentials directly to the local helper, which stores them as sensitive `phase-one` Preview environment values and starts a Preview rebuild. It never prints the secrets. Keep the terminal and helper open until setup completes.
 
-Use a separate Preview App restricted to its owner initially. Install it only on selected repositories. Keep user access-token expiration enabled. A later public release needs its own App, callback and server configuration; it is not part of this branch's Preview test.
+If the Vercel CLI path changes, locate its installed `dist/index.js` under `%LOCALAPPDATA%\npm-cache\_npx\` and use that path. Do not paste credentials into chat or create them as `NEXT_PUBLIC_*` values.
 
-GitHub documents this registration mechanism in [Registering a GitHub App using URL parameters](https://docs.github.com/en/apps/sharing-github-apps/registering-a-github-app-using-url-parameters).
+## Repository access
 
-## Credentials and runtime prerequisites
+After GitHub creates the App, choose **Only select repositories** to install it on one repository or several repositories. Resume Changer lists the granted repositories; each import is pinned to one repository. The App asks only for **Contents: read**, **Pull requests: read**, and **Metadata: read**. It does not need write access. Reconnect GitHub to update the selected repository set later.
 
-After creating the App, GitHub supplies the App ID, Client ID, client secret, and a downloadable private key. These belong in server secret storage only, with distinct Preview and Production values. Never put them in `NEXT_PUBLIC_*`, commit them, paste them into chat, or include them in diagnostics. `GITHUB_APP_CALLBACK_URL` and the app origin are public server configuration.
+## Hosting and checks
 
-Registration alone does **not** enable live imports. The current default services deliberately return unavailable until a runtime factory provides the encrypted credential vault, durable authorization metadata, real App token exchange, trusted per-account contexts and transport. The local backend/worker assembly is implemented. Vercel additionally needs a hosted durable persistence and worker adapter; it must never use the local filesystem store or a browser-owned job loop. Existing Firebase billing settings are unchanged.
+The Preview runtime stores private state in server-only Firestore collections, encrypts GitHub credentials, and dispatches work through Vercel Workflow. A dedicated Firebase service identity has conditional access to the selected Firestore database and only the Firebase Auth user-lookup permission; Firebase remains on the free plan. Do not promote this Preview configuration to Production.
 
-The Gate C integration test substitutes only the external GitHub/AI boundaries and uses the real local stores, selector, queue, worker, API handlers and approval writer with fictional data. This verifies the assembled workflow; it does not claim a real App connection or hosted worker is configured.
-
-## Enablement checklist
-
-- Register/install the Preview App using the prepared form.
-- Configure the server-only exchange and encrypted vault bindings; verify permissions again when issuing a repository-scoped installation token.
-- Provide durable hosted adapters before enabling imports on Vercel.
-- Verify the complete Preview journey with a deliberately selected repository: connect → pin → select PRs/files → consent → background result → confirm → save.
-- Verify another account cannot read the import, jobs, answers, notifications or saved achievements.
-- Keep the feature unavailable until those checks pass. Do not promote this branch to Production automatically.
+Automated tests use fictional repositories and emulator data. They cannot substitute for the final real Preview journey after App creation: connect GitHub, select a repository, pin its revision, review evidence, analyze, approve, and save. Verify account isolation and disconnect cleanup during that journey.

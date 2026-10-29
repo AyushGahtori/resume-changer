@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { githubInstallationUrl } from "../../../../../lib/github/installation-url";
 import { ImportWorkspace } from "../../../../../components/github-import/import-workspace";
 import {
   DataLoadError,
@@ -30,6 +31,11 @@ export default async function NewGithubImportPage({
         importId={null}
         routeState="setup"
         initialState={null}
+        installationUrl={
+          source === "personal"
+            ? githubInstallationUrl(process.env.GITHUB_APP_SLUG)
+            : undefined
+        }
         projects={projects}
         initialProjectId={projects.find((p) => p.id === query.projectId)?.id}
       />

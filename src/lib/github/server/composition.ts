@@ -14,7 +14,8 @@ import {
   projectJobNotifications,
   type JobNotification as DurableNotification,
 } from "./jobs/events";
-import { readLocalState } from "./local-state";
+import { readState } from "./state";
+import { hostedGithubConfigured } from "./hosted/config";
 import type { DomainError, ExecutionContext, Result } from "../contracts";
 import type {
   GithubFactoryPorts,
@@ -303,7 +304,7 @@ export function composeGithubServices(
   async function readDurableJobs(): Promise<DurableJobRecord[]> {
     let content: string;
     try {
-      content = await readLocalState(
+      content = await readState(
         input.personalRoot,
         join(input.personalRoot, "data", "github-jobs", "jobs.json"),
         32 * 1024 * 1024,
@@ -638,6 +639,7 @@ export function configureGithubServices(factory: GithubServicesFactory): void {
 export function isGithubImportRuntimeConfigured(): boolean {
   return (
     Boolean(configuredFactory) ||
+    hostedGithubConfigured() ||
     (isGithubImportHarnessEnabled(process.env) &&
       process.env.GITHUB_IMPORT_E2E_BACKEND === "1")
   );
@@ -645,6 +647,12 @@ export function isGithubImportRuntimeConfigured(): boolean {
 
 export function getGithubServices(): Promise<GithubServerServices> {
   if (!configuredFactory) {
+    if (hostedGithubConfigured()) {
+      servicesPromise ??= import("./hosted/runtime").then(
+        async (module) => (await module.getHostedGithubRuntime()).services,
+      );
+      return servicesPromise;
+    }
     if (
       isGithubImportHarnessEnabled(process.env) &&
       process.env.GITHUB_IMPORT_E2E_BACKEND === "1"

@@ -21,6 +21,7 @@ import { createImportJobRunner } from "./jobs/runner";
 import { createReportParser } from "./reports-core";
 import { createRunBudget } from "./budget-port";
 import { createUnavailableGithubPorts } from "./unavailable";
+import { hasDurableStateStorage } from "./state";
 import {
   err,
   ok,
@@ -56,6 +57,7 @@ export type GithubBackendDependencies = {
   ) => Promise<Result<ExecutionContext>>;
   jobContext: (job: JobRecord) => Promise<Result<ExecutionContext>>;
   workerAvailable: () => boolean;
+  dispatchJob?: (job: JobRecord, context: ExecutionContext) => Promise<void>;
   approvalFactory: (
     dependencies: GithubApprovalPortDependencies,
   ) => ApprovalPort;
@@ -70,7 +72,7 @@ export function createGithubBackendRuntime(deps: GithubBackendDependencies): {
   ports: GithubFactoryPorts;
   bindings: GithubRuntimeBindings;
 } {
-  if (process.env.VERCEL === "1")
+  if (process.env.VERCEL === "1" && !hasDurableStateStorage())
     throw new Error(
       "A durable hosted GitHub worker adapter is required on Vercel.",
     );
@@ -300,25 +302,29 @@ export function createGithubBackendRuntime(deps: GithubBackendDependencies): {
       input: Parameters<typeof service.prepare>[0],
       context: ExecutionContext,
     ) {
-      return deps.workerAvailable()
-        ? service.prepare(input, context)
-        : err<JobRecord>({
-            code: "unavailable",
-            message: "The GitHub import worker is unavailable.",
-            retryable: true,
-          });
+      if (!deps.workerAvailable())
+        return err<JobRecord>({
+          code: "unavailable",
+          message: "The GitHub import worker is unavailable.",
+          retryable: true,
+        });
+      const result = await service.prepare(input, context);
+      if (result.ok) await deps.dispatchJob?.(result.value, context);
+      return result;
     },
     async enqueueAnalysis(
       input: Parameters<typeof service.enqueueAnalysis>[0],
       context: ExecutionContext,
     ) {
-      return deps.workerAvailable()
-        ? service.enqueueAnalysis(input, context)
-        : err<JobRecord>({
-            code: "unavailable",
-            message: "The GitHub import worker is unavailable.",
-            retryable: true,
-          });
+      if (!deps.workerAvailable())
+        return err<JobRecord>({
+          code: "unavailable",
+          message: "The GitHub import worker is unavailable.",
+          retryable: true,
+        });
+      const result = await service.enqueueAnalysis(input, context);
+      if (result.ok) await deps.dispatchJob?.(result.value, context);
+      return result;
     },
     async changeSelection(
       input: Parameters<typeof service.changeSelection>[0],

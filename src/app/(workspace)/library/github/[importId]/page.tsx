@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { githubInstallationUrl } from "../../../../../lib/github/installation-url";
 import { notFound } from "next/navigation";
 import { ImportWorkspace } from "../../../../../components/github-import/import-workspace";
 import {
@@ -29,6 +30,7 @@ export default async function GithubImportPage({
         importId={importId}
         routeState="analysis"
         initialState={null}
+        installationUrl={githubInstallationUrl(process.env.GITHUB_APP_SLUG)}
         projects={projects}
       />
     );

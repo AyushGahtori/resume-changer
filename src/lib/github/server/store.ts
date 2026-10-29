@@ -22,11 +22,7 @@ import type {
   ImportRecordPatch,
 } from "../ports";
 import { inspectFileContent, getPathExclusionReason } from "./file-policy-core";
-import {
-  readLocalState,
-  withLocalStateLock,
-  writeLocalState,
-} from "./local-state";
+import { readState, withStateLock, writeState } from "./state";
 
 const MAX_BYTES = 64 * 1024 * 1024;
 const DocumentSchema = z
@@ -89,7 +85,7 @@ function engine(deps: Dependencies) {
         let doc: Document;
         try {
           doc = DocumentSchema.parse(
-            JSON.parse(await readLocalState(root, target, MAX_BYTES)),
+            JSON.parse(await readState(root, target, MAX_BYTES)),
           );
         } catch (error) {
           if ((error as NodeJS.ErrnoException).code === "ENOENT")
@@ -104,12 +100,12 @@ function engine(deps: Dependencies) {
           const text = `${JSON.stringify(DocumentSchema.parse(doc))}\n`;
           if (Buffer.byteLength(text) > MAX_BYTES)
             fault("limit-exceeded", "The staged workspace is full.");
-          await writeLocalState(root, target, text, deps.renameFile);
+          await writeState(root, target, text, deps.renameFile);
         }
         return ok(result);
       };
       return mutate
-        ? await withLocalStateLock(root, target, operation)
+        ? await withStateLock(root, target, operation)
         : await operation();
     } catch (error) {
       if (error instanceof StoreFault)

@@ -21,9 +21,11 @@ import type {
   RepositorySetupProps,
 } from "@/lib/github/contracts";
 import styles from "./repository-setup.module.css";
+import { safeGithubInstallationUrl } from "../../lib/github/installation-url";
 
 /** Optional display details supplied by the page controller when available. */
 export type RepositorySetupDisplayProps = {
+  installationUrl?: string;
   connectionPresentationState?: "expired" | "denied" | "unavailable";
   connectionStatusMessage?: string | null;
   pullRequestState?:
@@ -619,6 +621,24 @@ export function RepositorySetup(props: RepositorySetupViewProps) {
               )}
               {connection.action}
             </button>
+          ) : null}
+          {safeGithubInstallationUrl(props.installationUrl) ? (
+            <div className={styles.repositoryAccess}>
+              <a
+                className={styles.connectButton}
+                href={safeGithubInstallationUrl(props.installationUrl)}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <ExternalLink aria-hidden="true" size={15} /> Choose
+                repositories
+              </a>
+              <p className={styles.helperText}>
+                Choose one or more repositories on GitHub. Resume Changer
+                requests read-only access. Reconnect afterward to refresh this
+                list.
+              </p>
+            </div>
           ) : null}
           {selectedRepository?.visibility === "private" &&
           connectionState === "connected" ? (

@@ -15,7 +15,9 @@
     "noEmitOnError": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "workflow": ["./node_modules/workflow/dist/index.d.ts"],
+      "workflow/api": ["./node_modules/workflow/dist/api.d.ts"]
     },
     "jsx": "react-jsx",
     "resolveJsonModule": true
