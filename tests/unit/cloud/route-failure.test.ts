@@ -44,3 +44,24 @@ describe("protected route failure diagnostics", () => {
     );
   });
 });
+
+it("identifies fixed startup failures without emitting exception text", () => {
+  expect(
+    protectedRouteFailureDetails(
+      new ProtectedRouteFailure(
+        "github-services",
+        new Error("Invalid credential vault configuration."),
+      ),
+    ),
+  ).toEqual({
+    code: "ACCOUNT_REQUEST_FAILED",
+    stage: "github-services",
+    errorName: "Error",
+    reason: "hosted-vault",
+  });
+  expect(
+    protectedRouteFailureDetails(
+      new Error("Invalid credential vault configuration. private key"),
+    ),
+  ).not.toHaveProperty("reason");
+});

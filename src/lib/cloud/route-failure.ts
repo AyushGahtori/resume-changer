@@ -1,5 +1,24 @@
 export type ProtectedRouteFailureStage = "request-handler" | "github-services";
 
+const STARTUP_FAILURES = new Map([
+  [
+    "Hosted GitHub database credentials are unavailable.",
+    "hosted-admin-missing",
+  ],
+  [
+    "The hosted GitHub database project does not match.",
+    "hosted-admin-project",
+  ],
+  ["A dedicated GitHub state namespace is required.", "hosted-namespace"],
+  ["Durable GitHub state is already configured.", "hosted-state-duplicate"],
+  ["Invalid credential vault configuration.", "hosted-vault"],
+  [
+    "The GitHub callback must match the approved app origin.",
+    "hosted-callback",
+  ],
+  ["GitHub App credentials are incomplete.", "hosted-app-credentials"],
+]);
+
 /** Wraps an internal failure with a fixed stage label without exposing details. */
 export class ProtectedRouteFailure extends Error {
   constructor(
@@ -24,6 +43,8 @@ const SAFE_ERROR_NAMES = new Set([
 ]);
 
 const SAFE_ERROR_CODES = new Set([
+  "MODULE_NOT_FOUND",
+  "ERR_MODULE_NOT_FOUND",
   "app/invalid-credential",
   "app/invalid-app-options",
   "app/no-app",
@@ -69,6 +90,9 @@ export function protectedRouteFailureDetails(error: unknown) {
     code: "ACCOUNT_REQUEST_FAILED",
     stage,
     errorName: SAFE_ERROR_NAMES.has(name) ? name : "OtherError",
+    ...(cause instanceof Error && STARTUP_FAILURES.has(cause.message)
+      ? { reason: STARTUP_FAILURES.get(cause.message) }
+      : {}),
     ...(typeof code === "string" && SAFE_ERROR_CODES.has(code)
       ? { errorCode: code }
       : {}),
