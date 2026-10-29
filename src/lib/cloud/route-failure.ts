@@ -86,31 +86,56 @@ export function protectedRouteFailureDetails(error: unknown) {
       ? cause.status
       : undefined;
 
-  const sites =
-    cause instanceof Error
-      ? [
-          ...(cause.stack ?? "").matchAll(
-            /[/\\].next[/\\]server[/\\]chunks[/\\](\d+\.js):(\d+):(\d+)/g,
-          ),
-        ]
-          .slice(0, 3)
-          .map((match) => ({
-            chunk: match[1],
-            line: Number(match[2]),
-            column: Number(match[3]),
-          }))
-      : [];
-  const moduleFailure =
-    cause instanceof Error &&
-    /Cannot find module|Dynamic require of/.test(cause.message);
+  const message =
+    typeof cause === "string"
+      ? cause
+      : cause &&
+          typeof cause === "object" &&
+          "message" in cause &&
+          typeof cause.message === "string"
+        ? cause.message
+        : "";
+  const stack =
+    cause &&
+    typeof cause === "object" &&
+    "stack" in cause &&
+    typeof cause.stack === "string"
+      ? cause.stack
+      : "";
+  const vocabulary = new Set(
+    "cannot find module require import not supported missing package export path extension unknown loading load failed invalid client server component only use outside scope esm asynchronous sync synchronous top level await syntax identifier defined file directory permission denied timed out workflow context runtime credential credentials project database firebase firestore google cloud admin genai key api enoent einval eperm eacces".split(
+      " ",
+    ),
+  );
+  const messageWords = message
+    .toLowerCase()
+    .split(/[^a-z]+/)
+    .filter((word) => vocabulary.has(word))
+    .slice(0, 32);
+  const sites = stack
+    ? [
+        ...stack.matchAll(
+          /[/\\].next[/\\]server[/\\]chunks[/\\](\d+\.js):(\d+):(\d+)/g,
+        ),
+      ]
+        .slice(0, 3)
+        .map((match) => ({
+          chunk: match[1],
+          line: Number(match[2]),
+          column: Number(match[3]),
+        }))
+    : [];
+  const moduleFailure = /Cannot find module|Dynamic require of/.test(message);
   return {
     code: "ACCOUNT_REQUEST_FAILED",
+    ...(messageWords.length ? { messageWords } : {}),
+    causeType: typeof cause,
     ...(sites.length ? { sites } : {}),
     ...(moduleFailure ? { reason: "module-loading" } : {}),
     stage,
     errorName: SAFE_ERROR_NAMES.has(name) ? name : "OtherError",
-    ...(cause instanceof Error && STARTUP_FAILURES.has(cause.message)
-      ? { reason: STARTUP_FAILURES.get(cause.message) }
+    ...(STARTUP_FAILURES.has(message)
+      ? { reason: STARTUP_FAILURES.get(message) }
       : {}),
     ...(typeof code === "string" && SAFE_ERROR_CODES.has(code)
       ? { errorCode: code }
