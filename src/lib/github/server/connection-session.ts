@@ -20,6 +20,12 @@ import {
 import type { GithubAccessPort } from "../ports";
 import { getGithubServices } from "./composition";
 
+import {
+  callbackValidationDetails,
+  connectionFailureDetails,
+  reportConnectionFailure,
+} from "./connection-diagnostics";
+
 const CALLBACK_PATH = "/api/github/connection/callback";
 const SESSION_COOKIE = "github_session";
 const SECURE_SESSION_COOKIE = "__Host-github_session";
@@ -809,11 +815,19 @@ export function createGithubConnectionHandlers(
     let session: GithubConnectionSession | null;
     try {
       session = await deps.resolveSession(request, false);
-    } catch {
+    } catch (error) {
+      reportConnectionFailure("callback-session", {
+        reason:
+          error instanceof AccountAccessError && error.code === "AUTH_REQUIRED"
+            ? "account-auth-required"
+            : "session-resolution-failed",
+      });
       return redirect(callback, "expired", [clearedOauthStateCookie(request)]);
     }
-    if (!session)
+    if (!session) {
+      reportConnectionFailure("callback-session", { reason: "no-session" });
       return redirect(callback, "expired", [clearedOauthStateCookie(request)]);
+    }
 
     const query = callbackQuery(request);
     const expectedState = readCookie(
@@ -824,11 +838,16 @@ export function createGithubConnectionHandlers(
       query.kind === "failed" ||
       !expectedState ||
       query.state !== expectedState
-    )
+    ) {
+      reportConnectionFailure(
+        "callback-validation",
+        callbackValidationDetails(request, expectedState, query.kind),
+      );
       return redirect(callback, "expired", [
         stateCookie(request, "expired"),
         clearedOauthStateCookie(request),
       ]);
+    }
     if (query.kind === "denied")
       return redirect(callback, "denied", [
         stateCookie(request, "denied"),
@@ -848,12 +867,19 @@ export function createGithubConnectionHandlers(
           clearedOauthStateCookie(request),
         ]);
       const error = portFailure(result.error);
+      reportConnectionFailure(
+        "callback-exchange",
+        connectionFailureDetails(error.error),
+      );
       const state = callbackFailureState(error.error);
       return redirect(callback, state, [
         stateCookie(request, state),
         clearedOauthStateCookie(request),
       ]);
     } catch {
+      reportConnectionFailure("callback-exchange", {
+        reason: "unexpected-failure",
+      });
       return redirect(callback, "unavailable", [
         stateCookie(request, "unavailable"),
         clearedOauthStateCookie(request),
@@ -925,6 +951,10 @@ export function createGithubConnectionHandlers(
             },
             error.status,
           );
+        reportConnectionFailure("repository-list", {
+          ...connectionFailureDetails(error.error),
+          sessionState: session.state ?? "unknown",
+        });
         if (error.error.code !== "forbidden") return errorResponse(error);
         const state =
           session.state === "connected"
