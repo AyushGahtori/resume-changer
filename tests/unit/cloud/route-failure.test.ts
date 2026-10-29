@@ -16,7 +16,6 @@ describe("protected route failure diagnostics", () => {
 
     expect(protectedRouteFailureDetails(failure)).toEqual({
       code: "ACCOUNT_REQUEST_FAILED",
-      causeType: "object",
       stage: "github-services",
       errorName: "Error",
       errorCode: "app/invalid-credential",
@@ -36,7 +35,6 @@ describe("protected route failure diagnostics", () => {
 
     expect(protectedRouteFailureDetails(failure)).toEqual({
       code: "ACCOUNT_REQUEST_FAILED",
-      causeType: "object",
       stage: "request-handler",
       errorName: "OtherError",
       httpStatus: 502,
@@ -47,53 +45,17 @@ describe("protected route failure diagnostics", () => {
   });
 });
 
-it("identifies fixed startup failures without emitting exception text", () => {
-  expect(
-    protectedRouteFailureDetails(
-      new ProtectedRouteFailure(
-        "github-services",
-        new Error("Invalid credential vault configuration."),
-      ),
-    ),
-  ).toEqual({
-    code: "ACCOUNT_REQUEST_FAILED",
-    causeType: "object",
-    stage: "github-services",
-    errorName: "Error",
-    reason: "hosted-vault",
-    messageWords: ["invalid", "credential"],
-  });
-  expect(
-    protectedRouteFailureDetails(
-      new Error("Invalid credential vault configuration. private key"),
-    ),
-  ).not.toHaveProperty("reason");
-});
-
-it("reports only compiled numeric code locations from a private stack", () => {
-  const failure = new Error("private-secret");
-  failure.stack =
-    "Error: private-secret\n at privateFunction (/var/task/.next/server/chunks/1234.js:5:67)\n at x (/private/user/path.ts:1:2)";
-  const details = protectedRouteFailureDetails(failure);
-  expect(details).toMatchObject({
-    sites: [{ chunk: "1234.js", line: 5, column: 67 }],
-  });
-  expect(JSON.stringify(details)).not.toMatch(/private|Function|var\/task/);
-});
-
-it("handles serialized loader errors without revealing arbitrary message words", () => {
+it("identifies ESM loader failures without exposing dependency paths", () => {
+  const error = Object.assign(
+    new Error("require() of ES Module /private/token.js not supported"),
+    { code: "ERR_REQUIRE_ESM" },
+  );
   const details = protectedRouteFailureDetails(
-    new ProtectedRouteFailure("github-services", {
-      name: "Error",
-      message: "Cannot find module private-token-12345",
-      stack:
-        "Error: private-token-12345\n at loader (/var/task/.next/server/chunks/1234.js:1:2)",
-    }),
+    new ProtectedRouteFailure("github-services", error),
   );
   expect(details).toMatchObject({
-    reason: "module-loading",
-    messageWords: ["cannot", "find", "module"],
-    sites: [{ chunk: "1234.js", line: 1, column: 2 }],
+    stage: "github-services",
+    errorCode: "ERR_REQUIRE_ESM",
   });
-  expect(JSON.stringify(details)).not.toMatch(/private|token|var\/task/);
+  expect(JSON.stringify(details)).not.toMatch(/private|token|require\(/);
 });

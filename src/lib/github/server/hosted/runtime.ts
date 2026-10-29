@@ -54,11 +54,9 @@ export function getHostedGithubRuntime() {
   return (pending ??= buildRuntime());
 }
 async function buildRuntime() {
-  console.info("GitHub runtime startup.", { stage: "module-loaded" });
   const { db, auth, namespace } = hostedAdmin(),
     personalRoot = getPersonalDataRoot(),
     now = () => new Date();
-  console.info("GitHub runtime startup.", { stage: "admin-ready" });
   const storage = createFirestoreStateStorage(db, namespace);
   configureDurableStateStorage(storage);
   const vault = createHostedCredentialVault(
@@ -66,7 +64,6 @@ async function buildRuntime() {
     namespace,
     process.env.GITHUB_VAULT_KEY!,
   );
-  console.info("GitHub runtime startup.", { stage: "vault-ready" });
   const jobs = createJobStore({ rootDir: personalRoot, clock: { now } });
   const owners = createHostedJobOwners(db, namespace, (uid) =>
     auth.getUser(uid),
@@ -115,7 +112,6 @@ async function buildRuntime() {
     clientSecret: process.env.GITHUB_APP_CLIENT_SECRET!,
     privateKey: process.env.GITHUB_APP_PRIVATE_KEY!,
   });
-  console.info("GitHub runtime startup.", { stage: "exchange-ready" });
   const access = createGithubAccess({
     config: {
       clientId: process.env.GITHUB_APP_CLIENT_ID!,
@@ -251,7 +247,6 @@ async function buildRuntime() {
       experimental_retention: 0,
     });
   }
-  console.info("GitHub runtime startup.", { stage: "backend-start" });
   backend = createGithubBackendRuntime({
     personalRoot,
     now,
@@ -301,7 +296,6 @@ async function buildRuntime() {
     },
   });
   const services = composeGithubServices({ ...backend, personalRoot, now });
-  console.info("GitHub runtime startup.", { stage: "ready" });
   return {
     services,
     async runJob(jobId: string) {

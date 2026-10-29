@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { checkHostedAccountConfig } from "../../../scripts/check-hosted-account-config.mjs";
 import { signInErrorMessage } from "../../../src/lib/cloud/sign-in-error";
@@ -64,4 +65,51 @@ describe("hosted sign-in configuration", () => {
       "Sign-in is not configured for this deployment. Please contact the app owner.",
     );
   });
+});
+
+describe("hosted GitHub module loader compatibility", () => {
+  const github = { ...configured, GITHUB_RUNTIME_ENABLED: "1" };
+  it("rejects the Vercel default that cannot load firebase-admin/auth", () => {
+    for (const NODE_OPTIONS of [
+      undefined,
+      "",
+      "--max-old-space-size=2048",
+      "--no-experimental-require-module",
+      "--experimental-require-module --no-experimental-require-module",
+    ])
+      expect(() =>
+        checkHostedAccountConfig({ ...github, NODE_OPTIONS }),
+      ).toThrow(/NODE_OPTIONS=--experimental-require-module/);
+  });
+  it("accepts an explicit loader opt-in only when hosted GitHub is enabled", () => {
+    expect(() =>
+      checkHostedAccountConfig({
+        ...github,
+        NODE_OPTIONS: "--max-old-space-size=2048 --experimental-require-module",
+      }),
+    ).not.toThrow();
+    expect(() => checkHostedAccountConfig(configured)).not.toThrow();
+    expect(() =>
+      checkHostedAccountConfig({ GITHUB_RUNTIME_ENABLED: "1" }),
+    ).not.toThrow();
+  });
+  it("loads the actual Firebase Admin dependency chain with the deployed Node option", () => {
+    const result = spawnSync(
+      process.execPath,
+      [
+        "-e",
+        "require('firebase-admin/auth'); require('firebase-admin/firestore'); process.stdout.write('loaded')",
+      ],
+      {
+        cwd: process.cwd(),
+        env: { ...process.env, NODE_OPTIONS: "--experimental-require-module" },
+        encoding: "utf8",
+        windowsHide: true,
+        timeout: 20000,
+      },
+    );
+    expect(result.error).toBeUndefined();
+    expect(result.status, result.stderr).toBe(0);
+    expect(result.stdout).toBe("loaded");
+  }, 25000);
 });

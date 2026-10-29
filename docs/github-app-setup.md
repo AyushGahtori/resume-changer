@@ -25,3 +25,11 @@ After GitHub creates the App, choose **Only select repositories** to install it 
 The Preview runtime stores private state in server-only Firestore collections, encrypts GitHub credentials, and dispatches work through Vercel Workflow. A dedicated Firebase service identity has conditional access to the selected Firestore database and only the Firebase Auth user-lookup permission; Firebase remains on the free plan. Do not promote this Preview configuration to Production.
 
 Automated tests use fictional repositories and emulator data. They cannot substitute for the final real Preview journey after App creation: connect GitHub, select a repository, pin its revision, review evidence, analyze, approve, and save. Verify account isolation and disconnect cleanup during that journey.
+
+## Required Vercel Node loader option
+
+On the exact `phase-one` Preview environment, set `NODE_OPTIONS=--experimental-require-module` and rebuild. The hosted build rejects an enabled GitHub runtime without this setting. Keep it scoped to this branch; do not change Production.
+
+Firebase Admin 14 loads `jwks-rsa` 4, which synchronously requires the ESM-only `jose` 6 package. Vercel disables Node's require(ESM) capability by default. This caused `ERR_REQUIRE_ESM` before GitHub service initialization, even though credentials were present. The regular local Node runtime enabled the capability, so earlier local tests and builds passed. The regression now loads the real Firebase Admin auth/Firestore packages in a child Node process and checks the hosted configuration guard.
+
+See [Vercel's Node configuration](https://vercel.com/docs/functions/runtimes/node-js/advanced-node-configuration#experimental-nodejs-require-of-es-module) and the [jwks-rsa v4 release notes](https://github.com/auth0/node-jwks-rsa/blob/master/CHANGELOG.md).

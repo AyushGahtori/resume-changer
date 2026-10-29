@@ -3,6 +3,22 @@ import { fileURLToPath } from "node:url";
 
 export function checkHostedAccountConfig(environment) {
   if (environment.VERCEL !== "1") return;
+  // firebase-admin/auth -> jwks-rsa 4 -> jose 6 requires Node's require(ESM).
+  // Vercel disables that capability unless NODE_OPTIONS explicitly enables it.
+  if (environment.GITHUB_RUNTIME_ENABLED === "1") {
+    const flags = (environment.NODE_OPTIONS ?? "")
+      .split(/\s+/)
+      .filter((flag) =>
+        [
+          "--experimental-require-module",
+          "--no-experimental-require-module",
+        ].includes(flag),
+      );
+    if (flags.at(-1) !== "--experimental-require-module")
+      throw new Error(
+        "Hosted GitHub imports require NODE_OPTIONS=--experimental-require-module in this deployment environment.",
+      );
+  }
   const required = [
     "NEXT_PUBLIC_FIREBASE_API_KEY",
     "NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN",
