@@ -32,4 +32,8 @@ On the exact `phase-one` Preview environment, set `NODE_OPTIONS=--experimental-r
 
 Firebase Admin 14 loads `jwks-rsa` 4, which synchronously requires the ESM-only `jose` 6 package. Vercel disables Node's require(ESM) capability by default. This caused `ERR_REQUIRE_ESM` before GitHub service initialization, even though credentials were present. The regular local Node runtime enabled the capability, so earlier local tests and builds passed. The regression now loads the real Firebase Admin auth/Firestore packages in a child Node process and checks the hosted configuration guard.
 
+### Immediate “Connection expired” after authorization
+
+The live callback diagnostics showed a returned code, a present state cookie and an exact state match, but the parser rejected additional query parameters before consuming the pending authorization. No GitHub connection or token had been created: this was callback parsing, not token expiry. The parser now ignores unused response parameters as required by [OAuth 2.0 section 4.1.2](https://www.rfc-editor.org/rfc/rfc6749#section-4.1.2). They are never forwarded to the access service or reflected in the redirect. Session binding, exact state matching, duplicate-parameter rejection, callback origin validation, PKCE and single-use pending authorization remain enforced.
+
 See [Vercel's Node configuration](https://vercel.com/docs/functions/runtimes/node-js/advanced-node-configuration#experimental-nodejs-require-of-es-module) and the [jwks-rsa v4 release notes](https://github.com/auth0/node-jwks-rsa/blob/master/CHANGELOG.md).

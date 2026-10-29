@@ -348,6 +348,70 @@ describe("GitHub connection routes", () => {
     expect(start.status).toBe(200);
   });
 
+  it.each([
+    "&installation_id=123&setup_action=update",
+    "&scope=offline_access&provider_metadata=future-extension",
+    "&returnTo=https%3A%2F%2Fattacker.example&sessionId=another-account",
+  ])(
+    "ignores unused OAuth response metadata without forwarding or reflecting it: %s",
+    async (extra) => {
+      const { access, handlers } = createHandlers();
+      const started = await handlers.start(startRequest());
+      const response = await handlers.callback(
+        new Request(CALLBACK_URL + "?code=oauth-code&state=" + STATE + extra, {
+          headers: { cookie: cookieHeader(started) },
+        }),
+      );
+      expect(response.status).toBe(303);
+      expect(response.headers.get("location")).toBe(
+        APP_ORIGIN + "/library/github/new?githubConnection=connected",
+      );
+      expect(access.completeAuthorization).toHaveBeenCalledExactlyOnceWith(
+        { code: "oauth-code", state: STATE },
+        expect.objectContaining({
+          access: expect.objectContaining({
+            sessionId: "local-" + "A".repeat(43),
+          }),
+        }),
+      );
+    },
+  );
+
+  it.each([
+    { query: "code=oauth-code&state=" + STATE + "&state=" + STATE },
+    { query: "code=oauth-code&code=another-code&state=" + STATE },
+    { query: "code=oauth-code&error=access_denied&state=" + STATE },
+    { query: "code=oauth-code&state=" + "B".repeat(43) },
+    { query: "code=oauth-code&state=" + STATE, noStateCookie: true },
+    {
+      query:
+        "code=oauth-code&state=" + STATE + "&metadata=" + "x".repeat(8_192),
+    },
+  ])(
+    "rejects invalid OAuth responses even with unused metadata: $query",
+    async ({ query, noStateCookie }) => {
+      const { access, handlers } = createHandlers();
+      const started = await handlers.start(startRequest());
+      const cookie = cookieHeader(started)
+        .split("; ")
+        .filter(
+          (value) => !noStateCookie || !value.startsWith("github_oauth_state="),
+        )
+        .join("; ");
+      const response = await handlers.callback(
+        new Request(CALLBACK_URL + "?" + query + "&extension=ignored", {
+          headers: { cookie },
+        }),
+      );
+      expect(
+        new URL(response.headers.get("location")!).searchParams.get(
+          "githubConnection",
+        ),
+      ).toBe("expired");
+      expect(access.completeAuthorization).not.toHaveBeenCalled();
+    },
+  );
+
   it("reports GitHub organization or installation denial without exposing provider details", async () => {
     const access = createAccess({
       completeAuthorization: vi.fn(async () =>

@@ -581,18 +581,12 @@ function callbackQuery(
   | { kind: "failed" } {
   const url = new URL(request.url);
   const query = url.searchParams;
-  const allowed = new Set([
-    "code",
-    "state",
-    "error",
-    "error_description",
-    "error_uri",
-  ]);
   const keys = [...query.keys()];
   const state = query.get("state") ?? "";
+  // OAuth 2.0 section 4.1.2 requires ignoring unrecognized response parameters.
+  // Only code/state/error affect this flow; extra metadata grants no authority.
   if (
     url.href.length > 8_192 ||
-    keys.some((key) => !allowed.has(key)) ||
     keys.some((key) => query.getAll(key).length !== 1) ||
     !/^[A-Za-z0-9_-]{43,256}$/.test(state)
   )
