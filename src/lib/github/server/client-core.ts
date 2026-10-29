@@ -1,4 +1,5 @@
 import { isIP } from "node:net";
+import { readerOperation, reportReaderFailure } from "./reader-diagnostics";
 
 export const GITHUB_API_ORIGIN = "https://api.github.com";
 export const GITHUB_API_VERSION = "2026-03-10";
@@ -942,6 +943,8 @@ export function createGithubClient(
           const attemptSignal = await createAttemptSignal(input.context);
           const attemptId = `${input.context.runId}:${++nextAttemptId}`;
           let response: Response | undefined;
+          const attemptStarted = now();
+          let diagnosticStage = "dns";
           try {
             let addresses: readonly string[];
             try {
@@ -965,6 +968,7 @@ export function createGithubClient(
             validateResolvedAddresses(addresses);
 
             let token: string | null;
+            diagnosticStage = "credentials";
             try {
               token = await abortable(
                 deps.credentials.getAccessToken(input.context),
@@ -995,6 +999,7 @@ export function createGithubClient(
               );
             }
 
+            diagnosticStage = "attempt-budget";
             await abortable(
               charge(
                 input.context,
@@ -1012,6 +1017,7 @@ export function createGithubClient(
             });
             if (token) headers.set("Authorization", `Bearer ${token}`);
 
+            diagnosticStage = "fetch";
             try {
               response = await abortable(
                 deps.fetch(
@@ -1132,6 +1138,7 @@ export function createGithubClient(
               throw safeStatusFailure(response, rateLimit, responseTime);
             }
 
+            diagnosticStage = "response-body";
             const nextPage = parseNextPage(response.headers.get("link"));
             const bytes = await readResponseBytes(
               response,
@@ -1145,6 +1152,7 @@ export function createGithubClient(
               ),
             );
             let data: T;
+            diagnosticStage = "decode";
             try {
               data = decode(bytes);
             } catch {
@@ -1164,6 +1172,16 @@ export function createGithubClient(
                 ...(nextPage ? { nextPage } : {}),
               },
             };
+          } catch (error) {
+            reportReaderFailure({
+              runId: input.context.runId,
+              operation: readerOperation(url.pathname),
+              stage: diagnosticStage,
+              timedOut: attemptSignal.timedOut(),
+              elapsedMs: Math.max(0, now() - attemptStarted),
+              upstreamStatus: response?.status,
+            });
+            throw error;
           } finally {
             if (response?.body && !response.bodyUsed)
               await cancelBody(response);

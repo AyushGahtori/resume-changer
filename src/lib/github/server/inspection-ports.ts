@@ -45,6 +45,7 @@ import {
   preparedSelectionForStore,
 } from "./phase-one-core";
 import { ledgerFor, persistRunBudget } from "./budget-port";
+import { readerOperation, reportReaderFailure } from "./reader-diagnostics";
 
 type Transport = Omit<
   GithubClientDependencies,
@@ -110,6 +111,7 @@ export function createInspectionPorts(deps: InspectionDependencies) {
     candidates: Map<string, FileCandidate>;
     context: ExecutionContext;
     github: ReturnType<typeof createGithubClient>;
+    checkpointStats: { calls: number; ms: number };
   };
   const states = new WeakMap<object, State>();
   function state(context: ExecutionContext): State {
@@ -120,27 +122,37 @@ export function createInspectionPorts(deps: InspectionDependencies) {
       return s;
     }
     const bridge = createTransportBudget(ledger);
+    const checkpointStats = { calls: 0, ms: 0 };
+    async function persist() {
+      const started = Date.now();
+      try {
+        await persistRunBudget(context.budget);
+      } finally {
+        checkpointStats.calls++;
+        checkpointStats.ms += Date.now() - started;
+      }
+    }
     const github = createGithubClient({
       ...deps.transport(context),
       now: () => context.now().getTime(),
       ledger: {
         async reserve(input) {
           const result = await bridge.transport.reserve(input);
-          await persistRunBudget(context.budget);
+          await persist();
           return result;
         },
         async commitUsage(input) {
           await bridge.transport.commitUsage(input);
-          await persistRunBudget(context.budget);
+          await persist();
         },
       },
       async onAttemptSettled(...input) {
         const result = await bridge.settled(...input);
-        await persistRunBudget(context.budget);
+        await persist();
         return result;
       },
     });
-    s = { context, github, candidates: new Map() };
+    s = { context, github, checkpointStats, candidates: new Map() };
     states.set(ledger, s);
     return s;
   }
@@ -167,10 +179,19 @@ export function createInspectionPorts(deps: InspectionDependencies) {
         ) {
           if (!s.scope || !(await allowed(input.context, s.scope.repositoryId)))
             return denied();
+          const before = { ...s.checkpointStats };
           const r = await s.github.getJson<T>({
             ...input,
             context: requestContext(input.context),
           });
+          if (!r.ok)
+            reportReaderFailure({
+              runId: input.context.runId,
+              operation: readerOperation(input.path),
+              stage: "checkpoint-summary",
+              checkpointCalls: s.checkpointStats.calls - before.calls,
+              checkpointMs: s.checkpointStats.ms - before.ms,
+            });
           return r.ok
             ? r.value.data === null
               ? invalid("Repository metadata was unavailable.")
