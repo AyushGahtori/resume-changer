@@ -1,5 +1,6 @@
 import "server-only";
 import { protectAccountRoute } from "../../cloud/protect-route";
+import { ProtectedRouteFailure } from "../../cloud/route-failure";
 import { requireCloudAccount } from "../../cloud/server-account";
 import { assertSameOrigin, getAppMode } from "../../cloud/security";
 import { getGithubServices, type GithubServerServices } from "./composition";
@@ -19,7 +20,12 @@ export function protectGithubRoute<Arguments extends unknown[] = []>(
     async (request: Request, ...arguments_: Arguments) => {
       if (!["GET", "HEAD", "OPTIONS"].includes(request.method))
         assertSameOrigin(request);
-      const services = await getGithubServices();
+      let services: GithubServerServices;
+      try {
+        services = await getGithubServices();
+      } catch (error) {
+        throw new ProtectedRouteFailure("github-services", error);
+      }
       const accountId =
         getAppMode() === "firebase"
           ? (await requireCloudAccount()).uid
