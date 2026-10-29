@@ -335,10 +335,9 @@ describe("RepositorySetup", () => {
     ).toBe("ready");
   });
 
-  it("offers repository selection with read-only guidance and no automatic permission grant", () => {
+  it("keeps permission management secondary to the repository picker", () => {
     const onConnect = vi.fn();
     const props = baseProps({
-      ...task22DisconnectedProps(),
       onConnect,
       installationUrl:
         "https://github.com/apps/resume-changer-preview/installations/new",
@@ -347,15 +346,16 @@ describe("RepositorySetup", () => {
     const link = host.querySelector<HTMLAnchorElement>(
       'a[href$="/installations/new"]',
     );
-    expect(link?.textContent).toContain("Choose repositories");
+    expect(link?.textContent).toContain("Manage repository access on GitHub");
     expect(link?.target).toBe("_blank");
     expect(link?.rel).toContain("noopener");
-    expect(host.textContent).toContain("one or more repositories");
+    expect(host.textContent).toContain(
+      "permissions do not select a repository for analysis",
+    );
     expect(host.textContent).toContain("read-only access");
     expect(onConnect).not.toHaveBeenCalled();
     const unsafe = mount(
       baseProps({
-        ...task22DisconnectedProps(),
         installationUrl: "https://evil.example/installations/new",
       }),
     );
@@ -391,4 +391,71 @@ describe("RepositorySetup", () => {
       )?.disabled,
     ).toBe(true);
   });
+});
+
+it("offers one connect action before showing repository permission settings", () => {
+  const host = mount(
+    baseProps({
+      ...task22DisconnectedProps(),
+      installationUrl:
+        "https://github.com/apps/resume-changer-preview/installations/new",
+    }),
+  );
+  expect(
+    [...host.querySelectorAll("button")].filter((button) =>
+      button.textContent?.includes("Connect GitHub"),
+    ),
+  ).toHaveLength(1);
+  expect(host.querySelector('a[href$="/installations/new"]')).toBeNull();
+  expect(host.textContent).toContain("return here to choose one repository");
+});
+
+it("refreshes permissions on return once and allows a manual refresh without reconnecting", () => {
+  const refresh = vi.fn(),
+    connect = vi.fn();
+  const host = mount(
+    baseProps({
+      onConnect: connect,
+      onRefreshRepositories: refresh,
+      installationUrl:
+        "https://github.com/apps/resume-changer-preview/installations/new",
+    }),
+  );
+  const details = host.querySelector("details");
+  expect(details?.open).toBe(false);
+  const link = host.querySelector<HTMLAnchorElement>(
+    'a[href$="/installations/new"]',
+  )!;
+  link.addEventListener("click", (event) => event.preventDefault());
+  Object.defineProperty(document, "visibilityState", {
+    configurable: true,
+    value: "visible",
+  });
+  act(() => {
+    link.click();
+    window.dispatchEvent(new dom.window.Event("focus"));
+    window.dispatchEvent(new dom.window.Event("focus"));
+  });
+  expect(refresh).toHaveBeenCalledOnce();
+  act(() => buttonNamed(host, "Refresh repository list").click());
+  expect(refresh).toHaveBeenCalledTimes(2);
+  expect(connect).not.toHaveBeenCalled();
+});
+
+it("opens recovery for an empty repository list and disables concurrent refresh", () => {
+  const host = mount(
+    baseProps({
+      repositories: [],
+      selectedRepositoryId: null,
+      ready: false,
+      onRefreshRepositories: vi.fn(),
+      isRefreshingRepositories: true,
+    }),
+  );
+  expect(host.querySelector("details")?.open).toBe(true);
+  expect(
+    (buttonNamed(host, "Refreshing repositories…") as HTMLButtonElement)
+      .disabled,
+  ).toBe(true);
+  expect(host.querySelector('[data-readiness="ready"]')).toBeNull();
 });

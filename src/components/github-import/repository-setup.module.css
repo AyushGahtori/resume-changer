@@ -152,10 +152,7 @@
 
 .sourceGrid {
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1.25fr) minmax(
-      220px,
-      0.92fr
-    );
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
   gap: 12px;
   min-width: 0;
 }
@@ -949,8 +946,39 @@
     animation: none;
   }
 }
-.repositoryAccess {
+
+.connectionBlock {
   display: grid;
-  gap: 0.75rem;
-  margin-top: 1rem;
+  gap: 10px;
+  min-width: 0;
+}
+.primaryConnectButton {
+  background: var(--color-violet, #7c3aed);
+  border-color: var(--color-violet, #7c3aed);
+  color: #fff;
+}
+.primaryConnectButton:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-violet, #7c3aed) 85%, #000);
+  color: #fff;
+}
+.repositoryAccess {
+  margin-top: 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border, #cbd5e1);
+}
+.repositoryAccess summary {
+  width: fit-content;
+  cursor: pointer;
+  color: var(--color-text-secondary, #334155);
+  font-size: 13px;
+  font-weight: 600;
+}
+.repositoryAccess summary:focus-visible {
+  outline: 2px solid var(--color-focus-ring, #7c3aed);
+  outline-offset: 3px;
+}
+.accessHelp {
+  display: grid;
+  gap: 10px;
+  padding-top: 12px;
 }

@@ -12,9 +12,8 @@ import {
   LoaderCircle,
   LockKeyhole,
   RefreshCw,
-  ShieldCheck,
 } from "lucide-react";
-import { useId, type ChangeEvent } from "react";
+import { useEffect, useId, useRef, type ChangeEvent } from "react";
 import type {
   DomainError,
   PullRequestSummary,
@@ -26,6 +25,8 @@ import { safeGithubInstallationUrl } from "../../lib/github/installation-url";
 /** Optional display details supplied by the page controller when available. */
 export type RepositorySetupDisplayProps = {
   installationUrl?: string;
+  onRefreshRepositories?: () => void;
+  isRefreshingRepositories?: boolean;
   connectionPresentationState?: "expired" | "denied" | "unavailable";
   connectionStatusMessage?: string | null;
   pullRequestState?:
@@ -91,7 +92,7 @@ function connectionStatus(
       tone: "expired",
       message:
         presentationMessage ??
-        "Reconnect GitHub to refresh access to this repository.",
+        "GitHub sign-in was not completed or has expired. Reconnect, then choose a repository here.",
     } as const;
   }
 
@@ -131,7 +132,7 @@ function connectionStatus(
       action: null,
       tone: "connected",
       message:
-        "Only repositories available to this GitHub connection can be selected.",
+        "Choose one repository below. Granting access on GitHub does not start an analysis.",
     } as const;
   }
 
@@ -149,7 +150,9 @@ function connectionStatus(
       label: "Not connected",
       action: "Connect GitHub",
       tone: "disconnected",
-      message: "Connect an authorized GitHub account to choose repositories.",
+      message:
+        presentationMessage ||
+        "Sign in on GitHub and allow read-only access, then return here to choose one repository. This is a one-time connection.",
     } as const;
   }
 
@@ -231,7 +234,27 @@ export function RepositorySetup(props: RepositorySetupViewProps) {
     connectionStatusMessage,
     pullRequestStatusMessage,
     repositoryRevision,
+    onRefreshRepositories,
+    isRefreshingRepositories = false,
   } = props;
+  const awaitingAccessReturn = useRef(false);
+  useEffect(() => {
+    const refreshAfterReturn = () => {
+      if (
+        !awaitingAccessReturn.current ||
+        document.visibilityState !== "visible"
+      )
+        return;
+      awaitingAccessReturn.current = false;
+      onRefreshRepositories?.();
+    };
+    window.addEventListener("focus", refreshAfterReturn);
+    document.addEventListener("visibilitychange", refreshAfterReturn);
+    return () => {
+      window.removeEventListener("focus", refreshAfterReturn);
+      document.removeEventListener("visibilitychange", refreshAfterReturn);
+    };
+  }, [onRefreshRepositories]);
   const pullRequestState =
     props.pullRequestState ?? inferredPullRequestState(props);
   const id = useId().replaceAll(":", "");
@@ -270,6 +293,7 @@ export function RepositorySetup(props: RepositorySetupViewProps) {
     .slice(0, MAX_VISIBLE_PULL_REQUESTS);
   const setupReady =
     ready &&
+    !isRefreshingRepositories &&
     !error &&
     connectionState === "connected" &&
     connection.tone === "connected" &&
@@ -284,7 +308,15 @@ export function RepositorySetup(props: RepositorySetupViewProps) {
     ? "Your repository and destination are ready. Review your contribution scope before preparing evidence."
     : connection.tone === "denied"
       ? "Repository access must be restored before setup can become ready."
-      : "Choose an authorized repository and an existing project. PR selection is optional.";
+      : connectionState !== "connected"
+        ? "Connect GitHub above to get started."
+        : !selectedRepository
+          ? "Choose one repository to analyze."
+          : !selectedProject
+            ? "Choose the Achievement Library project for your drafts."
+            : !role.trim()
+              ? "Briefly describe your own work on this repository."
+              : "Prepare the evidence to continue. Pull requests are optional.";
 
   function handleRepositoryChange(event: ChangeEvent<HTMLSelectElement>) {
     const repositoryId = event.currentTarget.value;
@@ -378,9 +410,61 @@ export function RepositorySetup(props: RepositorySetupViewProps) {
               <GitBranch size={21} strokeWidth={2} />
             </span>
             <div className={styles.cardHeadingText}>
-              <p className={styles.eyebrow}>Source repository</p>
-              <h2 id={`${repoSelectId}-heading`}>Choose where to look</h2>
+              <p className={styles.eyebrow}>Step 1 · GitHub repository</p>
+              <h2 id={`${repoSelectId}-heading`}>Choose one repository</h2>
             </div>
+          </div>
+
+          <div
+            className={styles.connectionBlock}
+            aria-label="GitHub connection"
+          >
+            <p
+              className={styles.connectionStatus}
+              role={connectionState === "connecting" ? "status" : undefined}
+              aria-live={
+                connectionState === "connecting" ? "polite" : undefined
+              }
+              aria-busy={connectionState === "connecting" || undefined}
+            >
+              <span
+                className={`${styles.statusDot} ${styles[`dot${connection.tone}`]}`}
+                aria-hidden="true"
+              />
+              <strong>
+                {isRefreshingRepositories
+                  ? "Checking GitHub access…"
+                  : connection.label}
+              </strong>
+            </p>
+            <p className={styles.helperText}>{connection.message}</p>
+
+            {connection.action ? (
+              <button
+                className={`${styles.connectButton} ${styles.primaryConnectButton}`}
+                type="button"
+                onClick={onConnect}
+                disabled={
+                  connectionState === "connecting" || isRefreshingRepositories
+                }
+              >
+                {connectionState === "error" ? (
+                  <RefreshCw aria-hidden="true" size={15} />
+                ) : (
+                  <GitBranch aria-hidden="true" size={15} />
+                )}
+                {isRefreshingRepositories
+                  ? "Checking GitHub…"
+                  : connection.action}
+              </button>
+            ) : null}
+            {selectedRepository?.visibility === "private" &&
+            connectionState === "connected" ? (
+              <p className={styles.privateAccessNote}>
+                <LockKeyhole aria-hidden="true" size={14} />
+                Private repository access is active for this selection.
+              </p>
+            ) : null}
           </div>
 
           {connectionState === "connected" ? (
@@ -394,12 +478,14 @@ export function RepositorySetup(props: RepositorySetupViewProps) {
                     selectedRepository ? selectedRepository.repositoryId : ""
                   }
                   onChange={handleRepositoryChange}
-                  disabled={repositories.length === 0}
+                  disabled={
+                    repositories.length === 0 || isRefreshingRepositories
+                  }
                 >
                   <option value="" disabled>
                     {repositories.length
-                      ? "Select an accessible repository"
-                      : "No accessible repositories"}
+                      ? "Choose the repository to analyze"
+                      : "No repositories available yet"}
                   </option>
                   {repositories.map((repository) => (
                     <option
@@ -420,15 +506,7 @@ export function RepositorySetup(props: RepositorySetupViewProps) {
                 />
               </span>
             </label>
-          ) : (
-            <div className={styles.repositoryUnavailable}>
-              <p className={styles.fieldLabel}>Repository access</p>
-              <p className={styles.helperText}>
-                Connect GitHub to choose from repositories you are authorized to
-                use.
-              </p>
-            </div>
-          )}
+          ) : null}
 
           {selectedRepository ? (
             <div className={styles.repositoryIdentity}>
@@ -497,12 +575,62 @@ export function RepositorySetup(props: RepositorySetupViewProps) {
                 ) : null}
               </div>
             </div>
-          ) : (
+          ) : connectionState === "connected" ? (
             <p className={styles.helperText}>
-              Repository identity and its current revision will appear here
-              after selection.
+              Only the repository you select here will be analyzed.
             </p>
-          )}
+          ) : null}
+
+          {connectionState === "connected" &&
+          (safeGithubInstallationUrl(props.installationUrl) ||
+            onRefreshRepositories) ? (
+            <details
+              className={styles.repositoryAccess}
+              open={repositories.length === 0 || undefined}
+            >
+              <summary>Repository missing?</summary>
+              <div className={styles.accessHelp}>
+                <p className={styles.helperText}>
+                  Resume Changer requests read-only access. GitHub controls
+                  which repositories it can read. Allow the repository on
+                  GitHub, then return here. Access permissions do not select a
+                  repository for analysis.
+                </p>
+                {safeGithubInstallationUrl(props.installationUrl) ? (
+                  <a
+                    className={styles.connectButton}
+                    href={safeGithubInstallationUrl(props.installationUrl)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => {
+                      awaitingAccessReturn.current = true;
+                    }}
+                  >
+                    <ExternalLink aria-hidden="true" size={15} /> Manage
+                    repository access on GitHub
+                  </a>
+                ) : null}
+                {onRefreshRepositories ? (
+                  <button
+                    className={styles.connectButton}
+                    type="button"
+                    onClick={onRefreshRepositories}
+                    disabled={isRefreshingRepositories}
+                  >
+                    <RefreshCw aria-hidden="true" size={15} />{" "}
+                    {isRefreshingRepositories
+                      ? "Refreshing repositories…"
+                      : "Refresh repository list"}
+                  </button>
+                ) : null}
+                <p className={styles.helperText}>
+                  The list refreshes when you return from GitHub. You do not
+                  need to reconnect your account after changing repository
+                  access.
+                </p>
+              </div>
+            </details>
+          ) : null}
         </section>
 
         <section
@@ -514,7 +642,7 @@ export function RepositorySetup(props: RepositorySetupViewProps) {
               <BriefcaseBusiness size={20} strokeWidth={2} />
             </span>
             <div className={styles.cardHeadingText}>
-              <p className={styles.eyebrow}>Destination project</p>
+              <p className={styles.eyebrow}>Step 2 · Achievement Library</p>
               <h2 id={`${destinationSelectId}-heading`}>
                 Where drafts will be saved
               </h2>
@@ -566,87 +694,6 @@ export function RepositorySetup(props: RepositorySetupViewProps) {
               none is available; no project details are changed here.
             </p>
           )}
-        </section>
-
-        <section
-          className={styles.accessCard}
-          aria-labelledby={`${id}-access-heading`}
-        >
-          <div className={styles.cardHeading}>
-            <span
-              className={`${styles.connectionIcon} ${styles[`connection${connection.tone}`]}`}
-              aria-hidden="true"
-            >
-              {connectionState === "connected" ? (
-                <CheckCircle2 size={19} />
-              ) : connectionState === "connecting" ? (
-                <LoaderCircle className={styles.spinner} size={19} />
-              ) : connection.tone === "denied" ? (
-                <AlertCircle size={19} />
-              ) : (
-                <ShieldCheck size={19} />
-              )}
-            </span>
-            <div className={styles.cardHeadingText}>
-              <p className={styles.eyebrow}>GitHub access</p>
-              <h2 id={`${id}-access-heading`}>Connection and revision</h2>
-            </div>
-          </div>
-
-          <p
-            className={styles.connectionStatus}
-            role={connectionState === "connecting" ? "status" : undefined}
-            aria-live={connectionState === "connecting" ? "polite" : undefined}
-            aria-busy={connectionState === "connecting" || undefined}
-          >
-            <span
-              className={`${styles.statusDot} ${styles[`dot${connection.tone}`]}`}
-              aria-hidden="true"
-            />
-            <strong>{connection.label}</strong>
-          </p>
-          <p className={styles.helperText}>{connection.message}</p>
-
-          {connection.action ? (
-            <button
-              className={styles.connectButton}
-              type="button"
-              onClick={onConnect}
-              disabled={connectionState === "connecting"}
-            >
-              {connectionState === "error" ? (
-                <RefreshCw aria-hidden="true" size={15} />
-              ) : (
-                <GitBranch aria-hidden="true" size={15} />
-              )}
-              {connection.action}
-            </button>
-          ) : null}
-          {safeGithubInstallationUrl(props.installationUrl) ? (
-            <div className={styles.repositoryAccess}>
-              <a
-                className={styles.connectButton}
-                href={safeGithubInstallationUrl(props.installationUrl)}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <ExternalLink aria-hidden="true" size={15} /> Choose
-                repositories
-              </a>
-              <p className={styles.helperText}>
-                Choose one or more repositories on GitHub. Resume Changer
-                requests read-only access. Reconnect afterward to refresh this
-                list.
-              </p>
-            </div>
-          ) : null}
-          {selectedRepository?.visibility === "private" &&
-          connectionState === "connected" ? (
-            <p className={styles.privateAccessNote}>
-              <LockKeyhole aria-hidden="true" size={14} />
-              Private repository access is active for this selection.
-            </p>
-          ) : null}
         </section>
       </div>
 
@@ -815,16 +862,6 @@ export function RepositorySetup(props: RepositorySetupViewProps) {
                   ? "Choose a connected repository to load its pull requests."
                   : connection.message}
               </p>
-              {connection.action ? (
-                <button
-                  className={styles.manualScopeButton}
-                  type="button"
-                  onClick={onConnect}
-                  disabled={connectionState === "connecting"}
-                >
-                  {connection.action}
-                </button>
-              ) : null}
             </div>
           )}
         </section>

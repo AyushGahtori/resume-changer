@@ -4,9 +4,8 @@ import { expect, test } from "@playwright/test";
 
 const screenshotDirectory = join(
   process.cwd(),
-  "docs",
-  "ui-review",
-  "github",
+  ".runtime",
+  "github-setup",
   "task-22",
 );
 
@@ -67,7 +66,9 @@ test("setup stays readable at review widths in both themes", async ({
   await expect(
     page.getByRole("heading", { name: "Import GitHub project evidence" }),
   ).toBeVisible();
-  await expect(page.getByLabel("Repository")).toBeVisible();
+  await expect(
+    page.getByRole("combobox", { name: "Repository", exact: true }),
+  ).toBeVisible();
   await expect(page.getByLabel("Achievement Library project")).toBeVisible();
   await expect(page.getByLabel("Your role on this project")).toBeVisible();
   await expect(
@@ -92,7 +93,9 @@ test("setup stays readable at review widths in both themes", async ({
       .getByRole("combobox", { name: "Choose GitHub import fixture" })
       .focus();
     await page.keyboard.press("Tab");
-    await expect(page.getByLabel("Repository")).toBeFocused();
+    await expect(
+      page.getByRole("combobox", { name: "Repository", exact: true }),
+    ).toBeFocused();
     await setupSection(page).screenshot({
       path: join(screenshotDirectory, `t22-${theme}-1440-keyboard-focus.png`),
     });
@@ -111,10 +114,12 @@ test("empty and denied setup states keep repository access truthful", async ({
       await openFixture(page, "setup-empty");
       await setTheme(page, theme);
       await page.setViewportSize({ width, height: 1050 });
-      await expect(page.getByLabel("Repository")).toBeDisabled();
-      await expect(page.getByLabel("Repository")).toContainText(
-        "No accessible repositories",
-      );
+      await expect(
+        page.getByRole("combobox", { name: "Repository", exact: true }),
+      ).toBeDisabled();
+      await expect(
+        page.getByRole("combobox", { name: "Repository", exact: true }),
+      ).toContainText("No repositories available yet");
       await expectNoHorizontalOverflow(page);
       await setupSection(page).screenshot({
         path: join(screenshotDirectory, `t22-${theme}-${width}-empty.png`),
@@ -155,7 +160,9 @@ test("keyboard selection invokes no analysis or network request by itself", asyn
     .getByRole("combobox", { name: "Choose GitHub import fixture" })
     .focus();
   await page.keyboard.press("Tab");
-  await expect(page.getByLabel("Repository")).toBeFocused();
+  await expect(
+    page.getByRole("combobox", { name: "Repository", exact: true }),
+  ).toBeFocused();
   await page.keyboard.press("Tab");
   await expect(
     page.getByRole("link", { name: /on GitHub \(opens in a new tab\)/ }),

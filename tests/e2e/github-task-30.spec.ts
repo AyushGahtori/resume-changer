@@ -1,3 +1,5 @@
+import { mkdir } from "node:fs/promises";
+import { join } from "node:path";
 import { expect, test, type Page, type Route } from "@playwright/test";
 import type {
   Draft,
@@ -301,6 +303,13 @@ function createMockApi(page: Page) {
     const path = url.pathname;
     const method = request.method();
 
+    if (/^\/api\/github\/repositories\/[^/]+\/pull-requests$/.test(path)) {
+      return response(route, {
+        candidates: [],
+        completeness: "complete",
+        limitations: [],
+      });
+    }
     if (path === "/api/github/jobs/events") {
       return response(route, { events: [], nextCursor: null, hasMore: false });
     }
@@ -800,3 +809,141 @@ test.describe("Task 30 full-page GitHub import controller", () => {
     expect(mock.extractCount).toBe(2);
   });
 });
+
+test("connection recovery explains the next step and keeps abandoned sign-in retryable", async ({
+  page,
+}) => {
+  const mock = createMockApi(page);
+  await mock.install();
+  for (const state of ["expired", "connecting"]) {
+    await page.route("**/api/github/connection/repositories", async (route) => {
+      if (route.request().method() !== "GET") return route.fallback();
+      return route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({
+          data: {
+            state,
+            repositories: [],
+            nextCursor: null,
+            message:
+              "GitHub sign-in expired. Reconnect to choose a repository.",
+          },
+        }),
+      });
+    });
+    await page.goto("/library/github/new");
+    const button = page.getByRole("button", {
+      name: state === "expired" ? "Reconnect GitHub" : "Connect GitHub",
+      exact: true,
+    });
+    await expect(button).toHaveCount(1);
+    await expect(button).toBeEnabled();
+    await expect(
+      page
+        .getByText(
+          state === "expired"
+            ? "GitHub sign-in expired. Reconnect to choose a repository."
+            : "GitHub sign-in was not completed. Connect again, then choose your repository here.",
+          { exact: true },
+        )
+        .first(),
+    ).toBeVisible();
+    await expect(
+      page.getByText("Connection needs attention", { exact: true }),
+    ).toHaveCount(0);
+    if (state === "expired") await captureSetup(page, "expired");
+    await page.unroute("**/api/github/connection/repositories");
+  }
+});
+
+test("repository access refresh updates the picker without reconnecting and clears revoked selection", async ({
+  page,
+}) => {
+  const mock = createMockApi(page);
+  await mock.install();
+  let allowed = false,
+    oauthStarts = 0;
+  page.on("request", (request) => {
+    if (request.url().endsWith("/api/github/connection/start")) oauthStarts++;
+  });
+  await page.route("**/api/github/connection/repositories", async (route) => {
+    if (route.request().method() !== "GET") return route.fallback();
+    return route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        data: {
+          state: "connected",
+          repositories: allowed ? [repository] : [],
+          nextCursor: null,
+        },
+      }),
+    });
+  });
+  await page.goto("/library/github/new");
+  await expect(
+    page.getByRole("combobox", { name: "Repository", exact: true }),
+  ).toBeDisabled();
+  await expect(
+    page.getByRole("button", { name: "Refresh repository list", exact: true }),
+  ).toBeVisible();
+  await captureSetup(page, "empty");
+  allowed = true;
+  await page
+    .getByRole("button", { name: "Refresh repository list", exact: true })
+    .click();
+  const picker = page.getByRole("combobox", {
+    name: "Repository",
+    exact: true,
+  });
+  await expect(picker).toBeEnabled();
+  await picker.selectOption(repository.repositoryId);
+  await page
+    .getByLabel("Your role on this project", { exact: true })
+    .fill("I built the summary pipeline.");
+  await expect(
+    page.getByRole("button", {
+      name: "Prepare selected evidence",
+      exact: true,
+    }),
+  ).toBeEnabled();
+  await captureSetup(page, "ready");
+  await page.getByText("Repository missing?", { exact: true }).click();
+  allowed = false;
+  await page
+    .getByRole("button", { name: "Refresh repository list", exact: true })
+    .click();
+  await expect(picker).toBeDisabled();
+  await expect(
+    page.getByRole("button", {
+      name: "Prepare selected evidence",
+      exact: true,
+    }),
+  ).toBeDisabled();
+  expect(oauthStarts).toBe(0);
+});
+
+async function captureSetup(page: Page, state: string) {
+  const root = join(process.cwd(), ".runtime", "github-setup", "controller");
+  await mkdir(root, { recursive: true });
+  for (const theme of ["light", "dark"]) {
+    await page.evaluate((value) => {
+      document.documentElement.dataset.theme = value;
+    }, theme);
+    for (const width of [1440, 390]) {
+      await page.setViewportSize({ width, height: 1050 });
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= window.innerWidth,
+        ),
+      ).toBe(true);
+      await page.evaluate(() => {
+        (document.activeElement as HTMLElement | null)?.blur();
+        window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+      });
+      await page.screenshot({
+        path: join(root, state + "-" + theme + "-" + width + ".png"),
+        fullPage: true,
+      });
+    }
+  }
+}

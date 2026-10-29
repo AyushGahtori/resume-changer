@@ -88,12 +88,21 @@ export function ImportWorkspace(props: ImportWorkspacePageProps) {
     projects: workspace.projects,
     selectedProjectId: workspace.selectedProjectId,
     connectionState: workspace.connectionState,
+    connectionPresentationState: workspace.connectionPresentationState,
+    connectionStatusMessage: workspace.connectionMessage || null,
+    isRefreshingRepositories: workspace.isRefreshingRepositories,
+    onRefreshRepositories: workspace.loadRepositories,
     role: workspace.role,
     pullRequests: workspace.pullRequests,
     selectedPullRequestNumbers: workspace.selectedPullRequests,
     ready: Boolean(
       workspace.source === "personal" &&
       workspace.connectionState === "connected" &&
+      !workspace.isRefreshingRepositories &&
+      workspace.repositories.some(
+        (repository) =>
+          repository.repositoryId === workspace.selectedRepositoryId,
+      ) &&
       workspace.repositoryScope &&
       workspace.selectedProjectId &&
       workspace.role.trim() &&
@@ -390,17 +399,6 @@ export function ImportWorkspace(props: ImportWorkspacePageProps) {
               <p className={styles.error} role="alert">
                 {workspace.extras.error}
               </p>
-            ) : null}
-            {workspace.connectionMessage ? (
-              <p>{workspace.connectionMessage}</p>
-            ) : null}
-            {workspace.connectionState === "error" ? (
-              <button
-                type="button"
-                onClick={() => void workspace.loadRepositories()}
-              >
-                Try repository list again
-              </button>
             ) : null}
           </details>
           <button

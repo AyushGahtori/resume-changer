@@ -166,6 +166,12 @@ export function useImportWorkspace(input: {
   const [connectionState, setConnectionState] =
     useState<ConnectionState>("disconnected");
   const [connectionMessage, setConnectionMessage] = useState("");
+  const [connectionPresentationState, setConnectionPresentationState] =
+    useState<"expired" | "denied" | "unavailable">();
+  const [isRefreshingRepositories, setIsRefreshingRepositories] = useState(
+    input.source === "personal",
+  );
+  const repositoryRequest = useRef(0);
   const [role, setRole] = useState(
     input.initialState?.import.scope.contributionStatement ?? "",
   );
@@ -433,61 +439,81 @@ export function useImportWorkspace(input: {
     review,
   ]);
   const loadRepositories = useCallback(async () => {
-    setConnectionError(null);
-    setConnectionMessage("");
+    const requestId = ++repositoryRequest.current;
+    setIsRefreshingRepositories(true);
     const collected: RepositorySummary[] = [];
     let cursor: string | null = null;
     let state = "disconnected";
+    let message = "";
+    let failure: DomainError | null = null;
     try {
       do {
         const query = cursor ? "?cursor=" + encodeURIComponent(cursor) : "";
         const response = await apiFetch(
           "/api/github/connection/repositories" + query,
-          {
-            method: "GET",
-            cache: "no-store",
-          },
+          { method: "GET", cache: "no-store" },
         );
         const envelope = (await response.json().catch(() => null)) as
           ({ data?: ConnectionReply } & ConnectionReply) | null;
         const body = envelope?.data ?? envelope;
         if (!response.ok || !body) {
-          setConnectionError(
-            readConnectionError(
-              body ?? {},
-              "GitHub repositories could not be loaded.",
-            ),
+          failure = readConnectionError(
+            body ?? {},
+            "GitHub repositories could not be loaded.",
           );
           state = "unavailable";
           break;
         }
         state = body.state ?? "unavailable";
-        setConnectionMessage(body.message ?? "");
+        message = body.message ?? "";
         for (const raw of body.repositories ?? []) {
           const parsed = RepositorySummarySchema.safeParse(raw);
           if (parsed.success) collected.push(parsed.data);
         }
         cursor = body.nextCursor ?? null;
-      } while (cursor && collected.length < 1_000);
-      if (mountedRef.current) {
-        setRepositories(collected);
-        setConnectionState(
-          state === "connected"
-            ? "connected"
-            : state === "connecting"
-              ? "connecting"
-              : state === "disconnected"
-                ? "disconnected"
-                : "error",
-        );
-      }
+      } while (state === "connected" && cursor && collected.length < 1_000);
     } catch {
-      setConnectionError({
+      state = "unavailable";
+      failure = {
         code: "unavailable",
         message: "GitHub repositories could not be reached.",
         retryable: true,
-      });
-      setConnectionState("error");
+      };
+    }
+    if (!mountedRef.current || requestId !== repositoryRequest.current) return;
+    setIsRefreshingRepositories(false);
+    setConnectionError(failure);
+    setRepositories(collected);
+    setConnectionPresentationState(
+      state === "expired" || state === "denied" || state === "unavailable"
+        ? state
+        : undefined,
+    );
+    // A stored connecting cookie after navigation means sign-in was abandoned;
+    // there is no active request to wait for. Keep the Connect action usable.
+    setConnectionMessage(
+      state === "connecting"
+        ? "GitHub sign-in was not completed. Connect again, then choose your repository here."
+        : message,
+    );
+    setConnectionState(
+      state === "connected"
+        ? "connected"
+        : state === "disconnected" || state === "connecting"
+          ? "disconnected"
+          : "error",
+    );
+    if (state === "connected") {
+      const available = new Set(
+        collected.map((repository) => repository.repositoryId),
+      );
+      setSelectedRepositoryId((current) =>
+        current && available.has(current) ? current : null,
+      );
+      setRepositoryScope((current) =>
+        current && available.has(current.repositoryId) ? current : null,
+      );
+      setConsentAccepted(false);
     }
   }, []);
 
@@ -503,6 +529,8 @@ export function useImportWorkspace(input: {
   const connect = useCallback(async () => {
     setConnectionError(null);
     setConnectionState("connecting");
+    setConnectionPresentationState(undefined);
+    setConnectionMessage("");
     try {
       const response = await apiFetch("/api/github/connection/start", {
         method: "POST",
@@ -1242,6 +1270,8 @@ export function useImportWorkspace(input: {
         JSON.stringify(review.import.scope.selectedPaths)),
   );
   const canAnalyze =
+    connectionState === "connected" &&
+    !isRefreshingRepositories &&
     canAnalyzeSelection(review, source) &&
     !selectionIsDirty &&
     consentAccepted &&
@@ -1270,6 +1300,8 @@ export function useImportWorkspace(input: {
     connectionError,
     connectionState,
     connectionMessage,
+    connectionPresentationState,
+    isRefreshingRepositories,
     repositories,
     selectedRepositoryId,
     repositoryScope,
