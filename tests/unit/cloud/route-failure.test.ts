@@ -65,3 +65,14 @@ it("identifies fixed startup failures without emitting exception text", () => {
     ),
   ).not.toHaveProperty("reason");
 });
+
+it("reports only compiled numeric code locations from a private stack", () => {
+  const failure = new Error("private-secret");
+  failure.stack =
+    "Error: private-secret\n at privateFunction (/var/task/.next/server/chunks/1234.js:5:67)\n at x (/private/user/path.ts:1:2)";
+  const details = protectedRouteFailureDetails(failure);
+  expect(details).toMatchObject({
+    sites: [{ chunk: "1234.js", line: 5, column: 67 }],
+  });
+  expect(JSON.stringify(details)).not.toMatch(/private|Function|var\/task/);
+});

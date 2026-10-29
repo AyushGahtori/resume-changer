@@ -86,8 +86,27 @@ export function protectedRouteFailureDetails(error: unknown) {
       ? cause.status
       : undefined;
 
+  const sites =
+    cause instanceof Error
+      ? [
+          ...(cause.stack ?? "").matchAll(
+            /[/\\].next[/\\]server[/\\]chunks[/\\](\d+\.js):(\d+):(\d+)/g,
+          ),
+        ]
+          .slice(0, 3)
+          .map((match) => ({
+            chunk: match[1],
+            line: Number(match[2]),
+            column: Number(match[3]),
+          }))
+      : [];
+  const moduleFailure =
+    cause instanceof Error &&
+    /Cannot find module|Dynamic require of/.test(cause.message);
   return {
     code: "ACCOUNT_REQUEST_FAILED",
+    ...(sites.length ? { sites } : {}),
+    ...(moduleFailure ? { reason: "module-loading" } : {}),
     stage,
     errorName: SAFE_ERROR_NAMES.has(name) ? name : "OtherError",
     ...(cause instanceof Error && STARTUP_FAILURES.has(cause.message)

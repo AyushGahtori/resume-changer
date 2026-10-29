@@ -8,7 +8,12 @@ vi.mock("../../../src/workflows/github-import", () => ({
   githubImportWorkflow: vi.fn(),
 }));
 
-afterEach(() => vi.unstubAllEnvs());
+import { getHostedGithubRuntime } from "../../../src/lib/github/server/hosted/runtime";
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+  vi.unstubAllGlobals();
+});
 
 it("assembles hosted services before contacting external APIs", async () => {
   const origin = "https://preview.example.com";
@@ -28,8 +33,11 @@ it("assembles hosted services before contacting external APIs", async () => {
     AI_PROVIDER: "gemini",
   }))
     vi.stubEnv(key, value);
-  const { getHostedGithubRuntime } =
-    await import("../../../src/lib/github/server/hosted/runtime");
+  const fetcher = vi.fn(() => {
+    throw new Error("Unexpected external request");
+  });
+  vi.stubGlobal("fetch", fetcher);
   const runtime = await getHostedGithubRuntime();
   expect(runtime.services.createContext).toBeTypeOf("function");
+  expect(fetcher).not.toHaveBeenCalled();
 });
