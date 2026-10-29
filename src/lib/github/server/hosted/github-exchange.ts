@@ -83,7 +83,11 @@ export function createGithubAuthorizationExchange(
     const result = Token.parse(
       await request("https://github.com/login/oauth/access_token", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        // GitHub's OAuth endpoint negotiates JSON separately from its REST API.
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
           client_id: config.clientId,
           client_secret: config.clientSecret,

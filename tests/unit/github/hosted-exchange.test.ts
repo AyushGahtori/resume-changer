@@ -14,16 +14,14 @@ const config = {
 };
 describe("live GitHub App exchange", () => {
   it("keeps client credentials and PKCE verifier in the HTTPS request body and translates expirations", async () => {
-    const fetcher = vi
-      .fn()
-      .mockResolvedValue(
-        Response.json({
-          access_token: "fictional-user-token",
-          expires_in: 3600,
-          refresh_token: "fictional-refresh",
-          refresh_token_expires_in: 7200,
-        }),
-      );
+    const fetcher = vi.fn().mockResolvedValue(
+      Response.json({
+        access_token: "fictional-user-token",
+        expires_in: 3600,
+        refresh_token: "fictional-refresh",
+        refresh_token_expires_in: 7200,
+      }),
+    );
     const exchange = createGithubAuthorizationExchange(config, fetcher, () =>
       Date.parse("2026-10-28T00:00:00Z"),
     );
@@ -36,6 +34,7 @@ describe("live GitHub App exchange", () => {
     const [url, request] = fetcher.mock.calls[0];
     expect(url).toBe("https://github.com/login/oauth/access_token");
     expect(request.redirect).toBe("error");
+    expect(request.headers.Accept).toBe("application/json");
     expect(JSON.parse(request.body)).toMatchObject({
       client_secret: config.clientSecret,
       code_verifier: "private-verifier",
@@ -43,27 +42,25 @@ describe("live GitHub App exchange", () => {
     expect(url).not.toContain(config.clientSecret);
   });
   it("mints an App JWT and requests one repository with read permissions only", async () => {
-    const fetcher = vi
-      .fn()
-      .mockResolvedValue(
-        Response.json({
-          token: "fictional-installation-token",
-          expires_at: "2026-10-28T01:00:00Z",
-          permissions: {
-            contents: "read",
-            metadata: "read",
-            pull_requests: "read",
+    const fetcher = vi.fn().mockResolvedValue(
+      Response.json({
+        token: "fictional-installation-token",
+        expires_at: "2026-10-28T01:00:00Z",
+        permissions: {
+          contents: "read",
+          metadata: "read",
+          pull_requests: "read",
+        },
+        repositories: [
+          {
+            id: 42,
+            name: "example",
+            private: true,
+            owner: { login: "owner" },
           },
-          repositories: [
-            {
-              id: 42,
-              name: "example",
-              private: true,
-              owner: { login: "owner" },
-            },
-          ],
-        }),
-      );
+        ],
+      }),
+    );
     const exchange = createGithubAuthorizationExchange(config, fetcher, () =>
       Date.parse("2026-10-28T00:00:00Z"),
     );
