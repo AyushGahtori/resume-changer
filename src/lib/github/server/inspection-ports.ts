@@ -52,6 +52,11 @@ type Transport = Omit<
   "ledger" | "onAttemptSettled" | "now"
 >;
 export type InspectionDependencies = {
+  onFileRead?: (
+    file: { fileId: string; path: string; blobSha: string; content: string },
+    context: ExecutionContext,
+    repositoryId: string,
+  ) => Promise<void>;
   transport(context: ExecutionContext): Transport;
   authorize(context: ExecutionContext, repositoryId: string): Promise<boolean>;
   policy: SelectionPolicyPort;
@@ -337,6 +342,12 @@ export function createInspectionPorts(deps: InspectionDependencies) {
           blobSha: c.blobSha,
           content: r.value.text,
         });
+        if (s.scope)
+          await deps.onFileRead?.(
+            files[files.length - 1]!,
+            context,
+            s.scope.repositoryId,
+          );
       }
       return ok({ files });
     },

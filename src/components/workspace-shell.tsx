@@ -15,7 +15,7 @@ import {
   Moon,
 } from "lucide-react";
 import { usePathname, useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { AccountControl, useWorkspaceAccount } from "./account-session";
 import {
@@ -23,6 +23,11 @@ import {
   useImportStatus,
 } from "./library/import-status-provider";
 import importNotificationStyles from "./library/import-notifications.module.css";
+
+import {
+  bindImportSessionAccount,
+  resetImportSession,
+} from "../lib/github/session-client";
 
 const THEME_STORAGE_KEY = "resume-changer.theme.v1";
 
@@ -433,18 +438,17 @@ function WorkspaceShellContent({ children }: { children: ReactNode }) {
 
 export default function WorkspaceShell({
   children,
-  githubImportsAvailable = false,
 }: {
   children: ReactNode;
   githubImportsAvailable?: boolean;
 }) {
   const account = useWorkspaceAccount();
-  const query = useSearchParams();
+  useLayoutEffect(() => {
+    bindImportSessionAccount(account?.uid ?? "local");
+    return () => resetImportSession();
+  }, [account?.uid]);
   return (
-    <ImportStatusProvider
-      key={account?.uid ?? "local"}
-      enabled={githubImportsAvailable && query.get("source") !== "demo"}
-    >
+    <ImportStatusProvider key={account?.uid ?? "local"} enabled={false}>
       <WorkspaceShellContent>{children}</WorkspaceShellContent>
     </ImportStatusProvider>
   );

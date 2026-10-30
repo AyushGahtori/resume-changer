@@ -36,9 +36,11 @@ const blob = (text: string) =>
 export async function createE2eGithubServices({
   personalRoot,
   now,
+  beforeRequest,
 }: {
   personalRoot: string;
   now: () => Date;
+  beforeRequest?: (url: URL) => void;
 }) {
   if (
     !isGithubImportHarnessEnabled(process.env) ||
@@ -142,6 +144,7 @@ export async function createE2eGithubServices({
       credentials: { getAccessToken: async () => null },
       resolveAddresses: async () => ["140.82.112.6"],
       fetch: async (url) => {
+        beforeRequest?.(url);
         if (url.pathname === "/repos/example/publishing")
           return Response.json({
             id: 42,

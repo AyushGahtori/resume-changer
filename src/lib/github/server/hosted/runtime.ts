@@ -1,8 +1,5 @@
 import { z } from "zod";
-import { start } from "workflow/api";
 import { hostedAdmin } from "./admin";
-import { createHostedJobOwners } from "./job-owners";
-import { createFirestoreStateStorage } from "./firestore-state";
 import {
   createHostedAccessStore,
   createHostedCredentialVault,
@@ -10,6 +7,7 @@ import {
 import { createGithubAuthorizationExchange } from "./github-exchange";
 import { fetchPinnedGithub, resolveGithubAddresses } from "./network";
 import { hostedGithubConfigured } from "./config";
+import { currentImportSession } from "../session-memory";
 import { createGithubAccess } from "../access-core";
 import { createGithubAccessPort } from "../access-port";
 import { createGithubBackendRuntime } from "../backend-runtime";
@@ -18,8 +16,6 @@ import {
   newGithubRequestContext,
   type GithubServerServices,
 } from "../composition";
-import { configureDurableStateStorage } from "../state";
-import { createJobStore } from "../jobs/store";
 import { createUnavailableBudgetLedger } from "../unavailable";
 import { createAiProvider } from "../../../ai/provider-factory-core";
 import { getPersonalDataRoot } from "../../../data/root";
@@ -31,10 +27,8 @@ import {
   ok,
   RepositoryScopeSchema,
   type ExecutionContext,
-  type JobRecord,
 } from "../../contracts";
 import type { GithubCredentialScope } from "../credentials-core";
-import { githubImportWorkflow } from "../../../../workflows/github-import";
 
 const denied = () =>
   err<never>({
@@ -51,24 +45,17 @@ let pending:
 export function getHostedGithubRuntime() {
   if (!hostedGithubConfigured())
     throw new Error("The hosted GitHub runtime is not configured.");
-  return (pending ??= buildRuntime());
+  return currentImportSession() ? buildRuntime() : (pending ??= buildRuntime());
 }
 async function buildRuntime() {
-  const { db, auth, namespace } = hostedAdmin(),
+  const { db, namespace } = hostedAdmin(),
     personalRoot = getPersonalDataRoot(),
     now = () => new Date();
-  const storage = createFirestoreStateStorage(db, namespace);
-  configureDurableStateStorage(storage);
   const vault = createHostedCredentialVault(
     db,
     namespace,
     process.env.GITHUB_VAULT_KEY!,
   );
-  const jobs = createJobStore({ rootDir: personalRoot, clock: { now } });
-  const owners = createHostedJobOwners(db, namespace, (uid) =>
-    auth.getUser(uid),
-  );
-  let backend: ReturnType<typeof createGithubBackendRuntime>;
   const context = (uid: string, repositoryIds: string[], signal: AbortSignal) =>
     newGithubRequestContext({
       personalRoot,
@@ -80,25 +67,10 @@ async function buildRuntime() {
       budget: createUnavailableBudgetLedger(),
       now,
     });
-  const store = createHostedAccessStore(
-    db,
-    namespace,
-    async (sessionId, repositoryId) => {
-      // Repository authorization is checked freshly per request/run, so there is no
-      // repository-list cache to evict. Disconnect invalidates all staged excerpts.
-      if (repositoryId) return;
-      const uid = sessionId.replace(/^account-/, "");
-      if (!/^[A-Za-z0-9_-]{1,128}$/.test(uid) || sessionId !== `account-${uid}`)
-        throw new Error("Invalid account session.");
-      const ctx = context(uid, [], new AbortController().signal);
-      const result =
-        await backend.ports.imports.invalidateAuthorizationNamespace(
-          { authorizationNamespace: ctx.access.authorizationNamespace },
-          ctx,
-        );
-      if (!result.ok) throw new Error("Staged cache cleanup failed.");
-    },
-  );
+  const store = createHostedAccessStore(db, namespace, async () => {
+    // Every request checks current credentials/grants. Tab-held evidence is never
+    // an authorization grant; disconnect must not reopen legacy source stores.
+  });
   const callback = new URL(process.env.GITHUB_APP_CALLBACK_URL!);
   if (
     callback.protocol !== "https:" ||
@@ -122,20 +94,9 @@ async function buildRuntime() {
     github: exchange,
     clock: { now },
     cancellation: {
-      async cancelJobs(sessionId) {
-        const uid = sessionId.replace(/^account-/, "");
-        if (!/^[A-Za-z0-9_-]{1,128}$/.test(uid))
-          throw new Error("Invalid session.");
-        for (const id of await owners.list(uid)) {
-          const job = await jobs.get({ jobId: id });
-          if (
-            job.ok &&
-            (job.value.state === "queued" || job.value.state === "running")
-          ) {
-            const result = await jobs.requestCancel({ jobId: id });
-            if (!result.ok) throw new Error("Job cancellation failed.");
-          }
-        }
+      async cancelJobs() {
+        // There are no durable imports to enumerate. Revoked grants stop future
+        // requests; the browser aborts its own active foreground request.
       },
     },
   });
@@ -231,28 +192,11 @@ async function buildRuntime() {
       );
     },
   });
-  async function dispatchJob(job: JobRecord, ctx: ExecutionContext) {
-    const uid = ctx.access.accountId;
-    if (
-      !uid ||
-      ctx.access.sessionId !== `account-${uid}` ||
-      ctx.access.authorizationNamespace !== `firebase:${uid}`
-    )
-      throw new Error("Invalid hosted job owner.");
-    const loaded = await backend.ports.imports.get({ id: job.importId }, ctx);
-    if (!loaded.ok) throw new Error("The job import is unavailable.");
-    await owners.bind(job, ctx, loaded.value.scope.repositoryId);
-    await start(githubImportWorkflow, [job.id], {
-      region: "fra1",
-      experimental_retention: 0,
-    });
-  }
-  backend = createGithubBackendRuntime({
+  const backend = createGithubBackendRuntime({
     personalRoot,
     now,
     access: accessPort,
-    workerAvailable: () => true,
-    dispatchJob,
+    workerAvailable: () => Boolean(currentImportSession()),
     authorize,
     provider: createAiProvider(),
     approvalFactory: createGithubApprovalPort,
@@ -288,27 +232,26 @@ async function buildRuntime() {
         ),
       );
     },
-    async jobContext(job) {
-      const owner = await owners.resolve(job);
+    async jobContext() {
+      const session = currentImportSession();
+      if (!session) return denied();
+      const grants = await store.listRepositoryGrants(`account-${session.uid}`);
       return ok(
-        context(owner.uid, [owner.repositoryId], new AbortController().signal),
+        context(
+          session.uid,
+          grants.map((g) => g.repositoryId),
+          session.signal,
+        ),
       );
     },
   });
   const services = composeGithubServices({ ...backend, personalRoot, now });
   return {
     services,
-    async runJob(jobId: string) {
-      if (!(await owners.exists(jobId)))
-        throw new Error("The workflow job owner is unavailable.");
-      const recovery = await backend.ports.runner.recover();
-      if (!recovery.ok) throw new Error("Job recovery is unavailable.");
-      const result = await backend.ports.runner.runOnce({ jobId });
-      if (!result.ok && result.error.code !== "unavailable")
-        throw new Error("The hosted import worker failed.");
-      const job = await jobs.get({ jobId });
-      if (!job.ok) throw new Error("The workflow job is unavailable.");
-      return job.value.state !== "queued" && job.value.state !== "running";
+    async runJob(_jobId: string): Promise<boolean> {
+      throw new Error(
+        "Legacy background imports are retired. Start a new tab session.",
+      );
     },
   };
 }

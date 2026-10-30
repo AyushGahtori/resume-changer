@@ -38,8 +38,8 @@ Validation recorded so far:
 - Fresh optimized Next.js build with the separate worker: passed.
 - Assembled Chromium/browser/API/separate-worker journey: 1 passed, including explicit confirmed-draft save. GitHub and AI boundaries were synthetic; this is not a real hosted GitHub/model acceptance run.
 
-## Unresolved product work
+## Subsequent session redesign
 
-The agreed session-based redesign is still pending. Do not mark it complete based on these handoffs. The original streamed checkpoint timeout, abandoned HTTP reservations, batch-only content caching, client/202 contract mismatch and overlapping retry behaviour are not fixed by this PR pagination change. Durable source storage also remains in the running architecture.
+The owner selected “Complete the agreed session-based redesign, reusing useful work.” Integration proceeded in the attached review worktree, based on the existing assembled `phase-one` feature. This explicit integration instruction supersedes the original per-task worktree/main prerequisite for this combined review; main was not used as a dumping ground for incomplete prerequisites.
 
-The owner was asked to distinguish two materially different scopes: complete the agreed redesign using compatible work, or merge only compatible improvements from the older submissions. The compatible pagination port and plan/review documentation can be integrated independently of that choice. Keep that distinction explicit in the final delivery; do not present a selective compatibility port as all nine session tasks being merged and complete.
+The compatible Task 5 correction was retained. The alternate, uncommitted task implementations were preserved in their own worktrees rather than merged wholesale into incompatible interfaces. The session redesign reuses the already assembled authorization, screening, selector, extractor, measurement and approval modules behind request-local memory. See `github-session-contract.md` for the final design and `github-session-acceptance.md` for current verification and remaining live gates. The earlier validation counts above describe the compatibility baseline, not the new session acceptance run.

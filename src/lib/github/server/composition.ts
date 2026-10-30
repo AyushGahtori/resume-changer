@@ -16,6 +16,7 @@ import {
 } from "./jobs/events";
 import { readState } from "./state";
 import { hostedGithubConfigured } from "./hosted/config";
+import { currentImportSession } from "./session-memory";
 import type { DomainError, ExecutionContext, Result } from "../contracts";
 import type {
   GithubFactoryPorts,
@@ -646,6 +647,30 @@ export function isGithubImportRuntimeConfigured(): boolean {
 }
 
 export function getGithubServices(): Promise<GithubServerServices> {
+  const session = currentImportSession();
+  if (session) {
+    session.services ??= hostedGithubConfigured()
+      ? import("./hosted/runtime").then(
+          async (m) => (await m.getHostedGithubRuntime()).services,
+        )
+      : configuredFactory
+        ? Promise.resolve(
+            configuredFactory({
+              personalRoot: getPersonalDataRoot(),
+              now: () => new Date(),
+            }),
+          )
+        : isGithubImportHarnessEnabled(process.env) &&
+            process.env.GITHUB_IMPORT_E2E_BACKEND === "1"
+          ? import("./testing/e2e-runtime").then((m) =>
+              m.createE2eGithubServices({
+                personalRoot: getPersonalDataRoot(),
+                now: () => new Date(),
+              }),
+            )
+          : Promise.resolve(unavailableServices());
+    return session.services;
+  }
   if (!configuredFactory) {
     if (hostedGithubConfigured()) {
       servicesPromise ??= import("./hosted/runtime").then(

@@ -1,4 +1,5 @@
 import * as local from "./local-state";
+import { currentImportSession } from "./session-memory";
 
 export interface DurableStateStorage {
   readonly kind: "durable";
@@ -20,9 +21,11 @@ export function configureDurableStateStorage(next: DurableStateStorage) {
   storage = next;
 }
 export function hasDurableStateStorage() {
-  return storage?.kind === "durable";
+  return Boolean(currentImportSession()) || storage?.kind === "durable";
 }
 function requireHostedStorage() {
+  const session = currentImportSession();
+  if (session) return session.storage;
   if (process.env.VERCEL === "1" && !storage)
     throw new Error("Durable GitHub state is not configured.");
   return storage;

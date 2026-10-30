@@ -1,6 +1,8 @@
 # GitHub Integration: Session-Based Import Project Plan
 
-Date: 30 October 2026. Status: implementation backlog; no task is complete yet.
+Date: 30 October 2026. Status: session redesign implemented in the integration review worktree; automated and Preview acceptance is tracked in `github-session-acceptance.md`.
+
+Integration decision: after the eight referenced chats were reviewed, the owner chose the complete session redesign using compatible existing work. Those chats had followed the older numbered tasks. Their alternate implementations are preserved, and the compatible PR pagination fix was integrated. The combined redesign uses the existing isolated review worktree on the assembled `phase-one` baseline; main remains unchanged. The per-task worktree instructions below are the original backlog workflow, not a claim that nine matching session branches were delivered. See `github-task-integration-review.md` and `github-session-contract.md`.
 
 ## 1. Project Summary
 

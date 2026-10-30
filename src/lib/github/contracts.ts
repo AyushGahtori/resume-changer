@@ -1034,6 +1034,7 @@ export interface ImportTrustRailProps {
 }
 
 export interface AnalysisStatusProps {
+  busy?: boolean;
   state: ImportLifecycle;
   stage: string;
   createdAt: string;

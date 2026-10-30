@@ -118,6 +118,8 @@ export function ImportNotifications({
   const visibleItems = items.filter((item) => item.dismissedAt === null);
   const hasActivity = visibleItems.length > 0 || runningImports.length > 0;
 
+  if (loadState === "unavailable" && !hasActivity) return null;
+
   return (
     <section
       aria-label="GitHub project imports"

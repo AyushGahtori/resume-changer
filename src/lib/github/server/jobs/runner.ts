@@ -9,6 +9,7 @@ import {
   type NotificationOutboxEvent,
   type Result,
 } from "../../contracts";
+import { currentImportSession } from "../session-memory";
 import type {
   ImportJobRunnerFactory,
   ImportJobRunnerPort,
@@ -252,7 +253,7 @@ export const createImportJobRunner: ImportJobRunnerFactory = (
     if (!baseContext.ok) return workerFailure(baseContext.error);
     const context: ExecutionContext = {
       ...baseContext.value,
-      signal: controller.signal,
+      signal: AbortSignal.any([controller.signal, baseContext.value.signal]),
       runId: job.runId,
       deadline: job.deadline,
     };
@@ -371,6 +372,9 @@ export const createImportJobRunner: ImportJobRunnerFactory = (
         guardedContext,
       );
       if (!initialCheckpoint.ok) throw initialCheckpoint.error;
+      // Send an uncertain-attempt marker before the paid call. A lost final
+      // response must not make the tab look as though analysis never started.
+      if (job.kind === "analyze") await currentImportSession()?.checkpoint?.();
 
       const result =
         job.kind === "prepare"

@@ -1,7 +1,7 @@
 "use client";
 
 import { z } from "zod";
-import { apiFetch } from "../cloud/api-fetch";
+import { sessionFetch } from "./session-client";
 import {
   DraftSchema,
   PullRequestSummarySchema,
@@ -119,6 +119,7 @@ export type EventSourceLike = Pick<
 >;
 
 export type ImportClientTransport = {
+  session?: boolean;
   fetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response>;
   eventSource?: (url: string) => EventSourceLike;
 };
@@ -178,10 +179,8 @@ export type GithubImportClient = Omit<ImportClientPort, "subscribeStatus"> & {
 
 function browserTransport(): ImportClientTransport {
   return {
-    fetch: (input, init) => apiFetch(input, init),
-    ...(typeof window !== "undefined" && typeof EventSource !== "undefined"
-      ? { eventSource: (url: string) => new EventSource(url) }
-      : {}),
+    session: true,
+    fetch: sessionFetch,
   };
 }
 
@@ -275,7 +274,21 @@ export function createImportClient(
           ...init.headers,
         },
       });
-    } catch {
+    } catch (cause) {
+      if (transport.session)
+        return {
+          ok: false,
+          error: {
+            code:
+              cause instanceof DOMException && cause.name === "AbortError"
+                ? "cancelled"
+                : "interrupted",
+            message: path.endsWith("/extract")
+              ? "The AI outcome could not be confirmed. A submitted request may still be charged. No automatic retry will run."
+              : "The request stopped. Completed downloads remain available in this tab.",
+            retryable: false,
+          },
+        };
       return {
         ok: false,
         error: {
@@ -332,6 +345,8 @@ export function createImportClient(
     onError: (error: DomainError) => void = () => undefined,
     initialCursor: string | null = null,
   ): Result<{ close(): void; readonly cursor: string | null }> {
+    if (transport.session)
+      return { ok: true, value: { close() {}, cursor: null } };
     if (activeSubscription) return { ok: true, value: activeSubscription };
 
     let closed = false;

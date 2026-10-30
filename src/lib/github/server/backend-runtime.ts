@@ -21,7 +21,7 @@ import { createImportJobRunner } from "./jobs/runner";
 import { createReportParser } from "./reports-core";
 import { createRunBudget } from "./budget-port";
 import { createUnavailableGithubPorts } from "./unavailable";
-import { hasDurableStateStorage } from "./state";
+import { currentImportSession } from "./session-memory";
 import {
   err,
   ok,
@@ -72,10 +72,6 @@ export function createGithubBackendRuntime(deps: GithubBackendDependencies): {
   ports: GithubFactoryPorts;
   bindings: GithubRuntimeBindings;
 } {
-  if (process.env.VERCEL === "1" && !hasDurableStateStorage())
-    throw new Error(
-      "A durable hosted GitHub worker adapter is required on Vercel.",
-    );
   const now = deps.now ?? (() => new Date()),
     id = deps.id ?? randomUUID;
   const durable = createJobStore({
@@ -218,6 +214,25 @@ export function createGithubBackendRuntime(deps: GithubBackendDependencies): {
   });
   const policy = createSelectionPolicy({});
   const inspection = createInspectionPorts({
+    async onFileRead(file, context, repositoryId) {
+      const session = currentImportSession();
+      if (!session) return;
+      const saved = await imports.cachePut(
+        {
+          identity: {
+            kind: "safe-content",
+            repositoryId,
+            blobSha: file.blobSha,
+            parserVersion: "github-source-text-v1",
+            safetyPolicyVersion: "github-file-safety-v1",
+          },
+          value: { kind: "safe-content", files: [file] },
+        },
+        context,
+      );
+      if (!saved.ok) throw new Error("Completed file could not be retained.");
+      await session.checkpoint?.();
+    },
     transport: deps.transport,
     authorize: deps.authorize,
     policy,
@@ -259,8 +274,13 @@ export function createGithubBackendRuntime(deps: GithubBackendDependencies): {
       const budget = createRunBudget({
         now,
         deadline: job.deadline,
-        snapshot: raw.value.runnerData.budget as BudgetSnapshot | undefined,
+        // An interrupted request is never resumed. Its replacement receives a fresh
+        // bounded ledger and reuses completed screened files, not HTTP reservations.
+        snapshot: currentImportSession()
+          ? undefined
+          : (raw.value.runnerData.budget as BudgetSnapshot | undefined),
         async persist() {
+          if (currentImportSession()) return;
           const current = await durable.get({ jobId: job.id });
           if (!current.ok) throw new Error("Job checkpoint unavailable.");
           const r = await jobs.checkpoint(
@@ -309,6 +329,10 @@ export function createGithubBackendRuntime(deps: GithubBackendDependencies): {
           retryable: true,
         });
       const result = await service.prepare(input, context);
+      if (result.ok && currentImportSession()) {
+        await runner.runOnce({ jobId: result.value.id });
+        return jobs.getJob({ jobId: result.value.id }, context);
+      }
       if (result.ok) await deps.dispatchJob?.(result.value, context);
       return result;
     },
@@ -323,6 +347,10 @@ export function createGithubBackendRuntime(deps: GithubBackendDependencies): {
           retryable: true,
         });
       const result = await service.enqueueAnalysis(input, context);
+      if (result.ok && currentImportSession()) {
+        await runner.runOnce({ jobId: result.value.id });
+        return jobs.getJob({ jobId: result.value.id }, context);
+      }
       if (result.ok) await deps.dispatchJob?.(result.value, context);
       return result;
     },

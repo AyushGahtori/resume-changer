@@ -93,7 +93,7 @@ describe("AnalysisStatus", () => {
       "Analysis is queued",
     );
     expect(host.textContent).toContain(
-      "You can keep working; we'll notify you in Achievement Library.",
+      "Keep this tab open. Reloading or closing it discards unsaved evidence.",
     );
     expect(host.querySelector('[role="progressbar"]')).toBeNull();
     expect(host.textContent).not.toMatch(
@@ -257,7 +257,7 @@ describe("AnalysisStatus", () => {
     rerender(host, { ...base, retryAvailable: true });
     expect(buttonNamed(host, "Retry analysis")).not.toBeNull();
     expect(host.textContent).toContain(
-      "This action starts another analysis request using the approved evidence.",
+      "Retry prepares the evidence again. AI analysis requires your confirmation.",
     );
     expect(onRetry).not.toHaveBeenCalled();
     act(() => buttonNamed(host, "Retry analysis").click());
@@ -277,7 +277,7 @@ describe("AnalysisStatus", () => {
     const host = mount(statusProps("created"));
     expect(host.textContent).toContain("Analysis hasn’t started");
     expect(host.textContent).not.toContain(
-      "You can keep working; we'll notify you in Achievement Library.",
+      "Keep this tab open. Reloading or closing it discards unsaved evidence.",
     );
   });
 

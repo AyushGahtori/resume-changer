@@ -3,7 +3,11 @@ import { useOptionalImportStatus } from "../library/import-status-provider";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { apiFetch } from "../../lib/cloud/api-fetch";
+import {
+  sessionFetch,
+  resetImportSession,
+  cancelImportRequest,
+} from "../../lib/github/session-client";
 import {
   DeferredMeasurementTaskSchema,
   DomainErrorSchema,
@@ -37,7 +41,6 @@ import {
   reconcileDraftOverrides,
   selectedEligibleDraftIds,
   readyToSubmitDraftIds,
-  readDraftOverrides,
   type DraftOverrides,
 } from "./workspace-state";
 
@@ -129,6 +132,7 @@ export function useImportWorkspace(input: {
   const sharedStatus = useOptionalImportStatus();
   const watchImport = sharedStatus?.watchImport;
   const latestReview = useRef<ImportReviewState | null>(input.initialState);
+  const submission = useRef(false);
   const [client] = useState<GithubImportClient>(() => createImportClient());
   const [activeImportId, setActiveImportId] = useState(input.importId);
   const [source, setSource] = useState<Source>(input.source);
@@ -282,34 +286,6 @@ export function useImportWorkspace(input: {
     [input.source],
   );
 
-  const draftStorageKey = review
-    ? `resume.github-drafts.v1:${review.import.authorizationNamespaceHash}:${review.import.id}`
-    : null;
-  const [restoredKey, setRestoredKey] = useState<string | null>(null);
-  useEffect(() => {
-    if (!draftStorageKey || restoredKey === draftStorageKey || !review) return;
-    try {
-      const stored = readDraftOverrides(
-        window.sessionStorage.getItem(draftStorageKey),
-      );
-      setDraftOverrides((current) =>
-        reconcileDraftOverrides(review, { ...stored, ...current }),
-      );
-    } catch {}
-    setRestoredKey(draftStorageKey);
-  }, [draftStorageKey, restoredKey, review]);
-  useEffect(() => {
-    if (!draftStorageKey || restoredKey !== draftStorageKey) return;
-    try {
-      if (Object.keys(draftOverrides).length)
-        window.sessionStorage.setItem(
-          draftStorageKey,
-          JSON.stringify(draftOverrides),
-        );
-      else window.sessionStorage.removeItem(draftStorageKey);
-    } catch {}
-  }, [draftStorageKey, restoredKey, draftOverrides]);
-
   const refreshReview = useCallback(
     async (id = importId) => {
       if (!id) return null;
@@ -449,7 +425,7 @@ export function useImportWorkspace(input: {
     try {
       do {
         const query = cursor ? "?cursor=" + encodeURIComponent(cursor) : "";
-        const response = await apiFetch(
+        const response = await sessionFetch(
           "/api/github/connection/repositories" + query,
           { method: "GET", cache: "no-store" },
         );
@@ -532,7 +508,7 @@ export function useImportWorkspace(input: {
     setConnectionPresentationState(undefined);
     setConnectionMessage("");
     try {
-      const response = await apiFetch("/api/github/connection/start", {
+      const response = await sessionFetch("/api/github/connection/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -586,11 +562,14 @@ export function useImportWorkspace(input: {
     if (!repositoryId) return;
     setConnectionError(null);
     try {
-      const response = await apiFetch("/api/github/connection/repositories", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ repositoryId }),
-      });
+      const response = await sessionFetch(
+        "/api/github/connection/repositories",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ repositoryId }),
+        },
+      );
       const body = (await response.json().catch(() => null)) as {
         data?: { scope?: unknown };
         error?: unknown;
@@ -673,7 +652,7 @@ export function useImportWorkspace(input: {
         );
       }
       try {
-        const response = await apiFetch(
+        const response = await sessionFetch(
           "/api/github/imports/" + encodeURIComponent(id) + "/selection",
           {
             method: "PUT",
@@ -754,139 +733,153 @@ export function useImportWorkspace(input: {
   );
 
   const createAndPrepare = useCallback(async () => {
-    if (source !== "personal") {
-      setActionError({
-        code: "forbidden",
-        message:
-          "Demo imports are read-only. Switch to your personal library to connect GitHub.",
-        retryable: false,
-      });
-      return;
-    }
-    const scope = buildScope();
-    if (!scope || !selectedProjectId) {
-      setActionError({
-        code: "invalid-input",
-        message:
-          "Choose a destination, repository, and role before preparing evidence.",
-        retryable: false,
-      });
-      return;
-    }
-    setBusy("preparing");
-    setActionError(null);
-    const created = await client.create({
-      source,
-      destinationProjectId: selectedProjectId,
-      scope,
-    });
-    if (!created.ok) {
-      setActionError(created.error);
-      setBusy("idle");
-      return;
-    }
-    setActiveImportId(created.value.id);
-    setRepositoryScope(scope);
-    const prepared = await client.prepare(
-      created.value.id,
-      created.value.version,
-    );
-    if (!prepared.ok) {
-      setActionError(prepared.error);
-      await refreshReview(created.value.id);
-      setBusy("idle");
-      router.replace("/library/github/" + encodeURIComponent(created.value.id));
-      return;
-    }
-    await refreshReview(created.value.id);
-    setBusy("idle");
-    router.replace("/library/github/" + encodeURIComponent(created.value.id));
-  }, [buildScope, client, refreshReview, router, selectedProjectId, source]);
-
-  const updateSelectionAndPrepare = useCallback(async () => {
-    if (!review || !importId) return;
-    const scope = buildScope();
-    if (!scope) return;
-    if (
-      review.import.activeRunId &&
-      ["queued", "analyzing"].includes(review.import.lifecycle)
-    ) {
-      setActionError({
-        code: "version-conflict",
-        message:
-          "Wait for the accepted run to finish before preparing a changed selection.",
-        retryable: false,
-      });
-      return;
-    }
-    setPreviousDrafts(getWorkspaceDrafts(review, draftOverrides));
-    setBusy("preparing");
-    setActionError(null);
-    let editingVersion = review.import.version;
-    for (const [draftId, override] of Object.entries(draftOverrides)) {
-      if (!override.dirty) continue;
-      const draft = review.result?.drafts.find((d) => d.id === draftId);
-      if (
-        !draft ||
-        override.conflict ||
-        draft.version !== override.baseVersion
-      ) {
+    if (submission.current) return;
+    submission.current = true;
+    try {
+      if (source !== "personal") {
         setActionError({
-          code: "version-conflict",
-          message: "Review the newer draft before changing scope.",
+          code: "forbidden",
+          message:
+            "Demo imports are read-only. Switch to your personal library to connect GitHub.",
           retryable: false,
         });
+        return;
+      }
+      const scope = buildScope();
+      if (!scope || !selectedProjectId) {
+        setActionError({
+          code: "invalid-input",
+          message:
+            "Choose a destination, repository, and role before preparing evidence.",
+          retryable: false,
+        });
+        return;
+      }
+      setBusy("preparing");
+      setActionError(null);
+      const created = await client.create({
+        source,
+        destinationProjectId: selectedProjectId,
+        scope,
+      });
+      if (!created.ok) {
+        setActionError(created.error);
         setBusy("idle");
         return;
       }
-      const changed = await client.updateDraft(
+      setActiveImportId(created.value.id);
+      setRepositoryScope(scope);
+      const prepared = await client.prepare(
+        created.value.id,
+        created.value.version,
+      );
+      if (!prepared.ok) {
+        setActionError(prepared.error);
+        await refreshReview(created.value.id);
+        setBusy("idle");
+        router.replace(
+          "/library/github/" + encodeURIComponent(created.value.id),
+        );
+        return;
+      }
+      await refreshReview(created.value.id);
+      setBusy("idle");
+      router.replace("/library/github/" + encodeURIComponent(created.value.id));
+    } finally {
+      submission.current = false;
+    }
+  }, [buildScope, client, refreshReview, router, selectedProjectId, source]);
+
+  const updateSelectionAndPrepare = useCallback(async () => {
+    if (submission.current) return;
+    submission.current = true;
+    try {
+      if (!review || !importId) return;
+      const scope = buildScope();
+      if (!scope) return;
+      if (
+        review.import.activeRunId &&
+        ["queued", "analyzing"].includes(review.import.lifecycle)
+      ) {
+        setActionError({
+          code: "version-conflict",
+          message:
+            "Wait for the accepted run to finish before preparing a changed selection.",
+          retryable: false,
+        });
+        return;
+      }
+      setPreviousDrafts(getWorkspaceDrafts(review, draftOverrides));
+      setBusy("preparing");
+      setActionError(null);
+      let editingVersion = review.import.version;
+      for (const [draftId, override] of Object.entries(draftOverrides)) {
+        if (!override.dirty) continue;
+        const draft = review.result?.drafts.find((d) => d.id === draftId);
+        if (
+          !draft ||
+          override.conflict ||
+          draft.version !== override.baseVersion
+        ) {
+          setActionError({
+            code: "version-conflict",
+            message: "Review the newer draft before changing scope.",
+            retryable: false,
+          });
+          setBusy("idle");
+          return;
+        }
+        const changed = await client.updateDraft(
+          importId,
+          draftId,
+          editingVersion,
+          override.text,
+          {
+            selectedForSave: override.selectedForSave,
+            contributionConfirmed: override.contributionConfirmed,
+            confirmedMetricResultIds: override.confirmedMetricResultIds,
+          },
+        );
+        if (!changed.ok) {
+          setActionError(changed.error);
+          setBusy("idle");
+          return;
+        }
+        const current = await client.get(importId);
+        if (!current.ok) {
+          setActionError(current.error);
+          setBusy("idle");
+          return;
+        }
+        editingVersion = current.value.import.version;
+      }
+      const latest = await client.get(importId);
+      if (!latest.ok) {
+        setActionError(latest.error);
+        setBusy("idle");
+        return;
+      }
+      applyReview(latest.value);
+      const changed = await saveSelection(
         importId,
-        draftId,
-        editingVersion,
-        override.text,
-        {
-          selectedForSave: override.selectedForSave,
-          contributionConfirmed: override.contributionConfirmed,
-          confirmedMetricResultIds: override.confirmedMetricResultIds,
-        },
+        latest.value.import.version,
+        scope,
+        pendingPinnedFileIds,
+        pendingRemovedFileIds,
       );
       if (!changed.ok) {
         setActionError(changed.error);
         setBusy("idle");
+        await refreshReview(importId);
         return;
       }
-      const current = await client.get(importId);
-      if (!current.ok) {
-        setActionError(current.error);
-        setBusy("idle");
-        return;
-      }
-      editingVersion = current.value.import.version;
+      setConsentAccepted(false);
+      pendingConsent.current = null;
+      pendingApproval.current = null;
+      await prepareJob(importId, changed.value.version);
+    } finally {
+      submission.current = false;
     }
-    const latest = await client.get(importId);
-    if (!latest.ok) {
-      setActionError(latest.error);
-      setBusy("idle");
-      return;
-    }
-    applyReview(latest.value);
-    const changed = await saveSelection(
-      importId,
-      latest.value.import.version,
-      scope,
-      pendingPinnedFileIds,
-      pendingRemovedFileIds,
-    );
-    if (!changed.ok) {
-      setActionError(changed.error);
-      setBusy("idle");
-      await refreshReview(importId);
-      return;
-    }
-    setConsentAccepted(false);
-    pendingConsent.current = null;
-    pendingApproval.current = null;
-    await prepareJob(importId, changed.value.version);
   }, [
     applyReview,
     buildScope,
@@ -920,35 +913,41 @@ export function useImportWorkspace(input: {
   }, []);
 
   const analyze = useCallback(async () => {
-    if (!review || !importId) return;
-    if (!consentAccepted || !canAnalyzeSelection(review, source)) {
-      setActionError({
-        code: "version-conflict",
-        message:
-          "Review the current bundle and confirm its exact disclosure before analyzing.",
-        retryable: false,
-      });
-      return;
-    }
-    setBusy("analyzing");
-    setActionError(null);
-    const consentReference = pendingConsent.current ?? makeConsentReference();
-    pendingConsent.current = consentReference;
-    const result = await client.enqueueAnalysis(
-      importId,
-      review.import.version,
-      review.prepared!.selectionHash,
-      consentReference,
-    );
-    if (!result.ok) {
-      setActionError(result.error);
-      setBusy("idle");
+    if (submission.current) return;
+    submission.current = true;
+    try {
+      if (!review || !importId) return;
+      if (!consentAccepted || !canAnalyzeSelection(review, source)) {
+        setActionError({
+          code: "version-conflict",
+          message:
+            "Review the current bundle and confirm its exact disclosure before analyzing.",
+          retryable: false,
+        });
+        return;
+      }
+      setBusy("analyzing");
+      setActionError(null);
+      const consentReference = pendingConsent.current ?? makeConsentReference();
+      pendingConsent.current = consentReference;
+      const result = await client.enqueueAnalysis(
+        importId,
+        review.import.version,
+        review.prepared!.selectionHash,
+        consentReference,
+      );
+      if (!result.ok) {
+        setActionError(result.error);
+        setBusy("idle");
+        await refreshReview(importId);
+        return;
+      }
+      pendingConsent.current = null;
       await refreshReview(importId);
-      return;
+      setBusy("idle");
+    } finally {
+      submission.current = false;
     }
-    pendingConsent.current = null;
-    await refreshReview(importId);
-    setBusy("idle");
   }, [client, consentAccepted, importId, refreshReview, review, source]);
 
   const editDraft = useCallback(
@@ -1055,54 +1054,81 @@ export function useImportWorkspace(input: {
   );
 
   const approve = useCallback(async () => {
-    if (!review || !importId || review.expired) return;
-    setBusy("saving");
-    setSaveState("saving");
-    setActionError(null);
-    const persisted = await persistEdits(review);
-    if (!persisted) {
-      setSaveState("error");
-      setBusy("idle");
-      return;
-    }
-    const selectedIds = selectedEligibleDraftIds(
-      persisted.state,
-      persisted.overrides,
-    );
-    if (!selectedIds.length) {
-      setActionError({
-        code: "invalid-evidence",
-        message:
-          "Select and confirm at least one eligible draft before saving.",
-        retryable: false,
+    if (submission.current) return;
+    submission.current = true;
+    try {
+      if (!review || !importId || review.expired) return;
+      setBusy("saving");
+      setSaveState("saving");
+      setActionError(null);
+      const persisted = await persistEdits(review);
+      if (!persisted) {
+        setSaveState("error");
+        setBusy("idle");
+        return;
+      }
+      const selectedIds = selectedEligibleDraftIds(
+        persisted.state,
+        persisted.overrides,
+      );
+      if (!selectedIds.length) {
+        setActionError({
+          code: "invalid-evidence",
+          message:
+            "Select and confirm at least one eligible draft before saving.",
+          retryable: false,
+        });
+        setSaveState("error");
+        setBusy("idle");
+        return;
+      }
+      const signature = importId + ":" + selectedIds.join(",");
+      if (pendingApproval.current?.signature !== signature) {
+        pendingApproval.current = { signature, key: makeConsentReference() };
+      }
+      const result = await client.approve(
+        importId,
+        persisted.state.import.version,
+        selectedIds,
+        pendingApproval.current.key,
+      );
+      if (!result.ok) {
+        setActionError(result.error);
+        setSaveState("error");
+        setBusy("idle");
+        await refreshReview(importId);
+        return;
+      }
+      pendingApproval.current = null;
+      setSavedIds(result.value.savedIds);
+      setSaveState("saved");
+      resetImportSession();
+      setDraftOverrides({});
+      setPreviousDrafts([]);
+      setMetricDraftPreviews({});
+      applyReview({
+        ...persisted.state,
+        import: {
+          ...persisted.state.import,
+          lifecycle: "approved",
+          draftEdits: [],
+          draftRefs: [],
+          reviewHistory: [],
+          savedIds: result.value.savedIds,
+        },
+        priorReviews: [],
+        measurementAnswers: {},
+        result: null,
+        prepared: null,
+        candidates: [],
+        questions: [],
+        measurementResults: [],
       });
-      setSaveState("error");
       setBusy("idle");
-      return;
+    } finally {
+      submission.current = false;
     }
-    const signature = importId + ":" + selectedIds.join(",");
-    if (pendingApproval.current?.signature !== signature) {
-      pendingApproval.current = { signature, key: makeConsentReference() };
-    }
-    const result = await client.approve(
-      importId,
-      persisted.state.import.version,
-      selectedIds,
-      pendingApproval.current.key,
-    );
-    if (!result.ok) {
-      setActionError(result.error);
-      setSaveState("error");
-      setBusy("idle");
-      await refreshReview(importId);
-      return;
-    }
-    pendingApproval.current = null;
-    setSavedIds(result.value.savedIds);
-    setSaveState("saved");
-    await refreshReview(importId);
-    setBusy("idle");
-  }, [client, importId, persistEdits, refreshReview, review]);
+  }, [applyReview, client, importId, persistEdits, refreshReview, review]);
 
   const answerQuestion = useCallback(
     async (questionId: string, answer: MeasurementAnswer) => {
@@ -1175,7 +1201,7 @@ export function useImportWorkspace(input: {
         if (!importId || !review) return false;
         const preserved = await persistEdits(review);
         if (!preserved) return false;
-        const response = await apiFetch(
+        const response = await sessionFetch(
           "/api/github/imports/" +
             encodeURIComponent(importId) +
             "/measurement-tasks",
@@ -1231,25 +1257,34 @@ export function useImportWorkspace(input: {
   );
 
   const cancel = useCallback(async () => {
+    if (busy !== "idle") {
+      cancelImportRequest();
+      setBusy("idle");
+      setActionError({
+        code: "cancelled",
+        message:
+          "The request was stopped. An AI request already sent may still be charged; it will not be retried automatically.",
+        retryable: false,
+      });
+      await refreshReview(importId);
+      return;
+    }
     if (!review || !importId || !review.import.activeRunId) return;
     const result = await client.cancel(importId, review.import.activeRunId);
     if (!result.ok) setActionError(result.error);
     await refreshReview(importId);
-  }, [client, importId, refreshReview, review]);
+  }, [busy, client, importId, refreshReview, review]);
 
   const discard = useCallback(async () => {
     if (!review || !importId) return;
 
-    setBusy("discarding");
-    const result = await client.discard(importId, review.import.version);
-    if (!result.ok) {
-      setActionError(result.error);
-      setBusy("idle");
-      return false;
-    }
+    resetImportSession();
+    setDraftOverrides({});
+    setPreviousDrafts([]);
+    setReview(null);
     router.push("/library" + (source === "demo" ? "?source=demo" : ""));
     return true;
-  }, [client, importId, review, router, source]);
+  }, [importId, review, router, source]);
 
   const goBack = useCallback(() => {
     router.push("/library" + (source === "demo" ? "?source=demo" : ""));

@@ -1519,10 +1519,10 @@ export function createGithubApprovalPort(
                 ...point.githubEvidence!,
                 repositoryAttachmentId: attachmentResult.attachment.id,
                 snapshotId: savedSnapshot.id,
-                evidence: point.githubEvidence!.evidence.map((item) => ({
-                  ...item,
-                  snapshotId: savedSnapshot.id,
-                })),
+                evidence: point.githubEvidence!.evidence.map((item) => {
+                  const { excerpt: _source, ...reference } = item;
+                  return { ...reference, snapshotId: savedSnapshot.id };
+                }),
               },
             }),
           );

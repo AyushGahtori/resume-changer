@@ -14,9 +14,7 @@ const Owner = z
 export function createHostedJobOwners(
   db: Firestore,
   namespace: string,
-  lookupUser: (
-    uid: string,
-  ) => Promise<{
+  lookupUser: (uid: string) => Promise<{
     disabled: boolean;
     emailVerified: boolean;
     providerData: Array<{ providerId: string }>;

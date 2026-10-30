@@ -27,6 +27,7 @@ export interface AnalysisStatusError {
 }
 
 export interface AnalysisStatusProps {
+  busy?: boolean;
   state: ImportLifecycle;
   stage: string;
   createdAt: string;
@@ -282,6 +283,7 @@ function StageIcon({
 }
 
 export function AnalysisStatus({
+  busy = false,
   state,
   stage,
   createdAt,
@@ -436,14 +438,15 @@ export function AnalysisStatus({
             className={styles.retryActionNotice}
             id={`${headingId}-retry-note`}
           >
-            This action starts another analysis request using the approved
-            evidence.
+            Retry prepares the evidence again. AI analysis requires your
+            confirmation.
           </p>
         )}
 
         {isActive && (
           <p className={styles.keepWorking}>
-            You can keep working; we&apos;ll notify you in Achievement Library.
+            Keep this tab open. Reloading or closing it discards unsaved
+            evidence.
           </p>
         )}
 
@@ -464,6 +467,7 @@ export function AnalysisStatus({
               <button
                 className={styles.retryButton}
                 type="button"
+                disabled={busy}
                 onClick={onRetry}
                 aria-describedby={
                   retryDelay

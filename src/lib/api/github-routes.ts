@@ -5,6 +5,7 @@ import { GET as job } from "@/app/api/github/jobs/[jobId]/handler";
 import { GET as events } from "@/app/api/github/jobs/events/handler";
 import { GET as notifications } from "@/app/api/library/notifications/handler";
 import { POST as readNotification } from "@/app/api/library/notifications/[id]/read/handler";
+import { sessionImport } from "../github/server/session-handler";
 import {
   startGithubConnection,
   githubConnectionCallback,
@@ -21,6 +22,7 @@ type Match = {
 export function resolveGithubApiRoute(parts: string[]): Match | null {
   const key = parts.join("/");
   const direct: Record<string, Match["methods"]> = {
+    "github/session": { POST: sessionImport },
     "github/imports": { POST: imports.POST },
     "github/connection/start": { POST: startGithubConnection },
     "github/connection/callback": { GET: githubConnectionCallback },

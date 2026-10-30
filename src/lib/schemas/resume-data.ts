@@ -287,7 +287,8 @@ export const GithubEvidenceItemSchema = z
       .refine(
         (value) => value.trim().length > 0,
         "Evidence excerpt cannot be blank.",
-      ),
+      )
+      .optional(),
     excerptHash: z.string().regex(/^[a-f0-9]{64}$/i),
     category: z.enum([
       "implementation",

@@ -174,6 +174,27 @@ export function optionsForApiRequest(request: Request): Response {
 }
 
 export async function dispatchApiRequest(request: Request): Promise<Response> {
+  const path = new URL(request.url).pathname;
+  if (
+    (/^\/api\/github\/(?:imports(?:\/|$)|jobs(?:\/|$))/.test(path) ||
+      path.startsWith("/api/library/notifications")) &&
+    !(
+      process.env.VERCEL !== "1" &&
+      process.env.GITHUB_IMPORT_E2E_HARNESS === "1"
+    )
+  ) {
+    return Response.json(
+      {
+        error: {
+          code: "needs-context",
+          message:
+            "This background import has ended. Start a new temporary import in this tab.",
+          retryable: false,
+        },
+      },
+      { status: 410, headers: { "Cache-Control": "private, no-store" } },
+    );
+  }
   const match = resolveApiRequest(new URL(request.url).pathname);
   if (!match) return notFound();
 

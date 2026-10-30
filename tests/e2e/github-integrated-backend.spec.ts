@@ -40,7 +40,7 @@ async function audit(page: Page, state: string) {
   });
 }
 
-test("runs the assembled import through the separate worker and saves only confirmed drafts", async ({
+test("runs a tab-owned foreground import, saves only confirmed drafts and discards unsaved state on reload", async ({
   page,
 }, testInfo) => {
   test.skip(
@@ -108,17 +108,13 @@ test("runs the assembled import through the separate worker and saves only confi
     .check();
   const accepted = page.waitForResponse(
     (response) =>
-      new URL(response.url()).pathname.endsWith("/extract") &&
-      response.request().method() === "POST",
+      new URL(response.url()).pathname === "/api/github/session" &&
+      response.request().postDataJSON()?.path?.endsWith("/extract"),
   );
   await page
     .getByRole("button", { name: "Analyze this selection", exact: true })
     .click();
-  expect((await accepted).status()).toBe(202);
-  // Navigate away while the separate worker owns execution; reopening must recover review.
-  const importUrl = page.url();
-  await page.goto("/library");
-  await page.goto(importUrl);
+  expect((await accepted).status()).toBe(200);
   await expect(
     page
       .getByRole("button", { name: "Confirm my contribution", exact: true })
@@ -164,6 +160,11 @@ test("runs the assembled import through the separate worker and saves only confi
   await expect(page.getByText(/Saved 1 achievement/i).first()).toBeVisible({
     timeout: 15000,
   });
+  expect(
+    await page.evaluate(() =>
+      Object.keys(sessionStorage).filter((k) => k.startsWith("resume.github")),
+    ),
+  ).toEqual([]);
   await page.goto("/library");
   await expect(
     page
@@ -174,4 +175,40 @@ test("runs the assembled import through the separate worker and saves only confi
       .first(),
   ).toBeVisible();
   expect(failures).toEqual([]);
+});
+
+test("reload abandons unsaved evidence and old import URLs offer a fresh start", async ({
+  page,
+}) => {
+  test.skip(process.env.GITHUB_IMPORT_E2E_BACKEND !== "1");
+  await page.context().addCookies([
+    {
+      name: "github_session",
+      value: "a".repeat(43),
+      url: "http://127.0.0.1:" + (process.env.PLAYWRIGHT_PORT ?? "3012"),
+      httpOnly: true,
+      sameSite: "Lax",
+    },
+  ]);
+  await page.goto("/library/github/new");
+  await page
+    .getByRole("combobox", { name: "Repository", exact: true })
+    .selectOption("42");
+  await page
+    .getByLabel("Your role on this project")
+    .fill("I implemented publishing input validation and regression tests.");
+  await page
+    .getByRole("button", { name: "Prepare selected evidence", exact: true })
+    .click();
+  await expect(
+    page.getByText(
+      "I reviewed this selection and explicitly approve one analysis run.",
+    ),
+  ).toBeVisible({ timeout: 30000 });
+  await expect(page).toHaveURL(/\/library\/github\/(?!new)[a-z0-9-]+$/);
+  await page.reload();
+  await expect(
+    page.getByRole("link", { name: "Start a new import", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText(/temporary import ended/)).toBeVisible();
 });

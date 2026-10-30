@@ -295,13 +295,26 @@ export function ImportWorkspace(props: ImportWorkspacePageProps) {
   };
 
   const analysisProps: AnalysisStatusProps = {
-    state: review?.import.lifecycle ?? "created",
-    stage,
+    busy: workspace.busy !== "idle",
+    state:
+      workspace.busy === "preparing"
+        ? "preparing"
+        : workspace.busy === "analyzing"
+          ? "analyzing"
+          : (review?.import.lifecycle ?? "created"),
+    stage:
+      workspace.busy === "preparing"
+        ? "Preparing repository evidence"
+        : workspace.busy === "analyzing"
+          ? "Analyzing the approved evidence"
+          : stage,
     createdAt: review?.import.createdAt ?? new Date(0).toISOString(),
     updatedAt: review?.import.updatedAt ?? new Date(0).toISOString(),
     cancellationAvailable: Boolean(
-      activeRunId &&
-      ["queued", "analyzing"].includes(review?.import.lifecycle ?? ""),
+      workspace.busy === "preparing" ||
+      workspace.busy === "analyzing" ||
+      (activeRunId &&
+        ["queued", "analyzing"].includes(review?.import.lifecycle ?? "")),
     ),
     retryAvailable: ["failed", "interrupted", "cancelled"].includes(
       review?.import.lifecycle ?? "",
@@ -318,6 +331,18 @@ export function ImportWorkspace(props: ImportWorkspacePageProps) {
 
   const main = (
     <div className={styles.main}>
+      <p role="note">
+        Unsaved GitHub evidence stays in this tab. Reloading or closing it
+        starts over. Evidence expires after 20 minutes without an import action.
+      </p>
+      {workspace.busy === "preparing" || workspace.busy === "analyzing" ? (
+        <button type="button" onClick={() => void workspace.cancel()}>
+          Cancel current request
+        </button>
+      ) : null}
+      {workspace.importId && !workspace.loading && !review ? (
+        <Link href="/library/github/new">Start a new import</Link>
+      ) : null}
       {workspace.source === "demo" && (
         <aside className={styles.banner} role="status">
           Demo imports are read-only. Switch to your personal library to connect
