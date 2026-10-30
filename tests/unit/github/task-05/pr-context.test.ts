@@ -140,6 +140,38 @@ describe("GitHub pull request context", () => {
     );
   });
 
+  it("uses explicit pagination metadata to distinguish a complete 30-item list from an unknown full page", async () => {
+    const rows = Array.from({ length: 30 }, (_, index) =>
+      makePullRequest(index + 1),
+    );
+    const completeClient = makeGithub(async () =>
+      success(rows, { hasNextPage: false }),
+    );
+    const completeReader = createPrContextReader({
+      github: completeClient.github,
+    });
+    const unknownReader = createPrContextReader({
+      github: makeGithub(async () => success(rows)).github,
+    });
+
+    const complete = unwrap(
+      await completeReader.listCandidates({
+        scope: makeScope(),
+        context: makeContext(),
+      }),
+    );
+    const unknown = unwrap(
+      await unknownReader.listCandidates({
+        scope: makeScope(),
+        context: makeContext(),
+      }),
+    );
+
+    expect(complete.items).toHaveLength(PR_CONTEXT_LIMITS.candidateSummaries);
+    expect(complete.partial).toBe(false);
+    expect(unknown.partial).toBe(true);
+  });
+
   it("keeps fork, revision, rename, deletion, and merge-state identity separate from the current snapshot", async () => {
     const pr = makePullRequest(9, {
       title: "Dashboard integration",
@@ -269,6 +301,59 @@ describe("GitHub pull request context", () => {
     expect(result.items[0]?.author.kind).toBe("bot");
     expect(result.items[0]?.contribution.status).toBe("unconfirmed");
     expect("contributionCount" in (result.items[0] ?? {})).toBe(false);
+  });
+
+  it("keeps older merged PR paths historical when the pinned revision has no exact match", async () => {
+    const pr = makePullRequest(18, {
+      title: "Dashboard integration",
+      state: "closed",
+      merged: true,
+      merged_at: "2026-09-10T10:00:00Z",
+      merge_commit_sha: "d".repeat(40),
+      base: {
+        ref: "main",
+        sha: BASE_SHA,
+        repo: { id: 42, name: "resume-changer", owner: { login: "acme" } },
+      },
+      head: {
+        ref: "feature/dashboard",
+        sha: HEAD_SHA,
+        repo: { id: 42, name: "resume-changer", owner: { login: "acme" } },
+      },
+    });
+    const { github } = makeGithub(async ({ path }) =>
+      path.endsWith("/files")
+        ? success([
+            makeChangedFile({
+              filename: "src/app/removed-dashboard.tsx",
+              status: "removed",
+            }),
+          ])
+        : success(pr),
+    );
+    const reader = createPrContextReader({ github });
+
+    const result = unwrap(
+      await reader.readSelected({
+        scope: makeScope(),
+        selectedNumbers: [18],
+        context: makeContext(),
+      }),
+    );
+    const selected = result.items[0];
+
+    expect(selected?.mergeState).toBe("merged");
+    expect(selected?.snapshotRelation).toBe("no-exact-match");
+    expect(selected?.changedPaths[0]).toMatchObject({
+      filename: "src/app/removed-dashboard.tsx",
+      status: "removed",
+      evidenceKind: "historical-pr-metadata",
+      currentSnapshotContentVerified: false,
+    });
+    expect(result.limitations).toContain(
+      "pr-metadata-does-not-verify-current-snapshot-content",
+    );
+    expect(selected?.contribution.status).toBe("unconfirmed");
   });
 
   it("keeps documentation-only paths from becoming UI implementation hints", () => {

@@ -690,7 +690,9 @@ export function createPrContextReader(deps: PrContextReaderDependencies) {
       const items: PrCandidate[] = [];
       let partial =
         response.value.hasNextPage === true ||
-        rows.length > PR_CONTEXT_LIMITS.candidateSummaries;
+        rows.length > PR_CONTEXT_LIMITS.candidateSummaries ||
+        (response.value.hasNextPage === undefined &&
+          rows.length >= PR_CONTEXT_LIMITS.candidateSummaries);
       for (const row of rows.slice(0, PR_CONTEXT_LIMITS.candidateSummaries)) {
         const parsed = parsePr(row);
         if (!parsed) {
@@ -704,8 +706,6 @@ export function createPrContextReader(deps: PrContextReaderDependencies) {
         }
         items.push(parsed.value);
       }
-
-      if (rows.length >= PR_CONTEXT_LIMITS.candidateSummaries) partial = true;
 
       return {
         ok: true,
