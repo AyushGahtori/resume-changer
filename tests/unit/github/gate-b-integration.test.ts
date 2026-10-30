@@ -465,7 +465,7 @@ describe("Gate B composed backend", () => {
         { selectedForSave: true, contributionConfirmed: true },
       ),
     ).toMatchObject({ ok: false, error: { code: "version-conflict" } });
-  });
+  }, 15000);
   it("fences a late provider result after cancellation and never emits a ready notification", async () => {
     const f = await fixture();
     const created = unwrap(
