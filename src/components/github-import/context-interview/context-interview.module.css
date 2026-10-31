@@ -1,0 +1,735 @@
+.root {
+  --interview-accent: var(--github-import-primary, #7c3aed);
+  --interview-accent-strong: var(--github-import-primary-strong, #6d28d9);
+  --interview-accent-soft: var(--github-import-primary-subtle, #efebff);
+  --interview-surface: var(--github-import-surface, #fff);
+  --interview-surface-alt: var(--github-import-surface-alt, #f1f5f9);
+  --interview-surface-hover: var(--github-import-surface-hover, #e8eef5);
+  --interview-text: var(--github-import-text, #0f172a);
+  --interview-secondary: var(--github-import-text-secondary, #334155);
+  --interview-muted: var(--github-import-text-muted, #64748b);
+  --interview-border: var(--github-import-border, #cbd5e1);
+  --interview-border-strong: var(--github-import-border-strong, #94a3b8);
+  --interview-focus: var(--github-import-focus, #7c3aed);
+  --interview-error: var(--github-import-error, #b91c1c);
+  --interview-error-soft: var(--github-import-error-subtle, #fef2f2);
+  color: var(--interview-text);
+  min-width: 0;
+  width: 100%;
+}
+
+.root,
+.root *,
+.root *::before,
+.root *::after {
+  box-sizing: border-box;
+}
+
+.root :global(button),
+.root :global(textarea),
+.root :global(input) {
+  font: inherit;
+}
+
+.header {
+  max-width: 780px;
+  margin: 0 auto 24px;
+}
+
+.header h1,
+.questionTitle,
+.stateCard h2,
+.reviewCard > h2,
+.notesHeader h2 {
+  margin: 0;
+  color: var(--interview-text);
+  font-size: clamp(1.35rem, 2vw, 1.8rem);
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+  text-wrap: pretty;
+}
+
+.header > p:last-child {
+  max-width: 62ch;
+  margin: 10px 0 0;
+  color: var(--interview-secondary);
+  line-height: 1.55;
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  color: var(--interview-accent-strong);
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.105em;
+  line-height: 1.3;
+}
+
+.columns {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1.6fr) minmax(260px, 0.85fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.interviewColumn,
+.supportingColumn {
+  display: grid;
+  min-width: 0;
+  gap: 16px;
+}
+
+.questionCard,
+.reviewCard,
+.stateCard,
+.notesCard,
+.workflowCard {
+  min-width: 0;
+  padding: clamp(18px, 2.4vw, 28px);
+  border: 1px solid var(--interview-border);
+  border-radius: var(--radius-card, 8px);
+  background: var(--interview-surface);
+  box-shadow: var(
+    --shadow-xs,
+    0 1px 2px color-mix(in srgb, var(--interview-text) 5%, transparent)
+  );
+}
+
+.questionCard {
+  overflow: hidden;
+}
+
+.questionMeta {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin-bottom: 18px;
+}
+
+.stepLabel,
+.questionLimit {
+  color: var(--interview-muted);
+  font-size: 0.8rem;
+  font-weight: 650;
+  line-height: 1.35;
+  animation: progress-enter 180ms ease both;
+}
+
+.stepLabel {
+  color: var(--interview-accent-strong);
+}
+
+.progressAnnouncement {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.questionContent {
+  min-width: 0;
+  animation: question-enter 180ms ease both;
+}
+
+.questionTitle {
+  max-width: 34ch;
+  outline: none;
+}
+
+.questionTitle:focus-visible,
+.reviewCard > h2:focus-visible,
+.stateCard h2:focus-visible {
+  border-radius: 3px;
+  outline: 2px solid var(--interview-focus);
+  outline-offset: 4px;
+}
+
+.questionDescription {
+  max-width: 68ch;
+  margin: 10px 0 0;
+  color: var(--interview-secondary);
+  line-height: 1.5;
+}
+
+.options {
+  display: grid;
+  min-width: 0;
+  gap: 9px;
+  padding: 0;
+  margin: 22px 0 0;
+  border: 0;
+}
+
+.options legend {
+  margin-bottom: 9px;
+  color: var(--interview-secondary);
+  font-size: 0.86rem;
+  font-weight: 650;
+}
+
+.option {
+  display: grid;
+  min-width: 0;
+  min-height: 52px;
+  grid-template-columns: 20px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  padding: 10px 13px;
+  border: 1px solid var(--interview-border);
+  border-radius: var(--radius-control, 6px);
+  background: var(--interview-surface);
+  cursor: pointer;
+  transition:
+    border-color 120ms ease,
+    background-color 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.option:hover {
+  border-color: var(--interview-border-strong);
+  background: var(--interview-surface-hover);
+}
+
+.option[data-selected="true"] {
+  border-color: var(--interview-accent);
+  background: var(--interview-accent-soft);
+  box-shadow: inset 0 0 0 1px var(--interview-accent);
+}
+
+.option input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--interview-accent-strong);
+}
+
+.option input:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--interview-focus) 38%, transparent);
+  outline-offset: 3px;
+}
+
+.optionCopy {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.optionLabel {
+  color: var(--interview-text);
+  font-weight: 650;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.optionDescription {
+  color: var(--interview-muted);
+  font-size: 0.84rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.customAnswer {
+  display: grid;
+  min-width: 0;
+  gap: 7px;
+  margin-top: 16px;
+  animation: panel-enter 210ms ease both;
+}
+
+.customAnswer label,
+.notesCard > label:not(.srOnly),
+.expiredNotes label {
+  color: var(--interview-secondary);
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.customAnswer textarea,
+.notesCard textarea,
+.expiredNotes textarea {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  padding: 12px 13px;
+  border: 1px solid var(--interview-border-strong);
+  border-radius: var(--radius-control, 6px);
+  background: var(--interview-surface);
+  color: var(--interview-text);
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.customAnswer textarea:focus-visible,
+.notesCard textarea:focus-visible {
+  border-color: var(--interview-focus);
+  outline: 3px solid color-mix(in srgb, var(--interview-focus) 28%, transparent);
+  outline-offset: 1px;
+}
+
+.textareaFooter {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 12px;
+  color: var(--interview-muted);
+  font-size: 0.76rem;
+  line-height: 1.4;
+}
+
+.validation,
+.error {
+  margin: 12px 0 0;
+  color: var(--interview-error);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.notice,
+.busyStatus,
+.reviewHint {
+  margin: 14px 0 0;
+  color: var(--interview-secondary);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.busyStatus {
+  color: var(--interview-accent-strong);
+}
+
+.errorBlock {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  margin-top: 16px;
+  border: 1px solid color-mix(in srgb, var(--interview-error) 42%, transparent);
+  border-radius: var(--radius-control, 6px);
+  background: var(--interview-error-soft);
+  color: var(--interview-error);
+}
+
+.errorBlock p {
+  margin: 0;
+  line-height: 1.45;
+}
+
+.questionActions,
+.reviewActions {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding-top: 20px;
+  margin-top: 20px;
+  border-top: 1px solid var(--interview-border);
+}
+
+.questionActions button,
+.reviewActions button,
+.primaryButton,
+.secondaryButton,
+.skipButton,
+.editButton,
+.stateCard button,
+.errorBlock button {
+  min-height: 44px;
+  padding: 10px 15px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.25;
+  cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease,
+    transform 120ms ease;
+}
+
+.questionActions button:focus-visible,
+.reviewActions button:focus-visible,
+.primaryButton:focus-visible,
+.secondaryButton:focus-visible,
+.skipButton:focus-visible,
+.editButton:focus-visible,
+.stateCard button:focus-visible,
+.errorBlock button:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--interview-focus) 38%, transparent);
+  outline-offset: 2px;
+}
+
+.questionActions button:disabled,
+.reviewActions button:disabled,
+.stateCard button:disabled,
+.editButton:disabled,
+.errorBlock button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.primaryButton,
+.stateCard button,
+.errorBlock button {
+  background: var(--action-violet-surface, var(--interview-accent-strong));
+  color: var(--action-violet-label, var(--color-text-inverse, #fff));
+}
+
+.primaryButton:hover:not(:disabled),
+.stateCard button:hover:not(:disabled),
+.errorBlock button:hover:not(:disabled) {
+  background: var(--action-violet-surface-hover, var(--interview-accent));
+  color: var(--action-violet-label, var(--color-text-inverse, #fff));
+}
+
+.questionActions .primaryButton {
+  min-width: 132px;
+  margin-left: auto;
+}
+
+.secondaryButton,
+.editButton {
+  border-color: var(--interview-border-strong) !important;
+  background: var(--interview-surface);
+  color: var(--interview-text);
+}
+
+.secondaryButton:hover:not(:disabled),
+.editButton:hover:not(:disabled) {
+  background: var(--interview-surface-hover);
+}
+
+.skipButton {
+  background: transparent;
+  color: var(--interview-secondary);
+}
+
+.skipButton:hover:not(:disabled) {
+  background: var(--interview-surface-hover);
+}
+
+.notesCard {
+  display: grid;
+  gap: 13px;
+}
+
+.notesHeader {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.notesHeader .eyebrow {
+  margin-bottom: 7px;
+}
+
+.notesHeader h2 {
+  max-width: 30ch;
+  font-size: 1.08rem;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+}
+
+.notesCount {
+  flex: 0 0 auto;
+  padding-top: 1px;
+  color: var(--interview-muted);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.5;
+}
+
+.notesCard textarea {
+  min-height: 150px;
+}
+
+.notesHelp {
+  margin: 0;
+  color: var(--interview-muted);
+  font-size: 0.78rem;
+  line-height: 1.48;
+}
+
+.workflowCard {
+  background: var(--interview-surface-alt);
+  box-shadow: none;
+}
+
+.workflowCard p:last-child {
+  margin: 0;
+  color: var(--interview-secondary);
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+.reviewCard > h2,
+.stateCard h2 {
+  font-size: clamp(1.25rem, 2vw, 1.55rem);
+}
+
+.reviewCounts {
+  margin: 11px 0 0;
+  color: var(--interview-accent-strong);
+  font-size: 0.88rem;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.reviewHint {
+  max-width: 70ch;
+  margin-top: 8px;
+}
+
+.answerList {
+  display: grid;
+  gap: 0;
+  padding: 0;
+  margin: 22px 0 0;
+  list-style: none;
+}
+
+.answerItem {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 0;
+  border-top: 1px solid var(--interview-border);
+}
+
+.answerCopy {
+  min-width: 0;
+}
+
+.answerCopy h3 {
+  margin: 0;
+  color: var(--interview-text);
+  font-size: 0.93rem;
+  line-height: 1.4;
+}
+
+.answerCopy p {
+  margin: 6px 0 0;
+  color: var(--interview-secondary);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.answerCopy .answerDetail {
+  color: var(--interview-muted);
+  font-size: 0.88rem;
+}
+
+.editButton {
+  flex: 0 0 auto;
+  min-width: 104px;
+  min-height: 40px !important;
+  padding: 8px 11px !important;
+  font-size: 0.82rem !important;
+}
+
+.reviewActions {
+  margin-top: 8px;
+}
+
+.stateCard {
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+.stateCard > p:not(.eyebrow) {
+  color: var(--interview-secondary);
+  line-height: 1.55;
+}
+
+.stateCard button {
+  margin-top: 6px;
+}
+
+.retainedAnswers {
+  display: grid;
+  gap: 12px;
+  padding-left: 20px;
+  margin: 18px 0;
+}
+
+.retainedAnswers li {
+  display: grid;
+  gap: 4px;
+  color: var(--interview-secondary);
+  line-height: 1.45;
+}
+
+.retainedAnswers strong {
+  color: var(--interview-text);
+}
+
+.expiredNotes {
+  display: grid;
+  min-width: 0;
+  gap: 8px;
+  margin: 18px 0 8px;
+}
+
+.attachments {
+  min-width: 0;
+  grid-column: 1 / -1;
+}
+
+.loading {
+  padding: 28px;
+  margin: 0;
+  color: var(--interview-secondary);
+  text-align: center;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@keyframes question-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes panel-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes progress-enter {
+  from {
+    opacity: 0.65;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (max-width: 1023px) {
+  .columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .supportingColumn {
+    grid-row: 2;
+  }
+}
+
+@media (max-width: 520px) {
+  .header {
+    margin-bottom: 16px;
+  }
+
+  .columns,
+  .interviewColumn,
+  .supportingColumn {
+    gap: 12px;
+  }
+
+  .questionCard,
+  .reviewCard,
+  .stateCard,
+  .notesCard,
+  .workflowCard {
+    padding: 16px;
+    border-radius: var(--radius-card, 8px);
+  }
+
+  .questionMeta {
+    display: grid;
+    gap: 5px;
+    margin-bottom: 15px;
+  }
+
+  .options {
+    gap: 8px;
+    margin-top: 17px;
+  }
+
+  .option {
+    grid-template-columns: 20px minmax(0, 1fr);
+    gap: 10px;
+    padding: 10px;
+  }
+
+  .questionActions {
+    gap: 7px;
+  }
+
+  .questionActions .primaryButton {
+    min-width: 0;
+    flex: 1 1 100%;
+    margin-left: 0;
+  }
+
+  .questionActions .secondaryButton,
+  .questionActions .skipButton {
+    flex: 1 1 auto;
+  }
+
+  .answerItem {
+    display: grid;
+    gap: 10px;
+  }
+
+  .editButton {
+    justify-self: start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .questionContent,
+  .customAnswer,
+  .questionLimit {
+    animation: none;
+  }
+
+  .option,
+  .questionActions button,
+  .reviewActions button,
+  .primaryButton,
+  .secondaryButton,
+  .skipButton,
+  .editButton,
+  .stateCard button,
+  .errorBlock button {
+    transition-duration: 0.01ms;
+    transform: none;
+  }
+}

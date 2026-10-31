@@ -1,0 +1,31 @@
+{
+  "catalogVersion": "scripted-context-interview-v1",
+  "routes": [
+    {
+      "name": "short developer-tool route",
+      "routeLength": 5,
+      "projectKindOption": "kind-tool"
+    },
+    {
+      "name": "web project route",
+      "routeLength": 7,
+      "projectKindOption": "kind-web"
+    },
+    {
+      "name": "data and machine-learning route",
+      "routeLength": 10,
+      "projectKindOption": "kind-data"
+    }
+  ],
+  "adaptiveBranches": {
+    "web": 7,
+    "data": 10,
+    "tool": 5
+  },
+  "constraints": {
+    "maxQuestions": 10,
+    "maxCustomAnswerCodePoints": 500,
+    "maxNotesCodePoints": 500,
+    "providerCalls": 0
+  }
+}
