@@ -1,5 +1,10 @@
 import { createHash } from "node:crypto";
 import {
+  evidenceReadiness,
+  evidenceRecoveryNotes,
+  mergeEvidenceReadiness,
+} from "./evidence-readiness";
+import {
   AnalysisResultSchema,
   DraftSchema,
   FileCandidateSchema,
@@ -31,7 +36,7 @@ import type {
   RepositorySnapshot,
 } from "../ports";
 
-const SELECTOR_VERSION = "github-selector-v1";
+const SELECTOR_VERSION = "github-selector-v2";
 const SAFETY_POLICY_VERSION = "github-file-safety-v1";
 const SOURCE_PARSER_VERSION = "github-source-text-v1";
 const EXTRACTION_PROMPT_VERSION = "repository-achievements-v1";
@@ -289,11 +294,10 @@ function prepareCompleteness(input: {
   prPartial: boolean;
   selectedCount: number;
 }): "complete" | "partial" | "needs-context" {
-  if (input.missingDimensions.length > 0 || input.selectedCount === 0)
-    return "needs-context";
-  return input.inventoryPartial || input.snapshotPartial || input.prPartial
-    ? "partial"
-    : "complete";
+  return evidenceReadiness({
+    ...input,
+    partial: input.inventoryPartial || input.snapshotPartial || input.prPartial,
+  });
 }
 
 export const createImportService: ImportServiceFactory = (deps) => {
@@ -796,6 +800,7 @@ export const createImportService: ImportServiceFactory = (deps) => {
           "Prepare a current evidence bundle before analysis.",
         );
       if (
+        prepared.value.completeness === "needs-context" ||
         prepared.value.selectedFileIds.length === 0 ||
         prepared.value.evidence.length === 0
       )
@@ -1178,6 +1183,7 @@ export const createImportService: ImportServiceFactory = (deps) => {
         ...inventoryLimitations,
         ...prContext.limitations,
         ...selected.value.limitations,
+        ...evidenceRecoveryNotes(selected.value.missingDimensions),
       ]).slice(0, 100);
       const packed = await deps.selector.pack({
         importId: record.id,
@@ -1196,8 +1202,15 @@ export const createImportService: ImportServiceFactory = (deps) => {
         runId: job.runId,
         version: record.selectionVersion,
         scope: record.scope,
-        limitations,
-        completeness,
+        limitations: unique([
+          ...limitations,
+          ...packed.value.limitations,
+        ]).slice(0, 100),
+        completeness: mergeEvidenceReadiness(
+          completeness,
+          packed.value.completeness,
+          packed.value.evidence.length ? "complete" : "needs-context",
+        ),
         consentedAt: null,
       });
       if (
@@ -1313,6 +1326,7 @@ export const createImportService: ImportServiceFactory = (deps) => {
       if (
         !prepared.value ||
         prepared.value.selectionHash !== record.selectionHash ||
+        prepared.value.completeness === "needs-context" ||
         prepared.value.selectedFileIds.length === 0 ||
         prepared.value.evidence.length === 0
       )

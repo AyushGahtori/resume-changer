@@ -256,6 +256,18 @@ export function ImportWorkspace(props: ImportWorkspacePageProps) {
   };
 
   const trustProps: ImportTrustRailProps = {
+    reviewPhase:
+      review?.import.lifecycle === "approved"
+        ? "saved"
+        : drafts.length
+          ? "drafts"
+          : review?.result
+            ? "empty"
+            : workspace.busy === "analyzing"
+              ? "analyzing"
+              : prepared?.completeness === "needs-context"
+                ? "blocked"
+                : "prepared",
     safetySummary: [
       "Only the prepared selection is eligible for analysis.",
       "Drafts are saved only after you select and confirm them.",
@@ -266,7 +278,14 @@ export function ImportWorkspace(props: ImportWorkspacePageProps) {
       runId: prepared?.runId ?? activeRunId,
       revision: review?.import.scope.commitSha ?? "",
     },
-    budget: prepared?.budget ?? evidenceProps.budget,
+    budget: prepared
+      ? {
+          ...prepared.budget,
+          reportedInputTokens:
+            review?.result?.usage.promptTokens ??
+            prepared.budget.reportedInputTokens,
+        }
+      : evidenceProps.budget,
     cost: {
       estimate: null,
       currency: null,
@@ -295,6 +314,11 @@ export function ImportWorkspace(props: ImportWorkspacePageProps) {
   };
 
   const analysisProps: AnalysisStatusProps = {
+    analysisStarted: Boolean(
+      review?.result ||
+      review?.import.consent ||
+      workspace.busy === "analyzing",
+    ),
     busy: workspace.busy !== "idle",
     state:
       workspace.busy === "preparing"
@@ -387,6 +411,27 @@ export function ImportWorkspace(props: ImportWorkspacePageProps) {
           aria-labelledby="github-setup-heading"
         >
           <h2 id="github-setup-heading">Set up repository evidence</h2>
+          {prepared && !workspace.isStale ? (
+            <button
+              type="button"
+              className={styles.primary}
+              onClick={() => workspace.setForceSetup(false)}
+            >
+              Review prepared evidence
+            </button>
+          ) : null}
+          {prepared?.completeness === "needs-context" ? (
+            <div role="alert">
+              <p>
+                More evidence or contribution context is needed before analysis.
+              </p>
+              <ul>
+                {prepared.limitations.map((note) => (
+                  <li key={note}>{note}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
           <RepositorySetup {...setupProps} />
           <details className={styles.advanced}>
             <summary>Optional pull requests and file paths</summary>
@@ -456,11 +501,27 @@ export function ImportWorkspace(props: ImportWorkspacePageProps) {
           aria-labelledby="github-analysis-heading"
         >
           <h2 id="github-analysis-heading">Review the staged selection</h2>
+          {prepared ? (
+            <button type="button" onClick={analysisProps.onResumeSetup}>
+              Edit repository setup
+            </button>
+          ) : null}
           {review ? <AnalysisStatus {...analysisProps} /> : null}
+          {prepared?.limitations.length ? (
+            <div role="note" aria-label="Evidence limitations">
+              <ul>
+                {prepared.limitations.map((note) => (
+                  <li key={note}>{note}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
           {prepared ? <EvidencePanel {...evidenceProps} /> : null}
           {["ready-to-analyze", "partial"].includes(
             review?.import.lifecycle ?? "",
-          ) && !review?.result ? (
+          ) &&
+          !review?.result &&
+          props.importId === workspace.importId ? (
             <div className={styles.consent}>
               <p>
                 {prepared?.providerDisclosure ??
@@ -566,7 +627,20 @@ export function ImportWorkspace(props: ImportWorkspacePageProps) {
             </p>
           ) : null}
           {prepared ? <EvidencePanel {...evidenceProps} /> : null}
-          <AchievementReview {...achievementProps} />
+          {review?.result &&
+          !drafts.length &&
+          review.import.lifecycle !== "approved" ? (
+            <div role="status">
+              <h3>No supported achievements were generated</h3>
+              <p>
+                The analysis returned no drafts for this evidence. Review the
+                selected files and your contribution context before preparing
+                another analysis. No achievements were saved.
+              </p>
+            </div>
+          ) : (
+            <AchievementReview {...achievementProps} />
+          )}
 
           <details className={styles.advanced}>
             <summary>Change repository selection</summary>

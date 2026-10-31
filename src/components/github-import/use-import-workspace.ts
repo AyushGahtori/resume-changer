@@ -489,7 +489,13 @@ export function useImportWorkspace(input: {
       setRepositoryScope((current) =>
         current && available.has(current.repositoryId) ? current : null,
       );
-      setConsentAccepted(false);
+      // Refreshing an unchanged repository list does not change the reviewed
+      // evidence. Only revoked access invalidates consent here; scope/preparation
+      // changes have their own consent reset and hash checks.
+      const reviewedRepository =
+        latestReview.current?.import.scope.repositoryId;
+      if (reviewedRepository && !available.has(reviewedRepository))
+        setConsentAccepted(false);
     }
   }, []);
 

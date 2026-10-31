@@ -1,3 +1,4 @@
+import { evidenceReadiness, evidenceRecoveryNotes } from "./evidence-readiness";
 import {
   EVIDENCE_LIMITS,
   classifyPath,
@@ -565,14 +566,14 @@ export function createEvidenceSelector(
         )
           missingDimensions.push("measurement-context");
       }
-      const status =
-        pinConflicts.length > 0 ||
-        missingDimensions.includes("method") ||
-        missingDimensions.includes("attribution")
-          ? "needs-context"
-          : missingDimensions.length > 0 || limits
-            ? "partial"
-            : "ready";
+      limitations.push(...evidenceRecoveryNotes(missingDimensions));
+      const readiness = evidenceReadiness({
+        missingDimensions,
+        selectedCount: selectedFiles.length,
+        pinConflicts: pinConflicts.length,
+        partial: limits,
+      });
+      const status = readiness === "complete" ? "ready" : readiness;
 
       return {
         ok: true,
@@ -833,7 +834,55 @@ function chooseFiles(
     EVIDENCE_LIMITS.maxFilesPerRequest,
     Math.max(MAX_AUTO_FILES, selectedPathCount()),
   );
-  for (const item of ranked) {
+  // Explicit scope keeps its order. Reserve a bounded automatic slot for a
+  // related test instead of letting many equally ranked entrypoints crowd it out.
+  const explicit = ranked.filter(
+    (item) => item.selectedPath || item.changedInSelectedPr,
+  );
+  const automatic = ranked.filter(
+    (item) => !item.selectedPath && !item.changedInSelectedPr,
+  );
+  const method = ranked.find((item) =>
+    ["core-method", "product-surface", "helper"].includes(item.category),
+  );
+  const genericTerms = new Set([
+    "src",
+    "lib",
+    "tests",
+    "test",
+    "spec",
+    "unit",
+    "integration",
+    "app",
+    "index",
+    "page",
+    "tsx",
+    "jsx",
+  ]);
+  const methodTerms = new Set(
+    method
+      ? pathWords(method.candidate.path).filter(
+          (word) => word.length > 2 && !genericTerms.has(word),
+        )
+      : [],
+  );
+  const corroboration = automatic.find(
+    (item) =>
+      item.category === "corroboration" &&
+      pathWords(item.candidate.path).some((word) => methodTerms.has(word)),
+  );
+  const preferred = corroboration
+    ? [method, corroboration].filter(
+        (item): item is RankedCandidate =>
+          Boolean(item) && automatic.includes(item!),
+      )
+    : [];
+  const ordered = [
+    ...explicit,
+    ...preferred,
+    ...automatic.filter((item) => !preferred.includes(item)),
+  ];
+  for (const item of ordered) {
     if (pinnedIds.has(item.candidate.id) || selectedPathCount() >= autoLimit)
       continue;
     const duplicate = seenBlob.get(item.candidate.blobSha.toLowerCase());
@@ -1450,16 +1499,14 @@ async function packSelection(
     plan.scope,
     plan.missingDimensions,
   );
-  const completeness =
-    missingDimensions.includes("method") ||
-    missingDimensions.includes("attribution") ||
-    pinConflicts.length > 0
-      ? "needs-context"
-      : missingDimensions.length > 0 ||
-          limitations.length > 0 ||
-          excludedFiles.length > 0
-        ? "partial"
-        : "complete";
+  limitations.push(...evidenceRecoveryNotes(missingDimensions));
+  const completeness = evidenceReadiness({
+    missingDimensions,
+    selectedCount: evidence.length,
+    pinConflicts: pinConflicts.length,
+    partial: limitations.length > 0 || excludedFiles.length > 0,
+  });
+
   const selectionHash = sha256(
     JSON.stringify({
       scope: canonicalScopeForHash(plan.scope),

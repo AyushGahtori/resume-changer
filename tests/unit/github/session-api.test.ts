@@ -4,7 +4,10 @@ import { join, resolve, dirname } from "node:path";
 import { randomUUID } from "node:crypto";
 import { afterEach, expect, it, vi } from "vitest";
 import { sessionImport } from "../../../src/lib/github/server/session-handler";
-import { configureGithubServices } from "../../../src/lib/github/server/composition";
+import {
+  configureGithubServices,
+  resetGithubServicesForTests,
+} from "../../../src/lib/github/server/composition";
 import { createE2eGithubServices } from "../../../src/lib/github/server/testing/e2e-runtime";
 import { createImportClient } from "../../../src/lib/github/client";
 import { openImportSession } from "../../../src/lib/github/server/session-envelope";
@@ -15,6 +18,7 @@ const unwrap = <T>(r: Result<T>): T => {
 };
 let root: string;
 afterEach(async () => {
+  resetGithubServicesForTests();
   vi.unstubAllEnvs();
   if (
     root &&
@@ -207,6 +211,20 @@ it("uses real session HTTP contracts, retains completed downloads after failure 
   const point = written.projects
     .flatMap((p: { points: unknown[] }) => p.points)
     .find((p: { id: string }) => p.id === saved.savedIds[0]);
+  // Saved provenance identifies the selector behavior that produced the evidence.
+  expect(
+    written.projects
+      .flatMap(
+        (p: {
+          repositoryAttachments: { snapshots: { selectorVersion: string }[] }[];
+        }) => p.repositoryAttachments,
+      )
+      .flatMap((a: { snapshots: { selectorVersion: string }[] }) => a.snapshots)
+      .some(
+        (snapshot: { selectorVersion: string }) =>
+          snapshot.selectorVersion === "contribution-selector-v2",
+      ),
+  ).toBe(true);
   expect(
     point.githubEvidence.evidence.every((e: object) => !("excerpt" in e)),
   ).toBe(true);
@@ -220,3 +238,154 @@ it("uses real session HTTP contracts, retains completed downloads after failure 
   capsule = null;
   expect((await client.get(record.id)).ok).toBe(false);
 }, 20000);
+
+async function partialFixture(repositoryId: string, name: string) {
+  root = join(tmpdir(), "resume-changer-playwright-data-" + Date.now());
+  await mkdir(join(root, "data"), { recursive: true });
+  await copyFile(
+    "examples/sample-resume-library.json",
+    join(root, "data/resume-library.json"),
+  );
+  for (const [k, v] of Object.entries({
+    VERCEL: "",
+    RESUME_APP_MODE: "local",
+    RESUME_LIBRARY_ROOT: root,
+    GITHUB_IMPORT_E2E_HARNESS: "1",
+    GITHUB_IMPORT_E2E_BACKEND: "1",
+    NEXT_RUNTIME: "nodejs",
+  }))
+    vi.stubEnv(k, v);
+  let providerCalls = 0,
+    capsule: string | null = null;
+  configureGithubServices(({ personalRoot, now }) =>
+    createE2eGithubServices({
+      personalRoot,
+      now,
+      beforeProvider() {
+        providerCalls++;
+      },
+    }),
+  );
+  const client = createImportClient({
+    session: true,
+    fetch: async (path, init = {}) => {
+      const response = await sessionImport(
+        new Request("http://localhost/api/github/session", {
+          method: "POST",
+          headers: {
+            origin: "http://localhost",
+            cookie: "github_session=" + "a".repeat(43),
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            version: 1,
+            operationId: randomUUID(),
+            state: capsule,
+            path: String(path),
+            method: init.method ?? "GET",
+            ...(init.body ? { body: JSON.parse(String(init.body)) } : {}),
+          }),
+        }),
+      );
+      if (!response.ok) return response;
+      const events = (await response.text())
+        .trim()
+        .split("\n")
+        .map((x) => JSON.parse(x));
+      capsule = events.at(-1).state;
+      return Response.json(events.at(-1).body, {
+        status: events.at(-1).status,
+      });
+    },
+  });
+  const library = JSON.parse(
+    await readFile(join(root, "data/resume-library.json"), "utf8"),
+  );
+  const record = unwrap(
+    await client.create({
+      source: "personal",
+      destinationProjectId: library.projects[0].id,
+      scope: {
+        repositoryId,
+        owner: "example",
+        name,
+        canonicalUrl: `https://github.com/example/${name}`,
+        visibility: "public",
+        ref: "main",
+        commitSha: "a".repeat(40),
+        selectedPaths: [],
+        selectedPullRequestNumbers: [],
+        contributionStatement: "entire project.",
+        identitySource: "user-provided",
+      },
+    }),
+  );
+  unwrap(await client.prepare(record.id, record.version));
+  return { client, record, providerCalls: () => providerCalls };
+}
+
+it.each([
+  ["43", "publishing-no-tests"],
+  ["46", "publishing-dense"],
+])(
+  "allows partial evidence through the real session stack for %s without calling AI during preparation",
+  async (repositoryId, name) => {
+    const f = await partialFixture(repositoryId, name);
+    let review = unwrap(await f.client.get(f.record.id));
+    expect(review.import.lifecycle).toBe("partial");
+    expect(review.prepared?.completeness).toBe("partial");
+    expect(review.prepared?.limitations.join(" ")).toContain(
+      "No test evidence was included",
+    );
+    expect(f.providerCalls()).toBe(0);
+    expect(review.result).toBeNull();
+    unwrap(
+      await f.client.enqueueAnalysis(
+        f.record.id,
+        review.import.version,
+        review.prepared!.selectionHash,
+        "partial-consent",
+      ),
+    );
+    review = unwrap(await f.client.get(f.record.id));
+    expect(review.result?.drafts.length).toBeGreaterThan(0);
+    expect(f.providerCalls()).toBe(1);
+  },
+  15000,
+);
+
+it("keeps documentation-only evidence blocked at the real API without calling the provider", async () => {
+  const f = await partialFixture("44", "publishing-docs-only"),
+    review = unwrap(await f.client.get(f.record.id));
+  expect(review.prepared?.completeness).toBe("needs-context");
+  expect(review.import.lifecycle).toBe("needs-input");
+  expect(review.prepared?.limitations.join(" ")).toContain(
+    "does not show an implementation",
+  );
+  const attempt = await f.client.enqueueAnalysis(
+    f.record.id,
+    review.import.version,
+    review.prepared!.selectionHash,
+    "blocked-consent",
+  );
+  expect(attempt.ok).toBe(false);
+  expect(f.providerCalls()).toBe(0);
+}, 15000);
+
+it("returns an explicitly empty model result separately from a preparation blocker", async () => {
+  const f = await partialFixture("45", "publishing-empty-output");
+  let review = unwrap(await f.client.get(f.record.id));
+  unwrap(
+    await f.client.enqueueAnalysis(
+      f.record.id,
+      review.import.version,
+      review.prepared!.selectionHash,
+      "empty-consent",
+    ),
+  );
+  review = unwrap(await f.client.get(f.record.id));
+  expect(review.import.lifecycle).toBe("ready-to-review");
+  expect(review.result?.drafts).toEqual([]);
+  expect(review.result?.model).toBe("synthetic-source-extractor");
+  expect(f.providerCalls()).toBe(1);
+}, 15000);

@@ -18,6 +18,7 @@
 
 .sectionHeading {
   display: flex;
+  flex-wrap: wrap;
   min-width: 0;
   align-items: center;
   gap: 10px;
@@ -26,6 +27,7 @@
 
 .sectionHeading > div {
   min-width: 0;
+  flex: 1 1 120px;
 }
 
 .sectionHeading h2,

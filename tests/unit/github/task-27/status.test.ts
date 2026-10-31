@@ -78,6 +78,27 @@ afterEach(() => {
 });
 
 describe("AnalysisStatus", () => {
+  it("keeps partial preparation at Analyze until an analysis actually runs", () => {
+    const props = statusProps("partial", {
+      analysisStarted: false,
+      stage: "Partial analysis is ready for review",
+    });
+    const host = mount(props);
+    expect(host.querySelector('[aria-current="step"]')?.textContent).toContain(
+      "Analyze",
+    );
+    expect(host.textContent).toContain(
+      "Evidence prepared with coverage limitations",
+    );
+    expect(host.textContent).not.toContain(
+      "Partial analysis is ready for review",
+    );
+    rerender(host, { ...props, analysisStarted: true });
+    expect(host.querySelector('[aria-current="step"]')?.textContent).toContain(
+      "Review & save",
+    );
+  });
+
   it("shows queued work in the three-state flow and separates leaving from cancelling", () => {
     const onCancel = vi.fn();
     const host = mount(statusProps("queued", { onCancel }));

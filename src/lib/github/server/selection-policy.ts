@@ -10,7 +10,7 @@ import {
 import type { SelectionPolicyFactory, SelectionPolicyPort } from "../ports";
 import { createPrSignals } from "./pr-signals";
 
-const REQUIRED_DIMENSIONS = [
+const COVERAGE_TARGETS = [
   "purpose",
   "method",
   "attribution",
@@ -18,7 +18,7 @@ const REQUIRED_DIMENSIONS = [
 ] as const;
 
 const ALLOWED_DIMENSIONS = new Set([
-  ...REQUIRED_DIMENSIONS,
+  ...COVERAGE_TARGETS,
   "measurement-context",
 ]);
 
@@ -64,8 +64,9 @@ const EMPTY_CONFIG_ERROR: DomainError = {
 /**
  * Creates a deterministic ranking policy for the frozen selector-policy
  * contract. `coverageRules` keys are `all`, `private`, `selected-paths`,
- * `selected-prs`, or `unknown-identity`; their values add required evidence
- * dimensions to the four contribution-first defaults.
+ * `selected-prs`, or `unknown-identity`; their values add coverage targets to the four
+ * contribution-first defaults. The evidence-readiness policy determines which
+ * missing dimensions block analysis; corroboration is a coverage limitation.
  */
 export const createSelectionPolicy: SelectionPolicyFactory = (config = {}) => {
   const weights = { ...DEFAULT_SELECTION_WEIGHTS };
@@ -240,7 +241,7 @@ export const createSelectionPolicy: SelectionPolicyFactory = (config = {}) => {
 
       const normalizedScope = scopeResult.data;
       const rules = configuredRules ?? {};
-      const dimensions = new Set<string>(REQUIRED_DIMENSIONS);
+      const dimensions = new Set<string>(COVERAGE_TARGETS);
       const matchingRules = [
         "all",
         ...(normalizedScope.visibility === "private" ? ["private"] : []),

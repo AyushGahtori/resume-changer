@@ -45,6 +45,36 @@ afterEach(() => {
 });
 
 describe("ImportTrustRail", () => {
+  it.each(["prepared", "blocked", "analyzing", "empty"] as const)(
+    "does not offer achievement selection or save in the %s phase",
+    (phase) => {
+      const view = mount({
+        ...trustRailProps(),
+        reviewPhase: phase,
+        eligibleCount: 0,
+        selectedCount: 0,
+      });
+      mounted.push(view);
+      expect(
+        view.container.querySelector('[data-testid="trust-save"]'),
+      ).toBeNull();
+      expect(view.container.textContent).not.toContain(
+        "Select an eligible achievement",
+      );
+      expect(view.container.textContent).toContain("Next step");
+      expect(
+        view.container.querySelector('[data-testid="trust-discard"]'),
+      ).not.toBeNull();
+      if (phase === "prepared")
+        expect(view.container.textContent).toContain(
+          "AI analysis has not started",
+        );
+      if (phase === "empty")
+        expect(view.container.textContent).toContain(
+          "No supported achievements were generated",
+        );
+    },
+  );
   it("renders server-reported counts and keeps unavailable run facts unknown", () => {
     const props = trustRailProps();
     const view = mount(props);

@@ -19,6 +19,44 @@ function candidateById<T extends { candidate: { id: string } }>(
 }
 
 describe("safe GitHub evidence selection", () => {
+  it("retains a relevant test beside implementation when a dense inventory would fill the automatic slots", () => {
+    const inventory = Array.from({ length: 18 }, (_, i) =>
+      makeCandidate(
+        `method-${i}`,
+        `src/cache/route-${i}.ts`,
+        `export const route${i} = ${i};`,
+      ),
+    );
+    inventory.push(
+      makeCandidate(
+        "test",
+        "tests/cache/route-0.test.ts",
+        "it('checks cache', () => expect(route0).toBe(0));",
+      ),
+    );
+    const selector = createEvidenceSelector({
+      fetchFile: createFetcher(new Map()),
+      scoreCandidate: (ranked) => ({
+        ok: true,
+        value: ranked.category === "corroboration" ? 14 : 18,
+      }),
+    });
+    const result = selector.select({
+      inventory,
+      scope: makeScope(),
+      prContext: emptyPrContext,
+      pinnedFileIds: [],
+      context: makeContext(),
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.selectedFiles.map((f) => f.candidate.id)).toContain(
+      "test",
+    );
+    expect(result.value.selectedFiles.length).toBeLessThanOrEqual(12);
+    expect(result.value.missingDimensions).not.toContain("corroboration");
+  });
+
   it("ranks a changed implementation, its helper and test ahead of stale overview docs", async () => {
     const bodies = new Map([
       [

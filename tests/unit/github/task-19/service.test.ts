@@ -230,6 +230,10 @@ function harness(
     prFree?: boolean;
     partial?: boolean;
     needsContext?: boolean;
+    missingDimensions?: string[];
+    packedCompleteness?: PreparedSelection["completeness"];
+    packedLimitations?: string[];
+    emptyEvidence?: boolean;
     emptySelection?: boolean;
     cancelBeforeAnalysisCommit?: boolean;
     includeSecondCandidate?: boolean;
@@ -674,24 +678,30 @@ function harness(
           }));
         return ok({
           selected,
-          missingDimensions: options.needsContext ? ["team-role"] : [],
+          missingDimensions:
+            options.missingDimensions ??
+            (options.needsContext ? ["team-role"] : []),
           limitations: [],
         });
       },
     ),
     pack: vi.fn(async (input: Parameters<EvidenceSelectorPort["pack"]>[0]) =>
-      ok(
-        makePrepared({
+      ok({
+        ...makePrepared({
           importId: input.importId,
           selectionVersion: input.selectionVersion,
           runId: input.context.runId,
           scope: input.scope,
           selected: input.selected,
           contentByFileId: input.contentByFileId,
-          completeness: input.completeness,
-          limitations: input.limitations,
+          completeness: options.packedCompleteness ?? input.completeness,
+          limitations: [
+            ...input.limitations,
+            ...(options.packedLimitations ?? []),
+          ],
         }),
-      ),
+        ...(options.emptyEvidence ? { evidence: [] } : {}),
+      }),
     ),
   } as unknown as EvidenceSelectorPort;
   const extractor = {
@@ -843,6 +853,59 @@ async function analyze(
 }
 
 describe("GitHub import service orchestration", () => {
+  it("keeps missing corroboration analyzable as partial evidence without calling AI during preparation", async () => {
+    const h = harness({
+      missingDimensions: ["corroboration"],
+      packedCompleteness: "partial",
+    });
+    const { preparedRecord } = await prepare(h);
+    const state = await unwrap(
+      await h.service.get({ importId: preparedRecord.id }, h.context),
+    );
+    expect(state.prepared?.completeness).toBe("partial");
+    expect(state.import.lifecycle).toBe("partial");
+    expect(state.prepared?.limitations.join(" ")).toContain("No test evidence");
+    expect(h.extractor.extract).not.toHaveBeenCalled();
+  });
+  it.each(["method", "attribution", "unknown-critical-requirement"])(
+    "still blocks a missing %s requirement",
+    async (dimension) => {
+      const h = harness({
+        missingDimensions: [dimension],
+        packedCompleteness: "complete",
+      });
+      const { preparedRecord } = await prepare(h);
+      const state = await unwrap(
+        await h.service.get({ importId: preparedRecord.id }, h.context),
+      );
+      expect(state.prepared?.completeness).toBe("needs-context");
+      expect(h.extractor.extract).not.toHaveBeenCalled();
+    },
+  );
+  it("preserves a stricter packed verdict and the packer's recovery explanation", async () => {
+    const h = harness({
+      packedCompleteness: "needs-context",
+      packedLimitations: ["A pinned file could not be included safely."],
+    });
+    const { preparedRecord } = await prepare(h);
+    const state = await unwrap(
+      await h.service.get({ importId: preparedRecord.id }, h.context),
+    );
+    expect(state.prepared?.completeness).toBe("needs-context");
+    expect(state.prepared?.limitations).toContain(
+      "A pinned file could not be included safely.",
+    );
+  });
+  it("blocks an empty final evidence bundle even when the earlier plan looked complete", async () => {
+    const h = harness({ emptyEvidence: true });
+    const { preparedRecord } = await prepare(h);
+    const state = await unwrap(
+      await h.service.get({ importId: preparedRecord.id }, h.context),
+    );
+    expect(state.prepared?.completeness).toBe("needs-context");
+    expect(h.extractor.extract).not.toHaveBeenCalled();
+  });
+
   it("prepares a pinned snapshot and does not fall back to unselected PRs", async () => {
     const h = harness({ prFree: true });
     const scope = {

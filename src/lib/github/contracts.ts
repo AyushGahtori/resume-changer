@@ -5,7 +5,7 @@ import { z } from "zod";
 export const GITHUB_IMPORT_CONTRACT_VERSION = 1 as const;
 export const GITHUB_IMPORT_SAFETY_POLICY_VERSION = "github-safety-v1" as const;
 export const GITHUB_IMPORT_SELECTOR_VERSION =
-  "contribution-selector-v1" as const;
+  "contribution-selector-v2" as const;
 export const GITHUB_IMPORT_PROMPT_VERSION = "repository-extraction-v1" as const;
 
 export const GITHUB_IMPORT_POLICY = Object.freeze({
@@ -1008,6 +1008,8 @@ export interface MeasurementFieldsProps {
 }
 
 export interface ImportTrustRailProps {
+  reviewPhase?:
+    "prepared" | "blocked" | "analyzing" | "empty" | "drafts" | "saved";
   runDetails?: {
     repository: string | null;
     inspectedAt: string | null;
@@ -1034,6 +1036,7 @@ export interface ImportTrustRailProps {
 }
 
 export interface AnalysisStatusProps {
+  analysisStarted?: boolean;
   busy?: boolean;
   state: ImportLifecycle;
   stage: string;

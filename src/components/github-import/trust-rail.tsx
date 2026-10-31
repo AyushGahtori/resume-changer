@@ -279,6 +279,7 @@ function BudgetRow({
 }
 
 export function ImportTrustRail({
+  reviewPhase = "drafts",
   runDetails,
   safetySummary,
   runIdentity,
@@ -292,6 +293,21 @@ export function ImportTrustRail({
   onDiscard,
   onBack,
 }: ImportTrustRailProps) {
+  const hasDrafts = reviewPhase === "drafts";
+  const beforeAnalysis =
+    reviewPhase === "prepared" || reviewPhase === "blocked";
+  const phaseMessage = {
+    prepared:
+      "Evidence is prepared. Review it and approve analysis to generate achievement drafts.",
+    blocked:
+      "Review the missing evidence or contribution context before analysis can start.",
+    analyzing:
+      "Analysis is running. Achievement drafts will appear when it finishes.",
+    empty:
+      "No supported achievements were generated. Review your evidence and contribution context.",
+    drafts: "",
+    saved: "Your confirmed achievements were saved to Achievement Library.",
+  }[reviewPhase];
   const eligibleCount = count(eligibleCountInput);
   const selectedCount = count(selectedCountInput);
   const countMismatch = eligibleCount > selectedCount;
@@ -450,8 +466,14 @@ export function ImportTrustRail({
             <Icon name="summary" className={styles.headingIcon} />
           </span>
           <div>
-            <h2 id="trust-summary-title">Run summary</h2>
-            <p className={styles.sectionKicker}>Server-reported details</p>
+            <h2 id="trust-summary-title">
+              {beforeAnalysis ? "Repository preparation" : "Run summary"}
+            </h2>
+            <p className={styles.sectionKicker}>
+              {beforeAnalysis
+                ? "AI analysis has not started"
+                : "Server-reported details"}
+            </p>
           </div>
           <span
             className={`${styles.budgetBadge} ${styles[`budgetBadge_${budgetStatus.tone}`]}`}
@@ -490,7 +512,7 @@ export function ImportTrustRail({
             }
           />
           <SummaryRow
-            label="Files analyzed"
+            label={beforeAnalysis ? "Files inspected" : "Files analyzed"}
             value={`${formatCount(budget.selectedUniqueFiles)} ${plural(budget.selectedUniqueFiles, "file")}`}
           />
           <SummaryRow
@@ -624,24 +646,38 @@ export function ImportTrustRail({
         aria-labelledby="trust-actions-title"
       >
         <div className={styles.actionSummary}>
-          <h2 id="trust-actions-title">Review before saving</h2>
-          <p>
-            <strong>{formatCount(selectedCount)}</strong> selected
-            <span aria-hidden="true"> · </span>
-            <strong>{formatCount(eligibleCount)}</strong> eligible
-          </p>
-          {eligibleCount < selectedCount || countMismatch ? (
-            <p className={styles.eligibilityNote}>
-              Review each draft for its specific eligibility reason.
+          <h2 id="trust-actions-title">
+            {hasDrafts
+              ? "Review before saving"
+              : reviewPhase === "saved"
+                ? "Achievements saved"
+                : "Next step"}
+          </h2>
+          {hasDrafts ? (
+            <>
+              <p>
+                <strong>{formatCount(selectedCount)}</strong> selected
+                <span aria-hidden="true"> · </span>
+                <strong>{formatCount(eligibleCount)}</strong> eligible
+              </p>
+              {eligibleCount < selectedCount || countMismatch ? (
+                <p className={styles.eligibilityNote}>
+                  Review each draft for its specific eligibility reason.
+                </p>
+              ) : null}
+              <p
+                className={styles.actionStatus}
+                aria-live="polite"
+                data-testid="trust-save-status"
+              >
+                {actionStatus}
+              </p>
+            </>
+          ) : (
+            <p className={styles.actionStatus} role="status">
+              {phaseMessage}
             </p>
-          ) : null}
-          <p
-            className={styles.actionStatus}
-            aria-live="polite"
-            data-testid="trust-save-status"
-          >
-            {actionStatus}
-          </p>
+          )}
         </div>
 
         {saveState === "error" || callbackFailure ? (
@@ -684,36 +720,41 @@ export function ImportTrustRail({
           className={styles.actionButtons}
           data-testid="trust-action-buttons"
         >
-          <button
-            className={styles.saveButton}
-            type="button"
-            onClick={handleSave}
-            disabled={!canSave || saveRequested}
-            aria-describedby="trust-save-status"
-            data-testid="trust-save"
-          >
-            <Icon
-              name={
-                saveState === "saved"
-                  ? "check"
-                  : saveRequested || saveState === "saving"
-                    ? "spinner"
-                    : "check"
-              }
-              className={
-                saveRequested || saveState === "saving"
-                  ? `${styles.buttonIcon} ${styles.spinner}`
-                  : styles.buttonIcon
-              }
-            />
-            <span>{saveLabel}</span>
-          </button>
+          {hasDrafts ? (
+            <button
+              className={styles.saveButton}
+              type="button"
+              onClick={handleSave}
+              disabled={!canSave || saveRequested}
+              aria-describedby="trust-save-status"
+              data-testid="trust-save"
+            >
+              <Icon
+                name={
+                  saveState === "saved"
+                    ? "check"
+                    : saveRequested || saveState === "saving"
+                      ? "spinner"
+                      : "check"
+                }
+                className={
+                  saveRequested || saveState === "saving"
+                    ? `${styles.buttonIcon} ${styles.spinner}`
+                    : styles.buttonIcon
+                }
+              />
+              <span>{saveLabel}</span>
+            </button>
+          ) : null}
 
           {confirmDiscard ? (
             <div className={styles.discardConfirm}>
               <p id="trust-discard-confirmation">
-                Discard the staged drafts from this import? Any achievements
-                already saved stay in your Achievement Library.
+                {hasDrafts
+                  ? "Discard the staged drafts"
+                  : "Discard the temporary evidence"}{" "}
+                from this import? Any achievements already saved stay in your
+                Achievement Library.
               </p>
               <div className={styles.confirmButtons}>
                 <button
@@ -721,7 +762,7 @@ export function ImportTrustRail({
                   className={styles.keepButton}
                   onClick={() => setConfirmDiscard(false)}
                 >
-                  Keep drafts
+                  {hasDrafts ? "Keep drafts" : "Keep evidence"}
                 </button>
                 <button
                   type="button"
@@ -733,7 +774,9 @@ export function ImportTrustRail({
                   data-testid="trust-confirm-discard"
                 >
                   <Icon name="trash" className={styles.buttonIcon} />
-                  Discard staged drafts
+                  {hasDrafts
+                    ? "Discard staged drafts"
+                    : "Discard temporary evidence"}
                 </button>
               </div>
             </div>
@@ -755,7 +798,9 @@ export function ImportTrustRail({
               <span>
                 {discardRequested
                   ? "Discard request sent"
-                  : "Discard staged drafts"}
+                  : hasDrafts
+                    ? "Discard staged drafts"
+                    : "Discard temporary evidence"}
               </span>
             </button>
           )}

@@ -13,7 +13,7 @@ import { isGithubImportHarnessEnabled } from "../../test-harness";
 
 const commit = "a".repeat(40),
   tree = "b".repeat(40);
-const files = {
+const baseFiles = {
   "package.json": JSON.stringify({
     name: "fictional-publishing",
     dependencies: { express: "5.0.0" },
@@ -26,6 +26,26 @@ const files = {
   "tests/publish.test.ts":
     "it('rejects blank input', () => {\n expect(() => validatePublish('')).toThrow();\n});\n",
 };
+const repositories = [
+  { id: "42", name: "publishing" },
+  { id: "43", name: "publishing-no-tests" },
+  { id: "44", name: "publishing-docs-only" },
+  { id: "45", name: "publishing-empty-output" },
+  { id: "46", name: "publishing-dense" },
+];
+function filesFor(name: string): Record<string, string> {
+  const files: Record<string, string> = { ...baseFiles };
+  if (name !== "publishing") delete files["tests/publish.test.ts"];
+  if (name === "publishing-docs-only") delete files["src/publish.ts"];
+  if (name === "publishing-dense") {
+    for (let i = 0; i < 24; i++)
+      files[`src/workflows/action-${i}.ts`] =
+        `export function action${i}(input:string) { return input.trim()+"${i}"; }`;
+    files["tests/unrelated-widget.test.ts"] =
+      "it('checks widget', () => expect(widget()).toBe(true));";
+  }
+  return files;
+}
 const blob = (text: string) =>
   createHash("sha1")
     .update(`blob ${Buffer.byteLength(text)}\0`)
@@ -37,10 +57,12 @@ export async function createE2eGithubServices({
   personalRoot,
   now,
   beforeRequest,
+  beforeProvider,
 }: {
   personalRoot: string;
   now: () => Date;
   beforeRequest?: (url: URL) => void;
+  beforeProvider?: () => void;
 }) {
   if (
     !isGithubImportHarnessEnabled(process.env) ||
@@ -70,7 +92,7 @@ export async function createE2eGithubServices({
       personalRoot,
       sessionId: "e2e-session",
       authorizationNamespace: "e2e:user",
-      grantedRepositoryIds: ["42"],
+      grantedRepositoryIds: repositories.map((r) => r.id),
       signal,
       budget: createUnavailableBudgetLedger(),
       now,
@@ -119,22 +141,37 @@ export async function createE2eGithubServices({
       },
       async listAccessibleRepositories() {
         return ok({
-          repositories: [
-            {
-              repositoryId: "42",
-              owner: "example",
-              name: "publishing",
-              canonicalUrl: scope.canonicalUrl,
-              visibility: "public",
-              defaultBranch: "main",
-              permission: "read",
-            },
-          ],
+          repositories: repositories.map((repo) => ({
+            repositoryId: repo.id,
+            owner: "example",
+            name: repo.name,
+            canonicalUrl: `https://github.com/example/${repo.name}`,
+            visibility: "public" as const,
+            defaultBranch: "main",
+            permission: "read" as const,
+          })),
           nextCursor: null,
         });
       },
-      async authorizeRepository() {
-        return ok({ scope });
+      async authorizeRepository({ repositoryId }) {
+        const repo = repositories.find((r) => r.id === repositoryId);
+        if (!repo)
+          return {
+            ok: false,
+            error: {
+              code: "forbidden",
+              message: "Unknown synthetic repository.",
+              retryable: false,
+            },
+          };
+        return ok({
+          scope: {
+            ...scope,
+            repositoryId: repo.id,
+            name: repo.name,
+            canonicalUrl: `https://github.com/example/${repo.name}`,
+          },
+        });
       },
       async disconnect() {
         return ok({ disconnected: true, upstreamRevocation: "not-requested" });
@@ -145,11 +182,16 @@ export async function createE2eGithubServices({
       resolveAddresses: async () => ["140.82.112.6"],
       fetch: async (url) => {
         beforeRequest?.(url);
-        if (url.pathname === "/repos/example/publishing")
+        const repo = repositories.find(
+          (r) => r.name === url.pathname.split("/")[3],
+        );
+        if (!repo) return new Response("", { status: 404 });
+        const files = filesFor(repo.name);
+        if (url.pathname === `/repos/example/${repo.name}`)
           return Response.json({
-            id: 42,
-            name: "publishing",
-            full_name: "example/publishing",
+            id: Number(repo.id),
+            name: repo.name,
+            full_name: `example/${repo.name}`,
             owner: { login: "example" },
             default_branch: "main",
             private: false,
@@ -172,6 +214,8 @@ export async function createE2eGithubServices({
               size: Buffer.byteLength(text),
             })),
           });
+        if (repo.id !== "42" && url.pathname.includes("/pulls"))
+          return Response.json([]);
         if (url.pathname.endsWith("/pulls"))
           return Response.json([
             {
@@ -257,6 +301,7 @@ export async function createE2eGithubServices({
     }),
     provider: {
       async extractRepositoryAchievements(input) {
+        beforeProvider?.();
         const data = JSON.parse(
           input.prompt.split("INPUT_DATA_JSON\n").at(-1)!,
         );
@@ -265,26 +310,44 @@ export async function createE2eGithubServices({
         ).id;
         await new Promise((r) => setTimeout(r, 1200));
         return {
-          text: JSON.stringify({
-            projectSummary: "Input validation in a fictional publishing API.",
-            claims: [
-              {
-                text: "The publishing function rejects blank content.",
-                evidenceIds: [id],
-                usesContributionStatement: true,
-                limitations: [],
-              },
-            ],
-            drafts: [
-              {
-                text: "Implemented publishing input validation and added a regression assertion for blank content.",
-                claimIndexes: [0],
-                limitations: [],
-              },
-            ],
-            questionSuggestions: [],
-            limitations: [],
-          }),
+          text: JSON.stringify(
+            data.repository.name === "publishing-empty-output"
+              ? {
+                  projectSummary:
+                    "The selected evidence did not support an achievement draft.",
+                  claims: [],
+                  drafts: [],
+                  questionSuggestions: [],
+                  limitations: [
+                    "No supported achievement could be established.",
+                  ],
+                }
+              : {
+                  projectSummary:
+                    "Input validation in a fictional publishing API.",
+                  claims: [
+                    {
+                      text: "The publishing function rejects blank content.",
+                      evidenceIds: [id],
+                      usesContributionStatement: true,
+                      limitations: [],
+                    },
+                  ],
+                  drafts: [
+                    {
+                      text: data.evidence.some((e: { path: string }) =>
+                        e.path.startsWith("tests/"),
+                      )
+                        ? "Implemented publishing input validation and added a regression assertion for blank content."
+                        : "Implemented publishing input validation that rejects blank content.",
+                      claimIndexes: [0],
+                      limitations: [],
+                    },
+                  ],
+                  questionSuggestions: [],
+                  limitations: [],
+                },
+          ),
           model: "synthetic-source-extractor",
           finishReason: "STOP",
           usage: {

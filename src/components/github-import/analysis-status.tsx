@@ -27,6 +27,7 @@ export interface AnalysisStatusError {
 }
 
 export interface AnalysisStatusProps {
+  analysisStarted?: boolean;
   busy?: boolean;
   state: ImportLifecycle;
   stage: string;
@@ -283,6 +284,7 @@ function StageIcon({
 }
 
 export function AnalysisStatus({
+  analysisStarted = true,
   busy = false,
   state,
   stage,
@@ -298,13 +300,25 @@ export function AnalysisStatus({
   onResumeSetup,
 }: AnalysisStatusProps) {
   const headingId = useId();
-  const message = statusCopy(state, error);
+  const awaitingConsent =
+    !analysisStarted && (state === "ready-to-analyze" || state === "partial");
+  const message = awaitingConsent
+    ? {
+        title: "Evidence prepared — analysis has not started",
+        description:
+          "Review the evidence and its limitations, then explicitly approve one analysis run.",
+        tone: "neutral" as const,
+      }
+    : statusCopy(state, error);
   const isActive =
     (state === "preparing" && error?.code !== "unavailable") ||
     state === "queued" ||
     state === "analyzing";
-  const stageText =
-    stage.trim() || (state === "queued" ? "Queued" : message.title);
+  const stageText = awaitingConsent
+    ? state === "partial"
+      ? "Evidence prepared with coverage limitations"
+      : "Evidence prepared for your approval"
+    : stage.trim() || (state === "queued" ? "Queued" : message.title);
   const createdLabel = formatUtcTimestamp(createdAt);
   const updatedLabel = formatUtcTimestamp(updatedAt);
   const retryDelay =
@@ -314,8 +328,9 @@ export function AnalysisStatus({
       ? formatRetryDelay(error.retryAfterSeconds)
       : null;
 
-  const analysisStepState = stepState(state, "analysis");
-  const reviewStepState = stepState(state, "review");
+  const progressState = awaitingConsent ? "ready-to-analyze" : state;
+  const analysisStepState = stepState(progressState, "analysis");
+  const reviewStepState = stepState(progressState, "review");
   const toneClassName = {
     pending: styles.tonePending,
     success: styles.toneSuccess,
