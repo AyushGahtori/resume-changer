@@ -909,7 +909,19 @@ export function goBack(
   const previousId =
     historyIndex > 0 ? state.presentedNodeIds[historyIndex - 1] : undefined;
   if (!previousId) return state;
-  return InterviewStateSchema.parse({ ...state, currentNodeId: previousId });
+  // A history entry may be unanswered only while it is the current question.
+  // Remove the question we are leaving when it has no answer, so revisiting an
+  // earlier answer does not create an invalid state. Answered entries remain
+  // available for review and branch pruning; the next unanswered question can
+  // be discovered again when the user continues.
+  const answeredIds = new Set(state.answers.map((answer) => answer.nodeId));
+  return requireState(catalog, {
+    ...state,
+    presentedNodeIds: state.presentedNodeIds.filter(
+      (nodeId) => nodeId === previousId || answeredIds.has(nodeId),
+    ),
+    currentNodeId: previousId,
+  });
 }
 
 export function setExtraNotes(

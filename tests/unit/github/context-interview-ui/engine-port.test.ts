@@ -4,6 +4,59 @@ import { isInterviewSnapshot } from "../../../../src/components/github-import/co
 import type { ProjectContext } from "../../../../src/lib/github/context-interview";
 
 describe("production interview adapter", () => {
+  it.each([1, 3, 6, 9])(
+    "goes back from an unanswered question after %s answers without poisoning later actions",
+    async (count) => {
+      const port = createEngineInterviewPort(() => undefined);
+      let snapshot = await port.getSnapshot();
+      const answered: string[] = [];
+      for (let index = 0; index < count; index++) {
+        const question = snapshot.currentQuestion!;
+        answered.push(question.id);
+        snapshot = await port.submitAnswer({
+          nodeId: question.id,
+          optionIds: [question.options[0].id],
+          catalogVersion: snapshot.catalogVersion,
+        });
+      }
+      const unansweredId = snapshot.currentQuestion!.id;
+      snapshot = await port.goBack();
+      expect(snapshot.currentQuestion?.id).toBe(answered.at(-1));
+      expect(isInterviewSnapshot(snapshot)).toBe(true);
+      expect((await port.getSnapshot()).currentQuestion?.id).toBe(
+        answered.at(-1),
+      );
+      snapshot = await port.updateNotes("Keep these notes through Back");
+      const question = snapshot.currentQuestion!;
+      snapshot = await port.submitAnswer({
+        nodeId: question.id,
+        optionIds: [],
+        catalogVersion: snapshot.catalogVersion,
+      });
+      expect(isInterviewSnapshot(snapshot)).toBe(true);
+      expect(snapshot.notes).toBe("Keep these notes through Back");
+      expect(snapshot.currentQuestion?.id).toBe(unansweredId);
+      const restored = await port.resume(snapshot);
+      expect(restored.currentQuestion?.id).toBe(unansweredId);
+    },
+  );
+
+  it("disables Back at the first question even when later answers remain in history", async () => {
+    const port = createEngineInterviewPort(() => undefined);
+    let snapshot = await port.getSnapshot();
+    for (let index = 0; index < 3; index++) {
+      const question = snapshot.currentQuestion!;
+      snapshot = await port.submitAnswer({
+        nodeId: question.id,
+        optionIds: [question.options[0].id],
+        catalogVersion: snapshot.catalogVersion,
+      });
+    }
+    for (let index = 0; index < 3; index++) snapshot = await port.goBack();
+    expect(snapshot.currentQuestion?.id).toBe("project.purpose");
+    expect(snapshot.canGoBack).toBe(false);
+  });
+
   it("completes the real catalog, preserves purpose detail and whole-project ownership, and restores in-tab context", async () => {
     let context: ProjectContext | undefined;
     let complete = false;

@@ -55,7 +55,9 @@ export function createEngineInterviewPort(
       currentQuestionNumber: question
         ? state.presentedNodeIds.indexOf(question.id) + 1
         : null,
-      canGoBack: state.presentedNodeIds.length > 1,
+      canGoBack: question
+        ? state.presentedNodeIds.indexOf(question.id) > 0
+        : state.presentedNodeIds.length > 0,
       provisionalPlannedQuestionCount: null,
       answers: state.answers.map((answer) => {
         const node = catalog.nodes.find((n) => n.id === answer.nodeId)!;
