@@ -350,7 +350,11 @@ export const InterviewAnswerSchema = z
         message: "Choose an option or explicitly skip the question.",
       });
     }
-    if (hasCustom !== (answer.customAnswer !== undefined)) {
+    const purposeDetail = answer.nodeId === "project.purpose" && !hasCustom;
+    if (
+      (hasCustom && answer.customAnswer === undefined) ||
+      (!hasCustom && answer.customAnswer !== undefined && !purposeDetail)
+    ) {
       ctx.addIssue({
         code: "custom",
         path: ["customAnswer"],

@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import type { ComponentProps } from "react";
+import { useState, useCallback, type ComponentProps } from "react";
+import { EngineInterview } from "./context-interview/engine-interview";
+import type { ProjectContext } from "../../lib/github/context-interview";
 import "./import-tokens.css";
 import type {
   AchievementReviewProps,
@@ -41,6 +43,30 @@ function errorText(error: { message: string } | null) {
 
 export function ImportWorkspace(props: ImportWorkspacePageProps) {
   const workspace = useImportWorkspace(props);
+  const [interviewComplete, setInterviewComplete] = useState(false);
+  const { setRole, setProjectContext, setConsentAccepted } = workspace;
+  const acceptContext = useCallback(
+    (context: ProjectContext, complete: boolean) => {
+      setProjectContext(context);
+      setInterviewComplete(complete);
+      const facts = [
+        context.ownership,
+        context.projectPurpose,
+        ...context.contributedAreas,
+        ...context.contributionDetails,
+        context.notes,
+      ]
+        .filter(Boolean)
+        .map((f) => f!.value);
+      setRole(
+        complete
+          ? facts.join("; ").slice(0, 2000) ||
+              "Contribution context supplied in interview"
+          : "",
+      );
+    },
+    [setProjectContext, setRole],
+  );
   const review = workspace.review;
   const step = workspace.forceSetup
     ? "setup"
@@ -93,6 +119,22 @@ export function ImportWorkspace(props: ImportWorkspacePageProps) {
     isRefreshingRepositories: workspace.isRefreshingRepositories,
     onRefreshRepositories: workspace.loadRepositories,
     role: workspace.role,
+    contributionInput: workspace.repositoryScope ? (
+      <EngineInterview
+        key={workspace.selectedRepositoryId}
+        initialContext={workspace.projectContext}
+        onChange={acceptContext}
+        onRevision={(event) => {
+          setConsentAccepted(false);
+          if (event.pending) setRole("");
+        }}
+      />
+    ) : (
+      <p role="note">
+        Choose a repository above, then answer a few questions about the project
+        and your contribution.
+      </p>
+    ),
     pullRequests: workspace.pullRequests,
     selectedPullRequestNumbers: workspace.selectedPullRequests,
     ready: Boolean(
@@ -106,6 +148,7 @@ export function ImportWorkspace(props: ImportWorkspacePageProps) {
       workspace.repositoryScope &&
       workspace.selectedProjectId &&
       workspace.role.trim() &&
+      interviewComplete &&
       !workspace.extras.error,
     ),
     error: workspace.connectionError,
@@ -263,11 +306,15 @@ export function ImportWorkspace(props: ImportWorkspacePageProps) {
           ? "drafts"
           : review?.result
             ? "empty"
-            : workspace.busy === "analyzing"
-              ? "analyzing"
-              : prepared?.completeness === "needs-context"
-                ? "blocked"
-                : "prepared",
+            : review?.import.lifecycle === "interrupted"
+              ? "interrupted"
+              : review?.import.lifecycle === "failed"
+                ? "failed"
+                : workspace.busy === "analyzing"
+                  ? "analyzing"
+                  : prepared?.completeness === "needs-context"
+                    ? "blocked"
+                    : "prepared",
     safetySummary: [
       "Only the prepared selection is eligible for analysis.",
       "Drafts are saved only after you select and confirm them.",

@@ -337,6 +337,23 @@ const CompleteInputSchema = FencedInputSchema.extend({
 
 const FailInputSchema = FencedInputSchema.extend({
   failureCode: JobFailureCodeSchema,
+  knownFailure: z
+    .object({
+      code: z.enum([
+        "invalid-input",
+        "unavailable",
+        "rate-limited",
+        "limit-exceeded",
+        "invalid-evidence",
+        "needs-context",
+        "forbidden",
+      ]),
+      message: z.string().min(1).max(500),
+      retryable: z.boolean(),
+      retryAfterSeconds: z.number().int().nonnegative().optional(),
+    })
+    .strict()
+    .optional(),
 }).strict();
 
 const RecoverInputSchema = z
@@ -1113,7 +1130,8 @@ export function createJobStore(dependencies: JobStoreDependencies) {
           const code = parsed.data.failureCode;
           const uncertainProvider =
             code === "provider-outcome-unknown" ||
-            (job.kind === "analyze" &&
+            (!parsed.data.knownFailure &&
+              job.kind === "analyze" &&
               (job.checkpoint.providerState === "in-flight" ||
                 job.checkpoint.providerState === "unknown"));
           const state = uncertainProvider
@@ -1122,12 +1140,17 @@ export function createJobStore(dependencies: JobStoreDependencies) {
               ? "needs-input"
               : "failed";
           job.state = state;
+          if (parsed.data.knownFailure && !uncertainProvider)
+            job.runnerData = {
+              ...job.runnerData,
+              failure: parsed.data.knownFailure,
+            };
           job.failureCode = uncertainProvider
             ? "provider-outcome-unknown"
             : code;
           job.failureRetryable = uncertainProvider
             ? true
-            : failureIsRetryable(code);
+            : (parsed.data.knownFailure?.retryable ?? failureIsRetryable(code));
           job.retryRequired = uncertainProvider;
           job.usageLedger = {
             ...job.usageLedger,

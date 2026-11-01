@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { z } from "zod";
+import { ProjectContextSchema } from "./context-interview/types";
 
 /** Shared contracts for the GitHub evidence-import feature. */
 export const GITHUB_IMPORT_CONTRACT_VERSION = 1 as const;
@@ -210,6 +211,7 @@ export const RepositoryScopeSchema = z
     selectedPullRequestNumbers: z.array(z.number().int().positive()).max(30),
     selectedPaths: z.array(RepositoryPathSchema).max(100),
     contributionStatement: z.string().trim().min(1).max(2_000),
+    projectContext: ProjectContextSchema.optional(),
     identitySource: z.enum(["github-account", "user-provided", "unknown"]),
   })
   .strict();
@@ -1009,7 +1011,14 @@ export interface MeasurementFieldsProps {
 
 export interface ImportTrustRailProps {
   reviewPhase?:
-    "prepared" | "blocked" | "analyzing" | "empty" | "drafts" | "saved";
+    | "prepared"
+    | "blocked"
+    | "analyzing"
+    | "interrupted"
+    | "failed"
+    | "empty"
+    | "drafts"
+    | "saved";
   runDetails?: {
     repository: string | null;
     inspectedAt: string | null;

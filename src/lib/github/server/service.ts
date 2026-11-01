@@ -36,7 +36,7 @@ import type {
   RepositorySnapshot,
 } from "../ports";
 
-const SELECTOR_VERSION = "github-selector-v2";
+const SELECTOR_VERSION = "github-context-selector-v3";
 const SAFETY_POLICY_VERSION = "github-file-safety-v1";
 const SOURCE_PARSER_VERSION = "github-source-text-v1";
 const EXTRACTION_PROMPT_VERSION = "repository-achievements-v1";
@@ -127,6 +127,7 @@ function unique(values: string[]): string[] {
 function contextHash(scope: ImportRecord["scope"]): string {
   return hash({
     contributionStatement: scope.contributionStatement,
+    ...(scope.projectContext ? { projectContext: scope.projectContext } : {}),
     identitySource: scope.identitySource,
     selectedPullRequestNumbers: scope.selectedPullRequestNumbers,
     selectedPaths: scope.selectedPaths,

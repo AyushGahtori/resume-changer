@@ -448,7 +448,8 @@ function validateAnswerForNode(
   }
   if (
     answer.customAnswer !== undefined &&
-    !answer.optionIds.includes("custom")
+    !answer.optionIds.includes("custom") &&
+    node.id !== "project.purpose"
   ) {
     throw new InterviewStateError(
       "Custom text requires the custom answer option.",

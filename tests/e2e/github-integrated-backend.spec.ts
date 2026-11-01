@@ -1,3 +1,4 @@
+import { completeProjectInterview } from "./helpers/github-context";
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { expect, test, type Page } from "@playwright/test";
@@ -87,11 +88,10 @@ test("runs a tab-owned foreground import, saves only confirmed drafts and discar
   await page
     .getByRole("checkbox", { name: /Validate publishing requests/ })
     .check();
-  await page
-    .getByLabel("Your role on this project")
-    .fill(
-      "I implemented publishing input validation and the regression tests.",
-    );
+  await completeProjectInterview(
+    page,
+    "I implemented publishing input validation and the regression tests.",
+  );
   if (testInfo.repeatEachIndex === 0) await audit(page, "setup");
   await page
     .getByRole("button", { name: "Prepare selected evidence", exact: true })
@@ -194,9 +194,10 @@ test("reload abandons unsaved evidence and old import URLs offer a fresh start",
   await page
     .getByRole("combobox", { name: "Repository", exact: true })
     .selectOption("42");
-  await page
-    .getByLabel("Your role on this project")
-    .fill("I implemented publishing input validation and regression tests.");
+  await completeProjectInterview(
+    page,
+    "I implemented publishing input validation and regression tests.",
+  );
   await page
     .getByRole("button", { name: "Prepare selected evidence", exact: true })
     .click();
@@ -227,7 +228,7 @@ async function preparePartialFixture(page: Page, repositoryId: string) {
   await page
     .getByRole("combobox", { name: "Repository", exact: true })
     .selectOption(repositoryId);
-  await page.getByLabel("Your role on this project").fill("entire project.");
+  await completeProjectInterview(page, "entire project.");
   await page
     .getByRole("button", { name: "Prepare selected evidence", exact: true })
     .click();
@@ -302,8 +303,12 @@ test("implementation-only evidence reaches consent, generates drafts once, and s
     .getByRole("button", { name: "Edit repository setup", exact: true })
     .click();
   await page
-    .getByLabel("Your role on this project")
+    .getByRole("textbox", {
+      name: "Anything else about your project or contribution?",
+      exact: true,
+    })
     .fill("I implemented publishing input validation.");
+  await page.getByRole("button", { name: "Apply notes", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "Review prepared evidence", exact: true }),
   ).toHaveCount(0);
@@ -400,4 +405,45 @@ test("a completed zero-draft model result has a truthful empty state and no save
     page.getByText("synthetic-source-extractor", { exact: true }),
   ).toBeVisible();
   await audit(page, "empty-model-result");
+});
+
+test("a provider rejection reports the actual category and never claims analysis has not started", async ({
+  page,
+}) => {
+  test.skip(process.env.GITHUB_IMPORT_E2E_BACKEND !== "1");
+  let submissions = 0;
+  page.on("request", (request) => {
+    if (
+      new URL(request.url()).pathname === "/api/github/session" &&
+      request.postDataJSON()?.path?.endsWith("/extract")
+    )
+      submissions++;
+  });
+  await preparePartialFixture(page, "47");
+  await page
+    .getByRole("checkbox", {
+      name: "I reviewed this selection and explicitly approve one analysis run.",
+    })
+    .check();
+  await page
+    .getByRole("button", { name: "Analyze this selection", exact: true })
+    .click();
+  await expect(
+    page
+      .getByText(
+        "The AI provider rejected the configured credentials or permissions. The project owner must check the provider configuration.",
+      )
+      .first(),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", {
+      name: "Analysis couldn’t finish",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("AI analysis has not started", { exact: true }),
+  ).toHaveCount(0);
+  await expect(page.getByText("private fictional response")).toHaveCount(0);
+  expect(submissions).toBe(1);
 });

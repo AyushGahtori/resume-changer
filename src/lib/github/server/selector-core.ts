@@ -1,3 +1,4 @@
+import type { ProjectContext } from "../context-interview";
 import { evidenceReadiness, evidenceRecoveryNotes } from "./evidence-readiness";
 import {
   EVIDENCE_LIMITS,
@@ -24,6 +25,7 @@ export type EvidenceDimension =
   | "measurement-context";
 
 export interface RepositoryScope {
+  projectContext?: ProjectContext;
   repositoryId: string;
   owner: string;
   name: string;
@@ -1814,6 +1816,7 @@ function canonicalScopeForHash(scope: RepositoryScope) {
     ),
     selectedPrPaths: [...(scope.selectedPrPaths ?? [])].sort(),
     contributionStatement: scope.contributionStatement?.trim() ?? null,
+    projectContext: scope.projectContext ?? null,
     identitySource: scope.identitySource ?? "unknown",
     role: scope.role?.trim() ?? null,
   };

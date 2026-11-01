@@ -982,3 +982,7 @@
   gap: 10px;
   padding-top: 12px;
 }
+
+.scopeGrid[data-interview="true"] {
+  grid-template-columns: minmax(0, 1fr);
+}

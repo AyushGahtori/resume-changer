@@ -1,3 +1,4 @@
+import { jobDto } from "../../../../src/lib/github/server/job-port";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -154,6 +155,41 @@ afterEach(async () => {
 });
 
 describe("GitHub durable job store", () => {
+  it.each([true, false])(
+    "preserves a confirmed rejection without reclassifying it as an unknown request: %s",
+    async (known) => {
+      const { store } = await makeRuntime();
+      await enqueue(store);
+      const running = await claim(store);
+      await store.checkpoint({
+        jobId: running.id,
+        workerId: running.lease!.ownerId,
+        fence: running.executionFence,
+        expectedCheckpointVersion: 0,
+        checkpoint: { stage: "provider-request", providerState: "in-flight" },
+      });
+      const error = {
+        code: "unavailable" as const,
+        message: "The provider rejected the configured credentials.",
+        retryable: false,
+      };
+      const failed = unwrap(
+        await store.fail({
+          jobId: running.id,
+          workerId: running.lease!.ownerId,
+          fence: running.executionFence,
+          failureCode: "upstream-unavailable",
+          ...(known ? { knownFailure: error } : {}),
+        }),
+      );
+      expect(failed.state).toBe(known ? "failed" : "interrupted");
+      expect(failed.retryRequired).toBe(!known);
+      expect(jobDto(failed).error).toMatchObject(
+        known ? error : { code: "interrupted" },
+      );
+    },
+  );
+
   it("rejects an oversized checkpoint without corrupting durable job state", async () => {
     const runtime = await makeRuntime();
     await enqueue(runtime.store);

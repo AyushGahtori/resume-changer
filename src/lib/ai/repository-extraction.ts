@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ProjectContextSchema } from "../github/context-interview/types";
 import type { MetricDefinition } from "../github/contracts";
 
 const id = z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
@@ -62,6 +63,7 @@ export const RepositoryExtractionModelInputSchema = z
       })
       .strict(),
     contribution: z.string().trim().min(1).max(2_000),
+    projectContext: ProjectContextSchema.optional(),
     identitySource: z.enum(["github-account", "user-provided", "unknown"]),
     evidence: z
       .array(

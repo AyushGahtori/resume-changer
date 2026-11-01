@@ -13,7 +13,13 @@ import {
   LockKeyhole,
   RefreshCw,
 } from "lucide-react";
-import { useEffect, useId, useRef, type ChangeEvent } from "react";
+import {
+  useEffect,
+  useId,
+  useRef,
+  type ReactNode,
+  type ChangeEvent,
+} from "react";
 import type {
   DomainError,
   PullRequestSummary,
@@ -24,6 +30,7 @@ import { safeGithubInstallationUrl } from "../../lib/github/installation-url";
 
 /** Optional display details supplied by the page controller when available. */
 export type RepositorySetupDisplayProps = {
+  contributionInput?: ReactNode;
   installationUrl?: string;
   onRefreshRepositories?: () => void;
   isRefreshingRepositories?: boolean;
@@ -697,35 +704,43 @@ export function RepositorySetup(props: RepositorySetupViewProps) {
         </section>
       </div>
 
-      <div className={styles.scopeGrid}>
-        <section
-          className={styles.scopeCard}
-          aria-labelledby={`${roleInputId}-heading`}
-        >
-          <div className={styles.scopeHeading}>
-            <div>
-              <p className={styles.eyebrow}>Your contribution</p>
-              <h2 id={`${roleInputId}-heading`}>What did you work on?</h2>
+      {props.contributionInput}
+      <div
+        className={styles.scopeGrid}
+        data-interview={props.contributionInput ? "true" : undefined}
+      >
+        {!props.contributionInput && (
+          <section
+            className={styles.scopeCard}
+            aria-labelledby={`${roleInputId}-heading`}
+          >
+            <div className={styles.scopeHeading}>
+              <div>
+                <p className={styles.eyebrow}>Your contribution</p>
+                <h2 id={`${roleInputId}-heading`}>What did you work on?</h2>
+              </div>
+              <span className={styles.optionalLabel}>Brief context</span>
             </div>
-            <span className={styles.optionalLabel}>Brief context</span>
-          </div>
-          <label className={styles.field} htmlFor={roleInputId}>
-            <span className={styles.fieldLabel}>Your role on this project</span>
-            <textarea
-              className={styles.roleInput}
-              id={roleInputId}
-              value={role}
-              onChange={handleRoleChange}
-              placeholder="For example: I built the dashboard and added its data-loading tests."
-              rows={3}
-              aria-describedby={`${roleInputId}-help`}
-            />
-          </label>
-          <p className={styles.helperText} id={`${roleInputId}-help`}>
-            Describe your own work briefly. PR selection helps find evidence; it
-            does not confirm that you authored every change.
-          </p>
-        </section>
+            <label className={styles.field} htmlFor={roleInputId}>
+              <span className={styles.fieldLabel}>
+                Your role on this project
+              </span>
+              <textarea
+                className={styles.roleInput}
+                id={roleInputId}
+                value={role}
+                onChange={handleRoleChange}
+                placeholder="For example: I built the dashboard and added its data-loading tests."
+                rows={3}
+                aria-describedby={`${roleInputId}-help`}
+              />
+            </label>
+            <p className={styles.helperText} id={`${roleInputId}-help`}>
+              Describe your own work briefly. PR selection helps find evidence;
+              it does not confirm that you authored every change.
+            </p>
+          </section>
+        )}
 
         <section
           className={styles.scopeCard}

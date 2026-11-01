@@ -301,6 +301,10 @@ export function ImportTrustRail({
       "Evidence is prepared. Review it and approve analysis to generate achievement drafts.",
     blocked:
       "Review the missing evidence or contribution context before analysis can start.",
+    interrupted:
+      "Analysis was attempted, but its result could not be confirmed. Review the run before starting another paid attempt.",
+    failed:
+      "Analysis failed. Review the error before preparing another attempt.",
     analyzing:
       "Analysis is running. Achievement drafts will appear when it finishes.",
     empty:
@@ -512,7 +516,13 @@ export function ImportTrustRail({
             }
           />
           <SummaryRow
-            label={beforeAnalysis ? "Files inspected" : "Files analyzed"}
+            label={
+              beforeAnalysis ||
+              reviewPhase === "interrupted" ||
+              reviewPhase === "failed"
+                ? "Files inspected"
+                : "Files analyzed"
+            }
             value={`${formatCount(budget.selectedUniqueFiles)} ${plural(budget.selectedUniqueFiles, "file")}`}
           />
           <SummaryRow

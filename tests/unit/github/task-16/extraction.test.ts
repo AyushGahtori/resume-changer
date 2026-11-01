@@ -1,3 +1,4 @@
+import { AiProviderError } from "../../../../src/lib/ai/provider";
 import { describe, expect, it, vi } from "vitest";
 import {
   ok,
@@ -389,6 +390,31 @@ describe("GitHub repository extraction (task 16)", () => {
         totalTokens: 1_036,
       });
     }
+  });
+
+  it("keeps a timed-out paid attempt uncertain and never resubmits automatically", async () => {
+    const provider = {
+      extractRepositoryAchievements: vi.fn(async () => {
+        throw new AiProviderError(
+          "private provider response",
+          "REQUEST_TIMEOUT",
+          true,
+        );
+      }),
+    };
+    const extractor = createRepositoryExtractor({
+      provider,
+      now: () => new Date("2026-10-27T10:30:00.000Z"),
+    });
+    const result = await extractor.extract({
+      prepared: preparedSelection(),
+      contribution: githubImportFixtureScope.contributionStatement,
+      catalog,
+      context: executionContext().context,
+    });
+    expect(result).toMatchObject({ ok: false, error: { code: "interrupted" } });
+    expect(provider.extractRepositoryAchievements).toHaveBeenCalledTimes(1);
+    expect(JSON.stringify(result)).not.toContain("private provider response");
   });
 
   it("rejects invented evidence IDs after one bounded recovery", async () => {

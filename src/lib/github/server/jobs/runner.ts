@@ -1,3 +1,4 @@
+import { createRunDiagnosticSession } from "../../context-run-status/diagnostics-core";
 import {
   err,
   ok,
@@ -346,6 +347,14 @@ export const createImportJobRunner: ImportJobRunnerFactory = (
       Math.max(0, deadline - context.now().getTime()),
     );
 
+    const diagnostic = createRunDiagnosticSession({
+      operationId: job.id,
+      runId: job.runId,
+      attempt: 1,
+      startedAtMs: context.now().getTime(),
+      write: (event) => console.info("GitHub import run", event),
+    });
+    diagnostic.stage("initial-checkpoint");
     try {
       const current = await assertActive();
       if (!current.ok) throw current.error;
@@ -376,6 +385,7 @@ export const createImportJobRunner: ImportJobRunnerFactory = (
       // response must not make the tab look as though analysis never started.
       if (job.kind === "analyze") await currentImportSession()?.checkpoint?.();
 
+      diagnostic.stage("run-admission");
       const result =
         job.kind === "prepare"
           ? await deps.executePrepare(job, guardedContext)
@@ -385,6 +395,7 @@ export const createImportJobRunner: ImportJobRunnerFactory = (
       const stillCurrent = await assertActive();
       if (!stillCurrent.ok) throw stillCurrent.error;
       if (!jobs.storeRunnerOutput) throw UNAVAILABLE;
+      diagnostic.stage("result-staging");
       const stored = await jobs.storeRunnerOutput(
         { job, output: result.value },
         guardedContext,
@@ -413,6 +424,7 @@ export const createImportJobRunner: ImportJobRunnerFactory = (
 
       const beforeCommit = await assertActive();
       if (!beforeCommit.ok) throw beforeCommit.error;
+      diagnostic.stage("final-acknowledgement");
       const completed = await deps.jobs.completeWithEvent(
         {
           ...runIdentity,
@@ -428,6 +440,12 @@ export const createImportJobRunner: ImportJobRunnerFactory = (
         cause && typeof cause === "object" && "code" in cause
           ? (cause as DomainError)
           : safeError(cause);
+      diagnostic.failure({
+        errorCode: error.code,
+        aborted: context.signal.aborted,
+        deadlineExceeded:
+          Date.parse(context.deadline) <= context.now().getTime(),
+      });
       if (failedByLease || error.code === "version-conflict") {
         const current = await currentJob(job.id, context);
         return current.ok ? ok(current.value) : workerFailure(current.error);

@@ -2,6 +2,7 @@ import {
   err,
   ok,
   JobRecordSchema,
+  DomainErrorSchema,
   type ExecutionContext,
   type JobRecord,
   type Notification,
@@ -55,6 +56,7 @@ export function jobDto(job: DurableJob): JobRecord {
     reportedInputTokens: null,
     limitReason: null,
   };
+  const knownFailure = DomainErrorSchema.safeParse(job.runnerData.failure);
   return JobRecordSchema.parse({
     id: job.id,
     runId: job.runId,
@@ -85,16 +87,18 @@ export function jobDto(job: DurableJob): JobRecord {
     deadline: job.deadlineAt,
     usage,
     error: job.failureCode
-      ? {
-          code:
-            job.state === "interrupted"
-              ? "interrupted"
-              : job.failureCode === "needs-context"
-                ? "needs-context"
-                : "upstream-error",
-          message: "The background import needs review before continuing.",
-          retryable: job.failureRetryable ?? false,
-        }
+      ? knownFailure.success && job.state !== "interrupted"
+        ? knownFailure.data
+        : {
+            code:
+              job.state === "interrupted"
+                ? "interrupted"
+                : job.failureCode === "needs-context"
+                  ? "needs-context"
+                  : "upstream-error",
+            message: "The background import needs review before continuing.",
+            retryable: job.failureRetryable ?? false,
+          }
       : null,
     resultRef: job.resultRef,
     outboxEvents: job.outboxEvents.map((e) => ({
@@ -279,6 +283,19 @@ export function createJobPort(
           jobId: input.jobId,
           workerId: input.workerId,
           fence: input.fence,
+          // These codes represent a known rejection/validation/admission outcome.
+          // Network errors and interruption remain uncertain and fenced.
+          ...([
+            "invalid-input",
+            "unavailable",
+            "rate-limited",
+            "limit-exceeded",
+            "invalid-evidence",
+            "needs-context",
+            "forbidden",
+          ].includes(input.error.code)
+            ? { knownFailure: input.error }
+            : {}),
           failureCode:
             input.error.code === "interrupted"
               ? "provider-outcome-unknown"

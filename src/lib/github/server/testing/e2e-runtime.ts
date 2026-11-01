@@ -1,3 +1,4 @@
+import { AiProviderError } from "../../../ai/provider";
 import { createHash, randomBytes } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { join, basename, dirname, resolve } from "node:path";
@@ -32,6 +33,7 @@ const repositories = [
   { id: "44", name: "publishing-docs-only" },
   { id: "45", name: "publishing-empty-output" },
   { id: "46", name: "publishing-dense" },
+  { id: "47", name: "publishing-provider-denied" },
 ];
 function filesFor(name: string): Record<string, string> {
   const files: Record<string, string> = { ...baseFiles };
@@ -305,6 +307,14 @@ export async function createE2eGithubServices({
         const data = JSON.parse(
           input.prompt.split("INPUT_DATA_JSON\n").at(-1)!,
         );
+        if (data.repository.name === "publishing-provider-denied") {
+          throw new AiProviderError(
+            "private fictional response",
+            "AUTHENTICATION_FAILED",
+            false,
+            "HTTP_403",
+          );
+        }
         const id = data.evidence.find(
           (e: { path: string }) => e.path === "src/publish.ts",
         ).id;

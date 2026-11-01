@@ -148,7 +148,7 @@ function statusCopy(
       return {
         title: "Analysis was interrupted",
         description: safeError
-          ? `The local worker was interrupted. Its last checkpoint must be reconciled before another analysis request can run. Details: ${safeError}`
+          ? safeError
           : "The local runtime stopped the worker. Its last checkpoint must be reconciled before another analysis request can run.",
         tone: "warning",
       };

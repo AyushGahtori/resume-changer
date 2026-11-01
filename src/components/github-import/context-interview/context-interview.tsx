@@ -159,6 +159,7 @@ export function ContextInterview({
     (
       reason: ContextRevisionEvent["reason"],
       prunedAnswerIds: string[] = [],
+      pending = true,
     ) => {
       const next = Math.max(
         revisionRef.current + 1,
@@ -169,6 +170,7 @@ export function ContextInterview({
       revisionCallbackRef.current?.({
         revision: next,
         reason,
+        pending,
         prunedAnswerIds,
       });
     },
@@ -221,7 +223,7 @@ export function ContextInterview({
         next.contextRevision > previous.contextRevision &&
         next.phase !== "expired"
       ) {
-        publishRevision(reason, [...(next.prunedAnswerIds ?? [])]);
+        publishRevision(reason, [...(next.prunedAnswerIds ?? [])], false);
       }
       return next;
     },
@@ -1104,6 +1106,16 @@ export function ContextInterview({
               disabled={busy}
               aria-describedby="context-notes-help"
             />
+            {snapshot.phase === "review" && notesDraft !== snapshot.notes ? (
+              <button
+                type="button"
+                className={styles.secondaryButton}
+                disabled={busy}
+                onClick={() => void performAction({ kind: "review" })}
+              >
+                Apply notes
+              </button>
+            ) : null}
             <p id="context-notes-help" className={styles.notesHelp}>
               Optional. Keep project purpose and your own contribution distinct.
               Notes stay in this tab and are not saved to browser storage.

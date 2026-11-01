@@ -1,4 +1,5 @@
 "use client";
+import type { ProjectContext } from "../../lib/github/context-interview";
 import { useOptionalImportStatus } from "../library/import-status-provider";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -176,6 +177,9 @@ export function useImportWorkspace(input: {
     input.source === "personal",
   );
   const repositoryRequest = useRef(0);
+  const [projectContext, setProjectContext] = useState<
+    ProjectContext | undefined
+  >(input.initialState?.import.scope.projectContext);
   const [role, setRole] = useState(
     input.initialState?.import.scope.contributionStatement ?? "",
   );
@@ -238,6 +242,7 @@ export function useImportWorkspace(input: {
         setSelectedProjectId(incoming.import.destinationProjectId);
         setSelectedRepositoryId(incoming.import.scope.repositoryId);
         setRole(incoming.import.scope.contributionStatement);
+        setProjectContext(incoming.import.scope.projectContext);
         setPullRequestText(
           incoming.import.scope.selectedPullRequestNumbers.join(", "),
         );
@@ -565,6 +570,9 @@ export function useImportWorkspace(input: {
   const chooseRepository = useCallback(async (repositoryId: string | null) => {
     setSelectedRepositoryId(repositoryId);
     setRepositoryScope(null);
+    setProjectContext(undefined);
+    setRole("");
+    setConsentAccepted(false);
     if (!repositoryId) return;
     setConnectionError(null);
     try {
@@ -624,6 +632,7 @@ export function useImportWorkspace(input: {
       selectedPullRequestNumbers: extras.numbers,
       selectedPaths: extras.paths,
       contributionStatement: role.trim(),
+      ...(projectContext ? { projectContext } : {}),
     });
     if (!parsed.success) {
       setActionError({
@@ -634,7 +643,7 @@ export function useImportWorkspace(input: {
       return null;
     }
     return parsed.data;
-  }, [extras, repositoryScope, role]);
+  }, [extras, repositoryScope, role, projectContext]);
 
   const saveSelection = useCallback(
     async (
@@ -1305,6 +1314,8 @@ export function useImportWorkspace(input: {
     (candidateSelectionChanged ||
       selectedProjectId !== review.import.destinationProjectId ||
       role.trim() !== review.import.scope.contributionStatement ||
+      JSON.stringify(projectContext) !==
+        JSON.stringify(review.import.scope.projectContext) ||
       JSON.stringify(extras.numbers) !==
         JSON.stringify(review.import.scope.selectedPullRequestNumbers) ||
       JSON.stringify(extras.paths) !==
@@ -1377,6 +1388,8 @@ export function useImportWorkspace(input: {
     forceSetup,
     setSelectedProjectId,
     setRole,
+    projectContext,
+    setProjectContext,
     setPullRequestText,
     setManualPathText,
     setConsentAccepted,

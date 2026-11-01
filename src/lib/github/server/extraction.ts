@@ -1,3 +1,5 @@
+import { createRunDiagnosticSession } from "../context-run-status/diagnostics-core";
+import { createHash } from "node:crypto";
 import {
   AnalysisResultSchema,
   ContributionClaimSchema,
@@ -97,6 +99,21 @@ function toDomainError(error: unknown, signal: AbortSignal): DomainError {
   if (error instanceof AiProviderError) {
     if (error.code === "MISSING_API_KEY")
       return domainError("unavailable", "The AI provider is not configured.");
+    if (error.code === "AUTHENTICATION_FAILED")
+      return domainError(
+        "unavailable",
+        "The AI provider rejected the configured credentials or permissions. The project owner must check the provider configuration.",
+      );
+    if (error.code === "INVALID_REQUEST")
+      return domainError(
+        "invalid-input",
+        "The AI provider rejected the analysis request format. No achievement drafts were generated.",
+      );
+    if (error.code === "REQUEST_TIMEOUT")
+      return domainError(
+        "interrupted",
+        "The AI provider request timed out. Its final outcome is unconfirmed; do not automatically repeat the paid request.",
+      );
     if (error.code === "INPUT_TOO_LARGE")
       return domainError(
         "limit-exceeded",
@@ -387,6 +404,9 @@ function buildModelInput(
       selectedPaths: prepared.scope.selectedPaths,
     },
     contribution: contribution.trim(),
+    ...(prepared.scope.projectContext
+      ? { projectContext: prepared.scope.projectContext }
+      : {}),
     identitySource: prepared.scope.identitySource,
     evidence: prepared.evidence.map((item) => ({
       id: item.id,
@@ -681,6 +701,15 @@ function createExtractor(
       );
       if (!preparedResult.ok) return preparedResult;
       const prepared = preparedResult.value;
+      const diagnostic = createRunDiagnosticSession({
+        operationId: prepared.importId,
+        runId: input.context.runId,
+        attempt: 1,
+        startedAtMs: clock.getTime(),
+        now: () => now().getTime(),
+        write: (event) => console.info("GitHub extraction run", event),
+      });
+      diagnostic.stage("budget-admission");
       const catalogInput = input.catalog;
       if (!Array.isArray(catalogInput)) {
         return err(
@@ -823,6 +852,7 @@ function createExtractor(
           extractionMetadata?: ProviderMetadata;
         }>;
         try {
+          diagnostic.stage("provider-submission");
           generated = (await generate({
             prompt,
             schemaVersion: "repository-extraction-v1",
@@ -834,18 +864,59 @@ function createExtractor(
             extractionMetadata?: ProviderMetadata;
           }>;
         } catch (error) {
+          // Only application-defined codes, never SDK messages, source or stacks.
+          const providerCodes = new Set([
+            "MISSING_API_KEY",
+            "INPUT_TOO_LARGE",
+            "AUTHENTICATION_FAILED",
+            "RATE_LIMITED",
+            "SERVICE_UNAVAILABLE",
+            "REQUEST_TIMEOUT",
+            "INVALID_REQUEST",
+            "INVALID_RESPONSE",
+            "REQUEST_FAILED",
+          ]);
+          console.warn("GitHub analysis provider failure", {
+            stage: "provider-response",
+            runRef: createHash("sha256")
+              .update(input.context.runId)
+              .digest("hex")
+              .slice(0, 20),
+            attempt: attempt + 1,
+            code:
+              error instanceof AiProviderError && providerCodes.has(error.code)
+                ? error.code
+                : "UNKNOWN",
+            upstreamStatus:
+              error instanceof AiProviderError &&
+              /^HTTP_[1-5][0-9]{2}$/.test(error.diagnosticCode ?? "")
+                ? Number(error.diagnosticCode!.slice(5))
+                : null,
+            aborted: input.context.signal.aborted,
+          });
           const committed = await input.context.budget.commitUsage({
             reservationId: reservation.value.reservationId,
             actual: null,
           });
           if (!committed.ok) return err(budgetError(committed.error));
           const mapped = toDomainError(error, input.context.signal);
+          diagnostic.failure({
+            stage: "provider-response",
+            errorCode: mapped.code,
+            upstreamStatus:
+              error instanceof AiProviderError
+                ? error.diagnosticCode
+                : undefined,
+            aborted: input.context.signal.aborted,
+            deadlineExceeded:
+              error instanceof AiProviderError &&
+              error.code === "REQUEST_TIMEOUT",
+          });
           if (
             attempt + 1 < MAX_EXTRACTION_ATTEMPTS &&
             error instanceof AiProviderError &&
             error.retryable &&
-            error.code !== "RATE_LIMITED" &&
-            error.code !== "AUTHENTICATION_FAILED"
+            error.code === "INVALID_RESPONSE"
           ) {
             recoveryReason =
               "The prior provider attempt did not return a usable response. Retry once with the same evidence and deadline.";
@@ -863,6 +934,7 @@ function createExtractor(
           return err(generated.error);
         }
 
+        diagnostic.stage("result-validation");
         const generatedValue = generated.value as EnrichedGenerateResult;
         const metadata = metadataFromResult(generatedValue);
         const budgetUsage = actualUsageTotal(metadata.usage);

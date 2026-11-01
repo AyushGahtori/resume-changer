@@ -810,14 +810,21 @@ export function createGeminiProvider(
 
       const outputSchema = repositoryExtractionOutputSchema();
       sanitizeGeminiSchema(outputSchema);
-      const response = await request({
-        model,
-        prompt: input.prompt,
-        outputSchema,
-        signal: input.signal,
-        maxOutputTokens: input.maxOutputTokens ?? 6_144,
-        allowTruncated: true,
-      });
+      // Repository extraction uses the same error classification as other AI
+      // operations. Raw SDK errors must not become an unclassified interruption.
+      let response: Awaited<ReturnType<GeminiRequest>>;
+      try {
+        response = await request({
+          model,
+          prompt: input.prompt,
+          outputSchema,
+          signal: input.signal,
+          maxOutputTokens: input.maxOutputTokens ?? 6_144,
+          allowTruncated: true,
+        });
+      } catch (error) {
+        throw error instanceof AiProviderError ? error : mapRequestError(error);
+      }
 
       if (typeof response === "string" || response === undefined) {
         return {

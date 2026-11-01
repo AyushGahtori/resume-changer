@@ -4,6 +4,28 @@ import { createGeminiProvider } from "../../../src/lib/ai/gemini-provider-core";
 import { repositoryExtractionOutputSchema } from "../../../src/lib/ai/repository-extraction";
 
 describe("worker-safe repository extraction provider", () => {
+  it.each([
+    [400, "INVALID_REQUEST"],
+    [403, "AUTHENTICATION_FAILED"],
+    [429, "RATE_LIMITED"],
+    [503, "SERVICE_UNAVAILABLE"],
+  ])(
+    "classifies raw SDK HTTP %s errors without exposing their message",
+    async (status, code) => {
+      const request = vi.fn(async () => {
+        throw Object.assign(new Error("sensitive SDK response"), { status });
+      });
+      const provider = createGeminiProvider({ request });
+      await expect(
+        provider.extractRepositoryAchievements({
+          prompt: "evidence",
+          outputSchema: repositoryExtractionOutputSchema(),
+        }),
+      ).rejects.toMatchObject({ code });
+      expect(request).toHaveBeenCalledTimes(1);
+    },
+  );
+
   it("requests one schema-constrained response and returns actual provider metadata", async () => {
     const request = vi.fn(
       async (_input: {

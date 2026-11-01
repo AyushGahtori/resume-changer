@@ -74,6 +74,8 @@ export type ContextRevisionReason = "answer" | "notes";
 export type ContextRevisionEvent = {
   revision: number;
   reason: ContextRevisionReason;
+  /** True while an answer/notes draft has not been accepted by the engine. */
+  pending?: boolean;
   prunedAnswerIds: readonly string[];
 };
 

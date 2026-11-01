@@ -1,4 +1,5 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
+import { isSafeDomainErrorCode } from "../context-run-status/contracts";
 import { protectAccountRoute } from "../../cloud/protect-route";
 import {
   assertSameOrigin,
@@ -111,6 +112,13 @@ export const sessionImport = protectAccountRoute(async (request: Request) => {
         emit({ type: "checkpoint", state: sealImportSession(memory) });
       };
       void withImportSession(memory, async () => {
+        let stage:
+          | "route-resolution"
+          | "operation-claim"
+          | "route-handler"
+          | "response-parse"
+          | "operation-release"
+          | "session-seal" = "route-resolution";
         try {
           // The existing validators, scoped inspectors and approval writer run against
           // request memory. No Workflow is dispatched and no source store is written.
@@ -139,6 +147,7 @@ export const sessionImport = protectAccountRoute(async (request: Request) => {
             return;
           }
           let finish: undefined | (() => Promise<void>);
+          stage = "operation-claim";
           if (input.method === "POST" && input.path.endsWith("/extract")) {
             const body = input.body as {
               selectionHash?: string;
@@ -172,7 +181,9 @@ export const sessionImport = protectAccountRoute(async (request: Request) => {
               ? { body: JSON.stringify(input.body ?? {}) }
               : {}),
           });
+          stage = "route-handler";
           const response = await handler(nested);
+          stage = "response-parse";
           let body = await response.json();
           let status = response.status;
           if (response.status === 202) {
@@ -181,11 +192,12 @@ export const sessionImport = protectAccountRoute(async (request: Request) => {
               status = 422;
               body = {
                 error: {
-                  code: "upstream-error",
+                  code: job.error?.code ?? "upstream-error",
                   message:
-                    job.kind === "prepare"
+                    job.error?.message ??
+                    (job.kind === "prepare"
                       ? "Repository evidence could not be prepared. Completed file downloads are kept for retry."
-                      : "Analysis did not complete. Review the outcome before starting another paid attempt.",
+                      : "Analysis did not complete. Review the outcome before starting another paid attempt."),
                   retryable: job.kind === "prepare",
                 },
               };
@@ -195,17 +207,32 @@ export const sessionImport = protectAccountRoute(async (request: Request) => {
               if (job.kind === "analyze") releaseDownloadedFiles(memory);
             }
           }
+          stage = "operation-release";
           await finish?.();
           const clear =
             response.ok &&
             (input.method === "DELETE" || input.path.endsWith("/approve"));
+          stage = "session-seal";
           emit({
             type: "result",
             state: clear ? null : sealImportSession(memory),
             status,
             body,
           });
-        } catch {
+        } catch (cause) {
+          const code =
+            cause && typeof cause === "object" && "code" in cause
+              ? cause.code
+              : undefined;
+          console.warn("GitHub session operation failed", {
+            stage,
+            operationRef: createHash("sha256")
+              .update(input.operationId)
+              .digest("hex")
+              .slice(0, 20),
+            code: isSafeDomainErrorCode(code) ? code : "unknown",
+            aborted: signal.aborted,
+          });
           emit({
             type: "result",
             state: sealImportSession(memory),
