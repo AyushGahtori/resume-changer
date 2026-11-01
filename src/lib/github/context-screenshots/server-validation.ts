@@ -137,7 +137,12 @@ export async function validateScreenshotRequest(input: {
     (total, screenshot) =>
       total +
       (typeof screenshot.dataBase64 === "string"
-        ? Math.floor((screenshot.dataBase64.length * 3) / 4)
+        ? Math.floor((screenshot.dataBase64.length * 3) / 4) -
+          (screenshot.dataBase64.endsWith("==")
+            ? 2
+            : screenshot.dataBase64.endsWith("=")
+              ? 1
+              : 0)
         : 0),
     0,
   );

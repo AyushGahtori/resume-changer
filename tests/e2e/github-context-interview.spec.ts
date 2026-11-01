@@ -19,6 +19,7 @@ async function capture(page: Page, testInfo: TestInfo, name: string) {
   await page.screenshot({
     path: testInfo.outputPath(`${name}.png`),
     fullPage: true,
+    animations: "disabled",
   });
 }
 
@@ -50,6 +51,7 @@ test.describe("GitHub project context interview UI", () => {
       page.getByRole("heading", { name: "What is this project for?" }),
     ).toBeVisible();
     await expect(page.getByText("Question 1 · up to 10")).toBeVisible();
+    await expect(page.getByRole("main")).toHaveCount(1);
     await expect(
       page.getByRole("heading", {
         name: "Anything else about your project or contribution?",
@@ -74,9 +76,9 @@ test.describe("GitHub project context interview UI", () => {
         name: "I built the whole project from scratch",
       }),
     ).toBeVisible();
-    await expect(
-      page.getByText("Question 2 · 7 currently planned"),
-    ).toBeVisible();
+    await expect(page.getByTestId("context-progress-label")).toHaveText(
+      "Question 2 · 7 currently planned",
+    );
     await expect(
       page.getByText(/Evidence preparation is a separate step/),
     ).toBeVisible();
@@ -204,7 +206,10 @@ test.describe("GitHub project context interview UI", () => {
       page.getByRole("heading", { name: "Check your answers" }),
     ).toBeVisible();
     await expect(
-      page.getByText(/2 follow-up answers no longer apply/),
+      page.getByText(
+        "Your earlier answer changed, so 2 follow-up answers no longer apply.",
+        { exact: true },
+      ),
     ).toBeVisible();
     await expect(
       page.getByText("5 applicable questions completed · 0 remaining"),
@@ -225,9 +230,9 @@ test.describe("GitHub project context interview UI", () => {
         name: "What happens in the data or model workflow?",
       }),
     ).toBeFocused();
-    await expect(
-      page.getByText("Question 6 · 10 currently planned"),
-    ).toBeVisible();
+    await expect(page.getByTestId("context-progress-label")).toHaveText(
+      "Question 6 · 10 currently planned",
+    );
   });
 
   test("browser Back and Forward preserve the answer history", async ({

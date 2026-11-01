@@ -15,6 +15,33 @@ import {
 } from "../../../fixtures/github/context-sections/fixtures";
 
 describe("experimental GitHub context section reader", () => {
+  it("does not repopulate a cleared cache when a prior read completes", async () => {
+    const bytes = asBytes("export const cached = true;\n");
+    let release!: () => void;
+    let markStarted!: () => void;
+    const started = new Promise<void>((resolve) => {
+      markStarted = resolve;
+    });
+    const pending = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const source = createFakeSource(async () => {
+      markStarted();
+      await pending;
+      return bytes;
+    });
+    const reader = createContextSectionReader(source);
+    const input = makeReadInput("src/cached.ts", bytes);
+    const first = reader.readSections(input);
+    await started;
+    reader.clearMemoryCache();
+    release();
+    expect((await first).ok).toBe(true);
+    expect(reader.getMemoryStats().cacheEntries).toBe(0);
+    expect((await reader.readSections(input)).ok).toBe(true);
+    expect(source.calls).toHaveLength(2);
+  });
+
   it("compares the current 64 KiB ceiling with the experimental 256 KiB ceiling", async () => {
     for (const size of [63 * 1024, 64 * 1024, 65 * 1024]) {
       const bytes = exactSizeText(size);

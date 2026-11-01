@@ -206,6 +206,10 @@
   gap: 6px;
 }
 
+.imageCardExpanded {
+  grid-column: 1 / -1;
+}
+
 .imageNumber {
   min-width: 0;
   color: var(--color-text-secondary);

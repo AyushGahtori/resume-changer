@@ -87,6 +87,13 @@ test("compresses a fictional UI in the tab, previews it, and clears it without a
   await expect(
     page.getByAltText("Larger preview of fictional-dashboard.png"),
   ).toBeVisible();
+  const thumbnail = await page
+    .getByAltText("Preview of fictional-dashboard.png", { exact: true })
+    .boundingBox();
+  const preview = await page
+    .getByAltText("Larger preview of fictional-dashboard.png")
+    .boundingBox();
+  expect(preview!.height).toBeGreaterThan(thumbnail!.height * 2);
   await page.screenshot({
     path: "test-results/github-context-screenshots-preview.png",
     fullPage: true,

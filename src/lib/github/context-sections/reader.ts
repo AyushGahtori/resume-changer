@@ -91,6 +91,7 @@ export function createContextSectionReader(
   let usedBytes = 0;
   let reservedBytes = 0;
   let readAttempts = 0;
+  let cacheEpoch = 0;
 
   async function readSections(
     input: ReadSectionsInput,
@@ -187,6 +188,7 @@ export function createContextSectionReader(
       return result.ok ? cloneSuccess(result, true) : result;
     }
 
+    const epoch = cacheEpoch;
     const read = Promise.resolve().then(() =>
       readUncached(
         input,
@@ -199,10 +201,10 @@ export function createContextSectionReader(
     inFlight.set(key, read);
     try {
       const result = await read;
-      if (result.ok) putCache(key, result);
+      if (result.ok && epoch === cacheEpoch) putCache(key, result);
       return result;
     } finally {
-      inFlight.delete(key);
+      if (inFlight.get(key) === read) inFlight.delete(key);
     }
   }
 
@@ -497,6 +499,7 @@ export function createContextSectionReader(
       };
     },
     clearMemoryCache() {
+      cacheEpoch++;
       cache.clear();
       inFlight.clear();
       cacheBytes = 0;

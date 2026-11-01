@@ -58,4 +58,3 @@ The validated byte arrays are transient request data: do not checkpoint them, ca
 - Add the final multimodal request route/client call and enforce the actual stream-body cap.
 - Bind a production image decoder and image-capable provider model; keep the test harness unavailable in hosted deployments.
 - Add UI composition below the notes field and make the Analyze action show/approve the exact current image previews/hashes.
-

@@ -33,7 +33,9 @@ describe("ContextScreenshots", () => {
   const fetchSpy = vi.fn();
 
   beforeEach(() => {
-    (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+    (
+      globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }
+    ).IS_REACT_ACT_ENVIRONMENT = true;
     host = document.createElement("div");
     document.body.append(host);
     root = createRoot(host);
@@ -77,14 +79,20 @@ describe("ContextScreenshots", () => {
     });
 
     await act(async () => {
-      setFileInput([new File(["fictional dashboard"], "dashboard.png", { type: "image/png" })]);
+      setFileInput([
+        new File(["fictional dashboard"], "dashboard.png", {
+          type: "image/png",
+        }),
+      ]);
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
     expect(processor).toHaveBeenCalledTimes(1);
     expect(onChange).toHaveBeenCalledTimes(1);
     expect(onChange.mock.calls[0][0][0].fileName).toBe("dashboard.png");
     expect(onConsentInvalidated).toHaveBeenCalledTimes(1);
-    expect(host.textContent).toContain("sent only with your approved analysis");
+    expect(host.textContent).toContain(
+      "only be sent with your approved analysis",
+    );
     expect(fetchSpy).not.toHaveBeenCalled();
 
     const images = onChange.mock.calls[0][0];
@@ -103,7 +111,9 @@ describe("ContextScreenshots", () => {
     );
     expect(review).toBeDefined();
     await act(async () => review?.click());
-    expect(host.querySelector('img[alt="Larger preview of dashboard.png"]')).not.toBeNull();
+    expect(
+      host.querySelector('img[alt="Larger preview of dashboard.png"]'),
+    ).not.toBeNull();
 
     const remove = host.querySelector<HTMLButtonElement>(
       'button[aria-label="Remove dashboard.png"]',
@@ -126,6 +136,35 @@ describe("ContextScreenshots", () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
+  it("guards overlapping input events before React renders the busy state", async () => {
+    let release!: () => void;
+    const pending = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const processor = vi.fn(async (file: File) => {
+      await pending;
+      return fixture(file);
+    });
+    const onChange = vi.fn();
+    await act(async () => {
+      root.render(
+        <ContextScreenshots
+          images={[]}
+          onChange={onChange}
+          processor={processor}
+        />,
+      );
+    });
+    await act(async () => {
+      setFileInput([new File(["one"], "one.png", { type: "image/png" })]);
+      setFileInput([new File(["two"], "two.png", { type: "image/png" })]);
+      expect(processor).toHaveBeenCalledTimes(1);
+      release();
+      await pending;
+    });
+    expect(onChange).toHaveBeenCalledTimes(1);
+  });
+
   it("processes a multi-file drop sequentially and rejects files beyond five", async () => {
     let active = 0;
     let maxActive = 0;
@@ -139,12 +178,19 @@ describe("ContextScreenshots", () => {
     const onChange = vi.fn<(images: ProcessedScreenshot[]) => void>();
     await act(async () => {
       root.render(
-        <ContextScreenshots images={[]} onChange={onChange} processor={processor} />,
+        <ContextScreenshots
+          images={[]}
+          onChange={onChange}
+          processor={processor}
+        />,
       );
     });
     const files = Array.from(
       { length: 6 },
-      (_, index) => new File([`image-${index}`], `screen-${index}.png`, { type: "image/png" }),
+      (_, index) =>
+        new File([`image-${index}`], `screen-${index}.png`, {
+          type: "image/png",
+        }),
     );
     await act(async () => {
       setFileInput(files);
@@ -177,7 +223,9 @@ describe("ContextScreenshots", () => {
     );
     await act(async () => replace?.click());
     await act(async () => {
-      setFileInput([new File(["new"], "replacement.png", { type: "image/png" })]);
+      setFileInput([
+        new File(["new"], "replacement.png", { type: "image/png" }),
+      ]);
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
@@ -214,7 +262,13 @@ describe("ContextScreenshots", () => {
         }),
     );
     await act(async () => {
-      root.render(<ContextScreenshots images={[]} onChange={onChange} processor={processor} />);
+      root.render(
+        <ContextScreenshots
+          images={[]}
+          onChange={onChange}
+          processor={processor}
+        />,
+      );
     });
     await act(async () => {
       setFileInput([new File(["new"], "cancel-me.png", { type: "image/png" })]);

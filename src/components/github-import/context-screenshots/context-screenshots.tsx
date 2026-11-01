@@ -89,7 +89,7 @@ export function ContextScreenshots({
 
   const handleFiles = useCallback(
     async (files: readonly File[], replaceId: string | null = null) => {
-      if (disabled || files.length === 0) return;
+      if (disabled || files.length === 0 || activeControllerRef.current) return;
       const current = [...imagesRef.current];
       const replacementIndex = replaceId
         ? current.findIndex((image) => image.id === replaceId)
@@ -297,7 +297,10 @@ export function ContextScreenshots({
         <>
           <div className={styles.imageGrid}>
             {images.map((image, index) => (
-              <article className={styles.imageCard} key={image.id}>
+              <article
+                className={`${styles.imageCard} ${expandedId === image.id ? styles.imageCardExpanded : ""}`}
+                key={image.id}
+              >
                 <div className={styles.imageTopline}>
                   <span className={styles.imageNumber}>
                     Screenshot {index + 1}

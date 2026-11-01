@@ -64,6 +64,50 @@ async function makeRequest(bytes = pngFixture(), mediaType = "image/png") {
 }
 
 describe("server screenshot validation", () => {
+  it("admits the exact aggregate byte limit with padded base64 attachments", async () => {
+    const input = await makeRequest();
+    const envelope = JSON.parse(input.body);
+    const sizes = [200 * 1024, 200 * 1024, 200 * 1024, 150 * 1024];
+    envelope.screenshots = await Promise.all(
+      sizes.map(async (size, i) => {
+        const paddedOverhead = pngFixture({ paddingBytes: 1 }).byteLength - 1;
+        const bytes = pngFixture({ paddingBytes: size - paddedOverhead });
+        expect(bytes.byteLength).toBe(size);
+        const hash = await sha256Hex(bytes);
+        if (!hash.ok) throw new Error("Fixture hash failed");
+        return {
+          ...envelope.screenshots[0],
+          id: `image-${i}`,
+          byteLength: size,
+          sha256: hash.value,
+          dataBase64: encodeBase64(bytes),
+        };
+      }),
+    );
+    const expectedConsent = {
+      ...input.expectedConsent,
+      screenshots: envelope.screenshots.map(
+        ({
+          dataBase64: _data,
+          ...identity
+        }: (typeof envelope.screenshots)[number]) => identity,
+      ),
+    };
+    const consent = await createScreenshotConsentHash(expectedConsent);
+    if (!consent.ok) throw new Error("Fixture consent failed");
+    envelope.consentHash = consent.value;
+    const body = JSON.stringify(envelope);
+    const result = await validateScreenshotRequest({
+      body,
+      actualBodyBytes: new TextEncoder().encode(body).byteLength,
+      expectedCapsule: envelope.capsule,
+      expectedConsentHash: consent.value,
+      expectedConsent,
+      decoder: input.decoder,
+    });
+    expect(result).toMatchObject({ ok: true });
+  });
+
   it("checks actual bytes, hash, decoded type, dimensions, consent and body size", async () => {
     const input = await makeRequest();
     const actualBodyBytes = new TextEncoder().encode(input.body).byteLength;

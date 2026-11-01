@@ -722,7 +722,7 @@ export function ContextInterview({
       </header>
 
       <div className={styles.columns}>
-        <main className={styles.interviewColumn}>
+        <div className={styles.interviewColumn}>
           {snapshot.phase === "active" && question ? (
             <article
               className={styles.questionCard}
@@ -1071,7 +1071,7 @@ export function ContextInterview({
               </div>
             </article>
           ) : null}
-        </main>
+        </div>
 
         <aside
           className={styles.supportingColumn}
