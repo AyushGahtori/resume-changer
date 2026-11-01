@@ -1,0 +1,108 @@
+{
+  "manifestVersion": "public-selection-summary-v1",
+  "sourceIncluded": false,
+  "repository": "AyushGahtori/resume-changer",
+  "revision": "4fc28cdbc015aff12f2f08b15428c63e4f9a040e",
+  "contributionInput": "entire project.",
+  "providerCalls": 0,
+  "afterRepair": {
+    "selectedFiles": 12,
+    "selectedLines": 651,
+    "selectedBytes": 22536,
+    "testFiles": 3,
+    "testLines": 434,
+    "testLineShare": 0.6666666667
+  },
+  "beforeRepair": {
+    "selectedFiles": 12,
+    "selectedLines": 472,
+    "selectedBytes": 15828,
+    "readiness": "needs-context"
+  },
+  "selectedPaths": [
+    {
+      "path": "src/app/(workspace)/generate/page.tsx",
+      "lineStart": 1,
+      "lineEnd": 44,
+      "selectedLines": 44,
+      "role": "wrapper"
+    },
+    {
+      "path": "tests/e2e/generate-preview.spec.ts",
+      "lineStart": 1,
+      "lineEnd": 185,
+      "selectedLines": 185,
+      "role": "test"
+    },
+    {
+      "path": "src/app/(workspace)/history/page.tsx",
+      "lineStart": 1,
+      "lineEnd": 5,
+      "selectedLines": 5,
+      "role": "wrapper"
+    },
+    {
+      "path": "src/app/(workspace)/library/imagination/page.tsx",
+      "lineStart": 1,
+      "lineEnd": 63,
+      "selectedLines": 63,
+      "role": "wrapper"
+    },
+    {
+      "path": "src/app/(workspace)/library/page.tsx",
+      "lineStart": 1,
+      "lineEnd": 38,
+      "selectedLines": 38,
+      "role": "wrapper"
+    },
+    {
+      "path": "src/app/(workspace)/page.tsx",
+      "lineStart": 1,
+      "lineEnd": 6,
+      "selectedLines": 6,
+      "role": "wrapper"
+    },
+    {
+      "path": "src/app/(workspace)/settings/page.tsx",
+      "lineStart": 1,
+      "lineEnd": 15,
+      "selectedLines": 15,
+      "role": "wrapper"
+    },
+    {
+      "path": "src/app/api/[...path]/route.ts",
+      "lineStart": 1,
+      "lineEnd": 12,
+      "selectedLines": 12,
+      "role": "wrapper"
+    },
+    {
+      "path": "src/app/sign-in/page.tsx",
+      "lineStart": 1,
+      "lineEnd": 10,
+      "selectedLines": 10,
+      "role": "wrapper"
+    },
+    {
+      "path": "src/app/(workspace)/library/imagination/canvas-client.tsx",
+      "lineStart": 1,
+      "lineEnd": 24,
+      "selectedLines": 24,
+      "role": "wrapper"
+    },
+    {
+      "path": "tests/e2e/imagination-canvas-route.spec.ts",
+      "lineStart": 1,
+      "lineEnd": 74,
+      "selectedLines": 74,
+      "role": "test"
+    },
+    {
+      "path": "tests/unit/api/achievement-writing-route.test.ts",
+      "lineStart": 1,
+      "lineEnd": 175,
+      "selectedLines": 175,
+      "role": "test"
+    }
+  ]
+}
