@@ -25,6 +25,7 @@ import type {
   RepositoryInspectorPort,
 } from "../../../../src/lib/github/ports";
 import { createImportService } from "../../../../src/lib/github/server/service";
+import { estimateRepositoryExtractionInputTokens } from "../../../../src/lib/github/server/extraction";
 import { analysisBlockReason } from "../../../../src/components/github-import/workspace-state";
 import { githubImportFixtureScope } from "../../../fixtures/github/gate0";
 
@@ -869,6 +870,20 @@ async function analyze(
 }
 
 describe("GitHub import service orchestration", () => {
+  it("reports the complete request estimate during preparation and when reopening cached evidence", async () => {
+    const h = harness();
+    const { preparedRecord } = await prepare(h);
+    const state = await unwrap(
+      await h.service.get({ importId: preparedRecord.id }, h.context),
+    );
+    const estimate = await unwrap(
+      estimateRepositoryExtractionInputTokens(state.prepared!, []),
+    );
+    expect(state.prepared!.budget.estimatedInputTokens).toBe(estimate);
+    expect(estimate).toBeGreaterThan(
+      Math.ceil(state.prepared!.budget.selectedCharacters / 2),
+    );
+  });
   it("repairs old completed preparation records that retained a failed attempt's approval", async () => {
     const h = harness();
     const { preparedRecord, queued } = await prepare(h);

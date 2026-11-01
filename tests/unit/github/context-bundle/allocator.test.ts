@@ -656,7 +656,7 @@ describe("coverage-aware evidence bundle allocation", () => {
 
     expect(budget).toMatchObject({
       maxFiles: 12,
-      maxTokens: 36_000,
+      maxTokens: 40_000,
       maxLinesPerFile: 200,
       maxTotalLines: 1_500,
       maxCharsPerFile: 12_000,

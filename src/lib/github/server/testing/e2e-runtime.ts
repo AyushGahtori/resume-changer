@@ -34,6 +34,7 @@ const repositories = [
   { id: "45", name: "publishing-empty-output" },
   { id: "46", name: "publishing-dense" },
   { id: "47", name: "publishing-provider-denied" },
+  { id: "48", name: "publishing-large-input" },
 ];
 function filesFor(name: string): Record<string, string> {
   const files: Record<string, string> = { ...baseFiles };
@@ -45,6 +46,18 @@ function filesFor(name: string): Record<string, string> {
         `export function action${i}(input:string) { return input.trim()+"${i}"; }`;
     files["tests/unrelated-widget.test.ts"] =
       "it('checks widget', () => expect(widget()).toBe(true));";
+  }
+  if (name === "publishing-large-input") {
+    const steps = Array.from(
+      { length: 55 },
+      (_, index) =>
+        `  const publishingStep${index} = input.trim() + "${"publishing detail ".repeat(8)}";`,
+    ).join("\n");
+    files["src/publish.ts"] +=
+      `\nexport function describePublishing(input: string) {\n${steps}\n  return input;\n}\n`;
+    for (let index = 0; index < 4; index++)
+      files[`src/feature-${index}.ts`] =
+        `export function feature${index}(input: string) {\n${steps}\n  return input.trim();\n}\n`;
   }
   return files;
 }

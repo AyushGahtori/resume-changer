@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { GITHUB_IMPORT_POLICY } from "../../../../src/lib/github/contracts";
 import type {
   Draft,
   ImportReviewState,
@@ -352,6 +353,15 @@ describe("analysis action eligibility", () => {
     const full = input();
     full.state.import.lifecycle = "ready-to-analyze";
     expect(analysisBlockReason(full)).toBeNull();
+  });
+  it("blocks a full request above the token limit before submission", () => {
+    const oversized = input();
+    oversized.state.prepared!.budget.estimatedInputTokens =
+      GITHUB_IMPORT_POLICY.inputTokensPerRequest + 1;
+    expect(analysisBlockReason(oversized)).toContain("96,001 tokens");
+    expect(analysisBlockReason(oversized)).toContain(
+      "96,000-token request limit",
+    );
   });
   it.each([
     [{ approved: false }, "Approve this exact"],

@@ -184,6 +184,16 @@ function formatCost(
 }
 
 function getBudgetStatus(budget: BudgetSummary) {
+  if (
+    (budget.estimatedInputTokens ?? 0) >
+    GITHUB_IMPORT_POLICY.inputTokensPerRequest
+  ) {
+    return {
+      label: "Input limit exceeded",
+      detail: `The full request is estimated at ${formatTokens(budget.estimatedInputTokens)}, above the ${formatCount(GITHUB_IMPORT_POLICY.inputTokensPerRequest)}-token request limit. Prepare a smaller evidence selection.`,
+      tone: "partial" as const,
+    };
+  }
   const limits = [
     [budget.fetchedFiles, GITHUB_IMPORT_POLICY.fetchedBodies],
     [budget.fetchedBytes, GITHUB_IMPORT_POLICY.totalUpstreamBytes],
@@ -191,6 +201,10 @@ function getBudgetStatus(budget: BudgetSummary) {
     [budget.selectedUniqueFiles, GITHUB_IMPORT_POLICY.distinctFilesPerImport],
     [budget.selectedUniqueLines, GITHUB_IMPORT_POLICY.uniqueLinesPerImport],
     [budget.selectedCharacters, GITHUB_IMPORT_POLICY.selectedCharactersTotal],
+    [
+      budget.estimatedInputTokens ?? 0,
+      GITHUB_IMPORT_POLICY.inputTokensPerRequest,
+    ],
     [
       budget.cumulativeTransmittedLines,
       GITHUB_IMPORT_POLICY.transmittedLineOccurrences,
@@ -215,14 +229,14 @@ function getBudgetStatus(budget: BudgetSummary) {
     return {
       label: "Near a configured limit",
       detail:
-        "This run is close to one of its inspection limits. The counts below show what was used.",
+        "This run is close to an inspection or request-token limit. The counts below show what was used.",
       tone: "near" as const,
     };
   }
   return {
     label: "Within configured limits",
     detail:
-      "The server-reported inspection counts are within the configured limits.",
+      "The server-reported inspection counts and estimated request tokens are within the configured limits.",
     tone: "within" as const,
   };
 }
@@ -628,7 +642,7 @@ export function ImportTrustRail({
             <BudgetRow
               label="Estimated input tokens"
               used={formatTokens(budget.estimatedInputTokens)}
-              maximum={formatCount(GITHUB_IMPORT_POLICY.inputTokensPerImport)}
+              maximum={formatCount(GITHUB_IMPORT_POLICY.inputTokensPerRequest)}
             />
             <BudgetRow
               label="Reported input tokens"

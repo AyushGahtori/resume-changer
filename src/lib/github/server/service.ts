@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { estimateRepositoryExtractionInputTokens } from "./extraction";
 import {
   evidenceReadiness,
   evidenceRecoveryNotes,
@@ -1283,6 +1284,12 @@ export const createImportService: ImportServiceFactory = (deps) => {
       );
       if (!stillCurrent.ok) return stillCurrent;
 
+      const tokenEstimate = estimateRepositoryExtractionInputTokens(
+        parsedPrepared.data,
+        [...deps.catalog],
+      );
+      if (!tokenEstimate.ok) return tokenEstimate;
+      parsedPrepared.data.budget.estimatedInputTokens = tokenEstimate.value;
       const selectedIdentity = selectedBundleIdentity(parsedPrepared.data);
       const storedBundle = await deps.store.cachePut(
         {
@@ -1458,6 +1465,14 @@ export const createImportService: ImportServiceFactory = (deps) => {
       if (!prepared.ok) return prepared;
       const result = await loadResult(record, context);
       if (!result.ok) return result;
+      if (prepared.value) {
+        const estimate = estimateRepositoryExtractionInputTokens(
+          prepared.value,
+          [...deps.catalog],
+        );
+        if (!estimate.ok) return estimate;
+        prepared.value.budget.estimatedInputTokens = estimate.value;
+      }
       const priorReviews: ImportReviewState["priorReviews"] = [];
       for (const revision of record.reviewHistory) {
         const previousPrepared = await readCacheByRef(

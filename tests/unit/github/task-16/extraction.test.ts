@@ -1,13 +1,18 @@
 import { AiProviderError } from "../../../../src/lib/ai/provider";
 import { describe, expect, it, vi } from "vitest";
 import {
+  GITHUB_IMPORT_POLICY,
   ok,
   type BudgetSnapshot,
   type ExecutionContext,
   type PreparedSelection,
 } from "../../../../src/lib/github/contracts";
 import type { RepositoryExtractionGenerationResult } from "../../../../src/lib/ai/repository-extraction";
-import { createRepositoryExtractor } from "../../../../src/lib/github/server/extraction";
+import {
+  createRepositoryExtractor,
+  estimateRepositoryExtractionInputTokens,
+} from "../../../../src/lib/github/server/extraction";
+import { createRunBudget } from "../../../../src/lib/github/server/budget-port";
 import { githubImportFixtureScope } from "../../../fixtures/github/gate0";
 
 const revision = "0123456789abcdef0123456789abcdef01234567";
@@ -249,6 +254,52 @@ function extractorWithResponses(
 }
 
 describe("GitHub repository extraction (task 16)", () => {
+  it("admits the 23,616-token source selection plus request overhead through the real budget, including recovery", async () => {
+    const base = preparedSelection();
+    const evidence = Array.from({ length: 4 }, (_, index) => ({
+      ...base.evidence[index % 2]!,
+      id: index < 2 ? base.evidence[index]!.id : `evidence-extra-${index}`,
+      path: index < 2 ? base.evidence[index]!.path : `src/extra-${index}.ts`,
+      excerpt: "x".repeat(11_808),
+    }));
+    const prepared = preparedSelection({
+      evidence,
+      selectedFileIds: evidence.map((_, index) => `file-${index}`),
+      budget: {
+        ...base.budget,
+        selectedUniqueFiles: 4,
+        selectedCharacters: 47_232,
+        estimatedInputTokens: 23_616,
+      },
+    });
+    const estimate = estimateRepositoryExtractionInputTokens(prepared, catalog);
+    expect(estimate.ok).toBe(true);
+    if (!estimate.ok) throw new Error(estimate.error.message);
+    expect(estimate.value).toBeGreaterThan(24_000);
+    expect(estimate.value).toBeLessThan(
+      GITHUB_IMPORT_POLICY.inputTokensPerRequest,
+    );
+    const { context } = executionContext();
+    context.budget = createRunBudget({
+      now: context.now,
+      deadline: context.deadline,
+    });
+    const reserve = vi.spyOn(context.budget, "reserve");
+    const run = extractorWithResponses([
+      generated("invalid-json"),
+      generated(modelResponse()),
+    ]);
+    const result = await run.extractor.extract({
+      prepared,
+      contribution: prepared.scope.contributionStatement,
+      catalog,
+      context,
+    });
+    if (!result.ok) throw new Error(JSON.stringify(result.error));
+    expect(run.provider.extractRepositoryAchievements).toHaveBeenCalledTimes(2);
+    expect(reserve.mock.calls[0]![0].amount).toBe(estimate.value);
+  });
+
   it("returns cited review-only drafts and preserves actual provider usage", async () => {
     const { extractor, provider } = extractorWithResponses([
       generated(modelResponse()),

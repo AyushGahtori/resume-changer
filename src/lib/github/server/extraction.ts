@@ -37,8 +37,9 @@ import {
 } from "../../ai/repository-extraction";
 import { buildRepositoryExtractionPrompt } from "../../ai/prompts/v1/extract-repository-achievements";
 
-const MAX_PROMPT_TOKENS_PER_ATTEMPT = 24_000;
-const MAX_TOTAL_INPUT_TOKENS = 36_000;
+const MAX_PROMPT_TOKENS_PER_ATTEMPT =
+  GITHUB_IMPORT_POLICY.inputTokensPerRequest;
+const MAX_TOTAL_INPUT_TOKENS = GITHUB_IMPORT_POLICY.inputTokensPerImport;
 const MAX_EXTRACTION_ATTEMPTS = GITHUB_IMPORT_POLICY.generationAttempts;
 const MAX_OUTPUT_TOKENS = GITHUB_IMPORT_POLICY.generatedTokensPerRequest;
 const CONTRIBUTION_STATEMENT_ID = "contribution-statement";
@@ -193,6 +194,29 @@ function budgetError(error: unknown): DomainError {
 function estimatePromptTokens(prompt: string): number {
   // This is deliberately a conservative local estimate, not provider usage.
   return Math.ceil(prompt.length / 2);
+}
+
+function estimateModelInputTokens(
+  input: RepositoryExtractionModelInput,
+  recoveryReason?: string,
+): number {
+  return estimatePromptTokens(
+    `${buildRepositoryExtractionPrompt(input, recoveryReason)}\n${JSON.stringify(repositoryExtractionOutputSchema())}`,
+  );
+}
+
+/** The same complete request estimate used for admission, without sending source. */
+export function estimateRepositoryExtractionInputTokens(
+  prepared: PreparedSelection,
+  catalog: MetricDefinition[],
+): Result<number> {
+  const input = buildModelInput(
+    prepared,
+    prepared.scope.contributionStatement,
+    catalog,
+    [],
+  );
+  return input.ok ? ok(estimateModelInputTokens(input.value)) : input;
 }
 
 function nullableSum(left: number | null, right: number | null): number | null {
@@ -823,15 +847,15 @@ function createExtractor(
           modelInput,
           recoveryReason,
         );
-        const outputSchema = repositoryExtractionOutputSchema();
-        const estimatedTokens = estimatePromptTokens(
-          `${prompt}\n${JSON.stringify(outputSchema)}`,
+        const estimatedTokens = estimateModelInputTokens(
+          modelInput,
+          recoveryReason,
         );
         if (estimatedTokens > MAX_PROMPT_TOKENS_PER_ATTEMPT) {
           return err(
             domainError(
               "limit-exceeded",
-              "The selected evidence is too large for one bounded extraction request.",
+              `This analysis request is estimated at ${estimatedTokens.toLocaleString("en-US")} tokens, above the ${MAX_PROMPT_TOKENS_PER_ATTEMPT.toLocaleString("en-US")}-token request limit. Prepare a smaller evidence selection.`,
             ),
           );
         }

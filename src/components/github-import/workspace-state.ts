@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { GITHUB_IMPORT_POLICY } from "../../lib/github/contracts";
 import type {
   Draft,
   ImportLifecycle,
@@ -134,6 +135,11 @@ export function analysisBlockReason(input: {
     return "Your selection changed. Prepare updated evidence, then approve that new selection.";
   if (!isPreparedSelectionCurrent(state))
     return "This evidence is out of date. Prepare updated evidence.";
+  if (
+    (state.prepared.budget.estimatedInputTokens ?? 0) >
+    GITHUB_IMPORT_POLICY.inputTokensPerRequest
+  )
+    return `This request is estimated at ${state.prepared.budget.estimatedInputTokens!.toLocaleString("en-US")} tokens, above the ${GITHUB_IMPORT_POLICY.inputTokensPerRequest.toLocaleString("en-US")}-token request limit. Prepare a smaller evidence selection.`;
   if (state.prepared.completeness === "needs-context")
     return "Add the missing context and prepare updated evidence.";
   if (!["ready-to-analyze", "partial"].includes(state.import.lifecycle))

@@ -7,6 +7,8 @@
  * the request was never sent.
  */
 
+import { GITHUB_IMPORT_POLICY } from "../contracts";
+
 export const GITHUB_BUDGET_LIMITS = Object.freeze({
   inventoryEntries: 10_000,
   inventoryDepth: 8,
@@ -26,8 +28,8 @@ export const GITHUB_BUDGET_LIMITS = Object.freeze({
   transmittedLineOccurrences: 3_000,
   selectedCharactersPerFile: 12_000,
   selectedCharactersTotal: 80_000,
-  inputTokensPerRequest: 24_000,
-  inputTokensPerImport: 36_000,
+  inputTokensPerRequest: GITHUB_IMPORT_POLICY.inputTokensPerRequest,
+  inputTokensPerImport: GITHUB_IMPORT_POLICY.inputTokensPerImport,
   generatedTokensPerRequest: 6_144,
   generationAttempts: 2,
   historyCommitSummaries: 20,
@@ -1218,7 +1220,9 @@ function buildSummary(state: InternalState, now: number): BudgetSummary {
       transmittedLineOccurrencesLimit:
         GITHUB_BUDGET_LIMITS.transmittedLineOccurrences,
       transmittedLineOccurrencesUsed: source.transmittedLines,
-      charactersLimit: GITHUB_BUDGET_LIMITS.selectedCharactersTotal,
+      charactersLimit:
+        GITHUB_BUDGET_LIMITS.selectedCharactersTotal *
+        GITHUB_BUDGET_LIMITS.generationAttempts,
       charactersUsed: source.characters,
     },
     inputTokens: makeTokenCounter(
@@ -1662,12 +1666,22 @@ function checkProjectedUsage(
   }
   if (
     [...totalUsage.perFileRequestCharacters.values()].some(
-      (chars) => chars > GITHUB_BUDGET_LIMITS.selectedCharactersPerFile,
+      (chars) =>
+        chars >
+        GITHUB_BUDGET_LIMITS.selectedCharactersPerFile *
+          GITHUB_BUDGET_LIMITS.generationAttempts,
     )
   ) {
     return limitFailure("selected-characters-per-file-limit");
   }
-  if (totalUsage.characters > GITHUB_BUDGET_LIMITS.selectedCharactersTotal)
+  // A recovery sends the same approved excerpts again. Keep request ceilings
+  // intact while allowing the configured attempts to transmit a full bundle.
+  if (
+    requestUsage.characters > GITHUB_BUDGET_LIMITS.selectedCharactersTotal ||
+    totalUsage.characters >
+      GITHUB_BUDGET_LIMITS.selectedCharactersTotal *
+        GITHUB_BUDGET_LIMITS.generationAttempts
+  )
     return limitFailure("selected-characters-total-limit");
 
   const bodyRecords = fetchedBodyRecords(records);

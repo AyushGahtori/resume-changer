@@ -235,6 +235,35 @@ async function preparePartialFixture(page: Page, repositoryId: string) {
   await expect(page).toHaveURL(/\/library\/github\/(?!new)[a-z0-9-]+$/);
 }
 
+test("a request above the former token cap reaches the provider and produces reviewable drafts", async ({
+  page,
+}) => {
+  test.skip(process.env.GITHUB_IMPORT_E2E_BACKEND !== "1");
+  await preparePartialFixture(page, "48");
+  const estimate = page.getByText(/^Estimate: [\d,]+ tokens$/);
+  await expect(estimate).toBeVisible();
+  const tokens = Number((await estimate.textContent())!.replace(/\D/g, ""));
+  expect(tokens).toBeGreaterThan(24_000);
+  expect(tokens).toBeLessThanOrEqual(96_000);
+  await page
+    .getByRole("checkbox", {
+      name: "I reviewed this selection and explicitly approve one analysis run.",
+    })
+    .check();
+  await page
+    .getByRole("button", { name: "Analyze this selection", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: /Save selected achievements/ }),
+  ).toBeVisible({ timeout: 30_000 });
+  await expect(
+    page.getByText("synthetic-source-extractor", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText(/too large for one bounded extraction request/),
+  ).toHaveCount(0);
+});
+
 test("implementation-only evidence reaches consent, generates drafts once, and saves only after confirmation", async ({
   page,
 }) => {

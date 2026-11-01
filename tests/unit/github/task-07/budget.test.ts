@@ -314,7 +314,7 @@ describe("GitHub shared budget ledger", () => {
     });
   });
 
-  it("charges repeated selected characters against the cumulative per-file ceiling", () => {
+  it("allows a full approved file to be sent again for the bounded recovery", () => {
     const ledger = createBudgetLedger();
     expect(
       ledger.reserve({
@@ -325,7 +325,7 @@ describe("GitHub shared budget ledger", () => {
           {
             fileId: "repo@sha:large.ts",
             ranges: [{ startLine: 1, endLine: 1 }],
-            characters: 6_000,
+            characters: 12_000,
           },
         ],
         estimatedInputTokens: 1_000,
@@ -348,17 +348,15 @@ describe("GitHub shared budget ledger", () => {
           {
             fileId: "repo@sha:large.ts",
             ranges: [{ startLine: 2, endLine: 2 }],
-            characters: 6_001,
+            characters: 12_000,
           },
         ],
         estimatedInputTokens: 1_000,
         estimatedOutputTokens: 1,
         estimatedReasoningTokens: 0,
       }),
-    ).toMatchObject({
-      ok: false,
-      error: { reason: "selected-characters-per-file-limit" },
-    });
+    ).toMatchObject({ ok: true });
+    expect(ledger.remaining().selection.charactersUsed).toBe(24_000);
   });
 
   it("keeps unique import lines and distinct file counts across both calls", () => {
@@ -613,7 +611,7 @@ describe("GitHub shared budget ledger", () => {
     expect(ledger.remaining().inputTokens).toMatchObject({
       estimated: 10_000,
       actual: 0,
-      remaining: 26_000,
+      remaining: GITHUB_BUDGET_LIMITS.inputTokensPerImport - 10_000,
     });
     const actual = measured({
       inputTokens: 9_000,
@@ -647,7 +645,7 @@ describe("GitHub shared budget ledger", () => {
       actual: 9_000,
       estimated: 0,
       unknown: 0,
-      remaining: 27_000,
+      remaining: GITHUB_BUDGET_LIMITS.inputTokensPerImport - 9_000,
     });
   });
 
@@ -711,7 +709,7 @@ describe("GitHub shared budget ledger", () => {
       actual: 0,
       estimated: 0,
       unknown: 11_000,
-      remaining: 25_000,
+      remaining: GITHUB_BUDGET_LIMITS.inputTokensPerImport - 11_000,
     });
     expect(
       ledger.commitUsage("uncertain-generation", { known: false }),
@@ -745,7 +743,7 @@ describe("GitHub shared budget ledger", () => {
       actual: 9_000,
       estimated: 0,
       unknown: 0,
-      remaining: 27_000,
+      remaining: GITHUB_BUDGET_LIMITS.inputTokensPerImport - 9_000,
     });
     expect(ledger.release("uncertain-generation", true)).toMatchObject({
       ok: false,
@@ -1052,7 +1050,9 @@ describe("GitHub shared budget ledger", () => {
     expect(
       oversized.commitUsage(
         "count-too-large",
-        measured({ preflightInputTokens: 24_001 }),
+        measured({
+          preflightInputTokens: GITHUB_BUDGET_LIMITS.inputTokensPerRequest + 1,
+        }),
       ),
     ).toMatchObject({
       ok: false,
@@ -1095,7 +1095,9 @@ describe("GitHub shared budget ledger", () => {
         estimatedReasoningTokens: 1_144,
       }).ok,
     ).toBe(true);
-    expect(ledger.remaining().inputTokens.remaining).toBe(0);
+    expect(ledger.remaining().inputTokens.remaining).toBe(
+      GITHUB_BUDGET_LIMITS.inputTokensPerImport - 36_000,
+    );
     expect(ledger.remaining().generatedTokens.remaining).toBe(1_144);
     expect(
       ledger.commitUsage(
@@ -1128,7 +1130,7 @@ describe("GitHub shared budget ledger", () => {
         kind: "generation",
         consent,
         files: [lines("repo@sha:src/a.ts", 1, 1)],
-        estimatedInputTokens: 24_001,
+        estimatedInputTokens: GITHUB_BUDGET_LIMITS.inputTokensPerRequest + 1,
         estimatedOutputTokens: 1,
         estimatedReasoningTokens: 0,
       }),
@@ -1204,14 +1206,11 @@ describe("GitHub shared budget ledger", () => {
         kind: "recovery",
         consent: { ...consent, selectionVersion: 2 },
         files: [lines("repo@sha:src/a.ts", 2, 1)],
-        estimatedInputTokens: 12_001,
+        estimatedInputTokens: GITHUB_BUDGET_LIMITS.inputTokensPerRequest,
         estimatedOutputTokens: 1,
         estimatedReasoningTokens: 0,
       }),
-    ).toMatchObject({
-      ok: false,
-      error: { reason: "input-tokens-import-limit" },
-    });
+    ).toMatchObject({ ok: true });
   });
 
   it("applies the shared HTTP request cap to history and rejects its per-category overflow", () => {

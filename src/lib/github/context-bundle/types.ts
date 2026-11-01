@@ -1,10 +1,12 @@
 import { z } from "zod";
+import { GITHUB_IMPORT_POLICY } from "../contracts";
 
 export const BUNDLE_ALGORITHM_VERSION = "coverage-allocation-v1" as const;
 export const BUNDLE_POLICY_VERSION = "evidence-roles-v1" as const;
 export const BASELINE_MAX_FILES = 12;
 export const BASELINE_MAX_SECTIONS = 300;
-export const BASELINE_MAX_INPUT_TOKENS_PER_IMPORT = 36_000;
+export const BASELINE_MAX_INPUT_TOKENS_PER_IMPORT =
+  GITHUB_IMPORT_POLICY.inputTokensPerImport;
 export const BASELINE_MAX_LINES_PER_FILE = 200;
 export const BASELINE_MAX_LINES_PER_REQUEST = 1_500;
 export const BASELINE_MAX_CHARS_PER_FILE = 12_000;

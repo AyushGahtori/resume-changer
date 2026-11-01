@@ -5,7 +5,10 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ImportTrustRail } from "@/components/github-import/trust-rail";
 import { trustRailProps } from "@/components/github-import/testing/fixtures";
-import type { ImportTrustRailProps } from "@/lib/github/contracts";
+import {
+  GITHUB_IMPORT_POLICY,
+  type ImportTrustRailProps,
+} from "@/lib/github/contracts";
 
 Reflect.set(globalThis, "IS_REACT_ACT_ENVIRONMENT", true);
 
@@ -45,6 +48,21 @@ afterEach(() => {
 });
 
 describe("ImportTrustRail", () => {
+  it("does not claim an oversized token request is within configured limits", () => {
+    const props = trustRailProps();
+    props.budget = {
+      ...props.budget,
+      estimatedInputTokens: GITHUB_IMPORT_POLICY.inputTokensPerRequest + 1,
+    };
+    const view = mount(props);
+    mounted.push(view);
+    expect(
+      view.container.querySelector('[data-budget-state="partial"]'),
+    ).not.toBeNull();
+    expect(view.container.textContent).not.toContain(
+      "Within configured limits",
+    );
+  });
   it.each(["prepared", "blocked", "analyzing", "empty"] as const)(
     "does not offer achievement selection or save in the %s phase",
     (phase) => {
