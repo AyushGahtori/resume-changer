@@ -563,13 +563,15 @@ export function ImportWorkspace(props: ImportWorkspacePageProps) {
               </ul>
             </div>
           ) : null}
-          {prepared ? <EvidencePanel {...evidenceProps} /> : null}
           {["ready-to-analyze", "partial"].includes(
             review?.import.lifecycle ?? "",
           ) &&
           !review?.result &&
           props.importId === workspace.importId ? (
-            <div className={styles.consent}>
+            <div
+              className={styles.consent}
+              aria-label="Approve repository analysis"
+            >
               <p>
                 {prepared?.providerDisclosure ??
                   "The exact prepared evidence will be shared with the configured analysis provider."}
@@ -585,10 +587,29 @@ export function ImportWorkspace(props: ImportWorkspacePageProps) {
                 I reviewed this selection and explicitly approve one analysis
                 run.
               </label>
+              {workspace.analysisDisabledReason ? (
+                <p id="analysis-disabled-reason" role="status">
+                  {workspace.analysisDisabledReason}
+                </p>
+              ) : null}
+              {workspace.isStale ? (
+                <button
+                  type="button"
+                  disabled={workspace.busy !== "idle"}
+                  onClick={() => void workspace.updateSelectionAndPrepare()}
+                >
+                  Prepare updated evidence
+                </button>
+              ) : null}
               <button
                 type="button"
                 className={styles.primary}
                 disabled={!workspace.canAnalyze}
+                aria-describedby={
+                  workspace.analysisDisabledReason
+                    ? "analysis-disabled-reason"
+                    : undefined
+                }
                 onClick={() => void workspace.analyze()}
               >
                 {workspace.busy === "analyzing"
@@ -597,6 +618,7 @@ export function ImportWorkspace(props: ImportWorkspacePageProps) {
               </button>
             </div>
           ) : null}
+          {prepared ? <EvidencePanel {...evidenceProps} /> : null}
           {review?.import.lifecycle === "ready-to-analyze" ||
           review?.import.lifecycle === "ready-to-review" ||
           review?.import.lifecycle === "partial" ? (

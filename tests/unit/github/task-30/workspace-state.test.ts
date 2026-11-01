@@ -5,6 +5,8 @@ import type {
 } from "../../../../src/lib/github/contracts";
 import {
   hasAnalysisStarted,
+  analysisBlockReason,
+  sameSelectionValue,
   canAnalyzeSelection,
   readDraftOverrides,
   readyToSubmitDraftIds,
@@ -310,4 +312,88 @@ it("does not mistake consent left on partial preparation for a completed analysi
   const completed = reviewState();
   completed.import.lifecycle = "partial";
   expect(hasAnalysisStarted(completed, false)).toBe(true);
+});
+
+describe("analysis action eligibility", () => {
+  const ready = () => {
+    const state = reviewState();
+    state.result = null;
+    state.import.lifecycle = "partial";
+    return state;
+  };
+  const input = () => ({
+    state: ready(),
+    source: "personal" as const,
+    connected: true,
+    refreshing: false,
+    dirty: false,
+    approved: true,
+    busy: false,
+  });
+  it("ignores transport key order but detects actual edits including nested facts", () => {
+    const original = {
+      answers: [{ nodeId: "purpose", optionIds: ["a"], text: "App" }],
+      notes: { value: "Solo", source: "user" },
+    };
+    const transported = {
+      notes: { source: "user", value: "Solo" },
+      answers: [{ text: "App", optionIds: ["a"], nodeId: "purpose" }],
+    };
+    expect(JSON.stringify(original)).not.toBe(JSON.stringify(transported));
+    expect(sameSelectionValue(original, transported)).toBe(true);
+    transported.notes.value = "Team";
+    expect(sameSelectionValue(original, transported)).toBe(false);
+    expect(sameSelectionValue({ a: undefined }, {})).toBe(true);
+    expect(sameSelectionValue(undefined, null)).toBe(false);
+    expect(sameSelectionValue(["a", "b"], ["b", "a"])).toBe(false);
+  });
+  it("enables approved, current partial evidence", () => {
+    expect(analysisBlockReason(input())).toBeNull();
+    const full = input();
+    full.state.import.lifecycle = "ready-to-analyze";
+    expect(analysisBlockReason(full)).toBeNull();
+  });
+  it.each([
+    [{ approved: false }, "Approve this exact"],
+    [{ dirty: true }, "Prepare updated evidence"],
+    [{ busy: true }, "Another import action"],
+    [{ connected: false }, "Reconnect GitHub"],
+    [{ refreshing: true }, "Checking GitHub"],
+    [{ source: "demo" }, "Demo imports"],
+    [{ inputError: "Invalid paths" }, "Invalid paths"],
+  ])("explains each local blocker: %j", (patch, message) => {
+    expect(
+      analysisBlockReason({ ...input(), ...patch } as Parameters<
+        typeof analysisBlockReason
+      >[0]),
+    ).toContain(message);
+  });
+  it("rejects expired, stale, incomplete, completed and already-submitted evidence", () => {
+    const expired = input();
+    expired.state.expired = true;
+    expect(analysisBlockReason(expired)).toContain("expired");
+    const stale = input();
+    stale.state.prepared!.version++;
+    expect(analysisBlockReason(stale)).toContain("out of date");
+    const missing = input();
+    missing.state.prepared = null;
+    expect(analysisBlockReason(missing)).toContain("Prepare repository");
+    const incomplete = input();
+    incomplete.state.prepared!.completeness = "needs-context";
+    expect(analysisBlockReason(incomplete)).toContain("missing context");
+    const finished = input();
+    finished.state.result = reviewState().result;
+    expect(analysisBlockReason(finished)).toContain("already has a result");
+    const submitted = input();
+    submitted.state.import.consent = {
+      reference: "sent",
+      selectionHash: submitted.state.import.selectionHash!,
+      selectionVersion: submitted.state.import.selectionVersion,
+      consentedAt: "2026-11-01T20:00:00.000Z",
+    };
+    expect(analysisBlockReason(submitted)).toContain("already submitted");
+    const running = input();
+    running.state.import.lifecycle = "analyzing";
+    expect(analysisBlockReason(running)).toContain("current state");
+  });
 });

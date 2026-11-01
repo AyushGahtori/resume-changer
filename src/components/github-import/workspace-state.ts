@@ -91,29 +91,80 @@ export function isPreparedSelectionCurrent(
   );
 }
 
-export function canAnalyzeSelection(
-  state: ImportReviewState | null,
-  source: "personal" | "demo",
-): boolean {
-  if (source !== "personal" || !state) return false;
-  if (
-    !["ready-to-analyze", "partial"].includes(state.import.lifecycle) ||
-    state.result ||
-    state.prepared?.completeness === "needs-context"
-  )
-    return false;
-  if (!isPreparedSelectionCurrent(state)) return false;
+/** Object key order is a transport detail, not an edit. Array order stays meaningful. */
+export function sameSelectionValue(left: unknown, right: unknown): boolean {
+  const canonical = (value: unknown): unknown => {
+    if (Array.isArray(value)) return value.map(canonical);
+    if (value && typeof value === "object") {
+      return Object.fromEntries(
+        Object.entries(value)
+          .filter(([, item]) => item !== undefined)
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(([key, item]) => [key, canonical(item)]),
+      );
+    }
+    return value;
+  };
+  return JSON.stringify(canonical(left)) === JSON.stringify(canonical(right));
+}
 
+export function analysisBlockReason(input: {
+  state: ImportReviewState | null;
+  source: "personal" | "demo";
+  connected: boolean;
+  refreshing: boolean;
+  dirty: boolean;
+  approved: boolean;
+  busy: boolean;
+  inputError?: string;
+}): string | null {
+  const { state } = input;
+  if (input.busy)
+    return "Another import action is running. Wait for it to finish.";
+  if (input.source !== "personal")
+    return "Demo imports cannot run analysis. Switch to My data.";
+  if (!input.connected) return "Reconnect GitHub before starting analysis.";
+  if (input.refreshing) return "Checking GitHub access. Please wait.";
+  if (!state?.prepared) return "Prepare repository evidence before analysis.";
+  if (state.expired) return "This evidence expired. Prepare a fresh selection.";
+  if (state.result)
+    return "This selection already has a result. Review its achievements before starting another run.";
+  if (input.inputError) return input.inputError;
+  if (input.dirty)
+    return "Your selection changed. Prepare updated evidence, then approve that new selection.";
+  if (!isPreparedSelectionCurrent(state))
+    return "This evidence is out of date. Prepare updated evidence.";
+  if (state.prepared.completeness === "needs-context")
+    return "Add the missing context and prepare updated evidence.";
+  if (!["ready-to-analyze", "partial"].includes(state.import.lifecycle))
+    return "This run cannot start analysis in its current state. Review its status before preparing another attempt.";
   const consent = state.import.consent;
   if (
     consent &&
     consent.selectionVersion === state.import.selectionVersion &&
     consent.selectionHash === state.import.selectionHash
-  ) {
-    return false;
-  }
+  )
+    return "An analysis request was already submitted for this selection. Review its outcome before preparing another attempt.";
+  if (!input.approved)
+    return "Approve this exact evidence selection using the checkbox above.";
+  return null;
+}
 
-  return true;
+export function canAnalyzeSelection(
+  state: ImportReviewState | null,
+  source: "personal" | "demo",
+): boolean {
+  return (
+    analysisBlockReason({
+      state,
+      source,
+      connected: true,
+      refreshing: false,
+      dirty: false,
+      approved: true,
+      busy: false,
+    }) === null
+  );
 }
 
 export function getWorkspaceDrafts(

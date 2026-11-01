@@ -298,7 +298,16 @@ test("implementation-only evidence reaches consent, generates drafts once, and s
     exact: true,
   });
   await expect(analyze).toBeDisabled();
+  await expect(page.locator("#analysis-disabled-reason")).toContainText(
+    "Approve this exact",
+  );
   await consent.check();
+  await expect(analyze).toBeEnabled();
+  await expect(page.locator("#analysis-disabled-reason")).toHaveCount(0);
+  await consent.uncheck();
+  await expect(analyze).toBeDisabled();
+  await consent.check();
+  await expect(analyze).toBeEnabled();
   await page
     .getByRole("button", { name: "Edit repository setup", exact: true })
     .click();

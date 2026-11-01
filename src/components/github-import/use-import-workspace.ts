@@ -35,7 +35,8 @@ import {
   type GithubImportClient,
 } from "../../lib/github/client";
 import {
-  canAnalyzeSelection,
+  analysisBlockReason,
+  sameSelectionValue,
   getWorkspaceDrafts,
   isPreparedSelectionCurrent,
   makeConsentReference,
@@ -625,6 +626,35 @@ export function useImportWorkspace(input: {
     return parsed.numbers;
   }, [pullRequestText]);
 
+  const selectionIsDirty = Boolean(
+    review &&
+    (candidateSelectionChanged ||
+      selectedProjectId !== review.import.destinationProjectId ||
+      role.trim() !== review.import.scope.contributionStatement ||
+      !sameSelectionValue(projectContext, review.import.scope.projectContext) ||
+      !sameSelectionValue(
+        [...extras.numbers].sort((a, b) => a - b),
+        [...review.import.scope.selectedPullRequestNumbers].sort(
+          (a, b) => a - b,
+        ),
+      ) ||
+      !sameSelectionValue(
+        [...extras.paths].sort(),
+        [...review.import.scope.selectedPaths].sort(),
+      )),
+  );
+  const analysisDisabledReason = analysisBlockReason({
+    state: review,
+    source,
+    connected: connectionState === "connected",
+    refreshing: isRefreshingRepositories,
+    dirty: selectionIsDirty,
+    approved: consentAccepted,
+    busy: busy !== "idle",
+    inputError: extras.error,
+  });
+  const canAnalyze = analysisDisabledReason === null;
+
   const buildScope = useCallback((): RepositoryScope | null => {
     if (!repositoryScope || !role.trim() || extras.error) return null;
     const parsed = RepositoryScopeSchema.safeParse({
@@ -932,11 +962,10 @@ export function useImportWorkspace(input: {
     submission.current = true;
     try {
       if (!review || !importId) return;
-      if (!consentAccepted || !canAnalyzeSelection(review, source)) {
+      if (analysisDisabledReason) {
         setActionError({
           code: "version-conflict",
-          message:
-            "Review the current bundle and confirm its exact disclosure before analyzing.",
+          message: analysisDisabledReason,
           retryable: false,
         });
         return;
@@ -963,7 +992,7 @@ export function useImportWorkspace(input: {
     } finally {
       submission.current = false;
     }
-  }, [client, consentAccepted, importId, refreshReview, review, source]);
+  }, [client, analysisDisabledReason, importId, refreshReview, review]);
 
   const editDraft = useCallback(
     (
@@ -1309,25 +1338,6 @@ export function useImportWorkspace(input: {
     () => getWorkspaceDrafts(review, draftOverrides),
     [draftOverrides, review],
   );
-  const selectionIsDirty = Boolean(
-    review &&
-    (candidateSelectionChanged ||
-      selectedProjectId !== review.import.destinationProjectId ||
-      role.trim() !== review.import.scope.contributionStatement ||
-      JSON.stringify(projectContext) !==
-        JSON.stringify(review.import.scope.projectContext) ||
-      JSON.stringify(extras.numbers) !==
-        JSON.stringify(review.import.scope.selectedPullRequestNumbers) ||
-      JSON.stringify(extras.paths) !==
-        JSON.stringify(review.import.scope.selectedPaths)),
-  );
-  const canAnalyze =
-    connectionState === "connected" &&
-    !isRefreshingRepositories &&
-    canAnalyzeSelection(review, source) &&
-    !selectionIsDirty &&
-    consentAccepted &&
-    busy === "idle";
   const eligibleIds = readyToSubmitDraftIds(review, draftOverrides);
   const isStale = Boolean(
     review?.prepared &&
@@ -1370,6 +1380,7 @@ export function useImportWorkspace(input: {
     candidates,
     consentAccepted,
     canAnalyze,
+    analysisDisabledReason,
     isStale,
     currentDrafts,
     draftOverrides,
