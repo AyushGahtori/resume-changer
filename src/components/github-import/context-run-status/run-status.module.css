@@ -1,0 +1,135 @@
+.panel,
+.sidebar {
+  min-width: 0;
+  color: var(--color-text-primary, var(--ink));
+  border: 1px solid var(--color-border, var(--line));
+  border-radius: 14px;
+  background: var(--color-surface, var(--surface));
+}
+
+.panel {
+  padding: 18px;
+}
+
+.sidebar {
+  padding: 12px;
+}
+
+.content,
+.compactContent {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 12px minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+}
+
+.compactContent {
+  gap: 9px;
+}
+
+.marker {
+  width: 10px;
+  height: 10px;
+  margin-top: 6px;
+  border-radius: 50%;
+  background: var(--color-border-strong, #94a3b8);
+}
+
+.copy {
+  min-width: 0;
+}
+
+.copy h2,
+.copy p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.copy h2 {
+  color: var(--color-text-primary, var(--ink));
+  font-size: 16px;
+  line-height: 22px;
+  font-weight: 700;
+}
+
+.compactContent .copy h2 {
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.copy > p {
+  margin-top: 5px;
+  color: var(--color-text-secondary, var(--text-secondary));
+  font-size: 14px;
+  line-height: 21px;
+}
+
+.compactContent .copy > p {
+  font-size: 13px;
+  line-height: 19px;
+}
+
+.metadata {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  margin: 12px 0 0;
+}
+
+.metadata div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.metadata dt,
+.metadata dd {
+  margin: 0;
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.metadata dt {
+  color: var(--color-text-muted, var(--quiet));
+}
+
+.metadata dd {
+  color: var(--color-text-secondary, var(--text-secondary));
+  font-weight: 600;
+}
+
+.noRetry {
+  padding-top: 9px;
+  font-weight: 600;
+}
+
+.content[data-tone="pending"] .marker,
+.compactContent[data-tone="pending"] .marker {
+  background: var(--color-violet, #7c3aed);
+}
+
+.content[data-tone="success"] .marker,
+.compactContent[data-tone="success"] .marker {
+  background: var(--color-success, #10b981);
+}
+
+.content[data-tone="warning"] .marker,
+.compactContent[data-tone="warning"] .marker {
+  background: var(--color-warning, #f59e0b);
+}
+
+.content[data-tone="error"] .marker,
+.compactContent[data-tone="error"] .marker {
+  background: var(--color-error, #ef4444);
+}
+
+.content[data-tone="warning"] .noRetry,
+.compactContent[data-tone="warning"] .noRetry {
+  color: var(--color-warning-strong, #92400e);
+}
+
+.content[data-tone="error"] .noRetry,
+.compactContent[data-tone="error"] .noRetry {
+  color: var(--color-error-strong, #b91c1c);
+}
