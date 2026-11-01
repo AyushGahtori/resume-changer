@@ -158,11 +158,25 @@ function toDomainError(error: unknown, signal: AbortSignal): DomainError {
 function budgetError(error: unknown): DomainError {
   if (error && typeof error === "object" && "code" in error) {
     const code = (error as { code?: unknown }).code;
-    if (code === "limit-exceeded")
+    if (code === "limit-exceeded") {
+      const reason = "reason" in error ? String(error.reason) : "";
+      const messages: Record<string, string> = {
+        "reservation-overrun":
+          "The AI response exceeded the reserved token allowance.",
+        "generated-tokens-request-limit":
+          "The AI response exceeded the combined output and reasoning token limit.",
+        "input-tokens-request-limit":
+          "The AI request exceeded the input-token limit.",
+        "input-tokens-import-limit":
+          "This import exhausted its total input-token allowance.",
+        "deadline-exceeded": "The analysis time allowance expired.",
+      };
       return domainError(
         "limit-exceeded",
-        "The shared repository analysis budget is exhausted.",
+        messages[reason] ??
+          "The shared repository analysis budget is exhausted.",
       );
+    }
     if (code === "forbidden")
       return domainError(
         "forbidden",

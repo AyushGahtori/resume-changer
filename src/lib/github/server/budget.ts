@@ -1337,8 +1337,10 @@ function actualExceedsReservation(
     ((attempt.kind === "generation" || attempt.kind === "recovery") &&
       actual.inputTokens > attempt.reserved.inputTokens) ||
     (attempt.kind !== "token-count" && actual.preflightInputTokens !== 0) ||
-    actual.outputTokens > attempt.reserved.outputTokens ||
-    actual.reasoningTokens > attempt.reserved.reasoningTokens
+    // Providers share one generated-token allowance between visible output and
+    // reasoning. Their individual split is an estimate, not a separate cap.
+    actual.outputTokens + actual.reasoningTokens >
+      attempt.reserved.outputTokens + attempt.reserved.reasoningTokens
   )
     return true;
   const reserved = new Map(

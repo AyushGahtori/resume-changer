@@ -19,6 +19,51 @@ function candidateById<T extends { candidate: { id: string } }>(
 }
 
 describe("safe GitHub evidence selection", () => {
+  it("reserves overview and manifest context in a dense automatically ranked inventory", () => {
+    const inventory = [
+      ...Array.from({ length: 18 }, (_, i) =>
+        makeCandidate(
+          "impl-" + i,
+          "src/cache/module-" + i + ".ts",
+          "export const value" + i + " = " + i,
+        ),
+      ),
+      makeCandidate("overview", "README.md", "# Project purpose"),
+      makeCandidate("manifest", "package.json", '{"name":"project"}'),
+      ...Array.from({ length: 5 }, (_, i) =>
+        makeCandidate(
+          "test-" + i,
+          "tests/cache/module-" + i + ".test.ts",
+          "test('case" + i + "', () => {});",
+        ),
+      ),
+    ];
+    const selector = createEvidenceSelector({
+      fetchFile: createFetcher(new Map()),
+      scoreCandidate: (ranked) => ({
+        ok: true,
+        value: ["purpose", "stack"].includes(ranked.category) ? 1 : 100,
+      }),
+    });
+    const result = selector.select({
+      inventory,
+      scope: makeScope(),
+      prContext: emptyPrContext,
+      pinnedFileIds: [],
+      context: makeContext(),
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const files = result.value.selectedFiles;
+    expect(files.map((f) => f.candidate.id)).toEqual(
+      expect.arrayContaining(["overview", "manifest"]),
+    );
+    expect(
+      files.filter((f) => f.category === "corroboration").length,
+    ).toBeLessThanOrEqual(1);
+    expect(files.length).toBeLessThanOrEqual(12);
+  });
+
   it("retains a relevant test beside implementation when a dense inventory would fill the automatic slots", () => {
     const inventory = Array.from({ length: 18 }, (_, i) =>
       makeCandidate(

@@ -4,6 +4,7 @@ import type {
   ImportReviewState,
 } from "../../../../src/lib/github/contracts";
 import {
+  hasAnalysisStarted,
   canAnalyzeSelection,
   readDraftOverrides,
   readyToSubmitDraftIds,
@@ -290,4 +291,23 @@ describe("assembled review readiness", () => {
       )["draft-1"].dirty,
     ).toBe(true);
   });
+});
+
+it("does not mistake consent left on partial preparation for a completed analysis", () => {
+  const state = reviewState();
+  state.result = null;
+  state.import.lifecycle = "partial";
+  state.import.consent = {
+    selectionHash: hash,
+    selectionVersion: 1,
+    reference: "consent-reference",
+    consentedAt: "2026-11-01T20:00:00.000Z",
+  };
+  expect(hasAnalysisStarted(state, false)).toBe(false);
+  expect(hasAnalysisStarted(state, true)).toBe(true);
+  state.import.lifecycle = "failed";
+  expect(hasAnalysisStarted(state, false)).toBe(true);
+  const completed = reviewState();
+  completed.import.lifecycle = "partial";
+  expect(hasAnalysisStarted(completed, false)).toBe(true);
 });

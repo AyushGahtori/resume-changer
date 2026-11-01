@@ -118,6 +118,12 @@ function groupEvidenceByRange(items: EvidenceItem[]): EvidenceRangeGroup[] {
 
 function candidateStateMessage(candidate: FileCandidate) {
   if (candidate.safety === "blocked") {
+    if (candidate.reasonCodes.includes("binary-candidate"))
+      return "Unsupported binary or image file. Only readable text can be selected.";
+    if (candidate.reasonCodes.includes("oversized"))
+      return "This file exceeds the 64 KiB source-read limit. Choose a smaller relevant file.";
+    if (candidate.reasonCodes.includes("secret-candidate"))
+      return "Excluded because this path may contain credentials or secrets.";
     if (candidate.reasonCodes.includes("secret-bearing-config-pattern")) {
       return "Blocked by the safety rule for secret-like configuration paths. It cannot be added to this selection.";
     }
@@ -351,6 +357,14 @@ export function EvidencePanel({
             </label>
           </div>
 
+          {Math.max(selected.size, budget.selectedUniqueFiles) >=
+          GITHUB_IMPORT_POLICY.filesPerRequest ? (
+            <p id="evidence-file-limit" className={styles.helperText}>
+              All {GITHUB_IMPORT_POLICY.filesPerRequest} file slots are used.
+              Remove a selected file to add another. Other safe files remain
+              available to inspect.
+            </p>
+          ) : null}
           <ul className={styles.fileList} aria-label="Repository files">
             {filteredCandidates.map((candidate) => {
               const isSelected = selected.has(candidate.id);
@@ -364,9 +378,10 @@ export function EvidencePanel({
               const overLimit =
                 !included &&
                 candidate.safety === "safe" &&
-                (!candidate.eligible || atFileLimit);
+                !candidate.eligible &&
+                !atFileLimit;
               const unavailableMessage = atFileLimit
-                ? `The current bundle is at the ${GITHUB_IMPORT_POLICY.filesPerRequest}-file request limit. Remove a selected file or narrow the scope before adding this path.`
+                ? null
                 : candidateStateMessage(candidate);
               const canRemove = included;
               const canAdd =
@@ -458,7 +473,9 @@ export function EvidencePanel({
                       aria-describedby={
                         unavailableMessage
                           ? `evidence-reason-${candidate.id}`
-                          : undefined
+                          : atFileLimit
+                            ? "evidence-file-limit"
+                            : undefined
                       }
                       aria-label={
                         canRemove

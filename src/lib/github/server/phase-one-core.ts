@@ -230,7 +230,7 @@ export function inventoryForSelector(
       byteSize: f.sizeBytes ?? 0,
       category:
         categories[f.evidenceRole] ?? (f.evidenceRole as EvidenceCategory),
-      reasonCodes: f.reasonCodes,
+      reasonCodes: [...new Set([...f.reasonCodes, ...f.safetyFlags])],
       eligibility:
         f.eligibility === "excluded"
           ? "excluded"

@@ -25,7 +25,11 @@ import { RepositorySetup } from "./repository-setup";
 import { ImportTrustRail } from "./trust-rail";
 import styles from "./import-workspace.module.css";
 import { useImportWorkspace } from "./use-import-workspace";
-import { stageLabel, stepForImportState } from "./workspace-state";
+import {
+  hasAnalysisStarted,
+  stageLabel,
+  stepForImportState,
+} from "./workspace-state";
 
 export type ImportWorkspacePageProps = {
   source: "personal" | "demo";
@@ -361,11 +365,7 @@ export function ImportWorkspace(props: ImportWorkspacePageProps) {
   };
 
   const analysisProps: AnalysisStatusProps = {
-    analysisStarted: Boolean(
-      review?.result ||
-      review?.import.consent ||
-      workspace.busy === "analyzing",
-    ),
+    analysisStarted: hasAnalysisStarted(review, workspace.busy === "analyzing"),
     busy: workspace.busy !== "idle",
     state:
       workspace.busy === "preparing"

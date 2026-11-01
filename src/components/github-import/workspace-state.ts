@@ -18,6 +18,24 @@ export type DraftOverride = {
 
 export type DraftOverrides = Record<string, DraftOverride>;
 
+/** Consent permits a request; it does not prove that a result exists. */
+export function hasAnalysisStarted(
+  state: ImportReviewState | null,
+  analyzing: boolean,
+): boolean {
+  return (
+    analyzing ||
+    Boolean(state?.result) ||
+    [
+      "analyzing",
+      "ready-to-review",
+      "approved",
+      "failed",
+      "interrupted",
+    ].includes(state?.import.lifecycle ?? "")
+  );
+}
+
 export function stepForImportState(
   state: ImportReviewState | null,
 ): ImportStep {

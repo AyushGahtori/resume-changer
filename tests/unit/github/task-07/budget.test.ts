@@ -81,6 +81,63 @@ function commitHttp(
 }
 
 describe("GitHub shared budget ledger", () => {
+  it.each([
+    [5000, 1144],
+    [1000, 5144],
+  ])(
+    "accepts a different output/reasoning split within the shared cap (%i/%i)",
+    (outputTokens, reasoningTokens) => {
+      const ledger = createBudgetLedger();
+      expect(
+        ledger.reserve({
+          attemptId: "shared-generated",
+          kind: "generation",
+          consent,
+          files: [lines("repo@sha:src/a.ts", 1, 1)],
+          estimatedInputTokens: 1000,
+          estimatedOutputTokens: 4096,
+          estimatedReasoningTokens: 2048,
+        }).ok,
+      ).toBe(true);
+      const usage = measured({
+        inputTokens: 900,
+        outputTokens,
+        reasoningTokens,
+      });
+      expect(ledger.commitUsage("shared-generated", usage).ok).toBe(true);
+      expect(ledger.commitUsage("shared-generated", usage)).toMatchObject({
+        ok: true,
+        value: { idempotent: true },
+      });
+    },
+  );
+
+  it("still rejects generated usage above the combined hard cap", () => {
+    const ledger = createBudgetLedger();
+    ledger.reserve({
+      attemptId: "too-many-generated",
+      kind: "generation",
+      consent,
+      files: [lines("repo@sha:src/a.ts", 1, 1)],
+      estimatedInputTokens: 1000,
+      estimatedOutputTokens: 4096,
+      estimatedReasoningTokens: 2048,
+    });
+    expect(
+      ledger.commitUsage(
+        "too-many-generated",
+        measured({
+          inputTokens: 900,
+          outputTokens: 5000,
+          reasoningTokens: 1145,
+        }),
+      ),
+    ).toMatchObject({
+      ok: false,
+      error: { reason: "generated-tokens-request-limit" },
+    });
+  });
+
   it("counts physical lines after CRLF normalization without inventing a trailing line", () => {
     expect(countPhysicalLines("")).toBe(0);
     expect(countPhysicalLines("one")).toBe(1);

@@ -879,10 +879,19 @@ function chooseFiles(
           Boolean(item) && automatic.includes(item!),
       )
     : [];
+  // Reserve automatic slots for available purpose and stack context.
+  // Explicit user scope and pins remain authoritative.
+  const overview = ["purpose", "stack"].flatMap((category) => {
+    const candidate = automatic.find((item) => item.category === category);
+    return candidate ? [candidate] : [];
+  });
   const ordered = [
     ...explicit,
-    ...preferred,
-    ...automatic.filter((item) => !preferred.includes(item)),
+    ...overview,
+    ...preferred.filter((item) => !overview.includes(item)),
+    ...automatic.filter(
+      (item) => !preferred.includes(item) && !overview.includes(item),
+    ),
   ];
   for (const item of ordered) {
     if (pinnedIds.has(item.candidate.id) || selectedPathCount() >= autoLimit)
@@ -906,7 +915,7 @@ function chooseFiles(
       item.category === "purpose" || item.category === "stack"
         ? 2
         : item.category === "corroboration"
-          ? 4
+          ? 1
           : item.category === "measurement"
             ? 2
             : item.category === "ui-style"

@@ -121,6 +121,37 @@ afterEach(() => {
 });
 
 describe("EvidencePanel", () => {
+  it("shows the shared file limit once without warning styling on safe rows", () => {
+    const host = mount(
+      baseProps({
+        candidates: [
+          safeFileCandidate(),
+          { ...safeFileCandidate(), id: "second", path: "src/second.ts" },
+        ],
+        selectedIds: [],
+        budget: { ...exactBudget(), selectedUniqueFiles: 12 },
+      }),
+    );
+    expect(host.querySelectorAll("#evidence-file-limit")).toHaveLength(1);
+    expect(host.textContent).not.toContain("The current bundle is at");
+    for (const row of host.querySelectorAll("[data-file-id]")) {
+      expect(row.className).not.toContain("fileRowOverLimit");
+    }
+  });
+
+  it.each([
+    ["binary-candidate", "Unsupported binary or image file"],
+    ["oversized", "64 KiB source-read limit"],
+    ["secret-candidate", "may contain credentials or secrets"],
+  ])("explains exclusions using the actual %s reason", (reason, message) => {
+    const host = mount(
+      baseProps({
+        candidates: [{ ...blockedFileCandidate(), reasonCodes: [reason] }],
+      }),
+    );
+    expect(host.textContent).toContain(message);
+  });
+
   it("starts collapsed and exposes a native keyboard disclosure", () => {
     const host = mount(baseProps());
     const disclosure = host.querySelector("details");
@@ -234,7 +265,7 @@ describe("EvidencePanel", () => {
     const add = buttonNamed(host, `Cannot add ${candidate.path}`);
 
     expect(host.textContent).toContain(
-      "Remove a selected file or narrow the scope before adding this path.",
+      "Remove a selected file to add another.",
     );
     expect(add.disabled).toBe(true);
     act(() => add.click());
