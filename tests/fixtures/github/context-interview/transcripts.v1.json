@@ -1,0 +1,101 @@
+{
+  "catalogVersion": "project-context-v1",
+  "scenarios": [
+    {
+      "id": "solo-whole-project",
+      "answers": [
+        { "nodeId": "project.purpose", "optionIds": ["product"] },
+        { "nodeId": "project.areas", "optionIds": ["web-mobile"] },
+        { "nodeId": "project.ownership", "optionIds": ["whole-project"] },
+        { "nodeId": "project.collaboration", "optionIds": ["solo"] },
+        { "nodeId": "project.intended-users", "optionIds": ["public-users"] },
+        { "nodeId": "branch.web-mobile.1", "optionIds": ["web"] },
+        { "nodeId": "branch.web-mobile.2", "optionIds": ["main-flow"] },
+        { "nodeId": "branch.web-mobile.3", "optionIds": ["state-management"] },
+        { "nodeId": "project.technical-work", "optionIds": ["core-feature"] },
+        { "nodeId": "project.outcomes", "optionIds": ["shipped"] }
+      ]
+    },
+    {
+      "id": "team-dashboard-contribution",
+      "notes": "I implemented the analytics dashboard layout and filter controls with a product teammate.",
+      "answers": [
+        { "nodeId": "project.purpose", "optionIds": ["product"] },
+        { "nodeId": "project.areas", "optionIds": ["web-mobile"] },
+        { "nodeId": "project.ownership", "optionIds": ["shared"] },
+        { "nodeId": "project.collaboration", "optionIds": ["team"] },
+        {
+          "nodeId": "project.contribution-scope",
+          "optionIds": ["designed-implemented"]
+        },
+        { "nodeId": "project.intended-users", "optionIds": ["internal-users"] },
+        { "nodeId": "branch.web-mobile.1", "optionIds": ["web"] },
+        { "nodeId": "branch.web-mobile.2", "optionIds": ["main-flow"] },
+        { "nodeId": "project.technical-work", "optionIds": ["core-feature"] },
+        { "nodeId": "project.outcomes", "optionIds": ["qualitative"] }
+      ]
+    },
+    {
+      "id": "machine-learning-without-dashboard",
+      "answers": [
+        { "nodeId": "project.purpose", "optionIds": ["data-ai-system"] },
+        { "nodeId": "project.areas", "optionIds": ["ai-ml-data"] },
+        { "nodeId": "project.ownership", "optionIds": ["whole-project"] },
+        { "nodeId": "project.collaboration", "optionIds": ["solo"] },
+        {
+          "nodeId": "project.intended-users",
+          "optionIds": ["technical-users"]
+        },
+        { "nodeId": "branch.ai-ml-data.1", "optionIds": ["machine-learning"] },
+        { "nodeId": "branch.ai-ml-data.2", "optionIds": ["main-flow"] },
+        { "nodeId": "branch.ai-ml-data.3", "optionIds": ["data-contracts"] },
+        { "nodeId": "project.technical-work", "optionIds": ["data-flow"] },
+        { "nodeId": "project.outcomes", "optionIds": ["no-reliable-result"] }
+      ]
+    },
+    {
+      "id": "overlapping-ai-and-web",
+      "answers": [
+        { "nodeId": "project.purpose", "optionIds": ["product"] },
+        {
+          "nodeId": "project.areas",
+          "optionIds": ["web-mobile", "ai-ml-data"]
+        },
+        { "nodeId": "project.ownership", "optionIds": ["whole-project"] },
+        { "nodeId": "project.collaboration", "optionIds": ["solo"] },
+        { "nodeId": "project.intended-users", "optionIds": ["public-users"] },
+        { "nodeId": "branch.web-mobile.1", "optionIds": ["web"] },
+        { "nodeId": "branch.ai-ml-data.1", "optionIds": ["ai-feature"] },
+        { "nodeId": "branch.web-mobile.2", "optionIds": ["main-flow"] },
+        { "nodeId": "project.technical-work", "optionIds": ["core-feature"] },
+        { "nodeId": "project.outcomes", "optionIds": ["shipped"] }
+      ]
+    },
+    {
+      "id": "custom-unknown-project",
+      "answers": [
+        {
+          "nodeId": "project.purpose",
+          "optionIds": ["custom"],
+          "customAnswer": "A neighborhood archive for oral histories"
+        },
+        {
+          "nodeId": "project.areas",
+          "optionIds": ["custom"],
+          "customAnswer": "Community research and a small public catalog"
+        },
+        { "nodeId": "project.ownership", "optionIds": ["unsure"] },
+        { "nodeId": "project.collaboration", "optionIds": ["mixed"] },
+        {
+          "nodeId": "project.contribution-scope",
+          "optionIds": ["designed-implemented"]
+        },
+        { "nodeId": "project.intended-users", "optionIds": ["research-users"] },
+        { "nodeId": "branch.other-custom.1", "optionIds": ["research"] },
+        { "nodeId": "branch.other-custom.2", "optionIds": ["main-flow"] },
+        { "nodeId": "project.technical-work", "optionIds": ["core-feature"] },
+        { "nodeId": "project.outcomes", "optionIds": ["qualitative"] }
+      ]
+    }
+  ]
+}
