@@ -25,6 +25,7 @@ import type {
   RepositoryInspectorPort,
 } from "../../../../src/lib/github/ports";
 import { createImportService } from "../../../../src/lib/github/server/service";
+import { analysisBlockReason } from "../../../../src/components/github-import/workspace-state";
 import { githubImportFixtureScope } from "../../../fixtures/github/gate0";
 
 const NOW = "2026-10-27T10:00:00.000Z";
@@ -787,6 +788,21 @@ function harness(
     context: makeContext(),
     running,
     finish,
+    fail(job: JobRecord) {
+      const current = jobsByRun.get(job.runId)!;
+      jobsByRun.set(job.runId, {
+        ...current,
+        state: "failed",
+        stage: "failed",
+        lease: null,
+        error: {
+          code: "upstream-error",
+          message: "Service unavailable.",
+          retryable: true,
+        },
+        updatedAt: NOW,
+      });
+    },
     get record() {
       return record;
     },
@@ -853,6 +869,162 @@ async function analyze(
 }
 
 describe("GitHub import service orchestration", () => {
+  it("repairs old completed preparation records that retained a failed attempt's approval", async () => {
+    const h = harness();
+    const { preparedRecord, queued } = await prepare(h);
+    const stuck = await unwrap(
+      await h.store.updateExpectedVersion(
+        {
+          id: preparedRecord.id,
+          expectedVersion: preparedRecord.version,
+          patch: {
+            consent: {
+              reference: "old-consent",
+              selectionVersion: preparedRecord.selectionVersion,
+              selectionHash: preparedRecord.selectionHash!,
+              consentedAt: NOW,
+            },
+          },
+        },
+        h.context,
+      ),
+    );
+    const recovered = await unwrap(
+      await h.service.prepare(
+        {
+          importId: stuck.id,
+          expectedVersion: stuck.version,
+        },
+        h.context,
+      ),
+    );
+    expect(recovered.runId).toBe(queued.runId);
+    expect(h.record!.consent).toBeNull();
+    expect(h.jobs.enqueue).toHaveBeenCalledTimes(1);
+    expect(h.extractor.extract).not.toHaveBeenCalled();
+  });
+
+  it.each(["queued", "running"])(
+    "does not reset consent or detach a %s analysis during preparation",
+    async (state) => {
+      const h = harness();
+      const { preparedRecord } = await prepare(h);
+      const accepted = await unwrap(
+        await h.service.enqueueAnalysis(
+          {
+            importId: preparedRecord.id,
+            expectedVersion: preparedRecord.version,
+            selectionHash: preparedRecord.selectionHash!,
+            consentReference: "consent-one",
+            idempotencyKey: "analysis-one",
+          },
+          h.context,
+        ),
+      );
+      if (state === "running") h.running(accepted);
+      const before = h.record!;
+      const retry = await h.service.prepare(
+        { importId: before.id, expectedVersion: before.version },
+        h.context,
+      );
+      expect(retry.ok).toBe(false);
+      if (!retry.ok) expect(retry.error.code).toBe("version-conflict");
+      expect(h.record).toEqual(before);
+      expect(h.record!.activeRunId).toBe(accepted.runId);
+      expect(h.extractor.extract).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(["complete", "partial"] as const)(
+    "requires fresh consent after retry preparation reuses %s evidence from a failed analysis",
+    async (completeness) => {
+      const h = harness({ packedCompleteness: completeness });
+      const { preparedRecord } = await prepare(h);
+      const first = await unwrap(
+        await h.service.enqueueAnalysis(
+          {
+            importId: preparedRecord.id,
+            expectedVersion: preparedRecord.version,
+            selectionHash: preparedRecord.selectionHash!,
+            consentReference: "consent-one",
+            idempotencyKey: "analysis-one",
+          },
+          h.context,
+        ),
+      );
+      const running = h.running(first);
+      h.extractor.extract.mockResolvedValueOnce(
+        err({
+          code: "upstream-error",
+          message: "Service unavailable.",
+          retryable: true,
+        }),
+      );
+      const failed = await h.service.executeAnalyze({
+        job: running,
+        context: { ...h.context, runId: running.runId },
+      });
+      expect(failed.ok).toBe(false);
+      h.fail(first);
+      const retry = await unwrap(
+        await h.service.prepare(
+          { importId: preparedRecord.id, expectedVersion: h.record!.version },
+          h.context,
+        ),
+      );
+      const preparing = h.running(retry);
+      await unwrap(
+        await h.service.executePrepare({
+          job: preparing,
+          context: { ...h.context, runId: preparing.runId },
+        }),
+      );
+      h.finish(retry);
+      const state = await unwrap(
+        await h.service.get({ importId: preparedRecord.id }, h.context),
+      );
+      expect(state.prepared?.selectionHash).toBe(preparedRecord.selectionHash);
+      expect(state.import.consent).toBeNull();
+      expect(state.prepared?.consentedAt).toBeNull();
+      const inputs = {
+        state,
+        source: "personal" as const,
+        connected: true,
+        refreshing: false,
+        dirty: false,
+        busy: false,
+      };
+      expect(analysisBlockReason({ ...inputs, approved: false })).toContain(
+        "checkbox",
+      );
+      expect(analysisBlockReason({ ...inputs, approved: true })).toBeNull();
+      expect(h.readSelectedFiles).toHaveBeenCalledTimes(1);
+      expect(h.extractor.extract).toHaveBeenCalledTimes(1);
+      const next = await unwrap(
+        await h.service.enqueueAnalysis(
+          {
+            importId: state.import.id,
+            expectedVersion: state.import.version,
+            selectionHash: state.import.selectionHash!,
+            consentReference: "consent-two",
+            idempotencyKey: "analysis-two",
+          },
+          h.context,
+        ),
+      );
+      expect(next.runId).not.toBe(first.runId);
+      expect(h.record!.consent?.reference).toBe("consent-two");
+      expect(h.extractor.extract).toHaveBeenCalledTimes(1);
+      const nextRunning = h.running(next);
+      const result = await h.service.executeAnalyze({
+        job: nextRunning,
+        context: { ...h.context, runId: nextRunning.runId },
+      });
+      expect(result.ok).toBe(true);
+      expect(h.extractor.extract).toHaveBeenCalledTimes(2);
+    },
+  );
+
   it("keeps missing corroboration analyzable as partial evidence without calling AI during preparation", async () => {
     const h = harness({
       missingDimensions: ["corroboration"],

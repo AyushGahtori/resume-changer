@@ -455,4 +455,31 @@ test("a provider rejection reports the actual category and never claims analysis
   ).toHaveCount(0);
   await expect(page.getByText("private fictional response")).toHaveCount(0);
   expect(submissions).toBe(1);
+
+  await page
+    .getByRole("button", { name: "Retry analysis", exact: true })
+    .click();
+  const approval = page.getByRole("checkbox", {
+    name: "I reviewed this selection and explicitly approve one analysis run.",
+  });
+  const analyze = page.getByRole("button", {
+    name: "Analyze this selection",
+    exact: true,
+  });
+  await expect(approval).not.toBeChecked();
+  await expect(analyze).toBeDisabled();
+  await expect(
+    page.getByText(/An analysis request was already submitted/),
+  ).toHaveCount(0);
+  expect(submissions).toBe(1);
+  await approval.check();
+  await expect(analyze).toBeEnabled();
+  await analyze.click();
+  await expect(
+    page.getByRole("heading", {
+      name: "Analysis couldn’t finish",
+      exact: true,
+    }),
+  ).toBeVisible();
+  expect(submissions).toBe(2);
 });

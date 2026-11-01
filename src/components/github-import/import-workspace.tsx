@@ -592,13 +592,15 @@ export function ImportWorkspace(props: ImportWorkspacePageProps) {
                   {workspace.analysisDisabledReason}
                 </p>
               ) : null}
-              {workspace.isStale ? (
+              {workspace.isStale || review?.import.consent ? (
                 <button
                   type="button"
                   disabled={workspace.busy !== "idle"}
                   onClick={() => void workspace.updateSelectionAndPrepare()}
                 >
-                  Prepare updated evidence
+                  {workspace.isStale
+                    ? "Prepare updated evidence"
+                    : "Prepare another attempt"}
                 </button>
               ) : null}
               <button

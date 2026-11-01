@@ -564,6 +564,14 @@ export const createImportService: ImportServiceFactory = (deps) => {
             "The active preparation reference is invalid.",
           );
         if (
+          activeJob.value.kind === "analyze" &&
+          ["queued", "running"].includes(activeJob.value.state)
+        )
+          return failure(
+            "version-conflict",
+            "Wait for the accepted analysis to finish before preparing another attempt.",
+          );
+        if (
           activeJob.value.kind === "prepare" &&
           activeJob.value.selectionVersion === record.selectionVersion
         ) {
@@ -575,7 +583,22 @@ export const createImportService: ImportServiceFactory = (deps) => {
           if (activeJob.value.state === "completed") {
             const cached = await loadPrepared(record, context);
             if (!cached.ok) return cached;
-            if (cached.value) return ok(activeJob.value);
+            if (cached.value) {
+              // Repair selections prepared by older retries that retained the
+              // failed attempt's consent, without dispatching another AI run.
+              if (record.consent && !record.resultRef) {
+                const reset = await deps.store.updateExpectedVersion(
+                  {
+                    id: record.id,
+                    expectedVersion: record.version,
+                    patch: { consent: null },
+                  },
+                  context,
+                );
+                if (!reset.ok) return reset;
+              }
+              return ok(activeJob.value);
+            }
           }
         }
         const detached = await deps.store.updateExpectedVersion(
@@ -601,7 +624,9 @@ export const createImportService: ImportServiceFactory = (deps) => {
         {
           id: record.id,
           expectedVersion: record.version,
-          patch: { lifecycle: "preparing", activeRunId: null },
+          // Preparation starts a new approval cycle even when the unchanged
+          // evidence can be reused from cache after an analysis failure.
+          patch: { lifecycle: "preparing", activeRunId: null, consent: null },
         },
         context,
       );
