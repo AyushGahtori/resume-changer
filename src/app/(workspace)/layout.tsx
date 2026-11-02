@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import WorkspaceShell from "@/components/workspace-shell";
+import { isGithubImportRuntimeConfigured } from "@/lib/github/server/composition";
 import {
   AccountSession,
   type WorkspaceAccount,
@@ -32,7 +33,11 @@ export default async function WorkspaceLayout({
   }
   return (
     <AccountSession account={account}>
-      <WorkspaceShell>{children}</WorkspaceShell>
+      <WorkspaceShell
+        githubImportsAvailable={isGithubImportRuntimeConfigured()}
+      >
+        {children}
+      </WorkspaceShell>
     </AccountSession>
   );
 }

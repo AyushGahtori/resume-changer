@@ -8,6 +8,7 @@ import {
 } from "./security";
 import { accountContext, accountFromRequest } from "./server-account";
 import { withRequestBudget } from "./request-budget";
+import { protectedRouteFailureDetails } from "./route-failure";
 
 export function privateResponse(response: Response): Response {
   response.headers.set("Cache-Control", "private, no-store, max-age=0");
@@ -81,9 +82,10 @@ export function protectAccountRoute<Arguments extends unknown[]>(
           ),
         );
       }
-      console.error("Account request could not be authorized.", {
-        code: "ACCOUNT_REQUEST_FAILED",
-      });
+      console.error(
+        "Private account API request failed.",
+        protectedRouteFailureDetails(error),
+      );
       return privateResponse(
         Response.json(
           {

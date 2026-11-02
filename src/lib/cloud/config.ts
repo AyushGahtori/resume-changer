@@ -8,7 +8,12 @@ export function getFirebaseClientConfig(): FirebaseOptions {
     appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
   };
   if (Object.values(config).some((value) => !value)) {
-    throw new Error("Firebase account configuration is incomplete.");
+    throw Object.assign(
+      new Error("Firebase account configuration is incomplete."),
+      {
+        code: "app/account-config-incomplete",
+      },
+    );
   }
   return config;
 }

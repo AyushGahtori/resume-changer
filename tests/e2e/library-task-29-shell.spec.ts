@@ -55,39 +55,52 @@ test("marks the source the reader is looking at", async ({ page }) => {
   );
 });
 
-test("loads without a console error or a failed request", async ({ page }) => {
-  const consoleErrors: string[] = [];
-  const errorResponses: string[] = [];
-  const failedRequests: string[] = [];
+for (const source of ["demo", "personal"] as const) {
+  test(`loads ${source} without a console error or a failed request`, async ({
+    page,
+  }) => {
+    const consoleErrors: string[] = [];
+    const errorResponses: string[] = [];
+    const failedRequests: string[] = [];
+    const activityRequests: string[] = [];
+    page.on("request", (request) => {
+      if (/\/api\/(github\/|library\/notifications)/.test(request.url()))
+        activityRequests.push(request.url());
+    });
 
-  page.on("console", (message) => {
-    if (message.type() === "error") consoleErrors.push(message.text());
-  });
-  page.on("response", (response) => {
-    if (response.status() >= 400) {
-      errorResponses.push(`${response.status()} ${response.url()}`);
-    }
-  });
-  page.on("requestfailed", (request) => {
-    /*
-     * The shell prefetches the other routes, and the browser cancels a
-     * prefetch that is no longer needed. A cancelled prefetch is not a
-     * failure of the page, so only the other failures are collected.
-     */
-    const reason = request.failure()?.errorText ?? "";
-    if (reason.includes("ERR_ABORTED")) return;
-    failedRequests.push(`${request.method()} ${request.url()} ${reason}`);
-  });
+    page.on("console", (message) => {
+      if (message.type() === "error") consoleErrors.push(message.text());
+    });
+    page.on("response", (response) => {
+      if (response.status() >= 400) {
+        errorResponses.push(`${response.status()} ${response.url()}`);
+      }
+    });
+    page.on("requestfailed", (request) => {
+      /*
+       * The shell prefetches the other routes, and the browser cancels a
+       * prefetch that is no longer needed. A cancelled prefetch is not a
+       * failure of the page, so only the other failures are collected.
+       */
+      const reason = request.failure()?.errorText ?? "";
+      if (reason.includes("ERR_ABORTED")) return;
+      failedRequests.push(`${request.method()} ${request.url()} ${reason}`);
+    });
 
-  await page.goto("/library?source=demo", { waitUntil: "networkidle" });
-  await expect(
-    page.getByRole("heading", { name: "Achievement library", level: 1 }),
-  ).toBeVisible();
+    await page.goto(source === "demo" ? "/library?source=demo" : "/library", {
+      waitUntil: "networkidle",
+    });
+    await expect(
+      page.getByRole("heading", { name: "Achievement library", level: 1 }),
+    ).toBeVisible();
 
-  expect(consoleErrors).toEqual([]);
-  expect(errorResponses).toEqual([]);
-  expect(failedRequests).toEqual([]);
-});
+    if (source === "demo" || process.env.GITHUB_IMPORT_E2E_BACKEND !== "1")
+      expect(activityRequests).toEqual([]);
+    expect(consoleErrors).toEqual([]);
+    expect(errorResponses).toEqual([]);
+    expect(failedRequests).toEqual([]);
+  });
+}
 
 test("keeps the shell navigation reachable from the keyboard", async ({
   page,

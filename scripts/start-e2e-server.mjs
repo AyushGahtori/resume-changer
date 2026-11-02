@@ -35,6 +35,21 @@ const port = process.env.PLAYWRIGHT_PORT ?? "3010";
 const distDir = process.env.NEXT_DIST_DIR ?? ".next-test";
 const tsconfig = process.env.NEXT_TSCONFIG ?? "tsconfig.e2e.json";
 
+const workerBuild = spawnSync(
+  process.execPath,
+  [join(projectRoot, "scripts", "build-github-worker.mjs")],
+  {
+    cwd: projectRoot,
+    env: process.env,
+    stdio: "inherit",
+    windowsHide: true,
+  },
+);
+if (workerBuild.status !== 0) {
+  await rm(fixtureRoot, { recursive: true, force: true });
+  process.exit(workerBuild.status ?? 1);
+}
+
 /**
  * The browser suite runs against a production build.
  *
@@ -63,30 +78,41 @@ if (build.status !== 0) {
   process.exit(build.status ?? 1);
 }
 
-const server = spawn(process.execPath, [nextCli, "start", "--port", port], {
-  cwd: projectRoot,
-  env: {
-    ...process.env,
-    RESUME_APP_MODE: "local",
-    RESUME_LIBRARY_ROOT: fixtureRoot,
-    NEXT_DIST_DIR: distDir,
-    NEXT_TSCONFIG: tsconfig,
-    NEXT_TELEMETRY_DISABLED: "1",
-    /**
-     * The browser suite must never reach a real model. Every AI route in
-     * the tests is answered by a network mock, and the mock provider
-     * covers anything that is not. A placeholder key is set as well, so a
-     * code path that ignored AI_PROVIDER would fail authentication
-     * instead of spending API credits.
-     */
-    AI_PROVIDER: "mock",
-    GEMINI_API_KEY: "e2e-placeholder-key-not-a-real-credential",
-    GEMINI_MODEL: "",
+const server = spawn(
+  process.execPath,
+  [join(projectRoot, "scripts", "run-local.mjs"), "start", "--port", port],
+  {
+    cwd: projectRoot,
+    env: {
+      ...process.env,
+      RESUME_APP_MODE: "local",
+      RESUME_LIBRARY_ROOT: fixtureRoot,
+      GITHUB_IMPORT_E2E_HARNESS: "1",
+      ...(process.env.GITHUB_IMPORT_E2E_BACKEND === "1"
+        ? {
+            GITHUB_APP_CLIENT_ID: "e2e-github-app",
+            GITHUB_APP_CALLBACK_URL: `http://127.0.0.1:${port}/api/github/connection/callback`,
+          }
+        : {}),
+      NEXT_DIST_DIR: distDir,
+      NEXT_TSCONFIG: tsconfig,
+      NEXT_TELEMETRY_DISABLED: "1",
+      /**
+       * The browser suite must never reach a real model. Every AI route in
+       * the tests is answered by a network mock, and the mock provider
+       * covers anything that is not. A placeholder key is set as well, so a
+       * code path that ignored AI_PROVIDER would fail authentication
+       * instead of spending API credits.
+       */
+      AI_PROVIDER: "mock",
+      GEMINI_API_KEY: "e2e-placeholder-key-not-a-real-credential",
+      GEMINI_MODEL: "",
+    },
+    stdio: "inherit",
+    detached: process.platform !== "win32",
+    windowsHide: true,
   },
-  stdio: "inherit",
-  detached: process.platform !== "win32",
-  windowsHide: true,
-});
+);
 
 let shuttingDown = false;
 function stop(signal = "SIGTERM") {

@@ -1,0 +1,34 @@
+/*
+ * GitHub-import aliases stay scoped to the feature's own primitives. The
+ * application theme remains the source of truth for both light and dark mode.
+ */
+[data-github-import] {
+  --github-import-primary: var(--color-violet, #7c3aed);
+  --github-import-primary-strong: var(--color-violet-strong, #6d28d9);
+  --github-import-primary-subtle: var(--color-violet-subtle, #efebff);
+  --github-import-orange: var(--color-orange, #ff7a45);
+  --github-import-orange-strong: var(--color-orange-strong, #b23c0c);
+  --github-import-orange-subtle: var(--color-orange-subtle, #ffe9e0);
+  --github-import-surface: var(--color-surface, #ffffff);
+  --github-import-surface-alt: var(--color-surface-alt, #f1f5f9);
+  --github-import-surface-hover: var(--color-surface-hover, #e8eef5);
+  --github-import-text: var(--color-text-primary, #0f172a);
+  --github-import-text-secondary: var(--color-text-secondary, #334155);
+  --github-import-text-muted: var(--color-text-muted, #64748b);
+  --github-import-text-inverse: var(--color-text-inverse, #ffffff);
+  --github-import-border: var(--color-border, #cbd5e1);
+  --github-import-border-strong: var(--color-border-strong, #94a3b8);
+  --github-import-success: var(--color-success-strong, #047857);
+  --github-import-success-subtle: var(--color-success-subtle, #ecfdf5);
+  --github-import-warning: var(--color-warning-strong, #92400e);
+  --github-import-warning-subtle: var(--color-warning-subtle, #fffbeb);
+  --github-import-error: var(--color-error-strong, #b91c1c);
+  --github-import-error-subtle: var(--color-error-subtle, #fef2f2);
+  --github-import-focus: var(--color-focus-ring, #7c3aed);
+  --github-import-control-radius: 6px;
+  --github-import-surface-radius: 8px;
+  --github-import-body-size: 14px;
+  --github-import-body-line-height: 20px;
+  --github-import-metadata-size: 12px;
+  --github-import-metadata-line-height: 16px;
+}

@@ -29,3 +29,5 @@ pnpm-debug.log*
 *.tsbuildinfo
 .idea/
 .vscode/
+/.swc
+/src/app/.well-known/workflow/

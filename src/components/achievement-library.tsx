@@ -10,6 +10,7 @@ import {
   ChevronDown,
   ChartNoAxesColumn,
   FolderKanban,
+  FolderGit2,
   Lock,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -48,6 +49,9 @@ import type {
   ResumeLibrary,
 } from "@/lib/schemas/resume-data";
 import type { ResumeDataSource } from "@/lib/data/loaders";
+import { ImportNotifications } from "./library/import-notifications";
+import importNotificationStyles from "./library/import-notifications.module.css";
+import { useImportStatus } from "./library/import-status-provider";
 
 type Props = { library: ResumeLibrary; source: ResumeDataSource };
 type EditorState =
@@ -106,6 +110,7 @@ function ExperienceGroup({
   activeSkillId,
   editor,
   parents,
+  canAttachGitHub,
 }: {
   item: (Job | Project) & { points: AchievementPoint[] };
   kind: GroupKind;
@@ -119,6 +124,7 @@ function ExperienceGroup({
   activeSkillId: string;
   editor?: InlineEditorState;
   parents: ParentOption[];
+  canAttachGitHub: boolean;
 }) {
   const isJob = kind === "job";
   const job = isJob ? (item as Job) : null;
@@ -179,6 +185,18 @@ function ExperienceGroup({
           />
         </button>
       </h3>
+      {kind === "project" && canAttachGitHub ? (
+        <div className={importNotificationStyles.projectAttachRow}>
+          <Link
+            aria-label={`Attach GitHub to ${title}`}
+            className={`ui-button ui-button--secondary library-action library-action--secondary ${importNotificationStyles.projectAttachLink}`}
+            href={`/library/github/new?projectId=${encodeURIComponent(item.id)}`}
+          >
+            <FolderGit2 aria-hidden="true" size={16} />
+            Attach GitHub
+          </Link>
+        </div>
+      ) : null}
       <div className="experience-panel" hidden={!expanded} id={panelId}>
         {item.points.map((point) => (
           <AchievementCard
@@ -204,6 +222,7 @@ function ExperienceGroup({
 }
 export default function AchievementLibrary({ library, source }: Props) {
   const router = useRouter();
+  const importStatus = useImportStatus();
   const [filters, setFilters] = useState<LibraryFilters>(EMPTY_LIBRARY_FILTERS);
   const [sort, setSort] = useState<LibrarySort>(DEFAULT_LIBRARY_SORT);
   const [editor, setEditor] = useState<EditorState>(null);
@@ -232,6 +251,13 @@ export default function AchievementLibrary({ library, source }: Props) {
     key === "status" ? value !== "all" : value !== "",
   );
   const canEdit = source === "personal";
+  const projectNames = useMemo(
+    () =>
+      Object.fromEntries(
+        library.projects.map((project) => [project.id, project.name]),
+      ),
+    [library.projects],
+  );
   const hasNoData = result.totalPointCount === 0;
   const hasNoMatches = !hasNoData && result.visiblePointCount === 0;
   const parentOptions = [
@@ -416,6 +442,20 @@ export default function AchievementLibrary({ library, source }: Props) {
           </div>
         </div>
       </header>
+      {canEdit ? (
+        <ImportNotifications
+          actionError={importStatus.actionError}
+          errorMessage={importStatus.errorMessage}
+          items={importStatus.notifications}
+          loadState={importStatus.loadState}
+          onRead={importStatus.markRead}
+          onReview={importStatus.review}
+          onRetry={importStatus.refresh}
+          projectNames={projectNames}
+          runningImports={importStatus.runningImports}
+          unreadCount={importStatus.unreadCount}
+        />
+      ) : null}
       {!canEdit ? <LibraryReadOnlyNotice /> : null}
       <ProfileSummary library={library} source={source} />
 
@@ -492,6 +532,7 @@ export default function AchievementLibrary({ library, source }: Props) {
                     kind="job"
                     library={library}
                     parents={parentOptions}
+                    canAttachGitHub={false}
                     onSkill={(id) => updateFilter("skillId", id)}
                     onTag={(tag) => updateFilter("tag", tag)}
                     onToggle={toggleGroup}
@@ -542,6 +583,7 @@ export default function AchievementLibrary({ library, source }: Props) {
                     kind="project"
                     library={library}
                     parents={parentOptions}
+                    canAttachGitHub={canEdit}
                     onSkill={(id) => updateFilter("skillId", id)}
                     onTag={(tag) => updateFilter("tag", tag)}
                     onToggle={toggleGroup}

@@ -1,0 +1,482 @@
+.workspace {
+  display: grid;
+  min-width: 0;
+  gap: 20px;
+  color: var(--color-text-primary, var(--ink));
+}
+
+.progress {
+  min-width: 0;
+}
+
+.progressList {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.progressStep {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  min-height: 68px;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: 32px auto;
+  align-items: start;
+  gap: 5px;
+  padding-right: 12px;
+}
+
+.stepMarker {
+  z-index: 1;
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border: 1px solid var(--color-border-strong, var(--line-strong));
+  border-radius: 50%;
+  background: var(--color-surface, var(--surface));
+  color: var(--color-text-muted, var(--quiet));
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 700;
+}
+
+.connector {
+  position: absolute;
+  top: 15px;
+  left: 32px;
+  width: calc(100% - 32px);
+  height: 2px;
+  background: var(--color-border, var(--line));
+}
+
+.stepcomplete .stepMarker {
+  border-color: var(--color-success-subtle, #ecfdf5);
+  background: var(--color-success-subtle, #ecfdf5);
+  color: var(--color-success-strong, #047857);
+}
+
+.stepcomplete .connector {
+  background: var(--color-success, #10b981);
+}
+
+.stepcurrent .stepMarker {
+  border-color: var(--color-violet, #7c3aed);
+  background: var(--color-violet, #7c3aed);
+  color: #fff;
+  box-shadow: 0 0 0 4px var(--color-violet-subtle, #efebff);
+}
+
+.stepcurrent .stepTitle {
+  color: var(--color-violet-strong, #6d28d9);
+  font-weight: 700;
+}
+
+.stepText {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.stepTitle,
+.stepDescription {
+  overflow-wrap: anywhere;
+}
+
+.stepTitle {
+  color: var(--color-text-primary, var(--ink));
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 600;
+}
+
+.stepDescription {
+  color: var(--color-text-muted, var(--quiet));
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.statusCard {
+  display: grid;
+  min-width: 0;
+  gap: 20px;
+  padding: 24px;
+  border: 1px solid var(--color-border, var(--line));
+  border-radius: 8px;
+  background: var(--color-surface, var(--surface));
+  color: var(--color-text-primary, var(--ink));
+}
+
+.statusHeader {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 44px minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+}
+
+.statusIcon {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--color-violet-subtle, #efebff);
+  color: var(--color-violet-strong, #6d28d9);
+}
+
+.tonePending .statusIcon {
+  background: var(--color-violet-subtle, #efebff);
+  color: var(--color-violet-strong, #6d28d9);
+}
+
+.toneSuccess .statusIcon {
+  background: var(--color-success-subtle, #ecfdf5);
+  color: var(--color-success-strong, #047857);
+}
+
+.toneWarning .statusIcon {
+  background: var(--color-warning-subtle, #fffbeb);
+  color: var(--color-warning-strong, #92400e);
+}
+
+.toneError .statusIcon {
+  background: var(--color-error-subtle, #fef2f2);
+  color: var(--color-error-strong, #b91c1c);
+}
+
+.toneNeutral .statusIcon {
+  background: var(--color-surface-alt, var(--surface-soft));
+  color: var(--color-text-secondary, var(--muted));
+}
+
+.spinner {
+  animation: spin 1.4s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.neutralMark {
+  font-size: 26px;
+  line-height: 1;
+}
+
+.statusMessage {
+  display: grid;
+  min-width: 0;
+  gap: 6px;
+}
+
+.statusMessage h2 {
+  margin: 0;
+  color: var(--color-text-primary, var(--ink));
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 24px;
+  line-height: 32px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.statusMessage p {
+  margin: 0;
+  color: var(--color-text-secondary, var(--muted));
+  font-size: 14px;
+  line-height: 20px;
+  overflow-wrap: anywhere;
+}
+
+.stagePanel {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--color-border, var(--line));
+  border-radius: 8px;
+  background: var(--color-surface-alt, var(--surface-soft));
+}
+
+.stageCopy {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.stageLabel,
+.timestamps dt {
+  color: var(--color-text-muted, var(--quiet));
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.stageValue {
+  margin: 0;
+  color: var(--color-text-primary, var(--ink));
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+.timestamps {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 12px 20px;
+  margin: 0;
+  text-align: right;
+}
+
+.timestamps div {
+  display: grid;
+  gap: 2px;
+}
+
+.timestamps dt,
+.timestamps dd {
+  margin: 0;
+}
+
+.timestamps dd {
+  color: var(--color-text-secondary, var(--muted));
+  font-size: 12px;
+  line-height: 16px;
+  font-variant-numeric: tabular-nums;
+}
+
+.connectionNotice,
+.retryNotice,
+.keepWorking {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border, var(--line));
+  border-radius: 6px;
+  font-size: 14px;
+  line-height: 20px;
+  overflow-wrap: anywhere;
+}
+
+.connectionNotice {
+  background: var(
+    --color-info-subtle,
+    var(--color-surface-alt, var(--surface-soft))
+  );
+  color: var(--color-info-strong, var(--color-text-secondary, var(--muted)));
+}
+
+.retryNotice {
+  border-color: var(--color-warning, #f59e0b);
+  background: var(--color-warning-subtle, #fffbeb);
+  color: var(--color-warning-strong, #92400e);
+}
+
+.retryActionNotice {
+  margin: -10px 0 0;
+  color: var(--color-text-muted, var(--quiet));
+  font-size: 12px;
+  line-height: 16px;
+  overflow-wrap: anywhere;
+}
+
+.keepWorking {
+  border-color: var(--color-violet-subtle, #efebff);
+  background: var(--color-violet-subtle, #efebff);
+  color: var(--color-violet-strong, #6d28d9);
+  font-weight: 600;
+}
+
+.actions {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.recoveryActions {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-right: auto;
+}
+
+.resumeButton,
+.retryButton,
+.cancelButton,
+.libraryLink {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 14px;
+  border: 1px solid var(--color-border, var(--line));
+  border-radius: 6px;
+  background: var(--color-surface, var(--surface));
+  color: var(--color-text-primary, var(--ink));
+  font: inherit;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 600;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+
+.retryButton {
+  border-color: var(--color-violet, #7c3aed);
+  background: var(--color-violet, #7c3aed);
+  color: #fff;
+}
+
+.cancelButton {
+  border-color: var(--color-error, #ef4444);
+  color: var(--color-error-strong, #b91c1c);
+}
+
+.cancelButton[aria-disabled="true"] {
+  border-color: var(--color-border, var(--line));
+  color: var(--color-text-muted, var(--quiet));
+  cursor: not-allowed;
+}
+
+.libraryLink {
+  color: var(--color-violet-strong, #6d28d9);
+}
+
+.resumeButton:hover,
+.cancelButton:not([aria-disabled="true"]):hover,
+.libraryLink:hover {
+  background: var(--color-surface-hover, var(--surface-hover));
+}
+
+.retryButton:hover {
+  background: var(--color-violet-strong, #6d28d9);
+}
+
+.resumeButton:focus-visible,
+.retryButton:focus-visible,
+.cancelButton:focus-visible,
+.libraryLink:focus-visible {
+  outline: 2px solid var(--color-focus-ring, var(--focus));
+  outline-offset: 2px;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  clip-path: inset(50%);
+}
+
+@media (max-width: 760px) {
+  .workspace {
+    gap: 16px;
+  }
+
+  .progressList {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .progressStep {
+    min-height: 42px;
+    grid-template-columns: 32px minmax(0, 1fr);
+    grid-template-rows: minmax(32px, auto);
+    align-items: start;
+    gap: 10px;
+    padding-right: 0;
+  }
+
+  .connector {
+    top: 32px;
+    left: 15px;
+    width: 2px;
+    height: calc(100% - 20px);
+  }
+
+  .stepText {
+    grid-column: 2;
+    grid-row: 1;
+    padding-top: 1px;
+  }
+
+  .statusCard {
+    gap: 16px;
+    padding: 18px;
+  }
+
+  .stagePanel {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .timestamps {
+    justify-content: flex-start;
+    text-align: left;
+  }
+
+  .actions,
+  .recoveryActions {
+    width: 100%;
+  }
+
+  .recoveryActions {
+    margin-right: 0;
+  }
+
+  .resumeButton,
+  .retryButton,
+  .cancelButton,
+  .libraryLink {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+}
+
+@media (max-width: 390px) {
+  .statusCard {
+    padding: 14px;
+  }
+
+  .statusHeader {
+    grid-template-columns: 36px minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .statusIcon {
+    width: 36px;
+    height: 36px;
+  }
+
+  .statusMessage h2 {
+    font-size: 21px;
+    line-height: 28px;
+  }
+
+  .stagePanel {
+    padding: 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+  }
+}

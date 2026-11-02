@@ -3,11 +3,13 @@ import { resolve } from "node:path";
 import { z } from "zod";
 import { getPersonalDataRoot } from "./root";
 import { getAppMode } from "../cloud/security";
+import { normalizeResumeLibrary } from "../github/server/library-migration";
 import {
   GenerationHistorySchema,
-  ResumeLibrarySchema,
+  ResumeLibraryInputSchema,
   ResumePreferencesSchema,
   StableIdSchema,
+  type NormalizedResumeLibrary,
 } from "../schemas/resume-data";
 
 const nonEmptyText = z.string().trim().min(1, "Must not be empty.");
@@ -26,7 +28,11 @@ export type ResumeDataSource = "personal" | "demo";
 export type TemplateMetadata = z.infer<typeof TemplateMetadataSchema>;
 
 export type DataLoadErrorCode =
-  "missing-file" | "unreadable-file" | "invalid-json" | "invalid-schema";
+  | "missing-file"
+  | "unreadable-file"
+  | "invalid-json"
+  | "invalid-schema"
+  | "unsupported-version";
 
 type ValidationIssue = {
   path: string;
@@ -90,6 +96,8 @@ export function formatDataLoadError(error: {
         ? `${error.dataPath} does not match the required data schema:\n${details}`
         : `${error.dataPath} does not match the required data schema.`;
     }
+    case "unsupported-version":
+      return `${error.dataPath} uses an unsupported resume library version. Supported versions are 1 and 2.`;
   }
 }
 
@@ -136,22 +144,44 @@ async function loadValidatedFile<T>(
 export async function loadResumeLibrary({
   source = "personal",
   rootDir,
-}: ResumeLibraryLoadOptions = {}) {
+}: ResumeLibraryLoadOptions = {}): Promise<NormalizedResumeLibrary> {
   if (source === "personal" && getAppMode() === "firebase") {
     if (rootDir !== undefined)
       throw new Error("Hosted account reads cannot use a filesystem root.");
     const { getCloudLibrary } = await import("../cloud/library-store");
-    return getCloudLibrary();
+    return normalizeResumeLibrary(await getCloudLibrary());
   }
   const dataRoot =
     source === "personal"
       ? getPersonalDataRoot(rootDir)
       : (rootDir ?? process.cwd());
-  return loadValidatedFile(
-    getResumeLibraryPath(source),
-    ResumeLibrarySchema,
-    dataRoot,
-  );
+  const relativePath = getResumeLibraryPath(source);
+  const input = await readJsonFile(relativePath, dataRoot);
+  if (
+    typeof input === "object" &&
+    input !== null &&
+    "schemaVersion" in input &&
+    typeof input.schemaVersion === "number" &&
+    input.schemaVersion !== 1 &&
+    input.schemaVersion !== 2
+  ) {
+    throw new DataLoadError("unsupported-version", relativePath, [
+      {
+        path: "schemaVersion",
+        message: `Found version ${input.schemaVersion}; supported versions are 1 and 2.`,
+      },
+    ]);
+  }
+
+  const result = ResumeLibraryInputSchema.safeParse(input);
+  if (!result.success) {
+    throw new DataLoadError(
+      "invalid-schema",
+      relativePath,
+      schemaIssues(result.error),
+    );
+  }
+  return normalizeResumeLibrary(result.data);
 }
 
 export async function loadProfileData(options?: ResumeLibraryLoadOptions) {

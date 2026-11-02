@@ -1,0 +1,21 @@
+export { discoverProjectMap } from "./discovery";
+export type {
+  AliasMapping,
+  BoundedReaderPort,
+  BoundedReadResult,
+  CapabilitySuggestion,
+  ConfigurationCandidate,
+  DiscoveryExclusion,
+  DiscoveryFile,
+  DiscoveryInventory,
+  DiscoveryPackageBoundary,
+  EntrypointCandidate,
+  FrameworkSuggestion,
+  OverviewCandidate,
+  PackageMapEntry,
+  ProjectDiscoveryInput,
+  ProjectMap,
+  ProjectMapIssue,
+  ProjectMapResult,
+  RepositoryIdentity,
+} from "./contracts";

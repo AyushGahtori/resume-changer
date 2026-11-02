@@ -3,7 +3,7 @@ name: Quality checks
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, phase-one]
   workflow_dispatch:
 
 permissions:
@@ -114,4 +114,30 @@ jobs:
         with:
           name: browser-test-results-${{ matrix.shard }}
           path: test-results/
+          retention-days: 7
+
+  github-import-journey:
+    name: GitHub import assembled journey
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Verify browser, API, worker, exact approval and responsive layouts with fictional data
+        run: npm run test:github-journey
+      - name: Upload fictional journey evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: github-import-journey
+          path: |
+            test-results/
+            .runtime/github-gate-c/
           retention-days: 7

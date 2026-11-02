@@ -28,6 +28,7 @@ import { POST as createPoint } from "@/app/api/library/points/handler";
 import { PATCH as updatePoint } from "@/app/api/library/points/[id]/handler";
 import { POST as editResume } from "@/app/api/resume/edit/handler";
 import { GET as measureSkills } from "@/app/api/resume/skills/handler";
+import { resolveGithubApiRoute } from "./github-routes";
 
 type ApiMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 type RouteContext = { params: Promise<{ id: string }> };
@@ -106,6 +107,8 @@ export function resolveApiRequest(pathname: string): ApiRouteMatch | null {
     return null;
 
   const routePath = segments.slice(1);
+  const github = resolveGithubApiRoute(routePath);
+  if (github) return { methods: github.methods, context: emptyContext };
   const staticKey = routePath.join("/");
   if (Object.hasOwn(staticRoutes, staticKey))
     return { methods: staticRoutes[staticKey], context: emptyContext };
@@ -171,6 +174,27 @@ export function optionsForApiRequest(request: Request): Response {
 }
 
 export async function dispatchApiRequest(request: Request): Promise<Response> {
+  const path = new URL(request.url).pathname;
+  if (
+    (/^\/api\/github\/(?:imports(?:\/|$)|jobs(?:\/|$))/.test(path) ||
+      path.startsWith("/api/library/notifications")) &&
+    !(
+      process.env.VERCEL !== "1" &&
+      process.env.GITHUB_IMPORT_E2E_HARNESS === "1"
+    )
+  ) {
+    return Response.json(
+      {
+        error: {
+          code: "needs-context",
+          message:
+            "This background import has ended. Start a new temporary import in this tab.",
+          retryable: false,
+        },
+      },
+      { status: 410, headers: { "Cache-Control": "private, no-store" } },
+    );
+  }
   const match = resolveApiRequest(new URL(request.url).pathname);
   if (!match) return notFound();
 

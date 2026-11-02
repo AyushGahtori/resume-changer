@@ -12,7 +12,9 @@
     "authorizedDomains": [
       "resume-changer-ayush-prod.firebaseapp.com",
       "resume-changer-lime.vercel.app",
-      "resume-changer-ayushs-projects-ab23dbca.vercel.app"
+      "resume-changer-ayushs-projects-ab23dbca.vercel.app",
+      "resume-changer-git-phase-one-ayushs-projects-ab23dbca.vercel.app",
+      "resume-changer-1a9nxylqw-ayushs-projects-ab23dbca.vercel.app"
     ],
     "providers": {
       "googleSignIn": {

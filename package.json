@@ -3,10 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "build:vercel": "node scripts/prepare-pdf-runtime.mjs && next build",
-    "start": "next start",
+    "dev": "node scripts/run-local.mjs dev",
+    "build": "node scripts/build-github-worker.mjs && next build",
+    "build:vercel": "node scripts/check-hosted-account-config.mjs && node scripts/prepare-pdf-runtime.mjs && node scripts/build-github-worker.mjs && next build",
+    "start": "node scripts/run-local.mjs start",
+    "worker:build": "node scripts/build-github-worker.mjs",
+    "test:worker-smoke": "node scripts/test-github-worker-smoke.mjs",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\" \"tests/**/*.{ts,tsx}\" \"scripts/**/*.mjs\" \"docs/**/*.md\" \".github/**/*.yml\" \"*.{json,mjs,ts,md}\"",
@@ -16,12 +18,14 @@
     "test:pdf-live": "node scripts/test-pdf-live.mjs",
     "test:pdf-bundled": "node scripts/test-pdf-bundled.mjs",
     "test:e2e": "playwright test",
+    "test:github-journey": "node scripts/test-github-journey.mjs",
     "test:security": "npx -y firebase-tools@15.34.1 emulators:exec --only auth,firestore --project demo-resume-changer-security --config firebase.security.json \"node node_modules/vitest/vitest.mjs run --config vitest.security.config.ts && node scripts/test-account-http.mjs\""
   },
   "dependencies": {
     "@google/genai": "^2.29.1",
     "@vercel/blob": "^2.8.2",
     "firebase": "^13.1.0",
+    "firebase-admin": "14.5.0",
     "jose": "^6.2.13",
     "lucide-react": "^1.60.0",
     "next": "^15.5.28",
@@ -29,6 +33,7 @@
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "server-only": "^0.0.1",
+    "workflow": "5.2.3",
     "zod": "^4.6.7"
   },
   "devDependencies": {
@@ -59,6 +64,7 @@
   "overrides": {
     "zod": "$zod",
     "postcss": "8.5.31",
-    "@grpc/grpc-js": "1.14.6"
+    "@grpc/grpc-js": "1.14.6",
+    "undici": "7.30.1"
   }
 }

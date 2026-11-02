@@ -4,6 +4,7 @@ import { useState } from "react";
 import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { Asterisk, ArrowRight, LockKeyhole } from "lucide-react";
 import { getBrowserAuth } from "@/lib/cloud/browser-auth";
+import { signInErrorMessage } from "@/lib/cloud/sign-in-error";
 
 export default function SignIn() {
   const [busy, setBusy] = useState(false);
@@ -25,17 +26,7 @@ export default function SignIn() {
         throw new Error("Your account could not be opened. Please try again.");
       window.location.assign("/");
     } catch (reason) {
-      const code =
-        reason && typeof reason === "object" && "code" in reason
-          ? reason.code
-          : "";
-      setError(
-        code === "auth/popup-blocked"
-          ? "Allow the sign-in window in your browser, then try again."
-          : code === "auth/popup-closed-by-user"
-            ? "Sign-in was closed. You can try again when ready."
-            : "Sign-in could not finish. Please try again.",
-      );
+      setError(signInErrorMessage(reason));
       setBusy(false);
     }
   }

@@ -1,0 +1,499 @@
+.button {
+  display: inline-flex;
+  min-width: 44px;
+  min-height: 44px;
+  max-width: 100%;
+  align-items: center;
+  justify-content: center;
+  padding: 0 14px;
+  border: 1px solid var(--github-import-border, var(--color-border, #cbd5e1));
+  border-radius: 6px;
+  background: var(--github-import-surface, var(--color-surface, #ffffff));
+  color: var(--github-import-text, var(--color-text-primary, #0f172a));
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+  text-align: center;
+  cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease,
+    outline-color 120ms ease;
+  user-select: none;
+}
+
+.button:focus-visible,
+.evidenceButton:focus-visible {
+  outline: 2px solid
+    var(--github-import-focus, var(--color-focus-ring, #7c3aed));
+  outline-offset: 2px;
+  position: relative;
+  z-index: 1;
+}
+
+.button:disabled {
+  cursor: not-allowed;
+}
+
+.buttonContent {
+  position: relative;
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  overflow-wrap: anywhere;
+}
+
+.buttonIcon {
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  align-items: center;
+  justify-content: center;
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.primary {
+  border-color: var(--github-import-primary, var(--color-violet, #7c3aed));
+  background: var(--github-import-primary, var(--color-violet, #7c3aed));
+  color: var(--github-import-text-inverse, var(--color-text-inverse, #ffffff));
+}
+
+.primary:hover:not(:disabled) {
+  border-color: color-mix(
+    in srgb,
+    var(--github-import-primary, var(--color-violet, #7c3aed)) 88%,
+    black
+  );
+  background: color-mix(
+    in srgb,
+    var(--github-import-primary, var(--color-violet, #7c3aed)) 88%,
+    black
+  );
+}
+
+.primary:active:not(:disabled) {
+  border-color: color-mix(
+    in srgb,
+    var(--github-import-primary, var(--color-violet, #7c3aed)) 78%,
+    black
+  );
+  background: color-mix(
+    in srgb,
+    var(--github-import-primary, var(--color-violet, #7c3aed)) 78%,
+    black
+  );
+}
+
+.primary:disabled {
+  border-color: var(
+    --github-import-primary-subtle,
+    var(--color-violet-subtle, #efebff)
+  );
+  background: var(
+    --github-import-primary-subtle,
+    var(--color-violet-subtle, #efebff)
+  );
+  color: var(
+    --github-import-primary-strong,
+    var(--color-violet-strong, #6d28d9)
+  );
+}
+
+.secondary {
+  border-color: var(
+    --github-import-border-strong,
+    var(--color-border-strong, #94a3b8)
+  );
+}
+
+.secondary:hover:not(:disabled),
+.quiet:hover:not(:disabled) {
+  border-color: var(
+    --github-import-border-strong,
+    var(--color-border-strong, #94a3b8)
+  );
+  background: var(
+    --github-import-surface-alt,
+    var(--color-surface-alt, #f1f5f9)
+  );
+}
+
+.secondary:active:not(:disabled),
+.quiet:active:not(:disabled) {
+  background: var(
+    --github-import-surface-hover,
+    var(--color-surface-hover, #e8eef5)
+  );
+}
+
+.secondary:disabled,
+.quiet:disabled {
+  background: var(
+    --github-import-surface-alt,
+    var(--color-surface-alt, #f1f5f9)
+  );
+  color: var(
+    --github-import-text-secondary,
+    var(--color-text-secondary, #334155)
+  );
+}
+
+.quiet {
+  border-color: transparent;
+  background: transparent;
+}
+
+.destructive {
+  border-color: color-mix(
+    in srgb,
+    var(--github-import-error, var(--color-error-strong, #b91c1c)) 42%,
+    transparent
+  );
+  background: var(
+    --github-import-error-subtle,
+    var(--color-error-subtle, #fef2f2)
+  );
+  color: var(--github-import-error, var(--color-error-strong, #b91c1c));
+}
+
+.destructive:hover:not(:disabled) {
+  border-color: var(--github-import-error, var(--color-error-strong, #b91c1c));
+  background: color-mix(
+    in srgb,
+    var(--github-import-error-subtle, var(--color-error-subtle, #fef2f2)) 68%,
+    var(--github-import-error, var(--color-error-strong, #b91c1c))
+  );
+}
+
+.destructive:active:not(:disabled) {
+  background: color-mix(
+    in srgb,
+    var(--github-import-error-subtle, var(--color-error-subtle, #fef2f2)) 48%,
+    var(--github-import-error, var(--color-error-strong, #b91c1c))
+  );
+}
+
+.destructive:disabled {
+  border-color: color-mix(
+    in srgb,
+    var(--github-import-error, var(--color-error-strong, #b91c1c)) 24%,
+    transparent
+  );
+  background: var(
+    --github-import-error-subtle,
+    var(--color-error-subtle, #fef2f2)
+  );
+  color: var(--github-import-error, var(--color-error-strong, #b91c1c));
+}
+
+.button[data-error="true"] {
+  border-color: var(--github-import-error, var(--color-error-strong, #b91c1c));
+}
+
+.spinner {
+  animation: spin 900ms linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.statusPill {
+  display: inline-flex;
+  min-height: 28px;
+  max-width: 100%;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 9px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 16px;
+  overflow-wrap: anywhere;
+}
+
+.statusIcon {
+  flex: 0 0 14px;
+}
+
+.statusPill[data-tone="positive"] {
+  border-color: color-mix(
+    in srgb,
+    var(--github-import-success, var(--color-success-strong, #047857)) 28%,
+    transparent
+  );
+  background: var(
+    --github-import-success-subtle,
+    var(--color-success-subtle, #ecfdf5)
+  );
+  color: var(--github-import-success, var(--color-success-strong, #047857));
+}
+
+.statusPill[data-tone="warning"] {
+  border-color: color-mix(
+    in srgb,
+    var(--github-import-warning, var(--color-warning-strong, #92400e)) 28%,
+    transparent
+  );
+  background: var(
+    --github-import-warning-subtle,
+    var(--color-warning-subtle, #fffbeb)
+  );
+  color: var(--github-import-warning, var(--color-warning-strong, #92400e));
+}
+
+.statusPill[data-tone="danger"] {
+  border-color: color-mix(
+    in srgb,
+    var(--github-import-error, var(--color-error-strong, #b91c1c)) 28%,
+    transparent
+  );
+  background: var(
+    --github-import-error-subtle,
+    var(--color-error-subtle, #fef2f2)
+  );
+  color: var(--github-import-error, var(--color-error-strong, #b91c1c));
+}
+
+.statusPill[data-tone="accent"] {
+  border-color: color-mix(
+    in srgb,
+    var(--github-import-primary, var(--color-violet, #7c3aed)) 28%,
+    transparent
+  );
+  background: var(
+    --github-import-primary-subtle,
+    var(--color-violet-subtle, #efebff)
+  );
+  color: var(
+    --github-import-primary-strong,
+    var(--color-violet-strong, #6d28d9)
+  );
+}
+
+.statusPill[data-tone="neutral"] {
+  border-color: var(--github-import-border, var(--color-border, #cbd5e1));
+  background: var(
+    --github-import-surface-alt,
+    var(--color-surface-alt, #f1f5f9)
+  );
+  color: var(
+    --github-import-text-secondary,
+    var(--color-text-secondary, #334155)
+  );
+}
+
+.banner {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  grid-template-columns: 20px minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--github-import-border, var(--color-border, #cbd5e1));
+  border-radius: 8px;
+  background: var(
+    --github-import-surface-alt,
+    var(--color-surface-alt, #f1f5f9)
+  );
+  color: var(--github-import-text, var(--color-text-primary, #0f172a));
+}
+
+.banner[data-tone="info"] {
+  border-color: color-mix(
+    in srgb,
+    var(--github-import-primary, var(--color-violet, #7c3aed)) 28%,
+    var(--github-import-border, var(--color-border, #cbd5e1))
+  );
+  background: var(
+    --github-import-primary-subtle,
+    var(--color-violet-subtle, #efebff)
+  );
+}
+
+.banner[data-tone="success"] {
+  border-color: color-mix(
+    in srgb,
+    var(--github-import-success, var(--color-success-strong, #047857)) 28%,
+    transparent
+  );
+  background: var(
+    --github-import-success-subtle,
+    var(--color-success-subtle, #ecfdf5)
+  );
+}
+
+.banner[data-tone="warning"] {
+  border-color: color-mix(
+    in srgb,
+    var(--github-import-warning, var(--color-warning-strong, #92400e)) 28%,
+    transparent
+  );
+  background: var(
+    --github-import-warning-subtle,
+    var(--color-warning-subtle, #fffbeb)
+  );
+}
+
+.banner[data-tone="error"] {
+  border-color: color-mix(
+    in srgb,
+    var(--github-import-error, var(--color-error-strong, #b91c1c)) 28%,
+    transparent
+  );
+  background: var(
+    --github-import-error-subtle,
+    var(--color-error-subtle, #fef2f2)
+  );
+}
+
+.bannerIcon {
+  margin-top: 1px;
+  color: var(--github-import-primary, var(--color-violet, #7c3aed));
+}
+
+.banner[data-tone="success"] .bannerIcon {
+  color: var(--github-import-success, var(--color-success-strong, #047857));
+}
+
+.banner[data-tone="warning"] .bannerIcon {
+  color: var(--github-import-warning, var(--color-warning-strong, #92400e));
+}
+
+.banner[data-tone="error"] .bannerIcon {
+  color: var(--github-import-error, var(--color-error-strong, #b91c1c));
+}
+
+.bannerCopy {
+  min-width: 0;
+}
+
+.bannerTitle,
+.bannerDescription {
+  margin: 0;
+  font-size: 14px;
+  line-height: 20px;
+  overflow-wrap: anywhere;
+}
+
+.bannerTitle {
+  font-weight: 700;
+}
+
+.bannerDescription {
+  margin-top: 2px;
+  color: var(
+    --github-import-text-secondary,
+    var(--color-text-secondary, #334155)
+  );
+}
+
+.evidenceChip {
+  display: inline-flex;
+  min-width: 0;
+  min-height: 30px;
+  max-width: 100%;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 9px;
+  border: 1px solid var(--github-import-border, var(--color-border, #cbd5e1));
+  border-radius: 999px;
+  background: var(
+    --github-import-surface-alt,
+    var(--color-surface-alt, #f1f5f9)
+  );
+  color: var(
+    --github-import-text-secondary,
+    var(--color-text-secondary, #334155)
+  );
+  font-size: 12px;
+  line-height: 16px;
+  overflow-wrap: anywhere;
+}
+
+.evidenceChip[data-state="pinned"] {
+  border-color: color-mix(
+    in srgb,
+    var(--github-import-primary, var(--color-violet, #7c3aed)) 30%,
+    transparent
+  );
+  background: var(
+    --github-import-primary-subtle,
+    var(--color-violet-subtle, #efebff)
+  );
+  color: var(
+    --github-import-primary-strong,
+    var(--color-violet-strong, #6d28d9)
+  );
+}
+
+.evidenceChip[data-state="blocked"] {
+  border-color: color-mix(
+    in srgb,
+    var(--github-import-error, var(--color-error-strong, #b91c1c)) 28%,
+    transparent
+  );
+  background: var(
+    --github-import-error-subtle,
+    var(--color-error-subtle, #fef2f2)
+  );
+  color: var(--github-import-error, var(--color-error-strong, #b91c1c));
+}
+
+.evidenceIcon,
+.evidenceStateIcon {
+  flex: 0 0 auto;
+}
+
+.evidenceLabel {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.evidenceState {
+  flex: 0 0 auto;
+  font-weight: 700;
+}
+
+.evidenceStateIcon {
+  margin-left: -3px;
+}
+
+@media (max-width: 360px) {
+  .button {
+    padding-inline: 10px;
+  }
+
+  .evidenceChip {
+    align-items: flex-start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .button {
+    transition: none;
+  }
+
+  .spinner {
+    animation: none;
+  }
+}

@@ -46,8 +46,24 @@ npm exec --yes --package=firebase-tools@15.34.1 -- node scripts/sync-auth-domain
 Omit `--apply` for a read-only configuration check. This command uses the pinned
 CLI's existing login and refuses a project that differs from `.firebaserc`. It
 reads the backend setting back and fails if the requested list was not applied.
-The production website and protected project alias must both be authorized;
-preview deployments receive no production Firebase configuration.
+The production website and protected project alias must both be authorized.
+The approved `phase-one` Preview uses the existing Firebase account configuration,
+so its stable branch hostname must also be explicitly authorized. Share
+`https://resume-changer-git-phase-one-ayushs-projects-ab23dbca.vercel.app/sign-in`
+for interactive testing. An immutable deployment URL has a different hostname;
+authorize it separately before sharing a Google sign-in link. Never authorize
+all `vercel.app` domains or remove existing production entries to enable a Preview.
+The previously shared `resume-changer-1a9nxylqw-ayushs-projects-ab23dbca.vercel.app`
+is retained explicitly so that link works too. New Preview builds under the
+stable branch hostname do not require another Firebase domain change.
+
+Firebase domains alone are insufficient: Vercel environment variables are scoped
+separately. The approved `phase-one` branch has the five public Firebase settings,
+`RESUME_APP_MODE=firebase` and its exact `RESUME_APP_ORIGIN` configured for Preview
+only, restricted to that branch. Production settings are unchanged. Rebuild after
+changing these values because Next embeds public settings at build time. Other
+Preview branches must receive their own approved configuration; the hosted build
+guard rejects missing account settings rather than publishing a broken sign-in page.
 
 This administrative operation uses the operator's CLI login. No administrator
 key is stored in the application or repository. Rule changes require
