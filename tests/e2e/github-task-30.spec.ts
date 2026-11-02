@@ -1,6 +1,7 @@
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { expect, test, type Page, type Route } from "@playwright/test";
+import { completeProjectInterview } from "./helpers/github-context";
 import type {
   Draft,
   ImportRecord,
@@ -297,7 +298,7 @@ function createMockApi(page: Page) {
   let approveBody: Record<string, unknown> | null = null;
   let changedScopes: RepositoryScope[] = [];
 
-  const handler = async (route: Route) => {
+  const dispatch = async (route: Route) => {
     const request = route.request();
     const url = new URL(request.url());
     const path = url.pathname;
@@ -538,10 +539,51 @@ function createMockApi(page: Page) {
       body: JSON.stringify({
         error: {
           code: "not-found",
-          message: "No mock route",
+          message: `No mock route for ${method} ${path}`,
           retryable: false,
         },
       }),
+    });
+  };
+
+  const handler = async (route: Route) => {
+    const request = route.request();
+    if (
+      new URL(request.url()).pathname !== "/api/github/session" ||
+      request.method() !== "POST"
+    )
+      return dispatch(route);
+
+    const envelope = request.postDataJSON() as {
+      path: string;
+      method: string;
+      body?: unknown;
+      state: string | null;
+    };
+    let status = 200;
+    let body: unknown = null;
+    const underlyingRoute = {
+      request: () => ({
+        url: () => new URL(envelope.path, request.url()).href,
+        method: () => envelope.method,
+        postDataJSON: () => envelope.body,
+      }),
+      fulfill: async (response: { status?: number; body?: string }) => {
+        status = response.status ?? 200;
+        body = JSON.parse(response.body ?? "null");
+      },
+    } as unknown as Route;
+    await dispatch(underlyingRoute);
+
+    const state = envelope.state ?? "task-30-session";
+    return route.fulfill({
+      status: 200,
+      contentType: "application/x-ndjson",
+      body:
+        JSON.stringify({ type: "checkpoint", state }) +
+        "\n" +
+        JSON.stringify({ type: "result", state, status, body }) +
+        "\n",
     });
   };
 
@@ -617,9 +659,10 @@ async function prepareAndAnalyze(
   await page
     .getByRole("combobox", { name: "Repository" })
     .selectOption(repository.repositoryId);
-  await page
-    .getByLabel("Your role on this project", { exact: true })
-    .fill("I built the summary pipeline and tests.");
+  await completeProjectInterview(
+    page,
+    "I built the summary pipeline and tests.",
+  );
   await page.getByText("Optional pull requests and file paths").click();
   await page.getByLabel("Pull request numbers").fill("17");
   await page.getByLabel("Manual repository paths").fill("src/summary.ts");
@@ -897,9 +940,7 @@ test("repository access refresh updates the picker without reconnecting and clea
   });
   await expect(picker).toBeEnabled();
   await picker.selectOption(repository.repositoryId);
-  await page
-    .getByLabel("Your role on this project", { exact: true })
-    .fill("I built the summary pipeline.");
+  await completeProjectInterview(page, "I built the summary pipeline.");
   await expect(
     page.getByRole("button", {
       name: "Prepare selected evidence",
