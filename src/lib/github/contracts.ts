@@ -5,9 +5,8 @@ import { ProjectContextSchema } from "./context-interview/types";
 /** Shared contracts for the GitHub evidence-import feature. */
 export const GITHUB_IMPORT_CONTRACT_VERSION = 1 as const;
 export const GITHUB_IMPORT_SAFETY_POLICY_VERSION = "github-safety-v1" as const;
-export const GITHUB_IMPORT_SELECTOR_VERSION =
-  "contribution-selector-v2" as const;
-export const GITHUB_IMPORT_PROMPT_VERSION = "repository-extraction-v1" as const;
+export const GITHUB_IMPORT_SELECTOR_VERSION = "project-evidence-v1" as const;
+export const GITHUB_IMPORT_PROMPT_VERSION = "repository-extraction-v4" as const;
 
 export const GITHUB_IMPORT_POLICY = Object.freeze({
   targetFiles: { min: 8, max: 10 },
@@ -689,8 +688,20 @@ export const MeasurementResultSchema = z
   .strict();
 export type MeasurementResult = z.infer<typeof MeasurementResultSchema>;
 
+export const ProjectUnderstandingSchema = z
+  .object({
+    purpose: z.string().max(500),
+    intendedUsers: z.string().max(500),
+    workflow: z.string().max(1_000),
+    differentiators: z.array(z.string().max(500)).max(5),
+    evidenceIds: z.array(id).max(30),
+    purposeEvidenceIds: z.array(id).max(20).optional(),
+  })
+  .strict();
+
 export const AnalysisResultSchema = z
   .object({
+    projectUnderstanding: ProjectUnderstandingSchema.optional(),
     summary: z.string().max(4_000),
     claims: z.array(ContributionClaimSchema).max(GITHUB_IMPORT_POLICY.claims),
     drafts: z.array(DraftSchema).max(GITHUB_IMPORT_POLICY.draftPoints),

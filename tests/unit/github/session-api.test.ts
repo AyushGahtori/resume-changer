@@ -222,7 +222,7 @@ it("uses real session HTTP contracts, retains completed downloads after failure 
       .flatMap((a: { snapshots: { selectorVersion: string }[] }) => a.snapshots)
       .some(
         (snapshot: { selectorVersion: string }) =>
-          snapshot.selectorVersion === "contribution-selector-v2",
+          snapshot.selectorVersion === "project-evidence-v1",
       ),
   ).toBe(true);
   expect(

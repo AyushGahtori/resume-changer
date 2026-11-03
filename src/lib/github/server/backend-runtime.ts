@@ -214,6 +214,26 @@ export function createGithubBackendRuntime(deps: GithubBackendDependencies): {
   });
   const policy = createSelectionPolicy({});
   const inspection = createInspectionPorts({
+    async getCachedFile(candidate, context, repositoryId) {
+      const result = await imports.cacheGet(
+        {
+          identity: {
+            kind: "safe-content",
+            repositoryId,
+            blobSha: candidate.blobSha,
+            parserVersion: "github-source-text-v1",
+            safetyPolicyVersion: "github-file-safety-v1",
+          },
+        },
+        context,
+      );
+      if (!result.ok) throw new Error("Cached source could not be read.");
+      return result.value?.value.kind === "safe-content"
+        ? result.value.value.files.find(
+            (file) => file.blobSha === candidate.blobSha,
+          )?.content
+        : undefined;
+    },
     async onFileRead(file, context, repositoryId) {
       const session = currentImportSession();
       if (!session) return;
