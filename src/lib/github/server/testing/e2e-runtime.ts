@@ -328,9 +328,39 @@ export async function createE2eGithubServices({
             "HTTP_403",
           );
         }
-        const id = data.evidence.find(
+        const selectedEvidence = data.evidence.find(
           (e: { path: string }) => e.path === "src/publish.ts",
-        ).id;
+        );
+        if (!selectedEvidence) {
+          const available = data.availableEvidence?.find(
+            (e: { path: string }) => e.path === "src/publish.ts",
+          );
+          if (!available)
+            throw new Error("Publishing evidence is unavailable.");
+          return {
+            text: JSON.stringify({
+              projectSummary: "",
+              claims: [],
+              drafts: [],
+              questionSuggestions: [],
+              limitations: [],
+              contextRequest: {
+                missingInformation: "Read the publishing implementation.",
+                evidenceIds: [available.id],
+              },
+            }),
+            model: "synthetic-source-extractor",
+            finishReason: "STOP",
+            usage: {
+              promptTokens: 500,
+              cachedTokens: 0,
+              outputTokens: 50,
+              reasoningTokens: 0,
+              totalTokens: 550,
+            },
+          };
+        }
+        const id = selectedEvidence.id;
         await new Promise((r) => setTimeout(r, 1200));
         return {
           text: JSON.stringify(

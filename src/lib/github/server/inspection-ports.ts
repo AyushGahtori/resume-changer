@@ -46,12 +46,19 @@ import {
 } from "./phase-one-core";
 import { ledgerFor, persistRunBudget } from "./budget-port";
 import { readerOperation, reportReaderFailure } from "./reader-diagnostics";
+import { prepareProjectEvidence } from "./project-evidence";
+import type { PreparedEvidence } from "./selector-core";
 
 type Transport = Omit<
   GithubClientDependencies,
   "ledger" | "onAttemptSettled" | "now"
 >;
 export type InspectionDependencies = {
+  getCachedFile?: (
+    candidate: NativeCandidate,
+    context: ExecutionContext,
+    repositoryId: string,
+  ) => Promise<string | undefined>;
   onFileRead?: (
     file: { fileId: string; path: string; blobSha: string; content: string },
     context: ExecutionContext,
@@ -113,6 +120,8 @@ export function createInspectionPorts(deps: InspectionDependencies) {
     snapshot?: NativeSnapshot;
     scope?: RepositoryScope;
     plan?: SelectionPlan;
+    projectEvidence?: PreparedEvidence;
+    content: Map<string, { text: string; blobSha: string; byteSize: number }>;
     candidates: Map<string, FileCandidate>;
     context: ExecutionContext;
     github: ReturnType<typeof createGithubClient>;
@@ -157,7 +166,13 @@ export function createInspectionPorts(deps: InspectionDependencies) {
         return result;
       },
     });
-    s = { context, github, checkpointStats, candidates: new Map() };
+    s = {
+      context,
+      github,
+      checkpointStats,
+      candidates: new Map(),
+      content: new Map(),
+    };
     states.set(ledger, s);
     return s;
   }
@@ -214,6 +229,36 @@ export function createInspectionPorts(deps: InspectionDependencies) {
     if (!s.snapshot || !s.scope)
       return invalid("A pinned repository snapshot is required.");
     if (!(await allowed(context, s.scope.repositoryId))) return denied();
+    const cacheKey = `${s.snapshot.commitSha}:${candidate.path}:${candidate.blobSha}`;
+    const cached = s.content.get(cacheKey);
+    if (cached) return ok(cached);
+    const saved = await deps.getCachedFile?.(
+      candidate,
+      context,
+      s.scope.repositoryId,
+    );
+    if (saved !== undefined) {
+      const bytes = Buffer.from(saved, "utf8");
+      const hash = createHash(
+        candidate.blobSha.length === 64 ? "sha256" : "sha1",
+      )
+        .update(`blob ${bytes.length}\0`)
+        .update(bytes)
+        .digest("hex");
+      if (
+        hash === candidate.blobSha.toLowerCase() &&
+        bytes.length <= 65_536 &&
+        inspectFileContent(saved, candidate.path).safe
+      ) {
+        const content = {
+          text: saved,
+          blobSha: candidate.blobSha,
+          byteSize: bytes.length,
+        };
+        s.content.set(cacheKey, content);
+        return ok(content);
+      }
+    }
     const screened = getPathExclusionReason({ ...candidate });
     if (screened)
       return invalid(
@@ -248,7 +293,23 @@ export function createInspectionPorts(deps: InspectionDependencies) {
       !inspectFileContent(text, candidate.path).safe
     )
       return invalid("The source does not match its pinned safe blob.");
-    return ok({ text, blobSha: candidate.blobSha, byteSize: bytes.length });
+    const content = {
+      text,
+      blobSha: candidate.blobSha,
+      byteSize: bytes.length,
+    };
+    s.content.set(cacheKey, content);
+    await deps.onFileRead?.(
+      {
+        fileId: candidate.id,
+        path: candidate.path,
+        blobSha: candidate.blobSha,
+        content: text,
+      },
+      context,
+      s.scope.repositoryId,
+    );
+    return ok(content);
   }
   const repository: RepositoryInspectorPort = {
     async resolveSnapshot({ scope, context }) {
@@ -545,14 +606,30 @@ export function createInspectionPorts(deps: InspectionDependencies) {
           retryable: r.error.retryable,
         });
       s.plan = r.value;
+      s.projectEvidence = undefined;
+      if (process.env.GITHUB_PROJECT_CONTEXT !== "legacy") {
+        const project = await prepareProjectEvidence({
+          plan: r.value,
+          inventory: inventory.map(nativeCandidate),
+          context: evidenceContext(context, s.snapshot.snapshotId),
+          authorize: () => allowed(context, scope.repositoryId),
+          readFile: (candidate) => readFile(candidate, context),
+        });
+        if (!project.ok) return project;
+        s.projectEvidence = project.value.prepared;
+      }
+      const selectedIds = s.projectEvidence?.selectedFileIds;
       return ok({
-        selected: r.value.selectedFiles.map((f) => ({
-          ...s.candidates.get(f.candidate.id)!,
+        selected: (
+          selectedIds ?? r.value.selectedFiles.map((f) => f.candidate.id)
+        ).map((id) => ({
+          ...s.candidates.get(id)!,
           selected: true,
-          pinned: pinnedFileIds.includes(f.candidate.id),
+          pinned: pinnedFileIds.includes(id),
         })),
-        limitations: r.value.limitations,
-        missingDimensions: r.value.missingDimensions,
+        limitations: s.projectEvidence?.limitations ?? r.value.limitations,
+        missingDimensions:
+          s.projectEvidence?.missingDimensions ?? r.value.missingDimensions,
       });
     },
     async pack({
@@ -566,10 +643,12 @@ export function createInspectionPorts(deps: InspectionDependencies) {
       const s = state(context);
       if (!s.plan || !s.snapshot)
         return invalid("The safe selection plan is missing.");
-      const r = await selectorFor(context, scope, [], contentByFileId).pack({
-        selected: s.plan,
-        context: evidenceContext(context, s.snapshot.snapshotId),
-      });
+      const r = s.projectEvidence
+        ? ok(s.projectEvidence)
+        : await selectorFor(context, scope, [], contentByFileId).pack({
+            selected: s.plan,
+            context: evidenceContext(context, s.snapshot.snapshotId),
+          });
       if (!r.ok)
         return err({
           code: r.error.code,

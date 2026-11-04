@@ -96,6 +96,7 @@ describe("worker-safe repository extraction provider", () => {
         "drafts",
         "questionSuggestions",
         "limitations",
+        "projectUnderstanding",
       ],
     });
     expect(JSON.stringify(request.mock.calls[0][0].outputSchema)).not.toMatch(

@@ -254,6 +254,171 @@ function extractorWithResponses(
 }
 
 describe("GitHub repository extraction (task 16)", () => {
+  it("accepts ordinary verb inflection in a supported project opening", async () => {
+    const output = modelResponse({
+      projectUnderstanding: {
+        purpose: "summarize dashboard records",
+        intendedUsers: "dashboard users",
+        workflow: "Maps records to rows.",
+        differentiators: [],
+        evidenceIds: ["evidence-summary"],
+        purposeEvidenceIds: ["evidence-summary"],
+      },
+      drafts: [
+        {
+          text: "Built a tool that summarizes dashboard records.",
+          claimIndexes: [0],
+          limitations: [],
+        },
+      ],
+    });
+    const run = extractorWithResponses([generated(output)]);
+    const { context } = executionContext();
+    const prepared = preparedSelection();
+    const result = await run.extractor.extract({
+      prepared,
+      contribution: prepared.scope.contributionStatement,
+      catalog,
+      context,
+    });
+    expect(result.ok, JSON.stringify(result)).toBe(true);
+    expect(run.provider.extractRepositoryAchievements).toHaveBeenCalledTimes(1);
+  });
+  it("repairs a draft that leaves the product purpose only in the summary", async () => {
+    const understanding = {
+      purpose: "summarize dashboard records",
+      intendedUsers: "dashboard users",
+      workflow: "Maps records to rows.",
+      differentiators: [],
+      evidenceIds: ["evidence-summary"],
+      purposeEvidenceIds: ["evidence-summary"],
+    };
+    const initial = modelResponse({ projectUnderstanding: understanding });
+    const repaired = modelResponse({
+      projectUnderstanding: understanding,
+      drafts: [
+        {
+          text: "Built a tool to summarize dashboard records by mapping selected records into rows.",
+          claimIndexes: [0],
+          limitations: [],
+        },
+      ],
+    });
+    const run = extractorWithResponses([
+      generated(initial),
+      generated(repaired),
+    ]);
+    const { context } = executionContext();
+    const prepared = preparedSelection();
+    const result = await run.extractor.extract({
+      prepared,
+      contribution: prepared.scope.contributionStatement,
+      catalog,
+      context,
+    });
+    expect(result.ok, JSON.stringify(result)).toBe(true);
+    expect(run.provider.extractRepositoryAchievements).toHaveBeenCalledTimes(2);
+    expect(
+      run.provider.extractRepositoryAchievements.mock.calls[1]![0].prompt,
+    ).toContain("first achievement must contain the project purpose");
+    if (result.ok)
+      expect(result.value.drafts[0]?.text).toContain(understanding.purpose);
+  });
+
+  it("rejects an opening that does not cite the project purpose evidence", async () => {
+    const output = modelResponse({
+      projectUnderstanding: {
+        purpose: "summarize dashboard records",
+        intendedUsers: "dashboard users",
+        workflow: "Maps records to rows.",
+        differentiators: [],
+        evidenceIds: ["evidence-summary"],
+        purposeEvidenceIds: ["evidence-summary"],
+      },
+      drafts: [
+        {
+          text: "Built a tool to summarize dashboard records.",
+          claimIndexes: [1],
+          limitations: [],
+        },
+      ],
+    });
+    const run = extractorWithResponses([generated(output), generated(output)]);
+    const { context } = executionContext();
+    const prepared = preparedSelection();
+    const result = await run.extractor.extract({
+      prepared,
+      contribution: prepared.scope.contributionStatement,
+      catalog,
+      context,
+    });
+    expect(result).toMatchObject({
+      ok: false,
+      error: { code: "invalid-evidence" },
+    });
+  });
+  it("expands only requested already-consented evidence once", async () => {
+    const base = preparedSelection();
+    const evidence = Array.from({ length: 4 }, (_, i) => ({
+      ...base.evidence[0]!,
+      id: `evidence-extra-${i}`,
+      path: `src/extra-${i}.ts`,
+      excerpt: "x".repeat(10_000),
+    }));
+    const prepared = preparedSelection({
+      evidence,
+      selectedFileIds: evidence.map((_, i) => `file-${i}`),
+      budget: {
+        ...base.budget,
+        selectedUniqueFiles: 4,
+        selectedCharacters: 40_000,
+      },
+    });
+    const run = extractorWithResponses([
+      generated(
+        modelResponse({
+          claims: [],
+          drafts: [],
+          contextRequest: {
+            missingInformation: "How is the workflow implemented?",
+            evidenceIds: ["evidence-extra-3"],
+          },
+        }),
+      ),
+      generated(
+        modelResponse({
+          claims: [
+            {
+              text: "The workflow processes records.",
+              evidenceIds: ["evidence-extra-3"],
+              usesContributionStatement: false,
+              limitations: [],
+            },
+          ],
+          drafts: [
+            {
+              text: "Built a record-processing workflow.",
+              claimIndexes: [0],
+              limitations: [],
+            },
+          ],
+        }),
+      ),
+    ]);
+    const { context } = executionContext();
+    const result = await run.extractor.extract({
+      prepared,
+      contribution: prepared.scope.contributionStatement,
+      catalog,
+      context,
+    });
+    expect(result.ok, JSON.stringify(result)).toBe(true);
+    expect(run.provider.extractRepositoryAchievements).toHaveBeenCalledTimes(2);
+    const second =
+      run.provider.extractRepositoryAchievements.mock.calls[1]![0].prompt;
+    expect(second).toContain('"id":"evidence-extra-3"');
+    expect(second).not.toContain('"id":"evidence-extra-2"');
+  });
   it("admits the 23,616-token source selection plus request overhead through the real budget, including recovery", async () => {
     const base = preparedSelection();
     const evidence = Array.from({ length: 4 }, (_, index) => ({
@@ -287,7 +452,25 @@ describe("GitHub repository extraction (task 16)", () => {
     const reserve = vi.spyOn(context.budget, "reserve");
     const run = extractorWithResponses([
       generated("invalid-json"),
-      generated(modelResponse()),
+      generated(
+        modelResponse({
+          claims: [
+            {
+              text: "The module maps records into rows.",
+              evidenceIds: ["evidence-extra-2"],
+              usesContributionStatement: false,
+              limitations: [],
+            },
+          ],
+          drafts: [
+            {
+              text: "Built record summaries.",
+              claimIndexes: [0],
+              limitations: [],
+            },
+          ],
+        }),
+      ),
     ]);
     const result = await run.extractor.extract({
       prepared,
@@ -297,7 +480,7 @@ describe("GitHub repository extraction (task 16)", () => {
     });
     if (!result.ok) throw new Error(JSON.stringify(result.error));
     expect(run.provider.extractRepositoryAchievements).toHaveBeenCalledTimes(2);
-    expect(reserve.mock.calls[0]![0].amount).toBe(estimate.value);
+    expect(reserve.mock.calls[0]![0].amount).toBeLessThan(estimate.value);
   });
 
   it("returns cited review-only drafts and preserves actual provider usage", async () => {

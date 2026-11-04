@@ -37,10 +37,10 @@ import type {
   RepositorySnapshot,
 } from "../ports";
 
-const SELECTOR_VERSION = "github-context-selector-v3";
+const SELECTOR_VERSION = "project-evidence-v1";
 const SAFETY_POLICY_VERSION = "github-file-safety-v1";
 const SOURCE_PARSER_VERSION = "github-source-text-v1";
-const EXTRACTION_PROMPT_VERSION = "repository-achievements-v1";
+const EXTRACTION_PROMPT_VERSION = "repository-extraction-v4";
 const EXTRACTION_SCHEMA_VERSION = "github-analysis-result-v1";
 const EXTRACTION_SETTINGS_HASH = createHash("sha256")
   .update("default-extraction-settings-v1")
@@ -258,6 +258,12 @@ function sanitizeAnalysis(
     draftIds.size !== parsed.data.drafts.length ||
     parsed.data.claims.some((claim) =>
       claim.evidenceIds.some((evidenceId) => !evidenceIds.has(evidenceId)),
+    ) ||
+    parsed.data.projectUnderstanding?.evidenceIds.some(
+      (id) => !evidenceIds.has(id),
+    ) ||
+    parsed.data.projectUnderstanding?.purposeEvidenceIds?.some(
+      (id) => !evidenceIds.has(id),
     ) ||
     parsed.data.drafts.some((draft) =>
       draft.claimIds.some((claimId) => !claimIds.has(claimId)),

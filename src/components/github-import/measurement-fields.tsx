@@ -754,6 +754,11 @@ function QuestionMeasurement({
           <p className={styles.eyebrow}>Optional · no number required</p>
           <h3 id={titleId}>Add a measurement</h3>
           <p className={styles.prompt}>{question.prompt}</p>
+          <p className={styles.prompt}>
+            Consider time saved, accuracy, usage, reliability, or costs. For a
+            supported percentage improvements, provide comparable
+            before-and-after values and the app can calculate the change.
+          </p>
         </div>
         {expanded ? (
           <button

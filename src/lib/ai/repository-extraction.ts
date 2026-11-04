@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { ProjectContextSchema } from "../github/context-interview/types";
 import type { MetricDefinition } from "../github/contracts";
+import { ProjectUnderstandingSchema } from "../github/contracts";
 
 const id = z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
 
@@ -65,6 +66,19 @@ export const RepositoryExtractionModelInputSchema = z
     contribution: z.string().trim().min(1).max(2_000),
     projectContext: ProjectContextSchema.optional(),
     identitySource: z.enum(["github-account", "user-provided", "unknown"]),
+    availableEvidence: z
+      .array(
+        z
+          .object({
+            id,
+            path: z.string().min(1).max(1_024),
+            category: z.string().max(40),
+          })
+          .strict(),
+      )
+      .max(300)
+      .optional(),
+    finalAttempt: z.boolean().optional(),
     evidence: z
       .array(
         z
@@ -153,6 +167,15 @@ const ExtractedDraftSchema = z
 
 export const RepositoryExtractionModelResultSchema = z
   .object({
+    projectUnderstanding: ProjectUnderstandingSchema.optional(),
+    contextRequest: z
+      .object({
+        missingInformation: z.string().trim().min(1).max(500),
+        evidenceIds: z.array(id).min(1).max(12),
+      })
+      .strict()
+      .nullable()
+      .optional(),
     projectSummary: z.string().trim().max(2_000),
     claims: z.array(ExtractedClaimSchema).max(12),
     drafts: z.array(ExtractedDraftSchema).max(5),
@@ -192,6 +215,10 @@ export function repositoryExtractionOutputSchema(): Record<string, unknown> {
     RepositoryExtractionModelResultSchema,
   ) as Record<string, unknown>;
   delete schema.$schema;
+  // Historical cached results may omit this field, but new generations must
+  // provide a project story so the opening draft can be checked against it.
+  const required = Array.isArray(schema.required) ? schema.required : [];
+  schema.required = [...new Set([...required, "projectUnderstanding"])];
   return schema;
 }
 

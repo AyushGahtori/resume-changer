@@ -36,6 +36,10 @@ import {
   type RepositoryMetricCandidate,
 } from "../../ai/repository-extraction";
 import { buildRepositoryExtractionPrompt } from "../../ai/prompts/v1/extract-repository-achievements";
+import {
+  initialRepositoryContext,
+  expandRepositoryContext,
+} from "../../ai/repository-context";
 
 const MAX_PROMPT_TOKENS_PER_ATTEMPT =
   GITHUB_IMPORT_POLICY.inputTokensPerRequest;
@@ -497,6 +501,21 @@ function numericClaim(text: string): boolean {
 const unsafeGeneratedText =
   /(?:https?:\/\/|\bwww\.|```|`|\b(?:gh[pousr]_[a-z0-9]{8,}|github_pat_[a-z0-9_]{12,}|AIza[\w-]{20,})\b|-----BEGIN [A-Z ]*PRIVATE KEY-----|\b(?:npm|pnpm|yarn|git|curl|wget|sudo|powershell)\s+(?:run|install|exec|clone|fetch|push|config)\b)/iu;
 
+/** Permit ordinary plural and third-person verb inflections in the opening. */
+function normalizePurpose(text: string): string {
+  return text
+    .toLocaleLowerCase("en-US")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim()
+    .split(/\s+/u)
+    .map((word) =>
+      word.length > 4 && word.endsWith("s") && !word.endsWith("ss")
+        ? word.slice(0, -1)
+        : word,
+    )
+    .join(" ");
+}
+
 function validateModelResult(
   raw: unknown,
   input: RepositoryExtractionModelInput,
@@ -519,6 +538,35 @@ function validateModelResult(
   }
 
   const knownEvidence = new Set(input.evidence.map(({ id }) => id));
+  const availableEvidence = new Set(
+    input.availableEvidence?.map(({ id }) => id),
+  );
+  const request = parsed.data.contextRequest;
+  const understanding = parsed.data.projectUnderstanding;
+  if (
+    (request &&
+      (request.evidenceIds.some((id) => !availableEvidence.has(id)) ||
+        parsed.data.claims.length > 0 ||
+        parsed.data.drafts.length > 0)) ||
+    (understanding &&
+      (understanding.evidenceIds.some((id) => !knownEvidence.has(id)) ||
+        understanding.purposeEvidenceIds?.some(
+          (id) => !knownEvidence.has(id),
+        ) ||
+        [
+          understanding.purpose,
+          understanding.intendedUsers,
+          understanding.workflow,
+          ...understanding.differentiators,
+        ].some((text) => numericClaim(text) || unsafeGeneratedText.test(text))))
+  ) {
+    return err(
+      domainError(
+        "invalid-evidence",
+        "Project understanding or context requests refer to unsupported evidence or claims.",
+      ),
+    );
+  }
   const knownQuestions = repositoryCatalogIds(input.catalog);
   if (
     numericClaim(parsed.data.projectSummary) ||
@@ -559,6 +607,29 @@ function validateModelResult(
         domainError(
           "invalid-evidence",
           "A draft contains an unsupported claim reference, number, or unsafe value.",
+        ),
+      );
+    }
+  }
+  if (understanding?.purpose && parsed.data.drafts.length > 0) {
+    const opening = parsed.data.drafts[0]!;
+    const purposeIds =
+      understanding.purposeEvidenceIds ?? understanding.evidenceIds;
+    const purposeCited = opening.claimIndexes.some((index) =>
+      parsed.data.claims[index]?.evidenceIds.some((id) =>
+        purposeIds.includes(id),
+      ),
+    );
+    if (
+      !normalizePurpose(opening.text).includes(
+        normalizePurpose(understanding.purpose),
+      ) ||
+      !purposeCited
+    ) {
+      return err(
+        domainError(
+          "invalid-evidence",
+          "The first achievement must contain the project purpose phrase and cite supporting purpose evidence.",
         ),
       );
     }
@@ -677,6 +748,9 @@ function toAnalysisResult(input: {
     ...input.parsed.drafts.flatMap((draft) => draft.limitations),
   ];
   const result = AnalysisResultSchema.safeParse({
+    ...(input.parsed.projectUnderstanding
+      ? { projectUnderstanding: input.parsed.projectUnderstanding }
+      : {}),
     summary: input.parsed.projectSummary,
     claims,
     drafts,
@@ -761,7 +835,8 @@ function createExtractor(
         input.metricCandidates ?? [],
       );
       if (!modelInputResult.ok) return modelInputResult;
-      const modelInput = modelInputResult.value;
+      const fullModelInput = modelInputResult.value;
+      let modelInput = initialRepositoryContext(fullModelInput);
 
       if (prepared.evidence.length === 0) {
         return toAnalysisResult({
@@ -827,6 +902,7 @@ function createExtractor(
       let recoveryReason: string | undefined;
 
       for (let attempt = 0; attempt < MAX_EXTRACTION_ATTEMPTS; attempt += 1) {
+        if (attempt > 0) modelInput = { ...modelInput, finalAttempt: true };
         const currentTime = now();
         if (
           input.context.signal.aborted ||
@@ -1024,6 +1100,21 @@ function createExtractor(
             continue;
           }
           return err(validated.error);
+        }
+
+        if (validated.value.contextRequest) {
+          if (attempt + 1 < MAX_EXTRACTION_ATTEMPTS) {
+            modelInput = expandRepositoryContext(
+              modelInput,
+              fullModelInput,
+              validated.value.contextRequest.evidenceIds,
+            );
+            recoveryReason = `Additional approved evidence is included. Resolve this factual gap and write the final supported project bullets: ${validated.value.contextRequest.missingInformation}`;
+            continue;
+          }
+          validated.value.limitations.push(
+            "Essential project context remains missing after the bounded follow-up.",
+          );
         }
 
         return toAnalysisResult({
