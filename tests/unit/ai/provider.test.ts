@@ -7,6 +7,7 @@ import {
   createGeminiProvider,
   DEFAULT_MODEL,
   FALLBACK_MODEL,
+  LAST_RESORT_MODEL,
   parseRequestTimeout,
   REQUEST_TIMEOUT_MS,
 } from "../../../src/lib/ai/gemini-provider";
@@ -707,6 +708,53 @@ describe("Gemini adapter", () => {
     ).rejects.toMatchObject({ code: "SERVICE_UNAVAILABLE" });
     expect(models.length).toBeGreaterThan(0);
     expect(models.length).toBeLessThanOrEqual(6);
+  });
+
+  it("does not wait after a model's final rate-limit attempt", async () => {
+    const events: string[] = [];
+    const rateLimit = Object.assign(new Error("too many requests"), {
+      status: 429,
+      message: JSON.stringify({
+        error: {
+          details: [
+            {
+              "@type": "type.googleapis.com/google.rpc.RetryInfo",
+              retryDelay: "29s",
+            },
+          ],
+        },
+      }),
+    });
+    const provider = createGeminiProvider({
+      apiKey: "test-key",
+      model: DEFAULT_MODEL,
+      request: async ({ model }) => {
+        events.push(`call:${model}`);
+        throw rateLimit;
+      },
+      sleep: async (milliseconds) => {
+        events.push(`sleep:${milliseconds}`);
+      },
+    });
+
+    await expect(
+      provider.analyzeJobDescription({ jobDescription: "Platform role." }),
+    ).rejects.toMatchObject({
+      code: "RATE_LIMITED",
+      retryable: true,
+      retryAfterSeconds: 29,
+    });
+    expect(events).toEqual([
+      `call:${DEFAULT_MODEL}`,
+      "sleep:29000",
+      `call:${DEFAULT_MODEL}`,
+      `call:${FALLBACK_MODEL}`,
+      "sleep:29000",
+      `call:${FALLBACK_MODEL}`,
+      `call:${LAST_RESORT_MODEL}`,
+      "sleep:29000",
+      `call:${LAST_RESORT_MODEL}`,
+    ]);
   });
 
   it("reports the upstream retry delay for a rate limit", async () => {
