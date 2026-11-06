@@ -224,4 +224,72 @@ describe("GenerationHistoryEntrySchema", () => {
 
     expect(GenerationHistoryEntrySchema.safeParse(entry).success).toBe(false);
   });
+
+  it("rejects a duplicated selected achievement", () => {
+    const entry = structuredClone(validEntry);
+    entry.selectedAchievementIds = [
+      "achievement-api-reliability",
+      "achievement-api-reliability",
+    ];
+
+    expect(GenerationHistoryEntrySchema.safeParse(entry).success).toBe(false);
+  });
+
+  it("rejects oversized source lists before membership checks", () => {
+    const ids = Array.from(
+      { length: 20_000 },
+      (_, index) => `achievement-${index}`,
+    );
+    const entry = {
+      ...validEntry,
+      selectedAchievementIds: ids,
+      generatedBullets: ids.map((id, index) => ({
+        id: `generated-${index}`,
+        text: "Did the work.",
+        section: "experience" as const,
+        sourceAchievementIds: [id],
+      })),
+    };
+    const started = performance.now();
+    const parsed = GenerationHistoryEntrySchema.safeParse(entry);
+
+    expect(parsed.success).toBe(false);
+    expect(performance.now() - started).toBeLessThan(50);
+  });
+
+  it("checks source membership linearly for a valid history entry", () => {
+    const linked = (size: number) => {
+      const ids = Array.from(
+        { length: size },
+        (_, index) => `achievement-${index}`,
+      );
+      return {
+        ...validEntry,
+        selectedAchievementIds: ids,
+        generatedBullets: ids.map((id, index) => ({
+          id: `generated-${index}`,
+          text: "Did the work.",
+          section: "experience" as const,
+          sourceAchievementIds: ids,
+        })),
+      };
+    };
+    expect(GenerationHistoryEntrySchema.safeParse(linked(40)).success).toBe(
+      true,
+    );
+    const smallStarted = performance.now();
+    expect(GenerationHistoryEntrySchema.safeParse(linked(100)).success).toBe(
+      true,
+    );
+    const small = performance.now() - smallStarted;
+    const largeStarted = performance.now();
+    expect(GenerationHistoryEntrySchema.safeParse(linked(200)).success).toBe(
+      true,
+    );
+    const large = performance.now() - largeStarted;
+
+    // Doubling selections and references multiplies pair checks by four.
+    // A scan of the whole selected list for every reference would be about eight times.
+    expect(large).toBeLessThan(small * 6 + 30);
+  });
 });
