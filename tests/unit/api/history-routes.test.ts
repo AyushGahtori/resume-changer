@@ -161,6 +161,46 @@ describe("POST /api/history", () => {
     });
   });
 
+  it("rejects oversized and duplicate source lists before saving", async () => {
+    const ids = Array.from(
+      { length: 20_000 },
+      (_, index) => `achievement-${index}`,
+    );
+    const started = performance.now();
+    const oversized = await post(
+      generationInput({
+        selectedAchievementIds: ids,
+        generatedBullets: ids.map((id, index) => ({
+          id: `generated-${index}`,
+          text: "Did the work.",
+          section: "experience",
+          sourceAchievementIds: [id],
+        })),
+      }),
+    );
+    expect(oversized.status).toBe(400);
+    expect(performance.now() - started).toBeLessThan(500);
+    await expect(oversized.json()).resolves.toMatchObject({
+      error: expect.stringContaining("invalid"),
+    });
+    await expect(
+      listGenerationHistory({ rootDir: process.env.RESUME_LIBRARY_ROOT }),
+    ).resolves.toEqual([]);
+
+    const duplicate = await post(
+      generationInput({
+        selectedAchievementIds: [
+          "achievement-api-reliability",
+          "achievement-api-reliability",
+        ],
+      }),
+    );
+    expect(duplicate.status).toBe(400);
+    await expect(
+      listGenerationHistory({ rootDir: process.env.RESUME_LIBRARY_ROOT }),
+    ).resolves.toEqual([]);
+  });
+
   it("rejects a compiled generation that carries no PDF", async () => {
     const response = await post(generationInput({ status: "compiled" }));
 

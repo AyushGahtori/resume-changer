@@ -274,6 +274,17 @@ export async function readGenerationHistoryPdf(
   }
 }
 
+function historyEntry(metadata: unknown) {
+  const entry = GenerationHistoryEntrySchema.safeParse(metadata);
+  if (!entry.success) {
+    throw new GenerationHistoryError(
+      "invalid-generation",
+      "The generated resume could not be saved to history because its data is invalid.",
+    );
+  }
+  return entry.data;
+}
+
 export async function saveGenerationHistoryItem(
   input: unknown,
   options: { rootDir?: string; importOnly?: boolean } = {},
@@ -299,49 +310,40 @@ export async function saveGenerationHistoryItem(
       );
     }
   }
+  const { latex, pdfBase64: _pdfBase64, ...metadata } = parsed.data;
+  const latexHash = createHash("sha256").update(latex).digest("hex");
+  const texPath = artifactPath(metadata.id, latexHash, "tex");
+  const pdfHash = pdf
+    ? createHash("sha256").update(pdf).digest("hex")
+    : undefined;
+  const pdfPath = pdfHash
+    ? artifactPath(metadata.id, pdfHash, "pdf")
+    : undefined;
+  // Source membership is checked before files are written and before hosted
+  // storage applies its metadata quota.
+  const entry = historyEntry({
+    ...metadata,
+    texPath,
+    ...(pdfPath ? { pdfPath } : {}),
+  });
   if (getAppMode() === "firebase") {
     if (options.rootDir !== undefined)
       throw new Error("Hosted history cannot use a filesystem root.");
     const { saveCloudHistory } = await import("../cloud/history-store");
-    const { latex, pdfBase64: _pdfBase64, ...metadata } = parsed.data;
-    const latexHash = createHash("sha256").update(latex).digest("hex");
-    const pdfHash = pdf
-      ? createHash("sha256").update(pdf).digest("hex")
-      : undefined;
-    const entry = GenerationHistoryEntrySchema.parse({
-      ...metadata,
-      texPath: artifactPath(metadata.id, latexHash, "tex"),
-      ...(pdfHash
-        ? { pdfPath: artifactPath(metadata.id, pdfHash, "pdf") }
-        : {}),
-    });
     return saveCloudHistory(entry, latex, pdf, options.importOnly);
   }
   const rootDir = getRoot(options.rootDir);
   return withHistoryLock(rootDir, async () => {
     const history = await readHistory(rootDir);
-    const prior = history.entries.find((item) => item.id === parsed.data.id);
-    const latexHash = createHash("sha256")
-      .update(parsed.data.latex)
-      .digest("hex");
-    const texPath = artifactPath(parsed.data.id, latexHash, "tex");
+    const prior = history.entries.find((item) => item.id === entry.id);
     const keep = new Set([texPath]);
-    await writeAtomic(fileForReference(rootDir, texPath), parsed.data.latex);
+    await writeAtomic(fileForReference(rootDir, texPath), latex);
 
-    let pdfPath: string | undefined;
-    if (pdf) {
-      const pdfHash = createHash("sha256").update(pdf).digest("hex");
-      pdfPath = artifactPath(parsed.data.id, pdfHash, "pdf");
+    if (pdf && pdfPath) {
       keep.add(pdfPath);
       await writeAtomic(fileForReference(rootDir, pdfPath), pdf);
     }
 
-    const { latex: _latex, pdfBase64: _pdfBase64, ...metadata } = parsed.data;
-    const entry = GenerationHistoryEntrySchema.parse({
-      ...metadata,
-      texPath,
-      ...(pdfPath ? { pdfPath } : {}),
-    });
     const next: GenerationHistory = {
       schemaVersion: 1,
       entries: [
