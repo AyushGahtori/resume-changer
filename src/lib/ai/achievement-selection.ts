@@ -15,6 +15,7 @@ import {
 import { enrichSourceText } from "./draft-quality";
 import {
   assessRequirementCoverage,
+  openRequirementCoverage,
   semanticMatchScore,
   type CoverageAssessment,
 } from "./requirement-coverage";
@@ -290,9 +291,13 @@ function selectBalancedCandidates(
     }
   }
 
+  // Source and facet matches stay cached. Each added point updates only the
+  // requirements it can change, instead of rematching the whole library.
+  const utility = selectionUtility(input);
+  for (const candidate of selected) utility.commit(candidate.evidence.id);
+
   while (true) {
-    const currentIds = selected.map(({ evidence }) => evidence.id);
-    const currentValue = coverageUtility(input, currentIds);
+    const currentValue = utility.value();
     const usedLines = budgetCost(selected);
     const groupCounts = new Map<string, number>();
     for (const candidate of selected) {
@@ -311,8 +316,7 @@ function selectBalancedCandidates(
         const nextLines = budgetCost([...selected, item.candidate]);
         const gain = Math.max(
           0,
-          coverageUtility(input, [...currentIds, item.candidate.evidence.id]) -
-            currentValue,
+          utility.with(item.candidate.evidence.id) - currentValue,
         );
         const target = item.candidate.evidence.section === "projects" ? 2 : 4;
         return {
@@ -326,8 +330,81 @@ function selectBalancedCandidates(
       })
       .sort((left, right) => right.value - left.value)[0];
     if (!next || !addIfFits(next.item)) break;
+    utility.commit(next.item.candidate.evidence.id);
   }
   return selected;
+}
+
+const statusCredit = {
+  supported: 1,
+  partial: 0.4,
+  uncertain: 0.2,
+  "evidence-not-selected": 0,
+  "no-evidence-found": 0,
+} as const;
+const sourceCredit = {
+  job: 1,
+  project: 0.8,
+  education: 0.75,
+  credential: 0.4,
+  skill: 0.25,
+} as const;
+const priorityWeight = { required: 5, responsibility: 3, preferred: 1 };
+
+function requirementUtility(row: CoverageAssessment) {
+  const strongest = Math.max(
+    0,
+    ...row.evidence
+      .filter((source) => source.selected)
+      .map((source) => (source.inferred ? 0.1 : sourceCredit[source.kind])),
+  );
+  return (
+    priorityWeight[row.priority] *
+    statusCredit[row.status] *
+    (0.5 + 0.5 * strongest)
+  );
+}
+
+function selectionUtility(input: AchievementSelectionInput) {
+  const coverage = openRequirementCoverage(input);
+  const selected = new Set<string>();
+  let rows = coverage.assess([]);
+  const total = () =>
+    rows.reduce((sum, row) => sum + requirementUtility(row), 0);
+  const project = (id: string) => {
+    const touched = coverage.affectedBy(id);
+    if (touched.length === 0) return total();
+    const updated = coverage.assess([...selected], touched);
+    let cursor = 0;
+    let sum = 0;
+    for (let index = 0; index < rows.length; index += 1) {
+      sum += requirementUtility(
+        touched.includes(index) ? updated[cursor++] : rows[index],
+      );
+    }
+    return sum;
+  };
+  return {
+    value: total,
+    with(id: string) {
+      if (selected.has(id)) return total();
+      selected.add(id);
+      const sum = project(id);
+      selected.delete(id);
+      return sum;
+    },
+    commit(id: string) {
+      if (selected.has(id)) return;
+      selected.add(id);
+      const touched = coverage.affectedBy(id);
+      if (touched.length === 0) return;
+      const updated = coverage.assess([...selected], touched);
+      let cursor = 0;
+      rows = rows.map((row, index) =>
+        touched.includes(index) ? updated[cursor++] : row,
+      );
+    },
+  };
 }
 
 /** Value one grounded resume earns from the JD, including evidence strength. */
@@ -340,36 +417,8 @@ export function coverageUtility(
     summary?: string;
   } = {},
 ): number {
-  const statusCredit = {
-    supported: 1,
-    partial: 0.4,
-    uncertain: 0.2,
-    "evidence-not-selected": 0,
-    "no-evidence-found": 0,
-  } as const;
-  const sourceCredit = {
-    job: 1,
-    project: 0.8,
-    education: 0.75,
-    credential: 0.4,
-    skill: 0.25,
-  } as const;
-  const priorityWeight = { required: 5, responsibility: 3, preferred: 1 };
   return assessRequirementCoverage(input, selectedIds, options).reduce(
-    (sum, row) => {
-      const strongest = Math.max(
-        0,
-        ...row.evidence
-          .filter((source) => source.selected)
-          .map((source) => (source.inferred ? 0.1 : sourceCredit[source.kind])),
-      );
-      return (
-        sum +
-        priorityWeight[row.priority] *
-          statusCredit[row.status] *
-          (0.5 + 0.5 * strongest)
-      );
-    },
+    (sum, row) => sum + requirementUtility(row),
     0,
   );
 }
