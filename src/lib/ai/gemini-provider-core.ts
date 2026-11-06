@@ -740,7 +740,11 @@ export function createGeminiProvider(
             const upstreamDelayMs =
               (providerError.retryAfterSeconds ?? 0) * 1_000;
             const waitMs = upstreamDelayMs || RATE_LIMIT_BACKOFF_MS * attempt;
+            // Sleep only when this model still has another attempt. The final
+            // attempt cannot be retried, including after the last model.
+            const sameModelRetry = attempt < MAX_MODEL_ATTEMPTS;
             if (
+              sameModelRetry &&
               !dailyQuota &&
               !budgetSpent &&
               waitMs <= MAX_RATE_LIMIT_WAIT_MS &&
