@@ -1437,12 +1437,20 @@ export const ResumeLibrarySchema: z.ZodType<ResumeLibrary, ResumeLibrary> =
 export type NormalizedResumeLibrary = z.infer<typeof ResumeLibraryV2Schema>;
 export type ResumeLibraryInput = z.infer<typeof ResumeLibraryInputSchema>;
 
+/** One library holds at most this many achievements, so a generation cannot cite more. */
+export const MAX_HISTORY_SELECTED_ACHIEVEMENTS = 500;
+export const MAX_HISTORY_BULLETS = 500;
+export const MAX_HISTORY_BULLET_SOURCES = 500;
+
 export const GeneratedBulletSchema = z
   .object({
     id: StableIdSchema,
     text: nonEmptyText,
     section: z.enum(["experience", "projects"]),
-    sourceAchievementIds: z.array(StableIdSchema).min(1),
+    sourceAchievementIds: z
+      .array(StableIdSchema)
+      .min(1)
+      .max(MAX_HISTORY_BULLET_SOURCES),
   })
   .strict();
 
@@ -1452,8 +1460,10 @@ export const GenerationHistoryEntryFieldsSchema = z
     createdAt: z.iso.datetime(),
     company: nonEmptyText.optional(),
     role: nonEmptyText,
-    selectedAchievementIds: z.array(StableIdSchema),
-    generatedBullets: z.array(GeneratedBulletSchema),
+    selectedAchievementIds: z
+      .array(StableIdSchema)
+      .max(MAX_HISTORY_SELECTED_ACHIEVEMENTS),
+    generatedBullets: z.array(GeneratedBulletSchema).max(MAX_HISTORY_BULLETS),
     provider: nonEmptyText,
     status: z.enum(["drafted", "compiled", "failed"]),
     texPath: nonEmptyText.optional(),
@@ -1495,10 +1505,8 @@ export const GenerationHistoryEntrySchema =
         message: "Compiled generations must reference their PDF artifact.",
       });
     }
-    if (
-      new Set(entry.selectedAchievementIds).size !==
-      entry.selectedAchievementIds.length
-    ) {
+    const selectedIds = new Set(entry.selectedAchievementIds);
+    if (selectedIds.size !== entry.selectedAchievementIds.length) {
       context.addIssue({
         code: "custom",
         path: ["selectedAchievementIds"],
@@ -1507,7 +1515,7 @@ export const GenerationHistoryEntrySchema =
     }
     entry.generatedBullets.forEach((bullet, index) => {
       bullet.sourceAchievementIds.forEach((sourceId, sourceIndex) => {
-        if (!entry.selectedAchievementIds.includes(sourceId)) {
+        if (!selectedIds.has(sourceId)) {
           context.addIssue({
             code: "custom",
             path: [
