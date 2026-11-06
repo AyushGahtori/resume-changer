@@ -11,6 +11,11 @@ import type {
   JobAnalysisResult,
 } from "../../../src/lib/ai/contracts";
 import { AiProviderError } from "../../../src/lib/ai/provider";
+import {
+  assessRequirementCoverage,
+  resetSemanticMatchEvaluationCount,
+  semanticMatchEvaluationCount,
+} from "../../../src/lib/ai/requirement-coverage";
 import sampleLibrary from "../../../examples/sample-resume-library.json";
 import type { ResumeLibrary } from "../../../src/lib/schemas/resume-data";
 
@@ -625,5 +630,218 @@ describe("AI achievement selection service", () => {
       requirement: "Modernize feature store",
       coveredByAchievementIds: [],
     });
+  });
+
+  it("reuses requirement matches while preserving selection and coverage", async () => {
+    const base = makeInput();
+    const template = base.achievements[0];
+    const texts = [
+      "Deployed machine learning models on AWS with Docker.",
+      "Trained PyTorch models and documented the data pipeline.",
+      "Wrote SQL queries for feature tables.",
+      "Built Python services without a cloud deployment.",
+      "Maintained a bachelor degree in computer science program notes.",
+    ];
+    const analysisForLibrary: JobAnalysisResult = {
+      targetTitle: "ML Engineer",
+      seniority: "Mid level",
+      requiredQualifications: [
+        "Python",
+        "AWS",
+        "machine learning",
+        "Docker",
+        "SQL",
+      ],
+      responsibilities: [
+        "Deploy machine learning models",
+        "Document data pipelines",
+        "Train models",
+      ],
+      preferredQualifications: [
+        "PyTorch or TensorFlow",
+        "bachelor degree in computer science",
+      ],
+      toolsAndPlatforms: [],
+      domainConcepts: [],
+      atsTerms: [],
+      inferredContext: [],
+      terminology: [],
+    };
+    const libraryInput = (
+      count: number,
+      shape: "one-group" | "mixed" = "one-group",
+    ) => {
+      const achievements = Array.from({ length: count }, (_, index) => ({
+        ...template,
+        id: `point-${index}`,
+        text: `${texts[index % texts.length]} Case ${index}.`,
+        context: undefined,
+        tags: [],
+        supportedSkills: [],
+        metrics: [],
+        skillIds: [],
+        section:
+          shape === "mixed" && index % 2 === 1
+            ? ("projects" as const)
+            : ("experience" as const),
+        groupId:
+          shape === "mixed" && index % 2 === 1 ? "group-project" : "group-one",
+        groupTitle:
+          shape === "mixed" && index % 2 === 1 ? "One project" : "One role",
+      }));
+      return {
+        ...base,
+        analysis: analysisForLibrary,
+        achievements,
+        skills: [],
+        contentBudgetLines: 40,
+      };
+    };
+    const fallback = async (input: AchievementSelectionInput) =>
+      recommendAchievements({
+        input,
+        allowLocalFallback: true,
+        selectWithAi: async () => {
+          throw new Error("fallback");
+        },
+      });
+
+    const eight = libraryInput(8);
+    const eightResponse = await fallback(eight);
+    expect(
+      eightResponse.recommendations.selections.map(
+        (item) => item.achievementId,
+      ),
+    ).toEqual([
+      "point-0",
+      "point-1",
+      "point-3",
+      "point-2",
+      "point-5",
+      "point-6",
+      "point-7",
+      "point-4",
+    ]);
+    expect(
+      [0, 1, 2, 3].map((count) =>
+        coverageUtility(
+          eight,
+          eight.achievements.slice(0, count).map((item) => item.id),
+        ),
+      ),
+    ).toEqual([0.875, 20.075, 25.875, 30.875]);
+    expect(
+      assessRequirementCoverage(
+        eight,
+        ["point-0", "point-1"].map((id) => id),
+      ).map((row) => ({
+        requirement: row.requirement,
+        status: row.status,
+        covered: row.coveredByAchievementIds,
+        available: row.availableAchievementIds,
+        facets: row.facets.map((facet) => facet.matchedBy),
+      })),
+    ).toEqual([
+      {
+        requirement: "Python",
+        status: "evidence-not-selected",
+        covered: [],
+        available: ["point-3"],
+        facets: [[]],
+      },
+      {
+        requirement: "AWS",
+        status: "supported",
+        covered: ["point-0"],
+        available: ["point-0", "point-5"],
+        facets: [["point-0"]],
+      },
+      {
+        requirement: "machine learning",
+        status: "supported",
+        covered: ["point-0", "point-1"],
+        available: ["point-0", "point-1", "point-5", "point-6"],
+        facets: [["point-0", "point-1"]],
+      },
+      {
+        requirement: "Docker",
+        status: "supported",
+        covered: ["point-0"],
+        available: ["point-0", "point-5"],
+        facets: [["point-0"]],
+      },
+      {
+        requirement: "SQL",
+        status: "evidence-not-selected",
+        covered: [],
+        available: ["point-2", "point-7"],
+        facets: [[]],
+      },
+      {
+        requirement: "Deploy machine learning models",
+        status: "supported",
+        covered: ["point-0", "point-1"],
+        available: ["point-0", "point-1", "point-5", "point-6"],
+        facets: [["point-0", "point-1"], ["point-0"]],
+      },
+      {
+        requirement: "Document data pipelines",
+        status: "supported",
+        covered: ["point-1"],
+        available: ["point-1", "point-6"],
+        facets: [["point-1"]],
+      },
+      {
+        requirement: "Train models",
+        status: "supported",
+        covered: ["point-0", "point-1"],
+        available: ["point-0", "point-1", "point-5", "point-6"],
+        facets: [["point-1"]],
+      },
+      {
+        requirement: "PyTorch or TensorFlow",
+        status: "supported",
+        covered: ["point-1"],
+        available: ["point-1", "point-6"],
+        facets: [["point-1"]],
+      },
+      {
+        requirement: "bachelor degree in computer science",
+        status: "supported",
+        covered: [],
+        available: [],
+        facets: [["education-example-university"]],
+      },
+    ]);
+
+    const mixed = await fallback(libraryInput(6, "mixed"));
+    expect(
+      mixed.recommendations.selections.map((item) => item.achievementId),
+    ).toEqual([
+      "point-0",
+      "point-5",
+      "point-1",
+      "point-2",
+      "point-3",
+      "point-4",
+    ]);
+
+    const requirements = analysisForLibrary.requiredQualifications.length;
+    resetSemanticMatchEvaluationCount();
+    const startedSmall = performance.now();
+    await fallback(libraryInput(20));
+    const smallCount = semanticMatchEvaluationCount();
+    const smallElapsed = performance.now() - startedSmall;
+    resetSemanticMatchEvaluationCount();
+    const startedLarge = performance.now();
+    await fallback(libraryInput(80));
+    const largeCount = semanticMatchEvaluationCount();
+    const largeElapsed = performance.now() - startedLarge;
+
+    // One match pass per source and requirement, not one pass per candidate
+    // on every selection iteration. 80 points used to take about 20 seconds.
+    expect(largeCount).toBeLessThan(80 * requirements * 40);
+    expect(largeCount / smallCount).toBeLessThan(8);
+    expect(largeElapsed).toBeLessThan(Math.max(1500, smallElapsed * 8));
   });
 });
