@@ -511,6 +511,9 @@ export function ContextInterview({
           ? optionIds.filter((id) => id !== optionId)
           : [...optionIds, optionId];
     if (next.join("\u0000") === optionIds.join("\u0000")) return;
+    if (!next.includes(question.customOption.id) && !purposeQuestion) {
+      setCustomDraft("");
+    }
     setOptionIds(next);
     setNotice("");
     publishRevision("answer");
@@ -545,10 +548,14 @@ export function ContextInterview({
       setNotice("Choose an answer, or choose Not sure / Skip to continue.");
       return;
     }
+    const keepCustomText =
+      customSelected || (purposeQuestion && customDraft.trim().length > 0);
     const answer: InterviewAnswer = {
       nodeId: question.id,
       optionIds,
-      ...(customDraft.trim() ? { customAnswer: customDraft.trim() } : {}),
+      ...(keepCustomText && customDraft.trim()
+        ? { customAnswer: customDraft.trim() }
+        : {}),
       catalogVersion: snapshot.catalogVersion,
     };
     setNotice("");
