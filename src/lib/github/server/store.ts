@@ -95,12 +95,15 @@ function engine(deps: Dependencies) {
         const now = deps.now();
         if (!Number.isFinite(now.getTime()))
           fault("invalid-input", "A valid server clock is required.");
+        const before = JSON.stringify(doc);
         const result = await action(doc, ns, now);
         if (mutate) {
           const text = `${JSON.stringify(DocumentSchema.parse(doc))}\n`;
-          if (Buffer.byteLength(text) > MAX_BYTES)
-            fault("limit-exceeded", "The staged workspace is full.");
-          await writeState(root, target, text, deps.renameFile);
+          if (text !== `${before}\n`) {
+            if (Buffer.byteLength(text) > MAX_BYTES)
+              fault("limit-exceeded", "The staged workspace is full.");
+            await writeState(root, target, text, deps.renameFile);
+          }
         }
         return ok(result);
       };
@@ -640,12 +643,24 @@ export function createImportStore(
           expires > now.getTime() + GITHUB_IMPORT_POLICY.stageRetentionMs
         )
           fault("invalid-input", "Cache retention cannot exceed 24 hours.");
+        const key = hash(canonical({ identity, ns }));
+        const valueHash = hash(canonical(value));
+        const existing = doc.cache.find(
+          (entry) =>
+            entry.key === key && entry.authorizationNamespaceHash === ns,
+        );
+        if (
+          existing &&
+          existing.valueHash === valueHash &&
+          Date.parse(existing.expiresAt) > now.getTime()
+        )
+          return existing;
         const entry = ImportCacheEntrySchema.parse({
-          key: hash(canonical({ identity, ns })),
+          key,
           authorizationNamespaceHash: ns,
           identity,
           value,
-          valueHash: hash(canonical(value)),
+          valueHash,
           createdAt: now.toISOString(),
           expiresAt: new Date(expires).toISOString(),
           byteSize: Buffer.byteLength(canonical(value)),

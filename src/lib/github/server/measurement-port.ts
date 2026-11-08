@@ -64,6 +64,38 @@ function definition(id: string | null): MetricDefinition | undefined {
   return METRIC_CATALOG.find((d) => metricId(d.id) === id);
 }
 
+const CUSTOM_METRIC_ID = "custom-metric-v1";
+
+function isCustomMetric(id: string | null): boolean {
+  return id === CUSTOM_METRIC_ID;
+}
+
+function customEngineInput(answer: MeasurementAnswer): MeasurementAnswerInput {
+  const contextDescription = answer.context.contextDescription?.trim();
+  return {
+    definitionId: "custom.v1",
+    mode: "absolute",
+    status:
+      answer.mode === "report"
+        ? "documented"
+        : answer.attestation === "user-attested"
+          ? "user-attested"
+          : answer.attestation === "measured"
+            ? "measured"
+            : "documented",
+    customMetric: {
+      label: answer.context.customLabel?.trim() ?? "",
+      value: answer.originalValues[0],
+      unit: answer.originalUnits[0] ?? "",
+      ...(contextDescription ? { contextDescription } : {}),
+    },
+    evidence: {
+      sourceDescription: answer.context.sourceDescription,
+      evidenceIds: answer.sourceEvidenceIds,
+    },
+  };
+}
+
 function engineInput(answer: MeasurementAnswer): MeasurementAnswerInput {
   const d = definition(answer.definitionId);
   const context = { ...answer.context } as unknown as MeasurementContext;
@@ -112,6 +144,7 @@ function engineInput(answer: MeasurementAnswer): MeasurementAnswerInput {
 function derive(
   answer: MeasurementAnswer,
 ): Result<{ result: MeasurementResult; clause: string }> {
+  if (isCustomMetric(answer.definitionId)) return deriveCustom(answer);
   const input = engineInput(answer);
   const derived = deriveMeasurementResult(input);
   if (!derived.ok)
@@ -162,6 +195,55 @@ function derive(
   });
 }
 
+function deriveCustom(
+  answer: MeasurementAnswer,
+): Result<{ result: MeasurementResult; clause: string }> {
+  if (answer.mode === "target" || answer.originalValues.length !== 1) {
+    return invalid(
+      "A custom measurement needs one absolute value and cannot be stored as a target.",
+    );
+  }
+  const derived = deriveMeasurementResult(customEngineInput(answer));
+  if (!derived.ok)
+    return invalid(
+      derived.errors
+        .map((e) => e.message)
+        .join(" ")
+        .slice(0, 500),
+    );
+  const rendered = renderMetricClause(derived.value);
+  if (rendered.kind !== "review-note" || !rendered.clause) {
+    return invalid("Custom measurement needs manual review before use.");
+  }
+  const previewHash = digest(rendered.clause);
+  const evidenceStatus =
+    derived.value.evidenceStatus === "measured" ||
+    derived.value.evidenceStatus === "user-attested" ||
+    derived.value.evidenceStatus === "documented"
+      ? derived.value.evidenceStatus
+      : "documented";
+  return ok({
+    clause: rendered.clause,
+    result: MeasurementResultSchema.parse({
+      id: "result-" + digest(JSON.stringify(answer)).slice(0, 32),
+      definitionId: CUSTOM_METRIC_ID,
+      version: answer.version,
+      originalValues: answer.originalValues,
+      originalUnits: answer.originalUnits,
+      normalizedValues: [answer.originalValues[0]],
+      normalizedUnit: answer.originalUnits[0],
+      context: { ...answer.context, statistic: answer.statistic ?? "" },
+      evidenceStatus,
+      formulaVersion: null,
+      roundingPolicy: null,
+      derivedQuantity: null,
+      rendererId: "custom-review-v1",
+      previewHash,
+      confirmed: false,
+    }),
+  });
+}
+
 /** Lossless DTO adapter to Task 8's deterministic engine; no provider or IO. */
 export function createMeasurementPort(): MeasurementPort {
   return {
@@ -186,9 +268,14 @@ export function createMeasurementPort(): MeasurementPort {
       if (
         answer.mode !== "skip" &&
         answer.mode !== "defer" &&
-        !definition(answer.definitionId)
+        !definition(answer.definitionId) &&
+        !isCustomMetric(answer.definitionId)
       )
         return invalid("Choose a supported metric definition.");
+      if (isCustomMetric(answer.definitionId)) {
+        const custom = deriveCustom(answer);
+        return custom.ok ? ok(parsed.data) : custom;
+      }
       const checked = validateMeasurementAnswer(engineInput(answer));
       return checked.ok
         ? ok(parsed.data)

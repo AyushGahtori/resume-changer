@@ -437,6 +437,65 @@ test.describe("GitHub project context interview UI", () => {
     expect(persistentStorage).toBe(0);
   });
 
+  test("continues after deselecting custom text on single and multiple questions", async ({
+    page,
+  }) => {
+    await page.goto("/e2e/github-context-interview?engine=1");
+    await expect(
+      page.getByRole("heading", { name: "What is this project mainly for?" }),
+    ).toBeVisible();
+    await page.getByRole("radio", { name: "Something else" }).check();
+    await page
+      .getByRole("textbox", { name: "Your answer" })
+      .fill("Internal billing tool");
+    await page
+      .getByRole("radio", {
+        name: "A product or application for people to use",
+      })
+      .check();
+    await expect(
+      page.getByRole("textbox", {
+        name: "Clarify what the project is for (optional)",
+      }),
+    ).toHaveValue("Internal billing tool");
+    await page.getByRole("button", { name: "Continue" }).click();
+
+    await expect(
+      page.getByRole("heading", {
+        name: "Which areas or capabilities are part of it?",
+      }),
+    ).toBeVisible();
+    await page.getByRole("checkbox", { name: "Something else" }).check();
+    await page.getByRole("textbox", { name: "Your answer" }).fill("Batch jobs");
+    await page.getByRole("checkbox", { name: "Something else" }).uncheck();
+    await page
+      .getByRole("checkbox", { name: "Web or mobile experiences" })
+      .check();
+    await page.getByRole("button", { name: "Continue" }).click();
+
+    await expect(
+      page.getByRole("heading", {
+        name: "How would you describe your ownership of the project?",
+      }),
+    ).toBeVisible();
+    await page.getByRole("radio", { name: "Something else" }).check();
+    await page
+      .getByRole("textbox", { name: "Your answer" })
+      .fill("Shared lead");
+    await page
+      .getByRole("radio", { name: "I built the whole project" })
+      .check();
+    await expect(
+      page.getByRole("textbox", { name: "Your answer" }),
+    ).toHaveCount(0);
+    await page.getByRole("button", { name: "Continue" }).click();
+    await expect(
+      page.getByRole("heading", {
+        name: "How did you work with other people?",
+      }),
+    ).toBeVisible();
+  });
+
   test("explains an empty route and allows an honest empty review", async ({
     page,
   }) => {

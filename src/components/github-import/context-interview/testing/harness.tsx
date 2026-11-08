@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { ContextInterview } from "../context-interview";
+import { createEngineInterviewPort } from "../engine-port";
 import type { ContextRevisionEvent } from "../types";
 import {
   createScriptedContextInterviewPort,
@@ -15,6 +16,7 @@ export type InterviewHarnessProps = {
   failCalls?: number;
   dropNextAnswerResponse?: boolean;
   initialPhase?: "active" | "empty" | "expired";
+  useEngine?: boolean;
 };
 
 export function ContextInterviewHarness({
@@ -23,6 +25,7 @@ export function ContextInterviewHarness({
   failCalls,
   dropNextAnswerResponse,
   initialPhase,
+  useEngine = false,
 }: InterviewHarnessProps) {
   const fixture = useMemo(
     () =>
@@ -35,6 +38,10 @@ export function ContextInterviewHarness({
       }),
     [routeLength, delayMs, failCalls, dropNextAnswerResponse, initialPhase],
   );
+  const enginePort = useMemo(
+    () => (useEngine ? createEngineInterviewPort(() => undefined) : null),
+    [useEngine],
+  );
   const [events, setEvents] = useState<ContextRevisionEvent[]>([]);
 
   return (
@@ -44,7 +51,7 @@ export function ContextInterviewHarness({
         calls.
       </div>
       <ContextInterview
-        port={fixture.port}
+        port={enginePort ?? fixture.port}
         onContextRevisionChange={(event) =>
           setEvents((current) => [...current, event])
         }

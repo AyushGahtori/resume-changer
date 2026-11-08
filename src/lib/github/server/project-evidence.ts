@@ -52,6 +52,124 @@ function intent(path: string): ContextSection["role"] {
         : "implementation";
 }
 
+const MANIFEST_BASENAMES = new Set([
+  "androidmanifest.xml",
+  "build.gradle",
+  "build.gradle.kts",
+  "cargo.toml",
+  "go.mod",
+  "go.work",
+  "lerna.json",
+  "package.json",
+  "pnpm-workspace.yaml",
+  "pom.xml",
+  "pyproject.toml",
+  "requirements.txt",
+  "settings.gradle",
+  "settings.gradle.kts",
+  "setup.cfg",
+  "setup.py",
+]);
+const IMPLEMENTATION_READ_RESERVE = 2;
+
+function basename(path: string): string {
+  return path.split("/").at(-1)?.toLowerCase() ?? "";
+}
+
+function isManifestPath(path: string): boolean {
+  return MANIFEST_BASENAMES.has(basename(path));
+}
+
+function isOverviewPath(path: string): boolean {
+  return /^readme(?:\.[a-z0-9_-]+)*$/iu.test(basename(path));
+}
+
+function directoryOf(path: string): string {
+  const index = path.lastIndexOf("/");
+  return index < 0 ? "" : path.slice(0, index);
+}
+
+/** Keep overview, implementation, and pinned files from losing the shared read budget to manifests. */
+function planSharedReads(input: {
+  files: readonly FileCandidate[];
+  pinnedPaths: readonly string[];
+  hintPaths: readonly string[];
+  repositoryName: string;
+  preferredPaths: readonly string[];
+}): { reserved: Set<string>; allowedManifests: Set<string> } {
+  const paths = input.files.map((file) => file.path);
+  const pathSet = new Set(paths);
+  const pinned = input.pinnedPaths.filter((path) => pathSet.has(path));
+  const nameTerms = input.repositoryName
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .map((term) => term.replace(/(?:ing|ed|s)$/u, ""))
+    .filter((term) => term.length >= 5);
+  const nameMatches = (path: string) =>
+    nameTerms.some((term) => basename(path).includes(term));
+  const preferredRank = new Map(
+    input.preferredPaths.map((path, index) => [path, index]),
+  );
+  const overview = paths
+    .filter(isOverviewPath)
+    .sort(
+      (left, right) =>
+        left.split("/").length - right.split("/").length ||
+        left.localeCompare(right),
+    )[0];
+  const implementations = paths
+    .filter(
+      (path) => intent(path) === "implementation" && !isManifestPath(path),
+    )
+    .sort((left, right) => {
+      const pinnedRank =
+        Number(pinned.includes(right)) - Number(pinned.includes(left));
+      return (
+        pinnedRank ||
+        Number(nameMatches(right)) - Number(nameMatches(left)) ||
+        (preferredRank.get(left) ?? Number.MAX_SAFE_INTEGER) -
+          (preferredRank.get(right) ?? Number.MAX_SAFE_INTEGER) ||
+        left.split("/").length - right.split("/").length ||
+        left.localeCompare(right)
+      );
+    })
+    .slice(0, IMPLEMENTATION_READ_RESERVE);
+  const reserved = new Set(
+    [...pinned, ...(overview ? [overview] : []), ...implementations].filter(
+      (path) => pathSet.has(path),
+    ),
+  );
+  const rank = (path: string) => {
+    if (reserved.has(path)) return 0;
+    if (directoryOf(path) === "") return 1;
+    if (
+      input.hintPaths.some((hint) => {
+        const directory = directoryOf(path);
+        return hint === directory || hint.startsWith(`${directory}/`);
+      })
+    )
+      return 2;
+    return 3;
+  };
+  const manifests = paths
+    .filter(isManifestPath)
+    .sort(
+      (left, right) => rank(left) - rank(right) || left.localeCompare(right),
+    );
+  const extraSlots = Math.max(
+    0,
+    EVIDENCE_LIMITS.maxFetchedFiles - reserved.size,
+  );
+  const allowedManifests = new Set(
+    manifests
+      .filter((path) => reserved.has(path))
+      .concat(
+        manifests.filter((path) => !reserved.has(path)).slice(0, extraSlots),
+      ),
+  );
+  return { reserved, allowedManifests };
+}
+
 /** Inventory groups are retrieval hints, never product facts or ownership proof. */
 function area(path: string): string {
   const clean = path.replace(/^(?:tests?\/)(?:unit\/|e2e\/)?/, "src/");
@@ -148,6 +266,22 @@ export async function prepareProjectEvidence(
       f.byteSize <= EVIDENCE_LIMITS.maxFileBytes,
   );
   const byPath = new Map(safe.map((f) => [f.path, f]));
+  const pinnedPaths = plan.rankedCandidates
+    .filter((item) => item.pinned)
+    .map((item) => item.candidate.path);
+  const { reserved, allowedManifests } = planSharedReads({
+    files: safe,
+    pinnedPaths,
+    repositoryName: scope.name,
+    preferredPaths: plan.rankedCandidates.map((item) => item.candidate.path),
+    hintPaths: [
+      ...pinnedPaths,
+      ...(scope.selectedPaths ?? []),
+      ...safe
+        .filter((file) => intent(file.path) === "implementation")
+        .map((file) => file.path),
+    ],
+  });
   const loaded = new Map<
     string,
     { text: string; blobSha: string; byteSize: number }
@@ -165,10 +299,19 @@ export async function prepareProjectEvidence(
     if (!(await input.authorize())) return undefined;
     if (loaded.has(path)) return loaded.get(path);
     const file = byPath.get(path);
+    const used = loaded.size + failed.size;
+    const unreadReserved = [...reserved].filter(
+      (item) => item !== path && !loaded.has(item) && !failed.has(item),
+    ).length;
+    const reserveIsFull =
+      !reserved.has(path) &&
+      used + unreadReserved >= EVIDENCE_LIMITS.maxFetchedFiles;
     if (
       !file ||
       failed.has(path) ||
-      loaded.size + failed.size >= EVIDENCE_LIMITS.maxFetchedFiles ||
+      used >= EVIDENCE_LIMITS.maxFetchedFiles ||
+      reserveIsFull ||
+      (isManifestPath(path) && !allowedManifests.has(path)) ||
       fetchedBytes + file.byteSize > EVIDENCE_LIMITS.maxFetchedBytes
     )
       return undefined;
@@ -287,9 +430,8 @@ export async function prepareProjectEvidence(
   const visited = new Set<string>();
   const limitations: string[] = [];
   const seedPaths = [
-    ...plan.rankedCandidates
-      .filter((f) => f.pinned)
-      .map((f) => f.candidate.path),
+    ...reserved,
+    ...pinnedPaths,
     ...discovery.value.overviewCandidates
       .filter((c) => c.status === "candidate")
       .slice(0, 2)
@@ -395,6 +537,12 @@ export async function prepareProjectEvidence(
     const path = safe.find((f) => f.id === id)?.path;
     const section = ranking.ranked.rankedCandidates.find(
       (c) => c.path === path,
+    );
+    if (section) pinnedSections.add(section.sectionId);
+  }
+  for (const path of reserved) {
+    const section = ranking.ranked.rankedCandidates.find(
+      (candidate) => candidate.path === path,
     );
     if (section) pinnedSections.add(section.sectionId);
   }

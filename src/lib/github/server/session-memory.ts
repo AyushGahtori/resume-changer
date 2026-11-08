@@ -11,6 +11,8 @@ export type SessionMemory = {
   storage: DurableStateStorage;
   services?: Promise<import("./composition").GithubServerServices>;
   checkpoint?: () => Promise<void>;
+  /** Coalesced seal for completed file reads. Falls back to `checkpoint`. */
+  checkpointFile?: () => Promise<void>;
 };
 const sessions = new AsyncLocalStorage<SessionMemory>();
 export const currentImportSession = () => sessions.getStore();

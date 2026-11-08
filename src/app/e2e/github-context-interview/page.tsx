@@ -35,6 +35,7 @@ export default async function GitHubContextInterviewHarnessPage({
       failCalls={Math.min(3, Math.max(0, Number(first(params.fail)) || 0))}
       dropNextAnswerResponse={first(params.drop) === "1"}
       initialPhase={initialPhase}
+      useEngine={first(params.engine) === "1"}
     />
   );
 }

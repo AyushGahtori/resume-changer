@@ -14,6 +14,7 @@ import {
   type SessionMemory,
 } from "./session-memory";
 import { openImportSession, sealImportSession } from "./session-envelope";
+import { createSessionCheckpointer } from "./session-checkpoint";
 import { JobRecordSchema } from "../contracts";
 import { claimSessionOperation } from "./session-operations";
 import { resolveGithubConnectionSession } from "./connection-session";
@@ -108,9 +109,11 @@ export const sessionImport = protectAccountRoute(async (request: Request) => {
         if (!closed && !signal.aborted)
           controller.enqueue(encoder.encode(JSON.stringify(event) + "\n"));
       };
-      memory.checkpoint = async () => {
-        emit({ type: "checkpoint", state: sealImportSession(memory) });
-      };
+      const checkpointer = createSessionCheckpointer(memory, (state) => {
+        emit({ type: "checkpoint", state });
+      });
+      memory.checkpoint = checkpointer.checkpoint;
+      memory.checkpointFile = checkpointer.checkpointFile;
       void withImportSession(memory, async () => {
         let stage:
           | "route-resolution"

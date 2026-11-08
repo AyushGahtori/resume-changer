@@ -72,6 +72,57 @@ function fileForReference(rootDir: string, relativePath: string) {
   return target;
 }
 
+function isMissingFile(error: unknown) {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code?: string }).code === "ENOENT"
+  );
+}
+
+/**
+ * A save can replace the index and delete the artifact a reader already
+ * resolved. One retry reads the index again so the caller gets the current
+ * artifact instead of an I/O error for a file that was removed mid-read.
+ */
+async function readLocalArtifact(
+  rootDir: string,
+  id: string,
+  kind: "tex" | "pdf",
+): Promise<{ entry: GenerationHistoryEntry; contents: Buffer }> {
+  const unavailable =
+    kind === "tex"
+      ? "The saved LaTeX file is unavailable. The history entry was preserved."
+      : "The saved PDF file is unavailable. The history entry was preserved.";
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const history = await readHistory(rootDir);
+    const entry = history.entries.find((item) => item.id === id);
+    if (!entry) {
+      throw new GenerationHistoryError("not-found", "Generation not found.");
+    }
+    const reference = kind === "tex" ? entry.texPath : entry.pdfPath;
+    if (!reference) {
+      throw new GenerationHistoryError(
+        "not-found",
+        kind === "tex"
+          ? "LaTeX output is not available."
+          : "PDF output is not available.",
+      );
+    }
+    try {
+      return {
+        entry,
+        contents: await readFile(fileForReference(rootDir, reference)),
+      };
+    } catch (error) {
+      if (attempt === 0 && isMissingFile(error)) continue;
+      throw new GenerationHistoryError("io-error", unavailable);
+    }
+  }
+  throw new GenerationHistoryError("io-error", unavailable);
+}
+
 async function readHistory(rootDir: string): Promise<GenerationHistory> {
   let value: unknown;
   try {
@@ -220,27 +271,12 @@ export async function getGenerationHistoryItem(
   if (!parsedId.success)
     throw new GenerationHistoryError("not-found", "Generation not found.");
   const rootDir = getRoot(options.rootDir);
-  const history = await readHistory(rootDir);
-  const entry = history.entries.find((item) => item.id === parsedId.data);
-  if (!entry)
-    throw new GenerationHistoryError("not-found", "Generation not found.");
-  if (!entry.texPath)
-    throw new GenerationHistoryError(
-      "not-found",
-      "LaTeX output is not available.",
-    );
-  try {
-    const latex = await readFile(
-      fileForReference(rootDir, entry.texPath),
-      "utf8",
-    );
-    return { entry, latex };
-  } catch {
-    throw new GenerationHistoryError(
-      "io-error",
-      "The saved LaTeX file is unavailable. The history entry was preserved.",
-    );
-  }
+  const { entry, contents } = await readLocalArtifact(
+    rootDir,
+    parsedId.data,
+    "tex",
+  );
+  return { entry, latex: contents.toString("utf8") };
 }
 
 export async function readGenerationHistoryPdf(
@@ -257,21 +293,8 @@ export async function readGenerationHistoryPdf(
   if (!parsedId.success)
     throw new GenerationHistoryError("not-found", "Generation not found.");
   const rootDir = getRoot(options.rootDir);
-  const history = await readHistory(rootDir);
-  const entry = history.entries.find((item) => item.id === parsedId.data);
-  if (!entry?.pdfPath)
-    throw new GenerationHistoryError(
-      "not-found",
-      "PDF output is not available.",
-    );
-  try {
-    return await readFile(fileForReference(rootDir, entry.pdfPath));
-  } catch {
-    throw new GenerationHistoryError(
-      "io-error",
-      "The saved PDF file is unavailable. The history entry was preserved.",
-    );
-  }
+  const { contents } = await readLocalArtifact(rootDir, parsedId.data, "pdf");
+  return contents;
 }
 
 function historyEntry(metadata: unknown) {
