@@ -251,7 +251,7 @@ export function createGithubBackendRuntime(deps: GithubBackendDependencies): {
         context,
       );
       if (!saved.ok) throw new Error("Completed file could not be retained.");
-      await session.checkpoint?.();
+      await (session.checkpointFile ?? session.checkpoint)?.();
     },
     transport: deps.transport,
     authorize: deps.authorize,
