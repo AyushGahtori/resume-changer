@@ -1,4 +1,34 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+const artifactGate = vi.hoisted(() => ({
+  path: null as string | null,
+  wait: null as Promise<void> | null,
+  held: false,
+  entered: null as (() => void) | null,
+}));
+
+vi.mock("node:fs/promises", async () => {
+  const actual =
+    await vi.importActual<typeof import("node:fs/promises")>(
+      "node:fs/promises",
+    );
+  return {
+    ...actual,
+    readFile: async (path: string, options?: unknown) => {
+      if (
+        artifactGate.path &&
+        String(path) === artifactGate.path &&
+        !artifactGate.held
+      ) {
+        artifactGate.held = true;
+        artifactGate.entered?.();
+        if (artifactGate.wait) await artifactGate.wait;
+      }
+      return actual.readFile(path as never, options as never);
+    },
+  };
+});
+
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -47,11 +77,40 @@ const pdfBase64 = Buffer.from("%PDF-1.4\nresume fixture\n%%EOF").toString(
   "base64",
 );
 
+function resetArtifactGate() {
+  artifactGate.path = null;
+  artifactGate.wait = null;
+  artifactGate.held = false;
+  artifactGate.entered = null;
+}
+
 afterEach(async () => {
+  resetArtifactGate();
   await Promise.all(
     roots.splice(0).map((root) => rm(root, { recursive: true, force: true })),
   );
 });
+
+async function holdArtifact(path: string) {
+  let release!: () => void;
+  let entered!: () => void;
+  const wait = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const ready = new Promise<void>((resolve) => {
+    entered = resolve;
+  });
+  artifactGate.path = path;
+  artifactGate.wait = wait;
+  artifactGate.held = false;
+  artifactGate.entered = entered;
+  return {
+    ready,
+    release: () => {
+      release();
+    },
+  };
+}
 
 describe("local generation history store", () => {
   it("saves metadata and LaTeX to JSON-backed local history", async () => {
@@ -137,6 +196,49 @@ describe("local generation history store", () => {
     await expect(
       getGenerationHistoryItem(saved.id, { rootDir }),
     ).rejects.toMatchObject({ code: "not-found" });
+  });
+
+  it("returns the replacement LaTeX when a save removes the file mid-read", async () => {
+    const rootDir = await temporaryRoot();
+    const saved = await saveGenerationHistoryItem(input(), { rootDir });
+    const hold = await holdArtifact(join(rootDir, saved.texPath!));
+    const pending = getGenerationHistoryItem(saved.id, { rootDir });
+    try {
+      await hold.ready;
+      const updatedLatex =
+        "\\documentclass{article}\\begin{document}Updated resume\\end{document}";
+      const updated = await saveGenerationHistoryItem(
+        input({ latex: updatedLatex }),
+        { rootDir },
+      );
+      hold.release();
+      await expect(pending).resolves.toMatchObject({
+        entry: { id: saved.id, texPath: updated.texPath },
+        latex: updatedLatex,
+      });
+    } finally {
+      hold.release();
+    }
+  });
+
+  it("returns the replacement PDF when a save removes the file mid-read", async () => {
+    const rootDir = await temporaryRoot();
+    const saved = await saveGenerationHistoryItem(input({}, pdfBase64), {
+      rootDir,
+    });
+    const nextPdf = Buffer.from("%PDF-1.4\nupdated fixture\n%%EOF");
+    const hold = await holdArtifact(join(rootDir, saved.pdfPath!));
+    const pending = readGenerationHistoryPdf(saved.id, { rootDir });
+    try {
+      await hold.ready;
+      await saveGenerationHistoryItem(input({}, nextPdf.toString("base64")), {
+        rootDir,
+      });
+      hold.release();
+      await expect(pending).resolves.toEqual(nextPdf);
+    } finally {
+      hold.release();
+    }
   });
 
   it("rejects compiled entries without a valid PDF", async () => {
