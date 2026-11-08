@@ -157,7 +157,7 @@ function metricOptionsFor(question: ImportQuestion): MetricOption[] {
   const custom = parsed.find((choice) => choice.id === CUSTOM_METRIC_ID);
   const choices = parsed
     .filter((choice) => choice.id !== CUSTOM_METRIC_ID)
-    .map((choice) => {
+    .map((choice): MetricOption | null => {
       const definition = findDefinition(choice.id);
       return definition
         ? {

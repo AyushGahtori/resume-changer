@@ -46,7 +46,7 @@ export default defineConfig({
     reuseExistingServer: false,
     // The server builds the app before it starts, so the first run needs
     // longer than a plain start-up.
-    timeout: 300_000,
+    timeout: 900_000,
     stdout: "pipe",
     stderr: "pipe",
     gracefulShutdown: {
