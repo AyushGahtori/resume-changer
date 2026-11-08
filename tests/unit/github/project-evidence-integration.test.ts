@@ -179,4 +179,72 @@ describe("project evidence assembly", () => {
     expect(result.value.prepared.missingDimensions).not.toContain("purpose");
     expect(result.value.prepared.missingDimensions).not.toContain("method");
   });
+
+  it("reserves the repository implementation ahead of generic feature files", async () => {
+    const steps = Array.from(
+      { length: 55 },
+      (_, index) =>
+        `  const step${index} = input.trim() + "${"publishing detail ".repeat(8)}";`,
+    ).join("\n");
+    const bodies = new Map<string, string>([
+      ["README.md", "# Publishing API\nValidates publishing requests."],
+      ["package.json", JSON.stringify({ name: "publishing-large-input" })],
+      [
+        "src/publish.ts",
+        `export function validatePublish(input: string) {\n${steps}\n return input.trim();\n}`,
+      ],
+    ]);
+    for (let index = 0; index < 4; index++)
+      bodies.set(
+        `src/feature-${index}.ts`,
+        `export function feature${index}(input: string) {\n${steps}\n return input.trim();\n}`,
+      );
+    const inventory = [...bodies].map(([path, text], index) => ({
+      id: `file-${index}`,
+      path,
+      mode: "100644",
+      byteSize: Buffer.byteLength(text),
+      blobSha: gitBlobSha(text),
+    }));
+    const scope = makeScope({
+      repositoryId: "48",
+      name: "publishing-large-input",
+      contributionStatement: "Built the entire project.",
+    });
+    const context = makeContext();
+    const selector = createEvidenceSelector({
+      fetchFile: async () => ({
+        ok: false,
+        error: { code: "unavailable", message: "unused", retryable: false },
+      }),
+    });
+    const plan = selector.select({
+      inventory,
+      scope,
+      prContext: { selectedPullRequests: [] },
+      pinnedFileIds: [],
+      context,
+    });
+    expect(plan.ok).toBe(true);
+    if (!plan.ok) return;
+    const result = await prepareProjectEvidence({
+      plan: plan.value,
+      inventory,
+      context,
+      authorize: async () => true,
+      readFile: async (file) => ({
+        ok: true,
+        value: {
+          text: bodies.get(file.path)!,
+          blobSha: file.blobSha,
+          byteSize: file.byteSize,
+        },
+      }),
+    });
+    expect(result.ok, JSON.stringify(result)).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.prepared.evidence.map((item) => item.path)).toContain(
+      "src/publish.ts",
+    );
+  });
 });

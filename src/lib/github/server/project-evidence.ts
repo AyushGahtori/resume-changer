@@ -94,10 +94,22 @@ function planSharedReads(input: {
   files: readonly FileCandidate[];
   pinnedPaths: readonly string[];
   hintPaths: readonly string[];
+  repositoryName: string;
+  preferredPaths: readonly string[];
 }): { reserved: Set<string>; allowedManifests: Set<string> } {
   const paths = input.files.map((file) => file.path);
   const pathSet = new Set(paths);
   const pinned = input.pinnedPaths.filter((path) => pathSet.has(path));
+  const nameTerms = input.repositoryName
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .map((term) => term.replace(/(?:ing|ed|s)$/u, ""))
+    .filter((term) => term.length >= 5);
+  const nameMatches = (path: string) =>
+    nameTerms.some((term) => basename(path).includes(term));
+  const preferredRank = new Map(
+    input.preferredPaths.map((path, index) => [path, index]),
+  );
   const overview = paths
     .filter(isOverviewPath)
     .sort(
@@ -114,6 +126,9 @@ function planSharedReads(input: {
         Number(pinned.includes(right)) - Number(pinned.includes(left));
       return (
         pinnedRank ||
+        Number(nameMatches(right)) - Number(nameMatches(left)) ||
+        (preferredRank.get(left) ?? Number.MAX_SAFE_INTEGER) -
+          (preferredRank.get(right) ?? Number.MAX_SAFE_INTEGER) ||
         left.split("/").length - right.split("/").length ||
         left.localeCompare(right)
       );
@@ -257,6 +272,8 @@ export async function prepareProjectEvidence(
   const { reserved, allowedManifests } = planSharedReads({
     files: safe,
     pinnedPaths,
+    repositoryName: scope.name,
+    preferredPaths: plan.rankedCandidates.map((item) => item.candidate.path),
     hintPaths: [
       ...pinnedPaths,
       ...(scope.selectedPaths ?? []),
