@@ -487,4 +487,73 @@ describe("MeasurementFields", () => {
     });
     expect(submitted.answerHash).toMatch(/^[a-f0-9]{64}$/);
   });
+
+  it("renders a hyphenated custom metric and submits the entered value", async () => {
+    const onAnswer = vi.fn<MeasurementFieldsProps["onAnswer"]>();
+    const host = mount(
+      baseProps({
+        onAnswer,
+        questions: [
+          question({
+            definitionId: null,
+            choices: [
+              ...modeChoices,
+              metricChoice(publicId(apiDefinition.id), apiDefinition.label),
+              "metric:custom-metric-v1 — Describe a custom measurement",
+            ],
+          }),
+        ],
+      }),
+    );
+    click(host, '[data-testid="measurement-expand"]');
+    click(host, "Yes, I have a result");
+
+    const metric = host.querySelector<HTMLSelectElement>(
+      "#measurement-question-metric",
+    );
+    expect(
+      [...(metric?.options ?? [])].some(
+        (option) =>
+          option.value === "custom-metric-v1" &&
+          option.textContent?.includes("Describe a custom measurement"),
+      ),
+    ).toBe(true);
+
+    changeValue(host, "#measurement-question-metric", "custom-metric-v1");
+    expect(
+      host.querySelector("#measurement-question-custom-label"),
+    ).not.toBeNull();
+    changeValue(host, "#measurement-question-custom-unit", "widgets");
+    changeValue(
+      host,
+      "#measurement-question-sourceDescription",
+      "Operator count from the fictional dashboard",
+    );
+    click(host, "Preview measurement");
+    expect(onAnswer).not.toHaveBeenCalled();
+    expect(host.textContent).not.toContain("0 widgets");
+
+    changeValue(host, "#measurement-question-custom-label", "queue depth");
+    changeValue(host, "#measurement-question-custom-value", "12.5");
+    changeValue(
+      host,
+      "#measurement-question-custom-context",
+      "Peak weekday backlog",
+    );
+    click(host, "Preview measurement");
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(onAnswer).toHaveBeenCalledTimes(1);
+    expect(onAnswer.mock.calls[0]?.[1]).toMatchObject({
+      definitionId: "custom-metric-v1",
+      originalValues: [12.5],
+      originalUnits: ["widgets"],
+      context: {
+        customLabel: "queue depth",
+        contextDescription: "Peak weekday backlog",
+      },
+    });
+  });
 });

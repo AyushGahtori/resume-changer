@@ -38,10 +38,14 @@ interface FormDraft {
   attestation: Attestation;
   context: Record<string, string>;
   sourceDescription: string;
+  customLabel: string;
+  customContext: string;
 }
 
+const CUSTOM_METRIC_ID = "custom-metric-v1";
+
 interface MetricOption {
-  definition: MetricDefinition;
+  definition: MetricDefinition | null;
   publicId: string;
   label: string;
 }
@@ -135,22 +139,38 @@ function findDefinition(value: string | null | undefined) {
   );
 }
 
+function metricChoiceParts(
+  choice: string,
+): { id: string; label: string } | null {
+  const match = /^metric:([^—]+?)\s+—\s+(.+)$/u.exec(choice);
+  if (!match) return null;
+  return { id: match[1].trim(), label: match[2].trim() };
+}
+
 function metricOptionsFor(question: ImportQuestion): MetricOption[] {
   const questionDefinition = findDefinition(question.definitionId);
-  const choices = question.choices
+  const parsed = question.choices
+    .map(metricChoiceParts)
+    .filter(
+      (choice): choice is { id: string; label: string } => choice !== null,
+    );
+  const custom = parsed.find((choice) => choice.id === CUSTOM_METRIC_ID);
+  const choices = parsed
+    .filter((choice) => choice.id !== CUSTOM_METRIC_ID)
     .map((choice) => {
-      const match = /^metric:([^—]+?)\s+—\s+(.+)$/u.exec(choice);
-      if (!match) return null;
-      const definition = findDefinition(match[1].trim());
+      const definition = findDefinition(choice.id);
       return definition
         ? {
             definition,
             publicId: publicMetricId(definition),
-            label: match[2].trim(),
+            label: choice.label,
           }
         : null;
     })
     .filter((option): option is MetricOption => option !== null);
+  const customOption: MetricOption | null = custom
+    ? { definition: null, publicId: CUSTOM_METRIC_ID, label: custom.label }
+    : null;
 
   if (questionDefinition) {
     return [
@@ -161,7 +181,8 @@ function metricOptionsFor(question: ImportQuestion): MetricOption[] {
       },
     ];
   }
-  if (choices.length > 0) return choices;
+  const options = customOption ? [...choices, customOption] : choices;
+  if (options.length > 0) return options;
   return METRIC_CATALOG.map((definition) => ({
     definition,
     publicId: publicMetricId(definition),
@@ -201,6 +222,7 @@ function initialDraft(
   const chosenMode: InterviewMode | null =
     mode === "result" || mode === "report" || mode === "target" ? mode : null;
   const context = { ...(answer?.context ?? {}) };
+  const requestedId = answer?.definitionId ?? question.definitionId ?? "";
   if (!context.capabilityId && definition?.capabilityIds.length === 1) {
     context.capabilityId = definition.capabilityIds[0];
   }
@@ -209,7 +231,11 @@ function initialDraft(
   }
   return {
     mode: chosenMode,
-    definitionId: definition ? publicMetricId(definition) : "",
+    definitionId: definition
+      ? publicMetricId(definition)
+      : requestedId === CUSTOM_METRIC_ID
+        ? CUSTOM_METRIC_ID
+        : "",
     value:
       values.length > 1
         ? String(values[1])
@@ -235,6 +261,37 @@ function initialDraft(
             : "measured",
     context,
     sourceDescription: context.sourceDescription ?? "",
+    customLabel: context.customLabel ?? "",
+    customContext: context.contextDescription ?? "",
+  };
+}
+
+function enteredCustomNumber(raw: string): number | undefined {
+  const trimmed = raw.trim();
+  if (trimmed === "") return undefined;
+  const value = Number(trimmed);
+  return Number.isFinite(value) ? value : undefined;
+}
+
+function customEngineInput(draft: FormDraft): Record<string, unknown> {
+  const value = enteredCustomNumber(draft.value);
+  const contextDescription = draft.customContext.trim();
+  return {
+    definitionId: "custom.v1",
+    mode: "absolute",
+    status:
+      draft.mode === "report"
+        ? "documented"
+        : draft.attestation === "user-attested"
+          ? "user-attested"
+          : "measured",
+    customMetric: {
+      label: draft.customLabel.trim(),
+      ...(value === undefined ? {} : { value }),
+      unit: draft.unit.trim(),
+      ...(contextDescription ? { contextDescription } : {}),
+    },
+    evidence: { sourceDescription: draft.sourceDescription.trim() },
   };
 }
 
@@ -438,7 +495,8 @@ function QuestionMeasurement({
         normalizeMetricId(option.publicId) ===
         normalizeMetricId(draft.definitionId),
     );
-  const definition = selectedMetric?.definition;
+  const definition = selectedMetric?.definition ?? null;
+  const isCustom = selectedMetric?.publicId === CUSTOM_METRIC_ID;
   const currentServerPreview =
     !dirty &&
     question.answered &&
@@ -452,11 +510,18 @@ function QuestionMeasurement({
     serverPreview.evidenceStatus !== "none";
 
   const engineCheck = useMemo(() => {
-    if (
-      !definition ||
-      !draft.mode ||
-      (draft.mode === "target" && !draft.value)
-    ) {
+    if (!draft.mode || (draft.mode === "target" && !draft.value)) {
+      return { input: null, validation: null, derived: null, clause: null };
+    }
+    if (isCustom) {
+      const input = customEngineInput(draft);
+      const validation = validateMeasurementAnswer(input);
+      const derived = validation.ok ? deriveMeasurementResult(input) : null;
+      const clause =
+        derived?.ok === true ? renderMetricClause(derived.value) : null;
+      return { input, validation, derived, clause };
+    }
+    if (!definition) {
       return { input: null, validation: null, derived: null, clause: null };
     }
     const input = engineInput(draft, definition);
@@ -465,7 +530,7 @@ function QuestionMeasurement({
     const clause =
       derived?.ok === true ? renderMetricClause(derived.value) : null;
     return { input, validation, derived, clause };
-  }, [definition, draft]);
+  }, [definition, draft, isCustom]);
 
   const localErrors =
     engineCheck.validation && !engineCheck.validation.ok
@@ -553,7 +618,42 @@ function QuestionMeasurement({
   }
 
   function answerPayload(): Omit<MeasurementAnswer, "answerHash"> | null {
-    if (!definition || !draft.mode) return null;
+    if (!draft.mode) return null;
+    if (isCustom) {
+      const value = enteredCustomNumber(draft.value);
+      const label = draft.customLabel.trim();
+      const unit = draft.unit.trim();
+      if (draft.mode === "target" || value === undefined || !label || !unit) {
+        return null;
+      }
+      const mode = draft.mode;
+      return {
+        questionId: question.id,
+        version: question.version,
+        mode,
+        originalValues: [value],
+        originalUnits: [unit],
+        definitionId: CUSTOM_METRIC_ID,
+        statistic: null,
+        context: {
+          customLabel: label,
+          ...(draft.customContext.trim()
+            ? { contextDescription: draft.customContext.trim() }
+            : {}),
+          ...(draft.sourceDescription.trim()
+            ? { sourceDescription: draft.sourceDescription.trim() }
+            : {}),
+        },
+        sourceEvidenceIds: answer?.sourceEvidenceIds ?? [],
+        attestation:
+          mode === "report"
+            ? "documented"
+            : draft.attestation === "user-attested"
+              ? "user-attested"
+              : "measured",
+      };
+    }
+    if (!definition) return null;
     const mode = draft.mode;
     const unit = draft.unit || draft.context.targetUnit || "";
     const numericValues =
@@ -596,12 +696,30 @@ function QuestionMeasurement({
     event.preventDefault();
     setAttempted(true);
     setSubmitError("");
+    if (isCustom && draft.mode === "target") {
+      setSubmitError(
+        "A custom measurement cannot be stored as a future target.",
+      );
+      return;
+    }
     const payload = answerPayload();
     if (!payload) {
+      setSubmitError(
+        isCustom
+          ? "Enter a label, unit, and numeric value before continuing."
+          : "Choose a supported metric before continuing.",
+      );
+      return;
+    }
+    const input = isCustom
+      ? customEngineInput(draft)
+      : definition
+        ? engineInput(draft, definition)
+        : null;
+    if (!input) {
       setSubmitError("Choose a supported metric before continuing.");
       return;
     }
-    const input = engineInput(draft, definition!);
     const validated = validateMeasurementAnswer(input);
     if (!validated.ok) return;
 
@@ -860,11 +978,11 @@ function QuestionMeasurement({
                           ...previous.context,
                           capabilityId:
                             previous.context.capabilityId ||
-                            selected?.definition.capabilityIds[0] ||
+                            selected?.definition?.capabilityIds[0] ||
                             "",
                           taskType:
                             previous.context.taskType ||
-                            selected?.definition.taskTypes[0] ||
+                            selected?.definition?.taskTypes[0] ||
                             "",
                         },
                       }));
@@ -989,11 +1107,11 @@ function QuestionMeasurement({
                                 ...previous.context,
                                 capabilityId:
                                   previous.context.capabilityId ||
-                                  option?.definition.capabilityIds[0] ||
+                                  option?.definition?.capabilityIds[0] ||
                                   "",
                                 taskType:
                                   previous.context.taskType ||
-                                  option?.definition.taskTypes[0] ||
+                                  option?.definition?.taskTypes[0] ||
                                   "",
                               },
                             }));
@@ -1024,7 +1142,136 @@ function QuestionMeasurement({
                       </div>
                     ) : null}
 
-                    {definition ? (
+                    {isCustom ? (
+                      <>
+                        <div className={styles.field}>
+                          <label htmlFor={`${question.id}-custom-label`}>
+                            Custom metric label
+                            <span className={styles.required}>Required</span>
+                          </label>
+                          <input
+                            id={`${question.id}-custom-label`}
+                            value={draft.customLabel}
+                            onChange={(event) =>
+                              updateDraft(
+                                "customLabel",
+                                event.currentTarget.value,
+                              )
+                            }
+                            onBlur={() => markTouched("customLabel")}
+                            placeholder="Name the quantity you measured"
+                          />
+                        </div>
+                        <div className={styles.valueGrid}>
+                          <div className={styles.valueGroup}>
+                            <label htmlFor={`${question.id}-custom-value`}>
+                              Result value
+                            </label>
+                            <div className={styles.valueControl}>
+                              <input
+                                id={`${question.id}-custom-value`}
+                                type="number"
+                                step="any"
+                                value={draft.value}
+                                onChange={(event) =>
+                                  updateDraft(
+                                    "value",
+                                    event.currentTarget.value,
+                                  )
+                                }
+                                onBlur={() => markTouched("value")}
+                                placeholder="Enter the observed value"
+                              />
+                              <input
+                                id={`${question.id}-custom-unit`}
+                                aria-label="Custom unit"
+                                value={draft.unit}
+                                onChange={(event) =>
+                                  updateDraft("unit", event.currentTarget.value)
+                                }
+                                onBlur={() => markTouched("unit")}
+                                placeholder="Unit"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                        <div className={styles.field}>
+                          <label htmlFor={`${question.id}-custom-context`}>
+                            Context
+                          </label>
+                          <input
+                            id={`${question.id}-custom-context`}
+                            value={draft.customContext}
+                            onChange={(event) =>
+                              updateDraft(
+                                "customContext",
+                                event.currentTarget.value,
+                              )
+                            }
+                            placeholder="Conditions that make this result meaningful"
+                          />
+                        </div>
+                        <div className={styles.field}>
+                          <label htmlFor={`${question.id}-sourceDescription`}>
+                            How was this measured?
+                            <span className={styles.required}>Required</span>
+                          </label>
+                          <textarea
+                            id={`${question.id}-sourceDescription`}
+                            value={draft.sourceDescription}
+                            onChange={(event) =>
+                              updateDraft(
+                                "sourceDescription",
+                                event.currentTarget.value,
+                              )
+                            }
+                            rows={2}
+                          />
+                        </div>
+                        <p className={styles.helpText}>
+                          A custom result is saved for manual review. It is not
+                          converted into achievement wording automatically.
+                        </p>
+                        {engineCheck.clause &&
+                        (engineCheck.clause.kind === "review-note" ||
+                          engineCheck.clause.kind === "metric-candidate") ? (
+                          <div
+                            className={styles.localPreview}
+                            data-testid="measurement-local-preview"
+                          >
+                            <p>{engineCheck.clause.clause}</p>
+                          </div>
+                        ) : null}
+                        {showLocalErrors && localErrors.length > 0 ? (
+                          <div
+                            className={styles.validationSummary}
+                            role="alert"
+                          >
+                            <ul>
+                              {localErrors.map((error, index) => (
+                                <li key={`${error.field}-${index}`}>
+                                  {error.message}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        ) : null}
+                        <div className={styles.formActions}>
+                          <button
+                            className={styles.primaryAction}
+                            type="submit"
+                            disabled={
+                              saving ||
+                              (showLocalErrors && localErrors.length > 0)
+                            }
+                          >
+                            {saving
+                              ? "Preparing preview…"
+                              : "Preview measurement"}
+                          </button>
+                        </div>
+                      </>
+                    ) : definition ? (
                       <>
                         <div className={styles.metricSummary}>
                           <strong>{definition.label}</strong>
