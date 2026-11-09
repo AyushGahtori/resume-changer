@@ -29,6 +29,7 @@ export interface ImaginationResultProps {
   composerRef: RefObject<HTMLTextAreaElement | null>;
   onTextChange: (text: string) => void;
   onUseSuggestion: (text: string) => void;
+  onDismissSuggestion?: () => void;
   onRegenerate: () => void;
 }
 
@@ -48,6 +49,7 @@ export default function ImaginationResult({
   composerRef,
   onTextChange,
   onUseSuggestion,
+  onDismissSuggestion,
   onRegenerate,
 }: ImaginationResultProps) {
   const headingId = useId();
@@ -105,6 +107,11 @@ export default function ImaginationResult({
     if (!hasText || status === "loading") return;
     onUseSuggestion(text);
     composerRef.current?.focus();
+  }
+
+  function dismissSuggestion() {
+    if (status === "loading") return;
+    onDismissSuggestion?.();
   }
 
   return (
@@ -190,6 +197,16 @@ export default function ImaginationResult({
             >
               Use suggestion in editor
             </button>
+            {onDismissSuggestion && (
+              <button
+                className={styles.actionButton}
+                type="button"
+                disabled={status === "loading"}
+                onClick={dismissSuggestion}
+              >
+                Dismiss suggestion
+              </button>
+            )}
             <button
               className={styles.actionButton}
               type="button"

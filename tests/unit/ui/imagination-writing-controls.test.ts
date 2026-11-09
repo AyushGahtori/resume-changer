@@ -140,25 +140,42 @@ describe("ImaginationWritingControls", () => {
 
     expect(overLimitTextarea.props["aria-invalid"]).toBe(true);
     expect(textContent(overLimitTree)).toContain("501/500");
+    expect(textContent(overLimitTree)).toContain(
+      "Shorten the instruction to 500 characters or fewer.",
+    );
     expect(submitButton.props.disabled).toBe(true);
+  });
+
+  it("starts the instruction empty, shows the default as a placeholder, and still submits", () => {
+    const onSubmit = vi.fn();
+    const tree = renderTree(makeProps({ instruction: "", onSubmit }));
+    const textarea = collectElements(tree, "textarea")[0];
+    const form = collectElements(tree, "form")[0];
+    const onFormSubmit = form.props.onSubmit as
+      ((event: { preventDefault: () => void }) => void) | undefined;
+
+    expect(textarea.props.value).toBe("");
+    expect(textarea.props.placeholder).toBe(DEFAULT_IMAGINATION_INSTRUCTION);
+    onFormSubmit?.({ preventDefault: vi.fn() });
+    expect(onSubmit).toHaveBeenCalledOnce();
   });
 
   it("keeps target-line options controlled and reports measurement truthfully", () => {
     const onTargetLinesChange = vi.fn();
     const tree = renderTree(makeProps({ onTargetLinesChange }));
-    const select = collectElements(tree, "select")[0];
-    const onChange = select.props.onChange as
-      ((event: { currentTarget: { value: string } }) => void) | undefined;
-    const options = collectElements(tree, "option");
+    const lineButtons = ["1 line", "2 lines", "3 lines", "4 lines"].map(
+      (label) => findButton(tree, label),
+    );
 
-    expect(options.map((option) => textContent(option))).toEqual([
-      "1 line",
-      "2 lines",
-      "3 lines",
-      "4 lines",
+    expect(collectElements(tree, "select")).toEqual([]);
+    expect(lineButtons.map((button) => button.props["aria-pressed"])).toEqual([
+      false,
+      true,
+      false,
+      false,
     ]);
     expect(textContent(tree)).toContain("Estimated until compiled");
-    onChange?.({ currentTarget: { value: "3" } });
+    (lineButtons[2].props.onClick as () => void)();
     expect(onTargetLinesChange).toHaveBeenCalledWith(3);
 
     const measuredTree = renderTree(
@@ -211,6 +228,9 @@ describe("ImaginationWritingControls", () => {
     onFormSubmit?.({ preventDefault: vi.fn() });
 
     expect(askButton.props.disabled).toBe(true);
+    expect(textContent(tree)).toContain(
+      "Write a draft or connect an achievement before asking.",
+    );
     expect(onSubmit).not.toHaveBeenCalled();
   });
 });

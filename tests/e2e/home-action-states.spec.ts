@@ -160,11 +160,11 @@ test("gives every action a distinct default, hover, and pressed surface", async 
     );
     const analyzeDefault = await settleSurface(
       page,
-      ".home-action-button--secondary",
+      ".home-action-button--primary",
     );
     const saveDefault = await settleSurface(
       page,
-      ".home-action-button--primary",
+      ".home-action-button--secondary",
     );
 
     // Each variant keeps its own identity rather than sharing a surface.
@@ -178,14 +178,14 @@ test("gives every action a distinct default, hover, and pressed surface", async 
     // Hover shifts each control away from its own default.
     const defaults: Record<string, string> = {
       ".home-action-button--ghost": clearDefault.background,
-      ".home-action-button--secondary": analyzeDefault.background,
-      ".home-action-button--primary": saveDefault.background,
+      ".home-action-button--primary": analyzeDefault.background,
+      ".home-action-button--secondary": saveDefault.background,
     };
 
     for (const [button, selector] of [
       [clear, ".home-action-button--ghost"],
-      [analyze, ".home-action-button--secondary"],
-      [save, ".home-action-button--primary"],
+      [analyze, ".home-action-button--primary"],
+      [save, ".home-action-button--secondary"],
     ] as const) {
       await button.hover();
       // Wait for the hover surface to actually replace the resting one.
@@ -211,9 +211,9 @@ test("shows a visibly pressed surface for each action", async ({ page }) => {
     { name: "Clear draft", selector: ".home-action-button--ghost" },
     {
       name: "Analyze job description",
-      selector: ".home-action-button--secondary",
+      selector: ".home-action-button--primary",
     },
-    { name: "Save draft", selector: ".home-action-button--primary" },
+    { name: "Save draft", selector: ".home-action-button--secondary" },
   ];
 
   for (const theme of ["light", "dark"] as const) {
@@ -361,13 +361,10 @@ test("keeps the analyzing button the same size with a live spinner", async ({
   expect(loadingBox!.height).toBeCloseTo(idleBox!.height, 1);
 
   // The busy control keeps its live surface instead of the muted one.
-  const busySurface = await settleSurface(
-    page,
-    ".home-action-button--secondary",
-  );
+  const busySurface = await settleSurface(page, ".home-action-button--primary");
   expect(busySurface.opacity).toBe("1");
-  expect(busySurface.background).toBe("rgb(239, 235, 255)");
-  await assertLabelContrast(page, ".home-action-button--secondary");
+  expect(busySurface.background).toBe("rgb(255, 122, 69)");
+  await assertLabelContrast(page, ".home-action-button--primary");
 
   releaseResponse();
   await expect(
@@ -385,32 +382,22 @@ test("shows Saving only while a save is actually pending", async ({ page }) => {
   // An explicit save writes locally, so it resolves without a spinner.
   await jobDescription.fill("Build dependable services.");
   await save.click();
-  await expect(
-    page.getByText(
-      "Draft saved in this browser. You can open Resume builder now.",
-    ),
-  ).toBeVisible();
+  await expect(page.getByText("Draft saved in this browser.")).toBeVisible();
+  await expect(page.getByText("You can open Resume builder now.")).toHaveCount(
+    0,
+  );
   await expect(page.getByRole("button", { name: "Saving..." })).toHaveCount(0);
   await expect(save).toBeEnabled();
+  await expect(save).not.toHaveAttribute("aria-busy", "true");
 
-  // The debounced autosave is the pending save, and it is announced.
+  // Autosave is announced on the draft status, not on Save draft.
   await jobDescription.fill("Build dependable services for customers.");
-  const saving = page.getByRole("button", { name: "Saving..." });
-  await expect(saving).toBeVisible();
-  await expect(saving).toHaveAttribute("aria-busy", "true");
-  await expect(saving.locator("svg.home-action-spinner")).toBeVisible();
-
-  const savingBox = await saving.boundingBox();
-  const idleBox = await save.boundingBox();
-  expect(savingBox).not.toBeNull();
-  expect(idleBox).not.toBeNull();
-  expect(savingBox!.width).toBeCloseTo(idleBox!.width, 1);
-  expect(savingBox!.height).toBeCloseTo(idleBox!.height, 1);
-
-  await expect(save).toBeEnabled();
+  await expect(save).toHaveText("Save draft");
+  await expect(save.locator("svg.home-action-spinner")).toHaveCount(0);
   await expect(page.locator(".draft-state")).toContainText(
     "Saved on this device",
   );
+  await expect(save).toHaveText("Save draft");
 });
 
 test("keeps a visible focus ring and 44px target in every state", async ({
@@ -478,6 +465,43 @@ test("keeps a visible focus ring and 44px target in every state", async ({
       }
     }
   }
+});
+
+test("keeps missing fields out of the analysis failure state", async ({
+  page,
+}) => {
+  let requests = 0;
+  await page.route("**/api/ai/analyze-job-description", (route) => {
+    requests += 1;
+    return route.fulfill({ status: 500, json: { error: "nope" } });
+  });
+  await page.getByLabel("Job link").fill("not a url");
+  await page.getByRole("button", { name: "Analyze job description" }).click();
+  await expect(
+    page.getByText("Enter a company name before analyzing."),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Enter a job description before analyzing."),
+  ).toBeVisible();
+  await expect(page.getByText("Enter a valid job link.")).toBeVisible();
+  await expect(page.getByText("Analysis could not be completed")).toHaveCount(
+    0,
+  );
+  await expect(
+    page.getByRole("button", { name: "Retry analysis" }),
+  ).toHaveCount(0);
+  expect(requests).toBe(0);
+
+  await page.getByLabel("Company", { exact: true }).fill("Example Systems");
+  await page.getByRole("button", { name: "Analyze job description" }).click();
+  await expect(
+    page.getByText("Enter a company name before analyzing."),
+  ).toHaveCount(0);
+  await expect(
+    page.getByText("Enter a job description before analyzing."),
+  ).toBeVisible();
+  await expect(page.getByText("Enter a valid job link.")).toBeVisible();
+  expect(requests).toBe(0);
 });
 
 test("honors reduced motion for the loading spinner", async ({ page }) => {

@@ -322,7 +322,7 @@ export default function ImaginationConnectionCanvas({
         <div className={styles.dragHint}>
           <Move size={20} aria-hidden="true" />
           <p>
-            <strong>Hold and drag</strong> an achievement or skill to connect it
+            <strong>Select or drag</strong> an achievement or skill to connect it
             to your draft.
           </p>
         </div>
@@ -339,7 +339,7 @@ export default function ImaginationConnectionCanvas({
             {count} / {MAX_CONNECTED_ITEMS} connected
           </span>
           <p className={styles.helper} id={helperId}>
-            Hold and drag to connect evidence or skills
+            Select or drag to connect evidence or skills
           </p>
         </div>
 
@@ -373,7 +373,7 @@ export default function ImaginationConnectionCanvas({
             </svg>
           )}
 
-        <div className={styles.items} ref={itemsRef}>
+        <div className={styles.items} ref={itemsRef} onScroll={measureConnections}>
           {uniqueItems.map((item) => {
             const Icon = item.kind === "achievement" ? FileText : Wrench;
             return (

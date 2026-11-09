@@ -4,8 +4,10 @@ import * as React from "react";
 import { Save } from "lucide-react";
 import type { AchievementWritingOperation } from "@/lib/ai/achievement-writing";
 import type { ResumeDataSource } from "@/lib/data/loaders";
+import LibrarySelect from "@/components/library/library-select";
 import {
   getImaginationSaveDestinations,
+  imaginationSaveCopy,
   type ImaginationSaveDestination,
 } from "@/lib/generation/imagination-save";
 import styles from "./imagination-save-footer.module.css";
@@ -21,6 +23,7 @@ type Props = {
   isSaving: boolean;
   error?: string;
   reviewStatus?: string;
+  disabledReason?: string;
   onSaveToChange: (destination: ImaginationSaveDestination) => void;
   onCancel: () => void;
   onSave: () => void;
@@ -43,15 +46,16 @@ export default function ImaginationSaveFooter({
   isSaving,
   error = "",
   reviewStatus = "",
+  disabledReason = "",
   onSaveToChange,
   onCancel,
   onSave,
 }: Props) {
-  const destinations = getImaginationSaveDestinations(
-    source,
-    allowResume,
-    hasLibraryDestination,
-  );
+  const jobOrProjectRequired =
+    operation === "create" && source === "personal" && !hasLibraryDestination;
+  const destinations = jobOrProjectRequired
+    ? []
+    : getImaginationSaveDestinations(source, allowResume, hasLibraryDestination);
   const selectedDestination =
     saveTo && destinations.includes(saveTo) ? saveTo : "";
   const hasDestination = operation !== "create" || destinations.length > 0;
@@ -61,6 +65,37 @@ export default function ImaginationSaveFooter({
     !canSave ||
     !hasDestination ||
     (operation === "create" && !selectedDestination);
+  const unavailableCopy = !hasDestination
+    ? jobOrProjectRequired
+      ? imaginationSaveCopy.jobRequired
+      : imaginationSaveCopy.sourceUnavailable
+    : "";
+  const saveIncludesResume =
+    operation !== "create" ||
+    selectedDestination === "resume" ||
+    selectedDestination === "both";
+  const saveHint = !saveDisabled || isSaving
+    ? ""
+    : isBusy
+      ? imaginationSaveCopy.saveBusy
+      : unavailableCopy
+        ? ""
+        : disabledReason
+          ? disabledReason
+          : operation === "create" && !selectedDestination
+            ? imaginationSaveCopy.saveNeedsDestination
+            : !canSave
+              ? imaginationSaveCopy.saveNeedsText
+              : "";
+  const destinationOptions = [
+    ...(selectedDestination
+      ? []
+      : [{ value: "", label: "Select a destination" }]),
+    ...destinations.map((destination) => ({
+      value: destination,
+      label: destinationLabels[destination],
+    })),
+  ];
 
   return (
     <footer className={styles.footer}>
@@ -76,39 +111,40 @@ export default function ImaginationSaveFooter({
             {reviewStatus}
           </p>
         )}
+        {saveHint && (
+          <p className={styles.helper} id="imagination-save-hint" role="status">
+            {saveHint}
+          </p>
+        )}
       </div>
       {operation === "create" &&
         (destinations.length ? (
-          <label className={styles.destination}>
+          <div className={styles.destination}>
             <span>Save to</span>
-            <select
+            <LibrarySelect
               aria-label="Save achievement to"
-              value={selectedDestination}
+              className={styles.destinationSelect}
               disabled={isSaving}
-              onChange={(event) =>
-                onSaveToChange(event.target.value as ImaginationSaveDestination)
-              }
-            >
-              {!selectedDestination && (
-                <option value="" disabled>
-                  Select a destination
-                </option>
-              )}
-              {destinations.map((destination) => (
-                <option key={destination} value={destination}>
-                  {destinationLabels[destination]}
-                </option>
-              ))}
-            </select>
-          </label>
+              onChange={(value) => {
+                if (
+                  value === "resume" ||
+                  value === "library" ||
+                  value === "both"
+                )
+                  onSaveToChange(value);
+              }}
+              options={destinationOptions}
+              value={selectedDestination}
+            />
+          </div>
         ) : (
           <p className={styles.unavailable} role="status">
-            No save destination is available for this data source.
+            {unavailableCopy}
           </p>
         ))}
-      <p className={styles.pdfNote}>
-        Your PDF updates only after Apply changes.
-      </p>
+      {saveIncludesResume && (
+        <p className={styles.pdfNote}>{imaginationSaveCopy.pdfNote}</p>
+      )}
       <div className={styles.actions}>
         <button type="button" onClick={onCancel}>
           Cancel
@@ -118,6 +154,7 @@ export default function ImaginationSaveFooter({
           type="button"
           disabled={saveDisabled}
           aria-busy={isSaving}
+          aria-describedby={saveHint ? "imagination-save-hint" : undefined}
           onClick={onSave}
         >
           {isSaving ? (

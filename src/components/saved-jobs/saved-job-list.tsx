@@ -20,6 +20,8 @@ export function SavedJobList({
   title = "Saved analyses",
   description = "Choose a job to read its analysis again.",
   titleId = "saved-jobs-title",
+  loadError = "",
+  onRetry,
 }: {
   jobs: SavedJobSummary[];
   selectedId: string | null;
@@ -28,6 +30,8 @@ export function SavedJobList({
   title?: string;
   description?: string;
   titleId?: string;
+  loadError?: string;
+  onRetry?: () => void;
 }) {
   return (
     <section className="saved-jobs" aria-labelledby={titleId}>
@@ -35,8 +39,20 @@ export function SavedJobList({
         <h2 id={titleId}>{title}</h2>
         <p>{description}</p>
       </div>
+      {loadError ? (
+        <div className="saved-jobs-error">
+          <p role="alert">{loadError}</p>
+          {onRetry ? (
+            <button type="button" onClick={onRetry}>
+              Retry
+            </button>
+          ) : null}
+        </div>
+      ) : null}
       {jobs.length === 0 ? (
-        <p className="saved-jobs-empty">No analyzed jobs yet.</p>
+        loadError ? null : (
+          <p className="saved-jobs-empty">No analyzed jobs yet.</p>
+        )
       ) : (
         <ul className="saved-jobs-list">
           {jobs.map((job) => {

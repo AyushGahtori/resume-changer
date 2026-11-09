@@ -1,0 +1,12 @@
+.analyze {
+  width: 244px;
+  min-width: 244px;
+}
+
+@media (max-width: 700px) {
+  :global(.form-actions) .analyze {
+    width: 100%;
+    min-width: 0;
+    flex-basis: 100%;
+  }
+}

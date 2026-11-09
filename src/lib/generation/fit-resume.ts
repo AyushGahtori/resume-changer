@@ -2,8 +2,12 @@ import type {
   LatexRepairInput,
   LatexRepairResult,
   AchievementSelectionInput,
+  AchievementEvidence,
 } from "../ai/contracts";
-import { assessRequirementCoverage } from "../ai/requirement-coverage";
+import {
+  assessRequirementCoverage,
+  includesPhrase,
+} from "../ai/requirement-coverage";
 import { coverageUtility } from "../ai/achievement-selection";
 import { buildSkillEvidence } from "../ai/evidence";
 import { buildEvidenceSummary, enrichSourceText } from "../ai/draft-quality";
@@ -32,6 +36,34 @@ type Measure = (pdf: Uint8Array) => Promise<{
 }>;
 function wordCount(value: string): number {
   return value.split(/\s+/).filter(Boolean).length;
+}
+
+function sourcePhrases(text: string): string[] {
+  const words = text.trim().split(/\s+/).filter(Boolean);
+  if (words.length < 4) return words.length >= 2 ? [words.join(" ")] : [];
+  const phrases: string[] = [];
+  for (let index = 0; index <= words.length - 4; index += 1)
+    phrases.push(words.slice(index, index + 4).join(" "));
+  return phrases;
+}
+
+function summaryCitesRemovedSource(
+  summary: string,
+  removed: AchievementEvidence[],
+  remainingGroupIds: ReadonlySet<string>,
+): boolean {
+  if (!summary.trim()) return false;
+  return removed.some((source) => {
+    const phrases = [
+      ...sourcePhrases(source.text),
+      ...(source.metrics ?? []).map((metric) => metric.label),
+    ];
+    if (phrases.some((phrase) => includesPhrase(summary, phrase))) return true;
+    if (remainingGroupIds.has(source.groupId)) return false;
+    return [source.groupTitle, source.groupSubtitle].some(
+      (name) => Boolean(name?.trim()) && includesPhrase(summary, name ?? ""),
+    );
+  });
 }
 
 function currentRepairContent(
@@ -467,6 +499,22 @@ export async function fitResumeToPage(args: {
       const remove = sorted[0];
       if (!remove || sorted.length <= 1) break;
       const excluded = new Set(remove.sourceAchievementIds);
+      const currentSummary =
+        request.summaryOverride ?? generation.metadata.resumeSummary ?? "";
+      const removedSources = [...excluded].flatMap((id) => {
+        const source = evidence.get(id);
+        return source ? [source] : [];
+      });
+      const remainingSources = request.selectedAchievementIds.flatMap((id) => {
+        if (excluded.has(id)) return [];
+        const source = evidence.get(id);
+        return source ? [source] : [];
+      });
+      const summaryCitedRemovedSource = summaryCitesRemovedSource(
+        currentSummary,
+        removedSources,
+        new Set(remainingSources.map((source) => source.groupId)),
+      );
       request.selectedAchievementIds = request.selectedAchievementIds.filter(
         (id) => !excluded.has(id),
       );
@@ -474,14 +522,19 @@ export async function fitResumeToPage(args: {
         request.achievementTextOverrides?.filter(
           (item) => !excluded.has(item.achievementId),
         );
-      request.summaryOverride = buildEvidenceSummary({
-        achievements: request.selectedAchievementIds.map((id) =>
-          evidence.get(id)!,
-        ),
-        analysis: args.input.analysis,
-        skills: args.input.skills,
-        profile: args.input.profile,
-      });
+      if (summaryCitedRemovedSource) {
+        request.summaryOverride = buildEvidenceSummary({
+          achievements: request.selectedAchievementIds.map((id) =>
+            evidence.get(id)!,
+          ),
+          analysis: args.input.analysis,
+          skills: args.input.skills,
+          profile: args.input.profile,
+        });
+        log("Replaced the resume summary because it cited a removed source.", {
+          sourceAchievementIds: remove.sourceAchievementIds,
+        });
+      }
       log(
         "Removed the lowest-value eligible bullet after measured overflow; its source facts remain in the library.",
         { sourceAchievementIds: remove.sourceAchievementIds },

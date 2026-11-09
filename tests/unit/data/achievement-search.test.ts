@@ -172,6 +172,35 @@ describe("achievement library search", () => {
     expect(ids).toContain(linkedPoint!.id);
   });
 
+  it("does not count credentials as matches for a skill filter", () => {
+    const result = filterAchievementLibrary(
+      library,
+      filters({ skillId: "skill-python" }),
+    );
+
+    expect(library.credentials.length).toBeGreaterThan(0);
+    expect(result.credentials).toEqual([]);
+    expect(result.visiblePointCount).toBeGreaterThan(0);
+    expect(result.skills.map((skill) => skill.id)).toEqual(["skill-python"]);
+  });
+
+  it("keeps a text search of credentials when no skill is selected", () => {
+    const named = filterAchievementLibrary(
+      library,
+      filters({ query: "Cloud Deployment Foundations" }),
+    );
+    const withSkill = filterAchievementLibrary(
+      library,
+      filters({
+        query: "Cloud Deployment Foundations",
+        skillId: "skill-python",
+      }),
+    );
+
+    expect(named.credentials).toHaveLength(1);
+    expect(withSkill.credentials).toEqual([]);
+  });
+
   it("keeps the skill and credential lists independent of the point filters", () => {
     const result = filterAchievementLibrary(
       library,

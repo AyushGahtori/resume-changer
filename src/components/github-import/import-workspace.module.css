@@ -266,22 +266,20 @@
   }
 }
 
-@media (prefers-color-scheme: dark) {
-  .error {
-    background: color-mix(in srgb, #7d2111 28%, transparent);
-    border-color: #8e3f32;
-    color: #ffd2c7;
-  }
+:global(:root[data-theme="dark"]) .error {
+  background: color-mix(in srgb, #7d2111 28%, transparent);
+  border-color: #8e3f32;
+  color: #ffd2c7;
+}
 
-  .banner {
-    background: color-mix(in srgb, #245fd5 20%, transparent);
-    border-color: #3e5d91;
-  }
+:global(:root[data-theme="dark"]) .banner {
+  background: color-mix(in srgb, #245fd5 20%, transparent);
+  border-color: #3e5d91;
+}
 
-  .success {
-    background: color-mix(in srgb, #237a3b 20%, transparent);
-    border-color: #3c7950;
-  }
+:global(:root[data-theme="dark"]) .success {
+  background: color-mix(in srgb, #237a3b 20%, transparent);
+  border-color: #3c7950;
 }
 
 .main {

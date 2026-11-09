@@ -135,14 +135,16 @@ test("keeps Save text and keyboard focus contrasted in both themes", async ({
         .click();
     }
 
-    const ink = theme === "light" ? "rgb(15, 23, 42)" : "rgb(21, 21, 34)";
+    const ink = theme === "light" ? "rgb(109, 40, 217)" : "rgb(255, 255, 255)";
     const hoverBackground =
-      theme === "light" ? "rgb(178, 60, 12)" : "rgb(253, 186, 116)";
-    const hoverText =
-      theme === "light" ? "rgb(255, 255, 255)" : "rgb(21, 21, 34)";
+      theme === "light" ? "rgb(221, 208, 251)" : "rgb(109, 40, 217)";
+    const hoverText = ink;
 
     await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
-    await expect(save).toHaveCSS("background-color", "rgb(255, 122, 69)");
+    await expect(save).toHaveCSS(
+      "background-color",
+      theme === "light" ? "rgb(239, 235, 255)" : "rgb(124, 58, 237)",
+    );
     await expect(save).toHaveCSS("color", ink);
     await assertSaveTextContrast();
 
@@ -175,7 +177,8 @@ test("shows distinct labeled action variants and keyboard focus", async ({
   await expect(clear).toBeVisible();
   await expect(analyze).toBeEnabled();
   await expect(save).toBeEnabled();
-  await expect(save).toHaveCSS("background-color", "rgb(255, 122, 69)");
+  await expect(save).toHaveCSS("background-color", "rgb(239, 235, 255)");
+  await expect(analyze).toHaveCSS("background-color", "rgb(255, 122, 69)");
   await expect(analyze.locator("svg")).toHaveCount(1);
   await expect(save.locator("svg")).toHaveCount(1);
   await expect(clear.locator("svg")).toHaveCount(0);
@@ -190,8 +193,7 @@ test("shows distinct labeled action variants and keyboard focus", async ({
     (element) => getComputedStyle(element).backgroundColor,
   );
   await analyze.hover();
-  // The AI action deepens to a stronger violet on hover.
-  await expect(analyze).toHaveCSS("background-color", "rgb(221, 214, 254)");
+  await expect(analyze).toHaveCSS("background-color", "rgb(178, 60, 12)");
   expect(
     await analyze.evaluate(
       (element) => getComputedStyle(element).backgroundColor,
@@ -230,11 +232,10 @@ test("saves and clears a draft through the primary and ghost actions", async ({
     .getByRole("textbox", { name: "Job description", exact: true })
     .fill("Build dependable services for customers.");
   await page.getByRole("button", { name: "Save draft" }).click();
-  await expect(
-    page.getByText(
-      "Draft saved in this browser. You can open Resume builder now.",
-    ),
-  ).toBeVisible();
+  await expect(page.getByText("Draft saved in this browser.")).toBeVisible();
+  await expect(page.getByText("You can open Resume builder now.")).toHaveCount(
+    0,
+  );
 
   await page.getByRole("button", { name: "Clear draft" }).click();
   await expect(page.getByLabel("Company")).toHaveValue("");
@@ -298,10 +299,10 @@ test("keeps action buttons within tablet and narrow dark viewports", async ({
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await expect(
     page.getByRole("button", { name: "Analyze job description" }),
-  ).toHaveCSS("background-color", "rgb(124, 58, 237)");
+  ).toHaveCSS("background-color", "rgb(255, 122, 69)");
   await expect(page.getByRole("button", { name: "Save draft" })).toHaveCSS(
     "background-color",
-    "rgb(255, 122, 69)",
+    "rgb(124, 58, 237)",
   );
 
   for (const width of [950, 900, 768, 720, 390, 320]) {
@@ -344,8 +345,10 @@ test("shows disabled actions before hydration without JavaScript", async ({
     });
     await expect(save).toBeDisabled();
     await expect(analyze).toBeDisabled();
-    await expect(save).toHaveCSS("background-color", "rgb(253, 186, 116)");
-    await expect(save).toHaveCSS("color", "rgb(15, 23, 42)");
+    await expect(analyze).toHaveCSS("background-color", "rgb(253, 186, 116)");
+    await expect(analyze).toHaveCSS("color", "rgb(15, 23, 42)");
+    await expect(save).toHaveCSS("background-color", "rgb(221, 214, 254)");
+    await expect(save).toHaveCSS("color", "rgb(109, 40, 217)");
     await expect(
       page.getByRole("navigation", { name: "Main navigation" }),
     ).toBeVisible();

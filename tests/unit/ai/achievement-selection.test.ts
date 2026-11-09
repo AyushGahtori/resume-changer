@@ -198,6 +198,51 @@ describe("AI achievement selection service", () => {
     expect(response.budget.usedLines).toBeLessThanOrEqual(9);
   });
 
+  it("does not invent local picks when the model returns no selections", async () => {
+    const input = makeInput({ contentBudgetLines: 40 });
+    let calls = 0;
+    const response = await recommendAchievements({
+      input,
+      selectWithAi: async () => {
+        calls += 1;
+        return aiResult(input, []);
+      },
+    });
+
+    expect(calls).toBe(1);
+    expect(response.mode).toBe("ai");
+    expect(response.recommendations.selections).toEqual([]);
+    expect(response.notice ?? "").not.toContain("local matches");
+  });
+
+  it("treats an empty AI selection as local fallback only after consent", async () => {
+    const input = makeInput({ contentBudgetLines: 40 });
+    let calls = 0;
+    const response = await recommendAchievements({
+      input,
+      allowLocalFallback: true,
+      selectWithAi: async () => {
+        calls += 1;
+        return aiResult(input, []);
+      },
+    });
+
+    expect(calls).toBe(1);
+    expect(response.mode).toBe("local-fallback");
+    expect(response.notice).toContain("AI returned no recommendations");
+    expect(response.recommendations.selections.length).toBeGreaterThan(0);
+    expect(response.recommendations.summary).not.toBe(
+      "The selected evidence matches role requirements.",
+    );
+    expect(
+      response.recommendations.selections.every(
+        (selection) =>
+          selection.rationale !== "Evidence supports the analyzed role.",
+      ),
+    ).toBe(true);
+    expect(response.audit.every((item) => !item.modelRecommended)).toBe(true);
+  });
+
   it("fills an under-selected AI response with relevant evidence within budget", async () => {
     const input = makeInput({ contentBudgetLines: 40 });
     const response = await recommendAchievements({

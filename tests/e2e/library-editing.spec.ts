@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { chooseLibraryOption } from "./support/library-select";
 import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -48,7 +49,10 @@ test("creates a point with a metric and persists it after reload", async ({
   await page
     .getByLabel("Tags, separated by commas")
     .fill("testing, reliability");
-  await page.getByLabel("Linked skills").selectOption("skill-automation");
+  await page
+    .getByRole("group", { name: "Linked skills" })
+    .getByRole("button", { name: "Workflow Automation", exact: true })
+    .click();
   await page.getByRole("button", { name: "Add metric" }).click();
   await page
     .locator(".metric-fields")
@@ -134,9 +138,9 @@ test("updates text, tags, provenance, and enabled state", async ({ page }) => {
   await page
     .getByLabel("Tags, separated by commas")
     .fill("release, verification");
-  await page.getByLabel("Provenance type").selectOption("direct-user");
+  await chooseLibraryOption(page, "Provenance type", "direct-user");
   await page.getByLabel("Source label").fill("Browser test update");
-  await page.getByLabel("Use this point in resume selection").uncheck();
+  await page.getByRole("button", { name: "Enabled", exact: true }).click();
   const saved = page.waitForResponse(
     (response) =>
       response.request().method() === "PATCH" &&
@@ -471,7 +475,7 @@ test("changes the state of an achievement only through the editor", async ({
   await expect(card.locator("input[type=checkbox]")).toHaveCount(0);
 
   await card.getByRole("button", { name: "Edit" }).click();
-  await page.getByLabel("Use this point in resume selection").uncheck();
+  await page.getByRole("button", { name: "Enabled", exact: true }).click();
 
   // The card still reports the stored state until the change is saved.
   await expect(status).toHaveText("Enabled");

@@ -5,6 +5,7 @@ import {
   ManualGenerationRequestSchema,
 } from "../../../src/lib/generation/manual-generation";
 import { ResumeRenderError } from "../../../src/lib/latex/render-resume";
+import type { JobAnalysisResult } from "../../../src/lib/ai/contracts";
 import type { ResumeLibrary } from "../../../src/lib/schemas/resume-data";
 
 const library = sampleLibrary as ResumeLibrary;
@@ -221,5 +222,78 @@ describe("manual resume generation", () => {
         selectedSkillIds: ["skill-not-in-library"],
       }),
     ).toThrow(/Unknown skill ID/);
+  });
+
+  it("scores final coverage from the skills that fit the two rendered rows", () => {
+    const filler = (id: string, name: string) => ({
+      id,
+      name,
+      aliases: [] as string[],
+      sources: ["user-notes" as const],
+      isListedOnCurrentResume: false,
+      evidenceAchievementIds: [] as string[],
+    });
+    const fillers = [
+      filler(
+        "skill-required-one",
+        "Zorblax Quindle Requirement Marker Number One",
+      ),
+      filler(
+        "skill-required-two",
+        "Zorblax Quindle Requirement Marker Number Two",
+      ),
+      filler(
+        "skill-required-three",
+        "Zorblax Quindle Requirement Marker Number Three",
+      ),
+      filler(
+        "skill-required-four",
+        "Zorblax Quindle Requirement Marker Number Four",
+      ),
+    ];
+    const terraform = filler(
+      "skill-terraform",
+      "Terraform For Internal Platform Provisioning Work",
+    );
+    const expanded = structuredClone(library);
+    expanded.skills.push(...fillers, terraform);
+    const analysis: JobAnalysisResult = {
+      targetTitle: "Platform Engineer",
+      seniority: "Early",
+      requiredQualifications: fillers.map((skill) => skill.name),
+      responsibilities: [],
+      preferredQualifications: ["Experience with Terraform"],
+      toolsAndPlatforms: [],
+      domainConcepts: [],
+      atsTerms: [],
+      inferredContext: [],
+      terminology: [],
+    };
+    const result = createManualGeneration(
+      expanded,
+      {
+        ...validRequest,
+        selectedSkillIds: [...fillers, terraform].map((skill) => skill.id),
+      },
+      { analysis },
+    );
+    const terraformRow = result.metadata.finalCoverage?.find(
+      (row) => row.requirement === "Experience with Terraform",
+    );
+
+    expect(result.metadata.renderedSkillIds).not.toContain("skill-terraform");
+    expect(result.metadata.renderedSkillIds.length).toBeLessThan(5);
+    expect(terraformRow?.status).toBe("evidence-not-selected");
+    expect(
+      terraformRow?.evidence.find((item) => item.id === "skill-terraform")
+        ?.selected,
+    ).toBe(false);
+    const renderedRequirement = result.metadata.finalCoverage?.find((row) =>
+      result.metadata.renderedSkillIds.includes(
+        fillers.find((skill) => skill.name === row.requirement)?.id ?? "",
+      ),
+    );
+    expect(renderedRequirement?.status).toBe("partial");
+    expect(renderedRequirement?.coveredByAchievementIds).toEqual([]);
   });
 });

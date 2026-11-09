@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   buildImaginationLibraryPoint,
+  decideImaginationAcceptance,
   getDefaultImaginationSaveDestination,
   getImaginationSaveDestinations,
   getImaginationTextToAccept,
+  imaginationSaveCopy,
+  readImaginationPayload,
 } from "@/lib/generation/imagination-save";
 
 describe("Imagination Canvas save contract", () => {
@@ -94,6 +97,134 @@ describe("Imagination Canvas save contract", () => {
       sourceAchievementIds: ["achievement-cloud-deployment-platform"],
       skillIds: ["skill-automation"],
     });
+  });
+
+  it("accepts an AI proposal only when an achievement is connected", () => {
+    const base = {
+      operation: "create" as const,
+      editorText: "Rough notes.",
+      proposedText: "Imagined bullet.",
+      source: "personal" as const,
+      hasLibraryDestination: true,
+      allowResume: true,
+      groupId: "job-example",
+      saveDestination: "both" as const,
+    };
+
+    expect(
+      decideImaginationAcceptance({
+        ...base,
+        sourceAchievementIds: ["achievement-one"],
+        connectedSkillCount: 1,
+      }),
+    ).toMatchObject({
+      ok: true,
+      text: "Imagined bullet.",
+      saveToLibrary: true,
+      resumeSourceIds: ["achievement-one"],
+    });
+
+    expect(
+      decideImaginationAcceptance({
+        ...base,
+        editorText: "",
+        sourceAchievementIds: [],
+        connectedSkillCount: 2,
+      }),
+    ).toEqual({ ok: false, error: imaginationSaveCopy.skillOnly });
+
+    expect(
+      decideImaginationAcceptance({
+        ...base,
+        proposedText: "",
+        sourceAchievementIds: [],
+        connectedSkillCount: 0,
+        saveDestination: "library",
+      }),
+    ).toMatchObject({
+      ok: true,
+      text: "Rough notes.",
+      saveToLibrary: true,
+      resumeSourceIds: null,
+    });
+
+    expect(
+      decideImaginationAcceptance({
+        ...base,
+        proposedText: "",
+        sourceAchievementIds: [],
+        connectedSkillCount: 0,
+        saveDestination: "resume",
+      }),
+    ).toEqual({
+      ok: false,
+      error: imaginationSaveCopy.resumeNeedsAchievement,
+    });
+  });
+
+  it("names an empty personal library separately from read-only demo data", () => {
+    expect(
+      decideImaginationAcceptance({
+        operation: "create",
+        editorText: "First point.",
+        proposedText: "",
+        sourceAchievementIds: [],
+        connectedSkillCount: 0,
+        saveDestination: null,
+        source: "personal",
+        hasLibraryDestination: false,
+        allowResume: true,
+        groupId: "",
+      }),
+    ).toEqual({ ok: false, error: imaginationSaveCopy.jobRequired });
+
+    expect(
+      decideImaginationAcceptance({
+        operation: "create",
+        editorText: "Demo point.",
+        proposedText: "",
+        sourceAchievementIds: [],
+        connectedSkillCount: 0,
+        saveDestination: null,
+        source: "demo",
+        hasLibraryDestination: false,
+        allowResume: false,
+        groupId: "",
+      }),
+    ).toEqual({ ok: false, error: imaginationSaveCopy.sourceUnavailable });
+  });
+
+  it("replaces a JSON parse failure with a product sentence", async () => {
+    await expect(
+      readImaginationPayload(
+        {
+          json: async () => {
+            throw new SyntaxError("Unexpected token '<'");
+          },
+        },
+        imaginationSaveCopy.unreadableResponse,
+      ),
+    ).rejects.toThrow(imaginationSaveCopy.unreadableResponse);
+
+    await expect(
+      readImaginationPayload(
+        {
+          json: async () => {
+            throw new Error("Failed to execute 'json' on 'Response'");
+          },
+        },
+        imaginationSaveCopy.unreadableSave,
+      ),
+    ).rejects.toThrow(imaginationSaveCopy.unreadableSave);
+
+    await expect(
+      readImaginationPayload(
+        {
+          json: async () => ({ error: "Temporary test outage." }),
+        },
+        imaginationSaveCopy.unreadableResponse,
+      ),
+    ).resolves.toMatchObject({ error: "Temporary test outage." });
   });
 
   it("rejects empty reviewed text before making a library request", () => {

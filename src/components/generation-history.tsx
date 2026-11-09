@@ -1,9 +1,18 @@
 "use client";
-import { apiFetch as fetch } from "@/lib/cloud/api-fetch";
+import { apiFetch } from "@/lib/cloud/api-fetch";
 import { useWorkspaceAccount } from "./account-session";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import Link from "next/link";
+import StudioDialog from "./studio-dialog";
+import { countLabel } from "@/lib/ui/library-labels";
 import {
   Archive,
   ArrowUpRight,
@@ -38,6 +47,18 @@ function formatDate(value: string) {
   return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
 }
 
+function providerLabel(provider: string) {
+  return provider === "none" ? "Manual" : provider;
+}
+
+async function readJson(response: Response): Promise<unknown> {
+  try {
+    return await response.json();
+  } catch {
+    return null;
+  }
+}
+
 export default function GenerationHistory() {
   const account = useWorkspaceAccount();
   const [nextCursor, setNextCursor] = useState<string | null>(null);
@@ -52,21 +73,35 @@ export default function GenerationHistory() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [pendingDelete, setPendingDelete] =
+    useState<GenerationHistoryEntry | null>(null);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [pdfError, setPdfError] = useState("");
+  const [pdfLoading, setPdfLoading] = useState(false);
+  const [pdfAttempt, setPdfAttempt] = useState(0);
+  const [pdfUnavailable, setPdfUnavailable] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const [narrow, setNarrow] = useState(false);
+  const detailRef = useRef<HTMLElement>(null);
+  const detailHeadingRef = useRef<HTMLHeadingElement>(null);
+  const listRef = useRef<HTMLElement>(null);
+  const entryButtons = useRef(new Map<string, HTMLButtonElement>());
 
   const refreshEntries = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      const response = await fetch("/api/history", { cache: "no-store" });
-      const payload = (await response.json()) as {
+      const response = await apiFetch("/api/history", { cache: "no-store" });
+      const payload = (await readJson(response)) as {
         entries?: GenerationHistoryEntry[];
         error?: string;
         nextCursor?: string | null;
-      };
-      if (!response.ok || !payload.entries)
-        throw new Error(payload.error ?? "History could not be loaded.");
+      } | null;
+      if (!response.ok || !payload?.entries)
+        throw new Error(payload?.error ?? "History could not be loaded.");
       setEntries(payload.entries);
       setNextCursor(payload.nextCursor ?? null);
+      setLoaded(true);
     } catch (loadError) {
       setError(
         loadError instanceof Error
@@ -82,17 +117,22 @@ export default function GenerationHistory() {
     if (!nextCursor || loadingMore) return;
     setLoadingMore(true);
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         `/api/history?cursor=${encodeURIComponent(nextCursor)}`,
         { cache: "no-store" },
       );
-      const payload = await response.json();
-      if (!response.ok || !Array.isArray(payload.entries))
-        throw new Error(payload.error ?? "Older resumes could not be loaded.");
+      const payload = (await readJson(response)) as {
+        entries?: GenerationHistoryEntry[];
+        error?: string;
+        nextCursor?: string | null;
+      } | null;
+      if (!response.ok || !payload || !Array.isArray(payload.entries))
+        throw new Error(payload?.error ?? "Older resumes could not be loaded.");
+      const loaded = payload.entries;
       setEntries((current) =>
         Array.from(
           new Map(
-            [...current, ...payload.entries].map((entry) => [entry.id, entry]),
+            [...current, ...loaded].map((entry) => [entry.id, entry]),
           ).values(),
         ),
       );
@@ -107,6 +147,58 @@ export default function GenerationHistory() {
   useEffect(() => {
     void refreshEntries();
   }, [refreshEntries]);
+
+  useEffect(() => {
+    if (view !== "pdf" || !detail?.entry.pdfPath) {
+      setPdfLoading(false);
+      setPdfError("");
+      if (!detail?.entry.pdfPath) setPdfUnavailable(false);
+      setPdfUrl((current) => {
+        if (current) URL.revokeObjectURL(current);
+        return null;
+      });
+      return;
+    }
+    const id = detail.entry.id;
+    let cancelled = false;
+    setPdfLoading(true);
+    setPdfError("");
+    setPdfUnavailable(false);
+    setPdfUrl((current) => {
+      if (current) URL.revokeObjectURL(current);
+      return null;
+    });
+    void (async () => {
+      try {
+        const response = await apiFetch(
+          `/api/history/${encodeURIComponent(id)}/pdf`,
+          { cache: "no-store" },
+        );
+        const type = response.headers.get("content-type") ?? "";
+        if (!response.ok || !type.toLowerCase().includes("application/pdf")) {
+          throw new Error("The saved PDF could not be opened.");
+        }
+        const blob = await response.blob();
+        if ((await blob.slice(0, 5).text()) !== "%PDF-") {
+          throw new Error("The saved PDF could not be opened.");
+        }
+        if (cancelled) return;
+        setPdfUrl(URL.createObjectURL(blob));
+        setPdfUnavailable(false);
+      } catch {
+        if (!cancelled) {
+          setPdfUrl(null);
+          setPdfError("The saved PDF could not be opened. Try again.");
+          setPdfUnavailable(true);
+        }
+      } finally {
+        if (!cancelled) setPdfLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [view, detail, pdfAttempt]);
 
   const statusCounts = useMemo(
     () => ({
@@ -128,7 +220,13 @@ export default function GenerationHistory() {
         (filter === "attention" && entry.status === "failed");
       const matchesSearch =
         !needle ||
-        [entry.company, entry.role, entry.provider, entry.status]
+        [
+          entry.company,
+          entry.role,
+          providerLabel(entry.provider),
+          entry.status,
+          entry.dataSource === "demo" ? "Fictional demo data" : "",
+        ]
           .filter(Boolean)
           .join(" ")
           .toLocaleLowerCase()
@@ -143,15 +241,15 @@ export default function GenerationHistory() {
     setDetailLoading(true);
     setError("");
     try {
-      const response = await fetch(`/api/history/${encodeURIComponent(id)}`, {
+      const response = await apiFetch(`/api/history/${encodeURIComponent(id)}`, {
         cache: "no-store",
       });
-      const payload = (await response.json()) as HistoryDetail & {
-        error?: string;
-      };
-      if (!response.ok || !payload.entry || typeof payload.latex !== "string")
+      const payload = (await readJson(response)) as
+        | (HistoryDetail & { error?: string })
+        | null;
+      if (!response.ok || !payload?.entry || typeof payload.latex !== "string")
         throw new Error(
-          payload.error ?? "This saved generation could not be opened.",
+          payload?.error ?? "This saved generation could not be opened.",
         );
       setDetail(payload);
       setView(payload.entry.pdfPath ? "pdf" : "latex");
@@ -167,25 +265,21 @@ export default function GenerationHistory() {
   }
 
   async function deleteEntry(entry: GenerationHistoryEntry) {
-    if (
-      !window.confirm(
-        `Delete the saved resume for ${entry.role}${entry.company ? ` at ${entry.company}` : ""}? This also deletes its saved LaTeX and PDF files.`,
-      )
-    )
-      return;
+    setPendingDelete(null);
     setError("");
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         `/api/history/${encodeURIComponent(entry.id)}`,
         { method: "DELETE" },
       );
-      const payload = (await response.json()) as {
+      const payload = (await readJson(response)) as {
         error?: string;
         cleanupPending?: boolean;
-      };
-      if (!response.ok)
+        deletedId?: string;
+      } | null;
+      if (!response.ok || payload?.deletedId !== entry.id)
         throw new Error(
-          payload.error ?? "This generation could not be deleted.",
+          payload?.error ?? "This generation could not be deleted.",
         );
       setEntries((current) => current.filter((item) => item.id !== entry.id));
       if (selectedId === entry.id) {
@@ -193,7 +287,7 @@ export default function GenerationHistory() {
         setDetail(null);
       }
       setNotice(
-        payload.cleanupPending
+        payload?.cleanupPending
           ? "Saved generation removed. Private file cleanup is queued and retried when you reopen history."
           : "Saved generation and its files deleted.",
       );
@@ -205,6 +299,41 @@ export default function GenerationHistory() {
       );
     }
   }
+
+  function shownStatus(entry: GenerationHistoryEntry) {
+    if (
+      pdfUnavailable &&
+      detail?.entry.id === entry.id &&
+      entry.status === "compiled"
+    ) {
+      return "failed" as const;
+    }
+    return entry.status;
+  }
+
+  function backToList() {
+    const button = selectedId ? entryButtons.current.get(selectedId) : null;
+    const target = button ?? listRef.current;
+    target?.scrollIntoView({ block: "start" });
+    if (button) button.focus();
+    else listRef.current?.focus();
+  }
+
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 700px)");
+    const apply = () => setNarrow(media.matches);
+    apply();
+    media.addEventListener("change", apply);
+    return () => media.removeEventListener("change", apply);
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!narrow || !selectedId) return;
+    detailRef.current?.scrollIntoView({ block: "start" });
+    if (detail && !detailLoading) {
+      detailHeadingRef.current?.focus({ preventScroll: true });
+    }
+  }, [narrow, selectedId, detail, detailLoading]);
 
   function downloadLatex() {
     if (!detail) return;
@@ -238,8 +367,18 @@ export default function GenerationHistory() {
             <Archive size={19} />
           </span>
           <span>
-            <strong role="status">{entries.length}</strong>
-            <span>saved {entries.length === 1 ? "resume" : "resumes"}</span>
+            {loaded ? (
+              <>
+                <strong role="status">{entries.length}</strong>
+                <span>
+                  saved {entries.length === 1 ? "resume" : "resumes"}
+                </span>
+              </>
+            ) : (
+              <span>
+                {loading ? "Loading saved resumes" : "Saved resumes unavailable"}
+              </span>
+            )}
           </span>
         </div>
       </header>
@@ -308,8 +447,10 @@ export default function GenerationHistory() {
           </button>
         ))}
         <p className="history-results-count" aria-live="polite">
-          {loading
-            ? "Loading your archive…"
+          {!loaded
+            ? loading
+              ? "Loading your archive…"
+              : "History could not be loaded."
             : `Showing ${filteredEntries.length} of ${entries.length}`}
         </p>
       </nav>
@@ -326,8 +467,13 @@ export default function GenerationHistory() {
       )}
 
       <div className="history-layout">
-        <section aria-label="Saved generations" className="history-list">
-          {loading ? (
+        <section
+          aria-label="Saved generations"
+          className="history-list"
+          ref={listRef}
+          tabIndex={-1}
+        >
+          {loading && !loaded ? (
             <div
               className="history-loading"
               role="status"
@@ -336,6 +482,17 @@ export default function GenerationHistory() {
               <span />
               <span />
               <span />
+            </div>
+          ) : !loaded && error ? (
+            <div className="history-empty" role="alert">
+              <span className="history-empty-icon" aria-hidden="true">
+                <CircleAlert size={21} />
+              </span>
+              <strong>History could not be loaded.</strong>
+              <p>{error}</p>
+              <button onClick={() => void refreshEntries()} type="button">
+                Refresh
+              </button>
             </div>
           ) : filteredEntries.length ? (
             filteredEntries.map((entry) => (
@@ -347,19 +504,23 @@ export default function GenerationHistory() {
                   aria-current={selectedId === entry.id ? "true" : undefined}
                   className="history-entry-open"
                   onClick={() => void openEntry(entry.id)}
+                  ref={(node) => {
+                    if (node) entryButtons.current.set(entry.id, node);
+                    else entryButtons.current.delete(entry.id);
+                  }}
                   type="button"
                 >
                   <span className="history-entry-title">
                     <strong>{entry.role || "Untitled resume"}</strong>
-                    <span className={`history-status is-${entry.status}`}>
-                      {entry.status === "compiled" ? (
+                    <span className={`history-status is-${shownStatus(entry)}`}>
+                      {shownStatus(entry) === "compiled" ? (
                         <Check aria-hidden="true" size={12} />
-                      ) : entry.status === "failed" ? (
+                      ) : shownStatus(entry) === "failed" ? (
                         <CircleAlert aria-hidden="true" size={12} />
                       ) : (
                         <FileCode2 aria-hidden="true" size={12} />
                       )}
-                      {statusLabel(entry.status)}
+                      {statusLabel(shownStatus(entry))}
                     </span>
                   </span>
                   <span className="history-entry-subtitle">
@@ -370,15 +531,25 @@ export default function GenerationHistory() {
                   <span className="history-entry-meta">
                     <span>
                       <FileText aria-hidden="true" size={13} />
-                      {entry.selectedAchievementIds.length} achievements
+                      {countLabel(
+                        entry.selectedAchievementIds.length,
+                        "achievement",
+                        "achievements",
+                      )}
                     </span>
-                    <span className="history-provider">{entry.provider}</span>
+                    {/* Pass metadata.dataSource from createHistoryRequest so demo rows stay labelled. */}
+                    {entry.dataSource === "demo" ? (
+                      <span>Fictional demo data</span>
+                    ) : null}
+                    <span className="history-provider">
+                      {providerLabel(entry.provider)}
+                    </span>
                   </span>
                 </button>
                 <button
                   aria-label={`Delete ${entry.role} generation`}
                   className="history-delete"
-                  onClick={() => void deleteEntry(entry)}
+                  onClick={() => setPendingDelete(entry)}
                   title="Delete saved generation"
                   type="button"
                 >
@@ -424,7 +595,18 @@ export default function GenerationHistory() {
           )}
         </section>
 
-        <section aria-label="Saved resume output" className="history-detail">
+        <section
+          aria-label="Saved resume output"
+          className="history-detail"
+          ref={detailRef}
+        >
+          {narrow && selectedId ? (
+            <div className="history-detail-actions">
+              <button onClick={backToList} type="button">
+                Back to list
+              </button>
+            </div>
+          ) : null}
           {detailLoading ? (
             <p className="history-empty" role="status">
               Opening saved generation…
@@ -434,7 +616,13 @@ export default function GenerationHistory() {
               <div className="history-detail-heading">
                 <div>
                   <p className="source-indicator">SAVED OUTPUT</p>
-                  <h2>{detail.entry.role}</h2>
+                  <h2
+                    id="history-detail-title"
+                    ref={detailHeadingRef}
+                    tabIndex={-1}
+                  >
+                    {detail.entry.role}
+                  </h2>
                   <p>
                     {[detail.entry.company, formatDate(detail.entry.createdAt)]
                       .filter(Boolean)
@@ -462,25 +650,31 @@ export default function GenerationHistory() {
                     <button onClick={downloadLatex} type="button">
                       Download .tex
                     </button>
-                  ) : (
+                  ) : pdfUrl ? (
                     <a
                       download={`resume-${detail.entry.id}.pdf`}
-                      href={`/api/history/${encodeURIComponent(detail.entry.id)}/pdf?download=1`}
+                      href={pdfUrl}
                     >
                       Download PDF
                     </a>
-                  )}
+                  ) : null}
                 </div>
               </div>
               <dl className="history-facts">
                 <div>
                   <dt>Provider</dt>
-                  <dd>{detail.entry.provider}</dd>
+                  <dd>{providerLabel(detail.entry.provider)}</dd>
                 </div>
                 <div>
                   <dt>Status</dt>
-                  <dd>{statusLabel(detail.entry.status)}</dd>
+                  <dd>{statusLabel(shownStatus(detail.entry))}</dd>
                 </div>
+                {detail.entry.dataSource === "demo" ? (
+                  <div>
+                    <dt>Data</dt>
+                    <dd>Fictional demo data</dd>
+                  </div>
+                ) : null}
                 <div>
                   <dt>Selected achievements</dt>
                   <dd>{detail.entry.selectedAchievementIds.length}</dd>
@@ -492,14 +686,33 @@ export default function GenerationHistory() {
               </dl>
               {view === "latex" ? (
                 <pre className="history-latex">{detail.latex}</pre>
-              ) : (
+              ) : pdfError ? (
+                <div className="history-empty" role="alert">
+                  <strong>The saved PDF could not be opened.</strong>
+                  <p>{pdfError}</p>
+                  <button
+                    onClick={() => setPdfAttempt((attempt) => attempt + 1)}
+                    type="button"
+                  >
+                    Retry
+                  </button>
+                </div>
+              ) : pdfUrl ? (
                 <iframe
                   className="history-pdf"
-                  src={`/api/history/${encodeURIComponent(detail.entry.id)}/pdf`}
+                  src={pdfUrl}
                   title={`Saved PDF for ${detail.entry.role}`}
                 />
+              ) : (
+                <p className="history-empty" role="status">
+                  {pdfLoading ? "Opening saved PDF…" : "Opening saved PDF…"}
+                </p>
               )}
             </>
+          ) : !loaded ? (
+            <p className="history-empty" role="status">
+              {error || "Loading your archive…"}
+            </p>
           ) : (
             <div className="history-preview-empty">
               <span className="history-preview-icon" aria-hidden="true">
@@ -528,6 +741,28 @@ export default function GenerationHistory() {
           )}
         </section>
       </div>
+      {pendingDelete && (
+        <StudioDialog
+          title="Delete saved resume"
+          onClose={() => setPendingDelete(null)}
+        >
+          <p>
+            {`Delete the saved resume for ${pendingDelete.role}${pendingDelete.company ? ` at ${pendingDelete.company}` : ""}? This also deletes its saved LaTeX and PDF files.`}
+          </p>
+          <div className="studio-dialog-footer">
+            <button
+              data-studio-focus=""
+              onClick={() => setPendingDelete(null)}
+              type="button"
+            >
+              Cancel
+            </button>
+            <button onClick={() => void deleteEntry(pendingDelete)} type="button">
+              Delete
+            </button>
+          </div>
+        </StudioDialog>
+      )}
     </section>
   );
 }

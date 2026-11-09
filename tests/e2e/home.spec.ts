@@ -96,11 +96,10 @@ test("saves and restores the JD and role details locally", async ({ page }) => {
     .fill("Build reliable APIs and improve data services.");
 
   await page.getByRole("button", { name: "Save draft" }).click();
-  await expect(
-    page.getByText(
-      "Draft saved in this browser. You can open Resume builder now.",
-    ),
-  ).toBeVisible();
+  await expect(page.getByText("Draft saved in this browser.")).toBeVisible();
+  await expect(page.getByText("You can open Resume builder now.")).toHaveCount(
+    0,
+  );
   await expect(page.locator(".draft-state")).toContainText(
     "Saved on this device",
   );

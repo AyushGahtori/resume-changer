@@ -30,14 +30,87 @@ const LIBRARY_SECTIONS = [
 type LibraryCategory = (typeof LIBRARY_SECTIONS)[number]["id"];
 export type LibraryCategoryCounts = Record<LibraryCategory, number>;
 
+const HEADING_CLEARANCE = 12;
+
+function categoryCountText(id: LibraryCategory, count: number) {
+  if (id === "all") {
+    return `${count} achievement ${count === 1 ? "point" : "points"}`;
+  }
+  const unit =
+    id === "jobs"
+      ? count === 1
+        ? "job"
+        : "jobs"
+      : id === "projects"
+        ? count === 1
+          ? "project"
+          : "projects"
+        : id === "skills"
+          ? count === 1
+            ? "skill"
+            : "skills"
+          : count === 1
+            ? "credential"
+            : "credentials";
+  return `${count} ${unit}`;
+}
+
+/** Scroll offset that places a section heading just below a sticky stack. */
+export function libraryHeadingScrollTop(
+  headingViewportTop: number,
+  scrollY: number,
+  stickyBottom: number,
+) {
+  return Math.max(
+    0,
+    headingViewportTop + scrollY - stickyBottom - HEADING_CLEARANCE,
+  );
+}
+
+/** Scrolls a library section heading clear of the sticky workbench. */
+export function scrollLibrarySectionHeading(sectionId: string) {
+  const section = document.getElementById(sectionId);
+  const heading =
+    section?.querySelector<HTMLElement>(".library-section-header") ?? section;
+  if (!heading) return;
+
+  let stickyBottom = 0;
+  const stickyElements = document.querySelectorAll<HTMLElement>(
+    ".library-workspace-frame .topbar, .library-workbench",
+  );
+  for (const element of stickyElements) {
+    if (getComputedStyle(element).position !== "sticky") continue;
+    const bounds = element.getBoundingClientRect();
+    if (bounds.top <= stickyBottom + 1) {
+      stickyBottom = Math.max(stickyBottom, bounds.bottom);
+    }
+  }
+
+  window.scrollTo({
+    top: libraryHeadingScrollTop(
+      heading.getBoundingClientRect().top,
+      window.scrollY,
+      stickyBottom,
+    ),
+  });
+}
+
 /**
  * In-page navigation for the long library page. The controls jump to a
  * section; they never filter the library.
  */
 export default function CategoryNavigation({
   counts,
+  credentialsUnfiltered = false,
+  onRevealSection,
 }: {
   counts: LibraryCategoryCounts;
+  /**
+   * The credential count is the whole list. A skill filter is not in this
+   * case, because credentials are removed from that result.
+   */
+  credentialsUnfiltered?: boolean;
+  onRevealSection?: (section: "skills" | "credentials") => void;
 }) {
   const [activeSection, setActiveSection] = useState<LibraryCategory>("all");
 
@@ -97,22 +170,39 @@ export default function CategoryNavigation({
 
   return (
     <nav aria-label="Library sections" className="library-category-nav">
-      {LIBRARY_SECTIONS.map((section) => (
-        <a
-          aria-current={activeSection === section.id ? "location" : undefined}
-          aria-label={`${section.label}, ${counts[section.id]} items`}
-          className="library-category-link"
-          data-section={section.id}
-          href={`#${section.target}`}
-          key={section.id}
-          onClick={() => setActiveSection(section.id)}
-        >
-          {section.label}
-          <span aria-hidden="true" className="library-category-count">
-            {counts[section.id]}
-          </span>
-        </a>
-      ))}
+      {LIBRARY_SECTIONS.map((section) => {
+        const unfiltered =
+          section.id === "credentials" && credentialsUnfiltered;
+        const countText = categoryCountText(section.id, counts[section.id]);
+        return (
+          <a
+            aria-current={activeSection === section.id ? "location" : undefined}
+            aria-label={
+              unfiltered
+                ? `${section.label}, ${countText}, unfiltered`
+                : `${section.label}, ${countText}`
+            }
+            className="library-category-link"
+            data-section={section.id}
+            href={`#${section.target}`}
+            key={section.id}
+            onClick={() => {
+              setActiveSection(section.id);
+              if (section.id === "skills" || section.id === "credentials") {
+                onRevealSection?.(section.id);
+              }
+            }}
+          >
+            {section.label}
+            {unfiltered ? (
+              <span className="library-category-note">unfiltered</span>
+            ) : null}
+            <span aria-hidden="true" className="library-category-count">
+              {counts[section.id]}
+            </span>
+          </a>
+        );
+      })}
     </nav>
   );
 }

@@ -1,4 +1,5 @@
 import { protectAccountRoute } from "@/lib/cloud/protect-route";
+import { AccountAccessError, getAppMode } from "@/lib/cloud/security";
 import { NextResponse } from "next/server";
 import { loadResumeLibrary } from "@/lib/data/loaders";
 import { measureSkillWidths } from "@/lib/pdf/skill-measurements";
@@ -15,10 +16,23 @@ async function GETForAccount(request: Request) {
     );
   try {
     const library = await loadResumeLibrary({ source });
-    return NextResponse.json(await measureSkillWidths(library.skills), {
-      headers: { "Cache-Control": "no-store" },
-    });
+    return NextResponse.json(
+      await measureSkillWidths(library.skills, {
+        onCompile:
+          getAppMode() === "firebase"
+            ? async () => {
+                const { consumeAccountUsage } =
+                  await import("@/lib/cloud/usage");
+                await consumeAccountUsage("compile");
+              }
+            : undefined,
+      }),
+      {
+        headers: { "Cache-Control": "no-store" },
+      },
+    );
   } catch (error) {
+    if (error instanceof AccountAccessError) throw error;
     return NextResponse.json(
       {
         error:

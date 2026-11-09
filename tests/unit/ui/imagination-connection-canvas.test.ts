@@ -56,6 +56,10 @@ describe("ImaginationConnectionCanvas", () => {
     expect(markup).toContain("0 / 10 connected");
     expect(markup).toContain('aria-label="Evidence connection canvas"');
     expect(markup).toContain("Drop an achievement or skill here");
+    expect(markup).toContain("Select or drag");
+    expect(markup).not.toContain("Hold and drag");
+    expect(markup).toContain("Select or drag");
+    expect(markup).not.toContain("Hold and drag");
     expect(markup).not.toContain("Connect up to 10 items");
     expect(markup).not.toContain("Remove connected");
   });
@@ -230,7 +234,37 @@ describe("reduced motion", () => {
       "utf8",
     );
 
+    expect(styles).toMatch(/\.items\s*\{[^}]*width:\s*100%/);
+    expect(styles).not.toMatch(/\.items\s*\{[^}]*max-height:\s*96px/);
     expect(styles).toMatch(/@media\s*\(prefers-reduced-motion:\s*reduce\)/);
     expect(styles).toMatch(/\.particle\s*\{[\s\S]*?animation:\s*none;/);
+  });
+});
+
+describe("connected chip layout", () => {
+  it("keeps every chip inside the canvas and remeasures lines when the chip box scrolls", () => {
+    const styles = readFileSync(
+      new URL(
+        "../../../src/components/imagination-connection-canvas.module.css",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    const source = readFileSync(
+      new URL(
+        "../../../src/components/imagination-connection-canvas.tsx",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    const itemsRule = styles.slice(
+      styles.indexOf(".items {"),
+      styles.indexOf(".chip {"),
+    );
+
+    expect(itemsRule).toContain("width: 100%");
+    expect(itemsRule).not.toContain("max-height");
+    expect(styles).not.toContain("max-height: 96px");
+    expect(source).toContain("onScroll={measureConnections}");
   });
 });

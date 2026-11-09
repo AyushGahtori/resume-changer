@@ -1,6 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import type { JobAnalysisResult } from "../ai/contracts";
+import { buildAchievementSelectionInput } from "../ai/achievement-selection";
+import { assessRequirementCoverage } from "../ai/requirement-coverage";
 import type { ResumeDataSource } from "../data/loaders";
 import { MAX_JD_CHARACTERS } from "../jd-draft";
 import {
@@ -181,6 +183,34 @@ export function createManualGeneration(
         overrideById.get(id) ??
         selectedPoints.find((point) => point.id === id)!.text,
     }));
+  const resumeSummary = normalized.summaryOverride ?? library.profile.summary;
+  const renderedTexts = new Map(
+    generatedBullets.flatMap((bullet) =>
+      bullet.sourceAchievementIds.map((id) => [id, bullet.text] as const),
+    ),
+  );
+  const finalCoverage = options.analysis
+    ? assessRequirementCoverage(
+        buildAchievementSelectionInput({
+          library,
+          jobDescription: normalized.jobDescription,
+          analysis: options.analysis,
+        }),
+        normalized.selectedAchievementIds,
+        {
+          renderedSkillIds,
+          renderedTexts,
+          summary: resumeSummary,
+          inferredTermsById: new Map(
+            generatedBullets.flatMap((bullet) =>
+              bullet.sourceAchievementIds.map(
+                (id) => [id, bullet.inferredTerms ?? []] as const,
+              ),
+            ),
+          ),
+        },
+      )
+    : undefined;
   const visibleText = [
     library.profile.fullName,
     normalized.summaryOverride ?? library.profile.summary,
@@ -241,9 +271,10 @@ export function createManualGeneration(
       aiProvider: null,
       sourceProvenance,
       renderedSkillIds,
-      resumeSummary: normalized.summaryOverride ?? library.profile.summary,
+      resumeSummary,
       visibleWordCount: visibleText.split(/\s+/).filter(Boolean).length,
       generatedBullets,
+      ...(finalCoverage ? { finalCoverage } : {}),
       ...(normalized.selectedSkillIds
         ? { selectedSkillIds: normalized.selectedSkillIds }
         : {}),

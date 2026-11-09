@@ -10,6 +10,37 @@ import { accountContext, accountFromRequest } from "./server-account";
 import { withRequestBudget } from "./request-budget";
 import { protectedRouteFailureDetails } from "./route-failure";
 
+function assertMutationOrigin(request: Request): void {
+  if (getAppMode() !== "local") {
+    assertSameOrigin(request);
+    return;
+  }
+  const hostname = new URL(request.url).hostname;
+  const loopback = hostname === "localhost" || hostname === "127.0.0.1";
+  // Browsers send Origin on cross-site writes. Loopback unit tests and
+  // same-machine tools omit it. assertSameOrigin still treats localhost and
+  // 127.0.0.1 as the same site when an Origin header is present.
+  if (
+    loopback &&
+    !request.headers.has("origin") &&
+    !request.headers.has("sec-fetch-site")
+  )
+    return;
+  assertSameOrigin(request);
+}
+
+function assertJsonMutation(request: Request): void {
+  if (["GET", "HEAD", "OPTIONS"].includes(request.method)) return;
+  const raw = request.headers.get("content-type");
+  if (!raw) {
+    if (request.method === "DELETE") return;
+    throw new AccountAccessError("Send a JSON request.", "FORBIDDEN", 403);
+  }
+  const mediaType = raw.split(";", 1)[0]?.trim().toLowerCase();
+  if (mediaType === "application/json") return;
+  throw new AccountAccessError("Send a JSON request.", "FORBIDDEN", 403);
+}
+
 export function privateResponse(response: Response): Response {
   response.headers.set("Cache-Control", "private, no-store, max-age=0");
   response.headers.set("Vary", "Cookie");
@@ -29,9 +60,10 @@ export function protectAccountRoute<Arguments extends unknown[]>(
     ...context: Arguments
   ): Promise<Response> {
     try {
-      if (getAppMode() === "local") return handler(request, ...context);
+      if (request.method !== "GET") assertMutationOrigin(request);
       if (!["GET", "HEAD", "OPTIONS"].includes(request.method))
-        assertSameOrigin(request);
+        assertJsonMutation(request);
+      if (getAppMode() === "local") return handler(request, ...context);
       const account = await accountFromRequest(request);
       assertAccountBinding(request, account.uid);
       let bounded = request;

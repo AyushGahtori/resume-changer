@@ -680,9 +680,21 @@ export async function recommendAchievements(args: {
     }
   }
 
-  const recommendations = aiResult
-    ? normalizeAiResult(args.input, aiResult)
-    : makeFallbackResult(args.input);
+  // A valid model result with nothing chosen is not an AI selection. Local
+  // picks replace it only after the same consent used when the provider fails,
+  // and that path does not call the provider again.
+  const modelReturnedNoSelections = Boolean(
+    aiResult && aiResult.selections.length === 0,
+  );
+  const replaceEmptyModelResult =
+    modelReturnedNoSelections && Boolean(args.allowLocalFallback);
+  const recommendations = !aiResult
+    ? makeFallbackResult(args.input)
+    : replaceEmptyModelResult
+      ? makeFallbackResult(args.input)
+      : modelReturnedNoSelections
+        ? aiResult
+        : normalizeAiResult(args.input, aiResult);
   const allCandidates = buildCandidates(args.input);
   const selectedCandidates = allCandidates.filter((candidate) =>
     recommendations.selections.some(
@@ -690,7 +702,7 @@ export async function recommendAchievements(args: {
     ),
   );
   const usedLines = budgetCost(selectedCandidates);
-  const isFallback = !aiResult;
+  const isFallback = !aiResult || replaceEmptyModelResult;
   const relevantGroups = new Set(
     scoredCandidates(args.input).map(
       ({ candidate }) =>

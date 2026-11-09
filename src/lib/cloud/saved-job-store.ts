@@ -4,15 +4,23 @@ import {
   doc,
   getDocFromServer,
   getDocs,
+  getDocsFromServer,
   limit,
   orderBy,
   query,
   runTransaction,
   serverTimestamp,
+  type DocumentReference,
+  type DocumentSnapshot,
+  type Transaction,
 } from "firebase/firestore";
 import { StableIdSchema } from "../schemas/resume-data";
 import { SavedJobError } from "../jobs/saved-job-error";
-import { nextSavedJob } from "../jobs/saved-job-record";
+import {
+  nextSavedJob,
+  nextStoredJobCount,
+  readStoredJobCount,
+} from "../jobs/saved-job-record";
 import {
   MAX_SAVED_JOB_BYTES,
   MAX_SAVED_JOBS,
@@ -23,7 +31,53 @@ import {
 } from "../jobs/saved-job";
 import { ensureCloudAccount } from "./account-store";
 import { AccountAccessError } from "./security";
-import { writeUsageInTransaction } from "./usage";
+import { ACCOUNT_DAILY_LIMITS } from "./usage";
+
+function writeJobUsage(
+  transaction: Transaction,
+  reference: DocumentReference,
+  saved: DocumentSnapshot,
+  uid: string,
+  targetId: string,
+  storedJobs: number,
+) {
+  const maximum = ACCOUNT_DAILY_LIMITS.jobs;
+  const prior = saved.data();
+  const windowStart = prior?.windowStart as { toMillis?: () => number } | undefined;
+  const active =
+    typeof windowStart?.toMillis === "function" &&
+    Date.now() < windowStart.toMillis() + 86_400_000;
+  const count = active ? Number(prior?.count) + 1 : 1;
+  if (!Number.isSafeInteger(count) || count > maximum) {
+    throw new AccountAccessError(
+      "Your daily limit for this action has been reached. Please try again after the usage window resets.",
+      "RATE_LIMITED",
+      429,
+    );
+  }
+  transaction.set(reference, {
+    uid,
+    action: "jobs",
+    targetId,
+    count,
+    storedJobs,
+    windowStart: active ? prior?.windowStart : serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+}
+
+async function storedJobFallback(
+  db: Awaited<ReturnType<typeof ensureCloudAccount>>["db"],
+  uid: string,
+) {
+  const counted = await getDocsFromServer(
+    query(
+      collection(db, "accounts", uid, "jobAnalyses"),
+      limit(MAX_SAVED_JOBS),
+    ),
+  );
+  return counted.size;
+}
 
 function validId(value: string) {
   const id = StableIdSchema.max(200).safeParse(value);
@@ -93,19 +147,19 @@ export async function getCloudSavedJob(id: string) {
 export async function saveCloudSavedJob(input: unknown) {
   const { account, db, records, storedCount } = await loadSavedJobs();
   const next = nextSavedJob(input, records);
-  if (
-    !records.some((record) => record.id === next.id) &&
-    storedCount >= MAX_SAVED_JOBS
-  ) {
-    throw new SavedJobError(
-      "limit",
-      "Delete an older saved job before saving another. This account already has 40 saved analyses.",
-    );
-  }
   const reference = doc(db, ...savedJobDocumentPath(account.uid, next.id));
+  const usageReference = doc(db, "accounts", account.uid, "usage", "jobs");
   const payload = JSON.stringify(next);
   await runTransaction(db, async (transaction) => {
     const prior = await transaction.get(reference);
+    const usage = await transaction.get(usageReference);
+    const creating = !prior.exists();
+    const current = readStoredJobCount(usage.data()?.storedJobs);
+    const storedJobs = nextStoredJobCount(
+      current,
+      current === null ? storedCount : 0,
+      creating ? "create" : "update",
+    );
     const revision = prior.exists() ? Number(prior.data().revision) + 1 : 1;
     if (!Number.isSafeInteger(revision) || revision > 1_000_000_000) {
       throw new SavedJobError(
@@ -113,12 +167,13 @@ export async function saveCloudSavedJob(input: unknown) {
         "Saved job analyses could not be updated.",
       );
     }
-    await writeUsageInTransaction(
+    writeJobUsage(
       transaction,
-      db,
+      usageReference,
+      usage,
       account.uid,
-      "jobs",
       next.id,
+      storedJobs,
     );
     transaction.set(reference, {
       uid: account.uid,
@@ -135,17 +190,26 @@ export async function deleteCloudSavedJob(id: string) {
   const { account, db } = await ensureCloudAccount();
   const parsedId = validId(id);
   const reference = doc(db, ...savedJobDocumentPath(account.uid, parsedId));
+  const usageReference = doc(db, "accounts", account.uid, "usage", "jobs");
   await runTransaction(db, async (transaction) => {
     const prior = await transaction.get(reference);
     if (!prior.exists()) {
       throw new SavedJobError("not-found", "Saved job not found.");
     }
-    await writeUsageInTransaction(
+    const usage = await transaction.get(usageReference);
+    const current = readStoredJobCount(usage.data()?.storedJobs);
+    const storedJobs = nextStoredJobCount(
+      current,
+      current === null ? await storedJobFallback(db, account.uid) : 0,
+      "delete",
+    );
+    writeJobUsage(
       transaction,
-      db,
+      usageReference,
+      usage,
       account.uid,
-      "jobs",
       parsedId,
+      storedJobs,
     );
     transaction.delete(reference);
   });

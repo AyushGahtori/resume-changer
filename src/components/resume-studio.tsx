@@ -1,5 +1,5 @@
 "use client";
-import { apiFetch as fetch } from "@/lib/cloud/api-fetch";
+import { apiFetch } from "@/lib/cloud/api-fetch";
 import { useWorkspaceStorage } from "./account-session";
 import {
   useEffect,
@@ -40,12 +40,34 @@ import {
   type SkillMeasurements,
 } from "@/lib/generation/skill-layout";
 import type { ManualGenerationResult } from "@/lib/generation/manual-generation";
+import {
+  coverageStatusLabel,
+  summarizeCoverage,
+} from "@/lib/generation/coverage-presentation";
+import type { CoverageAssessment } from "@/lib/ai/requirement-coverage";
 import type {
   ResumeLibrary,
   AchievementPoint,
 } from "@/lib/schemas/resume-data";
 import type { ResumeDataSource } from "@/lib/data/loaders";
 import type { JobAnalysisResult } from "@/lib/ai/contracts";
+import { countLabel } from "@/lib/ui/library-labels";
+
+function coverageByPriority(rows: CoverageAssessment[]) {
+  const summary = summarizeCoverage(rows);
+  return [summary.required, summary.responsibilities, summary.preferred]
+    .filter((group) => group.total > 0)
+    .map((group) => {
+      const items = rows.filter((item) => item.priority === group.priority);
+      return {
+        priority: group.priority,
+        label: group.label,
+        headline: group.headline,
+        items,
+        breakdowns: summarizeCoverage(items).breakdowns,
+      };
+    });
+}
 
 type Props = {
   library: ResumeLibrary;
@@ -58,6 +80,7 @@ type Props = {
   qualityNotes?: string[];
   onApplied: (generation: ManualGenerationResult, pdfBase64: string) => void;
   onSetup: () => void;
+  onPendingChange?: (count: number) => void;
 };
 type Tab =
   | "overview"
@@ -269,6 +292,7 @@ export default function ResumeStudio({
   qualityNotes = [],
   onApplied,
   onSetup,
+  onPendingChange,
 }: Props) {
   const router = useRouter();
   const getWorkspaceStorage = useWorkspaceStorage();
@@ -330,6 +354,12 @@ export default function ResumeStudio({
   );
   const storageKey = `resume-changer.studio-draft.v1:${source}:${library.profile.id}:${generation.metadata.company}:${generation.metadata.roleTitle}`;
   const changes = draftChangeCount(baseline, document);
+  const onPendingChangeRef = useRef(onPendingChange);
+  onPendingChangeRef.current = onPendingChange;
+  useEffect(() => {
+    onPendingChangeRef.current?.(changes);
+  }, [changes]);
+  useEffect(() => () => onPendingChangeRef.current?.(0), []);
   const navigation: [Tab, string, string][] = [
     ["overview", "Overview", "◈"],
     ["achievements", "Achievements", "≋"],
@@ -343,14 +373,18 @@ export default function ResumeStudio({
 
   useEffect(() => {
     const controller = new AbortController();
-    fetch(`/api/resume/skills?source=${source}`, { signal: controller.signal })
+    apiFetch(`/api/resume/skills?source=${source}`, { signal: controller.signal })
       .then(async (response) => {
-        const payload = await response.json();
-        if (!response.ok || payload.source !== "latex" || !payload.widths)
+        const payload = (await response.json().catch(() => null)) as {
+          source?: string;
+          widths?: unknown;
+          error?: string;
+        } | null;
+        if (!response.ok || payload?.source !== "latex" || !payload.widths)
           throw new Error(
-            payload.error ?? "Layout measurements are unavailable.",
+            payload?.error ?? "Layout measurements are unavailable.",
           );
-        if (!controller.signal.aborted) setMeasurements(payload);
+        if (!controller.signal.aborted) setMeasurements(payload as SkillMeasurements);
       })
       .catch((failure) => {
         if (!controller.signal.aborted)
@@ -543,7 +577,7 @@ export default function ResumeStudio({
     setError("");
     setNotice("");
     try {
-      const response = await fetch("/api/resume/edit", {
+      const response = await apiFetch("/api/resume/edit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         signal: controller.signal,
@@ -558,15 +592,19 @@ export default function ResumeStudio({
           },
         }),
       });
-      const payload = await response.json();
+      const payload = (await response.json().catch(() => null)) as {
+        error?: string;
+        pdfBase64?: string;
+        generation?: ManualGenerationResult;
+      } | null;
       if (
         !response.ok ||
-        !payload.generation?.latex ||
+        !payload?.generation?.latex ||
         typeof payload.pdfBase64 !== "string" ||
         !atob(payload.pdfBase64).startsWith("%PDF-")
       )
         throw new Error(
-          payload.error ??
+          payload?.error ??
             "The service did not return a verified PDF. Your previous resume is unchanged.",
         );
       if (controller.signal.aborted) return;
@@ -577,12 +615,15 @@ export default function ResumeStudio({
         "Changes applied. The one-page PDF and its margins were validated.",
       );
     } catch (failure) {
-      if (!controller.signal.aborted)
-        setError(
-          failure instanceof Error
-            ? failure.message
-            : "The update failed. Your previous PDF and draft are preserved.",
-        );
+      if (controller.signal.aborted) {
+        setNotice("Apply cancelled. The draft is unchanged.");
+        return;
+      }
+      setError(
+        failure instanceof Error
+          ? failure.message
+          : "The update failed. Your previous PDF and draft are preserved.",
+      );
     } finally {
       if (applyController.current === controller) setApplying(false);
     }
@@ -637,7 +678,7 @@ export default function ResumeStudio({
           {isCompiling
             ? "Compiling…"
             : changes
-              ? `Draft · ${changes} changes`
+              ? `Draft · ${countLabel(changes, "change", "changes")}`
               : hasPdf
                 ? "PDF ready"
                 : "LaTeX ready"}
@@ -698,11 +739,17 @@ export default function ResumeStudio({
               <div className="studio-overview-stats">
                 <div>
                   <strong>{document.bullets.length}</strong>
-                  <span>achievements</span>
+                  <span>
+                    {document.bullets.length === 1
+                      ? "achievement"
+                      : "achievements"}
+                  </span>
                 </div>
                 <div>
                   <strong>{document.skillIds.length}</strong>
-                  <span>skills</span>
+                  <span>
+                    {document.skillIds.length === 1 ? "skill" : "skills"}
+                  </span>
                 </div>
                 <div>
                   <strong>
@@ -1238,42 +1285,41 @@ export default function ResumeStudio({
                   ))}
                 </details>
               )}
-              {generation.metadata.finalCoverage?.length ? (
-                <div className="studio-record">
-                  <strong>
-                    {
-                      generation.metadata.finalCoverage.filter(
-                        (item) => item.status === "supported",
-                      ).length
-                    }{" "}
-                    / {generation.metadata.finalCoverage.length} supported
-                    {generation.metadata.finalCoverage.some(
-                      (item) =>
-                        item.status === "partial" ||
-                        item.status === "uncertain",
-                    )
-                      ? ` · ${generation.metadata.finalCoverage.filter((item) => item.status === "partial" || item.status === "uncertain").length} partial`
-                      : ""}
-                  </strong>
-                  <p>
-                    Assessed for the last generated resume. Pending edits have
-                    not been reassessed.
-                  </p>
-                  {generation.metadata.finalCoverage.map((item) => (
-                    <details key={item.requirement}>
-                      <summary>
-                        {item.requirement} · {item.status}
-                      </summary>
-                      <p>{item.reason}</p>
-                      {item.missingComponents?.length ? (
+              {generation.metadata.finalCoverage?.length
+                ? coverageByPriority(generation.metadata.finalCoverage).map(
+                    (group) => (
+                      <div className="studio-record" key={group.priority}>
+                        <strong>
+                          {group.label}: {group.headline}
+                          {group.breakdowns.length
+                            ? ` · ${group.breakdowns
+                                .map((tally) => `${tally.count} ${tally.label}`)
+                                .join(" · ")}`
+                            : ""}
+                        </strong>
                         <p>
-                          Missing evidence: {item.missingComponents.join("; ")}
+                          Assessed for the last generated resume. Pending edits
+                          have not been reassessed.
                         </p>
-                      ) : null}
-                    </details>
-                  ))}
-                </div>
-              ) : null}
+                        {group.items.map((item) => (
+                          <details key={`${group.priority}:${item.requirement}`}>
+                            <summary>
+                              {item.requirement} ·{" "}
+                              {coverageStatusLabel(item.status)}
+                            </summary>
+                            <p>{item.reason}</p>
+                            {item.missingComponents?.length ? (
+                              <p>
+                                Missing evidence:{" "}
+                                {item.missingComponents.join("; ")}
+                              </p>
+                            ) : null}
+                          </details>
+                        ))}
+                      </div>
+                    ),
+                  )
+                : null}
               {analysis ? (
                 <>
                   {[
@@ -1429,8 +1475,17 @@ export default function ResumeStudio({
                       <strong>{revision.label}</strong>
                       <p>
                         {new Date(revision.at).toLocaleString()} ·{" "}
-                        {revision.document.bullets.length} points ·{" "}
-                        {revision.document.skillIds.length} skills
+                        {countLabel(
+                          revision.document.bullets.length,
+                          "point",
+                          "points",
+                        )}{" "}
+                        ·{" "}
+                        {countLabel(
+                          revision.document.skillIds.length,
+                          "skill",
+                          "skills",
+                        )}
                       </p>
                     </div>
                     <button
@@ -1496,6 +1551,14 @@ export default function ResumeStudio({
           >
             Discard
           </button>
+          {applying ? (
+            <button
+              type="button"
+              onClick={() => applyController.current?.abort()}
+            >
+              Cancel
+            </button>
+          ) : null}
           <button
             type="button"
             className="studio-primary"
@@ -1559,7 +1622,11 @@ export default function ResumeStudio({
             </label>
             <p className="studio-muted">
               {estimateBulletLines(manual.text, measurements)
-                ? `About ${estimateBulletLines(manual.text, measurements)} template lines. `
+                ? `About ${countLabel(
+                    estimateBulletLines(manual.text, measurements) ?? 0,
+                    "template line",
+                    "template lines",
+                  )}. `
                 : ""}
               Final fit is checked when you apply the draft.
             </p>

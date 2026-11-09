@@ -26,6 +26,7 @@ type Props = {
   sort: LibrarySort;
   onSortChange: (sort: LibrarySort) => void;
   onReset: () => void;
+  onRevealSection?: (section: "skills" | "credentials") => void;
 };
 
 const STICKY_BREAKPOINT = "(min-width: 1024px)";
@@ -45,6 +46,7 @@ export default function SearchWorkbench({
   sort,
   onSortChange,
   onReset,
+  onRevealSection,
 }: Props) {
   const workbenchRef = useRef<HTMLElement | null>(null);
   const [isStuck, setIsStuck] = useState(false);
@@ -64,12 +66,16 @@ export default function SearchWorkbench({
     projects: result.projects.length,
     skills: result.skills.length,
     credentials: result.credentials.length,
-    all:
-      result.jobs.length +
-      result.projects.length +
-      result.skills.length +
-      result.credentials.length,
+    all: result.visiblePointCount,
   };
+  const credentialsUnfiltered =
+    !filters.skillId &&
+    Boolean(
+      filters.tag ||
+        filters.experienceId ||
+        filters.sourceType ||
+        filters.status !== "all",
+    );
 
   useEffect(() => {
     const workbenchRefValue = workbenchRef.current;
@@ -254,7 +260,11 @@ export default function SearchWorkbench({
       </div>
 
       <div className="library-workbench-footer">
-        <CategoryNavigation counts={categoryCounts} />
+        <CategoryNavigation
+          counts={categoryCounts}
+          credentialsUnfiltered={credentialsUnfiltered}
+          onRevealSection={onRevealSection}
+        />
         <div className="library-filter-summary" aria-live="polite">
           <span className="library-result-count">
             {formatLibraryResultCount(

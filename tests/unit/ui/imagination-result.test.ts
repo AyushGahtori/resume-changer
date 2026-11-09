@@ -219,6 +219,23 @@ describe("ImaginationResult", () => {
     composer.remove();
   });
 
+  it("dismisses a suggestion without copying it into the editor", () => {
+    const onDismissSuggestion = vi.fn();
+    const onUseSuggestion = vi.fn();
+    const host = mount(
+      baseProps({
+        status: "ready",
+        text: "A suggestion that should not be saved yet.",
+        onDismissSuggestion,
+        onUseSuggestion,
+      }),
+    );
+
+    act(() => buttonNamed(host, "Dismiss suggestion").click());
+    expect(onDismissSuggestion).toHaveBeenCalledOnce();
+    expect(onUseSuggestion).not.toHaveBeenCalled();
+  });
+
   it("confirms a successful copy and explains when clipboard access is unavailable", async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     document.body.replaceChildren();

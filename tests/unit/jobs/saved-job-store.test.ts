@@ -162,6 +162,54 @@ describe("saved job analyses", () => {
     );
   });
 
+  it("keeps a stored link when the same posting is saved again without one", async () => {
+    const rootDir = await createRoot();
+    const saved = await saveSavedJob(input("BJAK"), { rootDir });
+    const cleared = await saveSavedJob(
+      { ...input("BJAK"), jobUrl: "" },
+      { rootDir },
+    );
+    const omitted = await saveSavedJob(
+      {
+        company: "BJAK",
+        roleTitle: "Backend Engineer",
+        jobDescription: "Build APIs for the product.",
+        analysis,
+      },
+      { rootDir },
+    );
+    const replaced = await saveSavedJob(
+      { ...input("BJAK"), jobUrl: "https://example.com/jobs/2" },
+      { rootDir },
+    );
+
+    expect(cleared.id).toBe(saved.id);
+    expect(cleared.jobUrl).toBe("https://example.com/jobs/1");
+    expect(omitted.id).toBe(saved.id);
+    expect(omitted.jobUrl).toBe("https://example.com/jobs/1");
+    expect(replaced.jobUrl).toBe("https://example.com/jobs/2");
+  });
+
+  it("stores an empty link on the first save", async () => {
+    const rootDir = await createRoot();
+    const saved = await saveSavedJob(
+      { ...input("New Co"), jobUrl: "" },
+      { rootDir },
+    );
+    const omitted = await saveSavedJob(
+      {
+        company: "Other Co",
+        roleTitle: "Backend Engineer",
+        jobDescription: "Build APIs for the product.",
+        analysis,
+      },
+      { rootDir },
+    );
+
+    expect(saved.jobUrl).toBe("");
+    expect(omitted.jobUrl).toBe("");
+  });
+
   it("deletes one job and leaves the other role at that company", async () => {
     const rootDir = await createRoot();
     const first = await saveSavedJob(input("BJAK", "Backend Engineer"), {

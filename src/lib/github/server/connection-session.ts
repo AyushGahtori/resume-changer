@@ -3,6 +3,7 @@ import "server-only";
 import { randomBytes, randomUUID } from "node:crypto";
 import {
   AccountAccessError,
+  assertAccountBinding,
   assertSameOrigin,
   getAppMode,
   readBoundedBody,
@@ -625,6 +626,14 @@ function callbackFailureState(
   return "denied";
 }
 
+function assertFirebaseAccountBinding(
+  request: Request,
+  session: GithubConnectionSession,
+): void {
+  if (!session.isLocal && session.accountId)
+    assertAccountBinding(request, session.accountId);
+}
+
 export function createGithubConnectionHandlers(
   overrides: Partial<GithubConnectionHandlerDependencies> = {},
 ) {
@@ -667,6 +676,7 @@ export function createGithubConnectionHandlers(
           "A local app session is required to connect GitHub.",
           401,
         );
+      assertFirebaseAccountBinding(request, session);
 
       const body = await readBoundedBody(request, 1024);
       let payload: unknown;
@@ -1068,6 +1078,7 @@ export function createGithubConnectionHandlers(
           },
           401,
         );
+      assertFirebaseAccountBinding(request, session);
       if (
         request.headers
           .get("content-type")
@@ -1160,6 +1171,7 @@ export function createGithubConnectionHandlers(
           200,
           clearedConnectionCookies(request, null),
         );
+      assertFirebaseAccountBinding(request, session);
       const result = await (
         await deps.getAccess()
       ).disconnect(

@@ -58,7 +58,9 @@ for (const theme of ["light", "dark"]) {
         name: "Clear draft",
         exact: true,
       });
-      const analyze = page.locator(".form-actions .analyze-button");
+      const analyze = page.locator(
+        ".form-actions .home-action-button--primary",
+      );
       const save = actions.getByRole("button", {
         name: "Save draft",
         exact: true,
@@ -79,11 +81,11 @@ for (const theme of ["light", "dark"]) {
       );
       await expect(save.locator("svg")).toHaveClass(/lucide-arrow-up-right/);
       await expect(save.locator("svg")).toHaveAttribute("aria-hidden", "true");
-      await expect(analyze).toHaveCSS(
+      await expect(analyze).toHaveCSS("background-color", "rgb(255, 122, 69)");
+      await expect(save).toHaveCSS(
         "background-color",
         theme === "light" ? "rgb(239, 235, 255)" : "rgb(124, 58, 237)",
       );
-      await expect(save).toHaveCSS("background-color", "rgb(255, 122, 69)");
       await capture(page, `${theme}-${width}-idle`);
       await save.click();
       await expect(jd).toBeFocused();

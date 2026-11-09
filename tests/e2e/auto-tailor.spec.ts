@@ -247,19 +247,17 @@ test("local matching is offered only after explaining the AI failure and request
     });
   });
 
-  let confirmationMessage = "";
-  page.once("dialog", async (dialog) => {
-    confirmationMessage = dialog.message();
-    await dialog.accept();
-  });
   const suggestButton = page.getByRole("button", { name: "Suggest points" });
   await expect(suggestButton).toBeEnabled();
   await suggestButton.click();
-  await expect.poll(() => requestBodies).toHaveLength(2);
-  expect(confirmationMessage).toContain(
+  const consent = page.getByRole("dialog", { name: "Continue without AI" });
+  await expect(consent).toBeVisible();
+  await expect(consent).toContainText(
     "Gemini's free-tier request limit was reached.",
   );
-  expect(confirmationMessage).toContain("Continue with local-matching?");
+  await expect(consent).toContainText("Continue with local-matching?");
+  await consent.getByRole("button", { name: "OK" }).click();
+  await expect.poll(() => requestBodies).toHaveLength(2);
   expect(requestBodies[0]).not.toHaveProperty("allowLocalFallback", true);
   expect(requestBodies[1]).toMatchObject({ allowLocalFallback: true });
 });

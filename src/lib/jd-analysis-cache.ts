@@ -11,6 +11,7 @@ const AnalysisCacheSchema = z
     company: z.string(),
     roleTitle: z.string(),
     jobDescription: z.string(),
+    jobUrl: z.string().optional(),
     analysis: JobAnalysisResultSchema,
   })
   .strict();
@@ -73,6 +74,7 @@ export function writeJobAnalysisCache(
   const entry = AnalysisCacheSchema.safeParse({
     schemaVersion: 1,
     ...normalizedDraft(draft),
+    jobUrl: draft.jobUrl.trim(),
     analysis: parsedAnalysis.data,
   });
   if (!entry.success) return false;

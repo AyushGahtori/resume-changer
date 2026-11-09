@@ -59,6 +59,18 @@ export function renderStudioGeneration(
       throw new ResumeRenderError(
         "Achievement sources must belong to their destination company or project.",
       );
+    if (bullet.sourceAchievementIds.length === 0)
+      throw new ResumeRenderError(
+        "A typed achievement with no library source cannot be included. Save it as a library point first.",
+      );
+    if (
+      bullet.sourceAchievementIds.some(
+        (id) => points.get(id)?.enabled === false,
+      )
+    )
+      throw new ResumeRenderError(
+        "A disabled achievement cannot be included. Turn it on in the library or remove it from the draft.",
+      );
     if (bullet.skillIds.some((id) => !skills.has(id)))
       throw new ResumeRenderError(
         "An achievement references a skill that is no longer in your library.",
@@ -103,7 +115,11 @@ export function renderStudioGeneration(
             skillIds: bullet.skillIds,
             metrics: [],
             source: { type: "direct-user", label: "Resume Studio draft" },
-            enabled: true,
+            enabled:
+              bullet.sourceAchievementIds.length > 0 &&
+              bullet.sourceAchievementIds.every(
+                (id) => points.get(id)?.enabled !== false,
+              ),
           })),
         ],
       };

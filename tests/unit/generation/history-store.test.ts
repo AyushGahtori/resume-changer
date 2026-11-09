@@ -5,6 +5,7 @@ const artifactGate = vi.hoisted(() => ({
   wait: null as Promise<void> | null,
   held: false,
   entered: null as (() => void) | null,
+  failRemoval: false,
 }));
 
 vi.mock("node:fs/promises", async () => {
@@ -25,6 +26,17 @@ vi.mock("node:fs/promises", async () => {
         if (artifactGate.wait) await artifactGate.wait;
       }
       return actual.readFile(path as never, options as never);
+    },
+    rm: async (path: string, options?: unknown) => {
+      const normalized = String(path).split("\\").join("/");
+      if (
+        artifactGate.failRemoval &&
+        normalized.includes("/data/generations/") &&
+        !normalized.endsWith(".tmp")
+      ) {
+        throw Object.assign(new Error("removal denied"), { code: "EPERM" });
+      }
+      return actual.rm(path as never, options as never);
     },
   };
 });
@@ -82,6 +94,7 @@ function resetArtifactGate() {
   artifactGate.wait = null;
   artifactGate.held = false;
   artifactGate.entered = null;
+  artifactGate.failRemoval = false;
 }
 
 afterEach(async () => {
@@ -196,6 +209,46 @@ describe("local generation history store", () => {
     await expect(
       getGenerationHistoryItem(saved.id, { rootDir }),
     ).rejects.toMatchObject({ code: "not-found" });
+  });
+
+  it("keeps the history entry when its files cannot be deleted", async () => {
+    const rootDir = await temporaryRoot();
+    const saved = await saveGenerationHistoryItem(input({}, pdfBase64), {
+      rootDir,
+    });
+    artifactGate.failRemoval = true;
+
+    await expect(
+      deleteGenerationHistoryItem(saved.id, { rootDir }),
+    ).rejects.toMatchObject({ code: "io-error" });
+    await expect(listGenerationHistory({ rootDir })).resolves.toEqual([saved]);
+    await expect(readFile(join(rootDir, saved.texPath!), "utf8")).resolves.toContain(
+      "\\documentclass",
+    );
+    await expect(readFile(join(rootDir, saved.pdfPath!))).resolves.toBeTruthy();
+  });
+
+  it("stores an optional data source and still reads entries that omit it", async () => {
+    const rootDir = await temporaryRoot();
+    const demo = await saveGenerationHistoryItem(
+      input({ id: "generation-demo-role", dataSource: "demo" }),
+      { rootDir },
+    );
+    const older = await saveGenerationHistoryItem(input(), { rootDir });
+
+    expect(demo.dataSource).toBe("demo");
+    expect(older).not.toHaveProperty("dataSource");
+    const entries = await listGenerationHistory({ rootDir });
+    expect(entries.find((entry) => entry.id === demo.id)?.dataSource).toBe(
+      "demo",
+    );
+    expect(
+      entries.find((entry) => entry.id === older.id),
+    ).not.toHaveProperty("dataSource");
+
+    await expect(
+      saveGenerationHistoryItem(input({ dataSource: "public" }), { rootDir }),
+    ).rejects.toMatchObject({ code: "invalid-generation" });
   });
 
   it("returns the replacement LaTeX when a save removes the file mid-read", async () => {

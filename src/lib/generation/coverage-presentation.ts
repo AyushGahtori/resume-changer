@@ -9,14 +9,14 @@ export type CoverageTone = "supported" | "partial" | "uncertain" | "missing";
  */
 export const COVERAGE_STATUS_LABELS: Record<CoverageStatus, string> = {
   supported: "Covered",
-  partial: "Partial support",
+  partial: "Partial",
   uncertain: "Needs confirmation",
   "evidence-not-selected": "Not selected",
-  "no-evidence-found": "No match found",
+  "no-evidence-found": "Not found",
 };
 
 export function coverageStatusLabel(status: CoverageStatus) {
-  return COVERAGE_STATUS_LABELS[status] ?? "No match found";
+  return COVERAGE_STATUS_LABELS[status] ?? "Not found";
 }
 
 export function coverageStatusTone(status: CoverageStatus): CoverageTone {
@@ -39,22 +39,56 @@ export type CoverageTally = {
   count: number;
 };
 
+export type CoveragePriority = "required" | "responsibility" | "preferred";
+
+export type CoverageGroupSummary = {
+  priority: CoveragePriority;
+  label: string;
+  supported: number;
+  total: number;
+  headline: string;
+};
+
 export type CoverageSummary = {
   /** Every requirement the analysis produced. */
   total: number;
+  /** Supported rows across every priority. Kept so existing readers still have a count. */
   supported: number;
   partial: number;
   uncertain: number;
   notSelected: number;
   noEvidence: number;
-  /** The first read: how many analyzed requirements the evidence supports. */
+  /**
+   * Required, responsibilities, and preferred counted apart.
+   * Uncategorized rows keep the older combined count.
+   */
   headline: string;
   /** The remaining states, so the headline is never the only number shown. */
   breakdowns: CoverageTally[];
+  required: CoverageGroupSummary;
+  responsibilities: CoverageGroupSummary;
+  preferred: CoverageGroupSummary;
 };
 
+function coverageGroup(
+  rows: { status: CoverageStatus; priority?: CoveragePriority }[],
+  priority: CoveragePriority,
+  label: string,
+): CoverageGroupSummary {
+  const matching = rows.filter((row) => row.priority === priority);
+  const supported = matching.filter((row) => row.status === "supported").length;
+  const total = matching.length;
+  return {
+    priority,
+    label,
+    supported,
+    total,
+    headline: `${supported} of ${total} covered`,
+  };
+}
+
 export function summarizeCoverage(
-  rows: { status: CoverageStatus }[],
+  rows: { status: CoverageStatus; priority?: CoveragePriority }[],
 ): CoverageSummary {
   const count = (status: CoverageStatus) =>
     rows.filter((row) => row.status === status).length;
@@ -64,29 +98,31 @@ export function summarizeCoverage(
   const notSelected = count("evidence-not-selected");
   const noEvidence = count("no-evidence-found");
   const total = rows.length;
+  const required = coverageGroup(rows, "required", "Required");
+  const responsibilities = coverageGroup(
+    rows,
+    "responsibility",
+    "Responsibilities",
+  );
+  const preferred = coverageGroup(rows, "preferred", "Preferred");
+  const grouped = [required, responsibilities, preferred].filter(
+    (group) => group.total > 0,
+  );
   const breakdowns: CoverageTally[] = (
     [
-      { status: "partial", label: "partial", tone: "partial", count: partial },
-      {
-        status: "uncertain",
-        label: "need confirmation",
-        tone: "uncertain",
-        count: uncertain,
-      },
-      {
-        status: "evidence-not-selected",
-        label: "not selected",
-        tone: "missing",
-        count: notSelected,
-      },
-      {
-        status: "no-evidence-found",
-        label: "no match",
-        tone: "missing",
-        count: noEvidence,
-      },
-    ] satisfies CoverageTally[]
-  ).filter((tally) => tally.count > 0);
+      ["partial", partial],
+      ["uncertain", uncertain],
+      ["evidence-not-selected", notSelected],
+      ["no-evidence-found", noEvidence],
+    ] as const
+  )
+    .filter(([, tallyCount]) => tallyCount > 0)
+    .map(([status, tallyCount]) => ({
+      status,
+      label: coverageStatusLabel(status),
+      tone: coverageStatusTone(status),
+      count: tallyCount,
+    }));
 
   return {
     total,
@@ -95,8 +131,13 @@ export function summarizeCoverage(
     uncertain,
     notSelected,
     noEvidence,
-    headline: `${supported} / ${total} supported`,
+    headline: grouped.length
+      ? grouped.map((group) => `${group.label} ${group.headline}`).join(" · ")
+      : `${supported} / ${total} supported`,
     breakdowns,
+    required,
+    responsibilities,
+    preferred,
   };
 }
 

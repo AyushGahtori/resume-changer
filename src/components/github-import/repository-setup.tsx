@@ -86,6 +86,22 @@ function isFullRevision(sha?: string | null) {
   return Boolean(sha && /^(?:[a-f\d]{40}|[a-f\d]{64})$/i.test(sha));
 }
 
+const GITHUB_IMPORT_UNAVAILABLE_ON_SERVER =
+  "GitHub import is not available on this server.";
+
+/** Callback setup failures cannot be repaired by signing in again. */
+const UNCONFIGURED_CALLBACK_MESSAGES = new Set([
+  "GitHub App callback setup is missing on this server.",
+  "GitHub App callback setup is invalid on this server.",
+  "GitHub App callback setup must use the exact callback URL.",
+  "Hosted GitHub connections require an HTTPS callback URL.",
+  "The GitHub callback URL must use the configured app origin.",
+]);
+
+function isUnconfiguredGithubCallback(message: string | null | undefined) {
+  return Boolean(message && UNCONFIGURED_CALLBACK_MESSAGES.has(message));
+}
+
 function connectionStatus(
   connectionState: RepositorySetupProps["connectionState"],
   error: DomainError | null,
@@ -112,6 +128,18 @@ function connectionStatus(
         presentationMessage ??
         error?.message ??
         "GitHub did not grant access to this repository.",
+    } as const;
+  }
+
+  if (
+    isUnconfiguredGithubCallback(presentationMessage) ||
+    isUnconfiguredGithubCallback(error?.message)
+  ) {
+    return {
+      label: "Import unavailable",
+      action: null,
+      tone: "unavailable",
+      message: GITHUB_IMPORT_UNAVAILABLE_ON_SERVER,
     } as const;
   }
 
@@ -313,17 +341,19 @@ export function RepositorySetup(props: RepositorySetupViewProps) {
       : "incomplete";
   const readinessMessage = setupReady
     ? "Your repository and destination are ready. Review your contribution scope before preparing evidence."
-    : connection.tone === "denied"
-      ? "Repository access must be restored before setup can become ready."
-      : connectionState !== "connected"
-        ? "Connect GitHub above to get started."
-        : !selectedRepository
-          ? "Choose one repository to analyze."
-          : !selectedProject
-            ? "Choose the Achievement Library project for your drafts."
-            : !role.trim()
-              ? "Briefly describe your own work on this repository."
-              : "Prepare the evidence to continue. Pull requests are optional.";
+    : connection.message === GITHUB_IMPORT_UNAVAILABLE_ON_SERVER
+      ? GITHUB_IMPORT_UNAVAILABLE_ON_SERVER
+      : connection.tone === "denied"
+        ? "Repository access must be restored before setup can become ready."
+        : connectionState !== "connected"
+          ? "Connect GitHub above to get started."
+          : !selectedRepository
+            ? "Choose one repository to analyze."
+            : !selectedProject
+              ? "Choose the Achievement Library project for your drafts."
+              : !role.trim()
+                ? "Briefly describe your own work on this repository."
+                : "Prepare the evidence to continue. Pull requests are optional.";
 
   function handleRepositoryChange(event: ChangeEvent<HTMLSelectElement>) {
     const repositoryId = event.currentTarget.value;
@@ -402,7 +432,11 @@ export function RepositorySetup(props: RepositorySetupViewProps) {
           <AlertCircle aria-hidden="true" size={18} />
           <div>
             <strong>Setup needs attention</strong>
-            <p>{error.message}</p>
+            <p>
+              {connection.message === GITHUB_IMPORT_UNAVAILABLE_ON_SERVER
+                ? connection.message
+                : error.message}
+            </p>
           </div>
         </div>
       ) : null}

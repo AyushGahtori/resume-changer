@@ -57,26 +57,50 @@ describe("LaTeX skill measurement", () => {
         ]),
       ];
     });
-    const measured = await measureSkillWidths([skill]);
+    const onCompile = vi.fn(async () => {});
+    const measured = await measureSkillWidths([skill], { onCompile });
     expect(measured.widths[skill.id]).toBeCloseTo(45);
     expect(measured.separatorWidth).toBe(4);
     expect(measured.labelWidths).toEqual([72, 82]);
     expect(measured.glyphWidths?.W).toBe(6);
     expect(mocks.compile.mock.calls[0][0]).toContain("C++ \\& C\\#");
-    expect(await measureSkillWidths([skill])).toBe(measured);
+    expect(onCompile).toHaveBeenCalledOnce();
+    expect(await measureSkillWidths([skill], { onCompile })).toBe(measured);
     expect(mocks.compile).toHaveBeenCalledOnce();
+    expect(onCompile).toHaveBeenCalledOnce();
   });
   it("does not cache failed measurements", async () => {
     const skill = { ...studioLibrary.skills[0], id: "failed-measurement" };
+    const onCompile = vi.fn(async () => {});
     mocks.compile.mockRejectedValueOnce(new Error("Missing compiler"));
-    await expect(measureSkillWidths([skill])).rejects.toThrow(
+    await expect(measureSkillWidths([skill], { onCompile })).rejects.toThrow(
       "Missing compiler",
     );
+    expect(onCompile).toHaveBeenCalledOnce();
     mocks.boxes.mockResolvedValueOnce([]);
-    await expect(measureSkillWidths([skill])).rejects.toThrow(
+    await expect(measureSkillWidths([skill], { onCompile })).rejects.toThrow(
       /could not be read/,
     );
+    expect(onCompile).toHaveBeenCalledTimes(2);
     expect(mocks.compile).toHaveBeenCalledTimes(2);
+  });
+  it("does not run Tectonic when the compile quota rejects the measurement", async () => {
+    const skill = {
+      ...studioLibrary.skills[0],
+      id: "quota-rejected-skill",
+      name: "Quota",
+    };
+    const onCompile = vi.fn(async () => {
+      throw new Error("daily limit");
+    });
+    await expect(measureSkillWidths([skill], { onCompile })).rejects.toThrow(
+      "daily limit",
+    );
+    await expect(measureSkillWidths([skill], { onCompile })).rejects.toThrow(
+      "daily limit",
+    );
+    expect(onCompile).toHaveBeenCalledTimes(2);
+    expect(mocks.compile).not.toHaveBeenCalled();
   });
   it("reports an unsupported skill without discarding valid measurements", async () => {
     const skill = {

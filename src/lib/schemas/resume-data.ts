@@ -103,6 +103,19 @@ const utcDateTimeSchema = z.iso
 const uniqueStrings = (values: string[]) =>
   new Set(values).size === values.length;
 
+function duplicatedIdMessage(ids: string[], message: string) {
+  const seen = new Set<string>();
+  const duplicates: string[] = [];
+  for (const id of ids) {
+    if (seen.has(id)) {
+      if (!duplicates.includes(id)) duplicates.push(id);
+    } else seen.add(id);
+  }
+  return duplicates.length
+    ? `${message} Duplicated ID: ${duplicates.join(", ")}.`
+    : message;
+}
+
 export const GithubSnapshotBudgetSchema = z
   .object({
     filesFetched: z.number().int().min(0).max(20),
@@ -924,8 +937,10 @@ export const ResumeLibraryV1Schema = z
       context.addIssue({
         code: "custom",
         path: [],
-        message:
+        message: duplicatedIdMessage(
+          entityIds,
           "Every profile, education, job, project, skill, credential, achievement, and metric ID must be unique.",
+        ),
       });
     }
 
@@ -1051,8 +1066,10 @@ export const ResumeLibraryV2Schema = z
       context.addIssue({
         code: "custom",
         path: [],
-        message:
+        message: duplicatedIdMessage(
+          entityIds,
           "Every profile, education, job, project, skill, credential, achievement, metric, repository, snapshot, provenance, and approval ID must be unique.",
+        ),
       });
     }
 
@@ -1460,6 +1477,8 @@ export const GenerationHistoryEntryFieldsSchema = z
     createdAt: z.iso.datetime(),
     company: nonEmptyText.optional(),
     role: nonEmptyText,
+    // Absent on history saved before the source was recorded. Do not default it.
+    dataSource: z.enum(["personal", "demo"]).optional(),
     selectedAchievementIds: z
       .array(StableIdSchema)
       .max(MAX_HISTORY_SELECTED_ACHIEVEMENTS),

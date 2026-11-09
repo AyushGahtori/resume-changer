@@ -29,6 +29,9 @@ export type ImaginationComposerProps = {
   restoreDraft: ImaginationDraft | null;
   onRestoreDraft: (draft: ImaginationDraft) => void;
   onDismissRestoreDraft: () => void;
+  disconnectedCount?: number;
+  onUndoDestination?: () => void;
+  restoreConfirming?: boolean;
 };
 
 const CREATE_NOTICE_COPY: Record<
@@ -36,11 +39,21 @@ const CREATE_NOTICE_COPY: Record<
   string
 > = {
   library:
-    "This creates a new achievement and saves to your Achievement Library. It does not update your PDF yet. Your PDF updates only after you Apply changes.",
+    "This creates a new achievement and saves to your Achievement Library. It does not update your PDF yet.",
   resume:
     "This adds the reviewed achievement to your resume draft. Your PDF updates only after you Apply changes.",
   both: "This saves the new achievement to your Achievement Library and adds it to your resume draft. Your PDF updates only after you Apply changes.",
 };
+
+export function disconnectedAchievementNotice(count: number): string | null {
+  if (count < 1) return null;
+  if (count === 1)
+    return "1 connected achievement was disconnected because it belongs to another job or project.";
+  return (
+    count +
+    " connected achievements were disconnected because they belong to another job or project."
+  );
+}
 
 export function reconcileDestinationAchievementIds(
   library: ResumeLibrary,
@@ -76,8 +89,10 @@ export default function ImaginationComposer({
   restoreDraft,
   onRestoreDraft,
   onDismissRestoreDraft,
+  disconnectedCount = 0,
+  onUndoDestination,
+  restoreConfirming = false,
 }: ImaginationComposerProps) {
-  let composerElement: HTMLTextAreaElement | null = null;
   const destinations = studioGroups(library);
   const selectedDestinationId = destinations.some(
     (destination) => destination.id === destinationGroupId,
@@ -85,6 +100,7 @@ export default function ImaginationComposer({
     ? destinationGroupId
     : "";
   const noticeCopy = createNotice ? CREATE_NOTICE_COPY[createNotice] : null;
+  const disconnectCopy = disconnectedAchievementNotice(disconnectedCount);
 
   function handleDestinationChange(nextDestinationId: string) {
     if (
@@ -174,11 +190,11 @@ export default function ImaginationComposer({
               disabled={destinations.length === 0}
               onChange={handleDestinationChange}
               options={
-                destinations.length === 0
+                  destinations.length === 0
                   ? [
                       {
                         value: "",
-                        label: "No resume destinations available",
+                        label: "A job or project is required.",
                       },
                     ]
                   : destinations.map((destination) => {
@@ -193,6 +209,20 @@ export default function ImaginationComposer({
               }
               value={selectedDestinationId}
             />
+            {disconnectCopy && (
+              <p className={styles.disconnect} role="status">
+                <span>{disconnectCopy}</span>
+                {onUndoDestination && (
+                  <button
+                    className={styles.undo}
+                    type="button"
+                    onClick={onUndoDestination}
+                  >
+                    Undo
+                  </button>
+                )}
+              </p>
+            )}
           </div>
 
           {restoreDraft && (
@@ -210,7 +240,9 @@ export default function ImaginationComposer({
                   type="button"
                   onClick={() => onRestoreDraft(restoreDraft)}
                 >
-                  Restore writing draft
+                  {restoreConfirming
+                    ? "Replace what you typed"
+                    : "Restore writing draft"}
                 </button>
                 <button
                   className={styles.discardButton}
@@ -244,21 +276,11 @@ export default function ImaginationComposer({
               />
               New achievement
             </label>
-            <button
-              className={styles.startButton}
-              type="button"
-              aria-controls="imagination-achievement-text"
-              onClick={() => composerElement?.focus()}
-            >
-              <Sparkles aria-hidden="true" focusable="false" size={15} />
-              Start with a draft
-            </button>
           </div>
           <textarea
             className={styles.textarea}
             id="imagination-achievement-text"
             ref={(element) => {
-              composerElement = element;
               if (composerRef) composerRef.current = element;
             }}
             rows={4}

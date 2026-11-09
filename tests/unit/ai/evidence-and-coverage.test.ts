@@ -357,8 +357,122 @@ describe("buildAchievementEvidence", () => {
   });
 });
 
+describe("requirement coverage limits", () => {
+  const blankAnalysis = {
+    targetTitle: "Engineer",
+    seniority: "Early",
+    requiredQualifications: [] as string[],
+    responsibilities: [] as string[],
+    preferredQualifications: [] as string[],
+    toolsAndPlatforms: [] as string[],
+    domainConcepts: [] as string[],
+    atsTerms: [] as string[],
+    inferredContext: [] as string[],
+    terminology: [] as { term: string; alternatives: string[] }[],
+  };
+
+  it("caps a listed or rendered skill at partial when no achievement covers it", () => {
+    const base = buildAchievementEvidence(library)[0];
+    const analysis = {
+      ...blankAnalysis,
+      requiredQualifications: ["Kubernetes", "Python"],
+    };
+    const input = {
+      jobDescription: "Kubernetes and Python.",
+      analysis,
+      achievements: [
+        {
+          ...base,
+          id: "achievement-unrelated",
+          text: "Redesigned service boundaries and capacity planning for a multi-tenant processing platform.",
+          context: undefined,
+          tags: [],
+          supportedSkills: [],
+          metrics: [],
+          skillIds: [],
+        },
+      ],
+      skills: [
+        {
+          id: "skill-k8s",
+          name: "Kubernetes",
+          aliases: [],
+          isListedOnCurrentResume: true,
+          evidenceAchievementIds: [],
+        },
+        {
+          id: "skill-python",
+          name: "Python",
+          aliases: [],
+          isListedOnCurrentResume: false,
+          evidenceAchievementIds: [],
+        },
+      ],
+      contentBudgetLines: 40,
+    };
+    const listed = assessRequirementCoverage(input, ["achievement-unrelated"]);
+    expect(
+      listed.find((row) => row.requirement === "Kubernetes"),
+    ).toMatchObject({
+      status: "partial",
+      coveredByAchievementIds: [],
+    });
+    expect(listed.find((row) => row.requirement === "Python")?.status).toBe(
+      "evidence-not-selected",
+    );
+
+    const rendered = assessRequirementCoverage(
+      input,
+      ["achievement-unrelated"],
+      { renderedSkillIds: ["skill-python"] },
+    );
+    expect(rendered.find((row) => row.requirement === "Python")).toMatchObject({
+      status: "partial",
+      coveredByAchievementIds: [],
+    });
+    expect(
+      rendered
+        .find((row) => row.requirement === "Python")
+        ?.evidence.some((item) => item.id === "skill-python" && item.selected),
+    ).toBe(true);
+  });
+
+  it("does not cover React from an employer description that mentions internal tooling", () => {
+    const evidence = buildAchievementEvidence(library);
+    const point = evidence.find(
+      (item) => item.id === "achievement-service-observability",
+    )!;
+    const requirement = "React for internal tooling dashboards";
+    expect(point.context).toContain("internal developer tooling");
+    expect(evidenceText(point)).toContain("dashboards");
+    expect(evidenceText(point)).not.toContain("internal developer tooling");
+    expect(semanticMatchScore(evidenceText(point), requirement)).toBeLessThan(
+      0.75,
+    );
+
+    const rows = assessRequirementCoverage(
+      {
+        jobDescription:
+          "Fictional role supporting cloud services and internal developer tooling.",
+        analysis: {
+          ...blankAnalysis,
+          preferredQualifications: [requirement],
+        },
+        achievements: evidence,
+        skills: buildSkillEvidence(library),
+        profile: buildProfileEvidence(library),
+        contentBudgetLines: 40,
+      },
+      evidence.map((item) => item.id),
+    );
+    expect(
+      rows.find((row) => row.requirement === requirement)?.status,
+    ).not.toBe("supported");
+  });
+});
+
 describe("evidenceText", () => {
-  it("joins the text, context, tags, skills, and metrics of a point", () => {
+  it("joins the text, tags, skills, and metrics of a point without the employer description", () => {
     const evidence = buildAchievementEvidence(library);
     const point = evidence.find(
       (item) => item.id === "achievement-service-capacity-design",
@@ -366,7 +480,7 @@ describe("evidenceText", () => {
     const text = evidenceText(point);
 
     expect(text).toContain(point.text);
-    expect(text).toContain(point.context!);
+    expect(text).not.toContain(point.context!);
     expect(text).toContain(point.tags[0]);
     expect(text).toContain(point.supportedSkills![0]);
   });

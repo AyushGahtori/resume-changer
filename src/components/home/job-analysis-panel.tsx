@@ -18,6 +18,12 @@ export type AnalysisPanelProps = {
   error: string;
   cacheSaved: boolean;
   onAnalyze: () => void;
+  onSaveAnalysis?: () => void;
+  onCancelAnalysis?: () => void;
+  retryLocked?: boolean;
+  outOfDate?: boolean;
+  savingAnalysis?: boolean;
+  saveError?: string;
 };
 
 export function JobAnalysisPanel({
@@ -26,6 +32,11 @@ export function JobAnalysisPanel({
   error,
   cacheSaved,
   onAnalyze,
+  onSaveAnalysis,
+  retryLocked = false,
+  outOfDate = false,
+  savingAnalysis = false,
+  saveError = "",
   embedded = false,
 }: AnalysisPanelProps & { embedded?: boolean }) {
   const Heading = embedded ? "h3" : "h2";
@@ -47,7 +58,9 @@ export function JobAnalysisPanel({
           ? "Analyzing job description..."
           : state === "error"
             ? "Analysis could not be completed."
-            : "Job description analysis ready."}
+            : outOfDate
+              ? "This analysis is out of date."
+              : "Job description analysis ready."}
       </p>
       {state === "loading" && (
         <div className="analysis-loading" aria-hidden="true">
@@ -79,12 +92,12 @@ export function JobAnalysisPanel({
         <button
           key="analysis-action"
           className="clear-button analysis-retry"
-          aria-disabled={state === "loading"}
+          aria-disabled={state === "loading" || retryLocked ? true : undefined}
           aria-describedby={
             state === "error" ? "analysis-error-message" : undefined
           }
           onClick={() => {
-            if (state !== "loading") onAnalyze();
+            if (state !== "loading" && !retryLocked) onAnalyze();
           }}
           type="button"
         >
@@ -98,10 +111,20 @@ export function JobAnalysisPanel({
       {state === "success" && analysis && (
         <>
           {!cacheSaved && (
-            <p className="analysis-cache-notice" role="status">
-              This analysis was not added to your saved jobs. You can retry the
-              analysis.
-            </p>
+            <div className="analysis-cache-notice" role="status">
+              {saveError ? <p>{saveError}</p> : null}
+              <p>This analysis was not added to your saved jobs.</p>
+              {onSaveAnalysis && (
+                <button
+                  className="clear-button"
+                  disabled={savingAnalysis}
+                  onClick={onSaveAnalysis}
+                  type="button"
+                >
+                  Save this analysis
+                </button>
+              )}
+            </div>
           )}
           <dl className="analysis-role">
             <div>

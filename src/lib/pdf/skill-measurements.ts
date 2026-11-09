@@ -106,6 +106,7 @@ async function measure(skills: Skill[]): Promise<SkillMeasurements> {
 
 export function measureSkillWidths(
   skills: Skill[],
+  options: { onCompile?: () => Promise<void> | void } = {},
 ): Promise<SkillMeasurements> {
   const key = createHash("sha256")
     .update(JSON.stringify(skills.map(({ id, name }) => [id, name])))
@@ -113,7 +114,10 @@ export function measureSkillWidths(
   const existing = cache.get(key);
   if (existing) return existing;
   if (cache.size >= 8) cache.delete(cache.keys().next().value!);
-  const promise = measure(skills).catch((error: unknown) => {
+  const promise = (async () => {
+    await options.onCompile?.();
+    return measure(skills);
+  })().catch((error: unknown) => {
     cache.delete(key);
     throw error;
   });

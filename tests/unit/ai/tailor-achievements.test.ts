@@ -303,6 +303,26 @@ describe("Guided Tailor response validation", () => {
     ).toBe("achievement-terraform");
   });
 
+  it("notes when a missing resume summary is replaced with the evidence template", () => {
+    const response = createTailoringResponse({
+      input,
+      result: {
+        summary: "Draft",
+        achievementText: [
+          {
+            achievementId: "achievement-terraform",
+            text: "Provisioned AWS resources with Terraform modules.",
+          },
+        ],
+      },
+    });
+
+    expect(response.resumeSummary?.trim().length).toBeGreaterThan(0);
+    expect(response.qualityNotes?.join(" ")).toContain(
+      "Replaced an unsupported summary with an evidence-backed accomplishment summary.",
+    );
+  });
+
   it("does not append a supported term the model did not phrase naturally", () => {
     const response = createTailoringResponse({
       input,

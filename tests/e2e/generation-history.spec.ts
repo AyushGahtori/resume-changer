@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { createOnePagePdf } from "../helpers/pdf-fixture";
+import { saveJobAnalysis } from "../helpers/saved-job";
 
 test("searches, reopens, preserves, and safely deletes a prior output", async ({
   page,
@@ -75,10 +76,10 @@ test("searches, reopens, preserves, and safely deletes a prior output", async ({
     dimensions.viewportWidth,
   );
 
-  page.once("dialog", (dialog) => dialog.accept());
   await page
     .getByRole("button", { name: "Delete Applied ML Engineer generation" })
     .click();
+  await page.getByRole("button", { name: "Delete", exact: true }).click();
   await expect(
     page
       .locator(".history-entry-open")
@@ -92,4 +93,36 @@ test("searches, reopens, preserves, and safely deletes a prior output", async ({
   expect((await historyResponse.json()).entries).not.toContainEqual(
     expect.objectContaining({ id }),
   );
+});
+
+test("does not call an empty history save saved", async ({ page }) => {
+  await page.goto("/");
+  await page.getByLabel("Company").fill("Example Systems");
+  await page.getByLabel("Role title").fill("Platform Engineer");
+  await page
+    .getByRole("textbox", { name: "Job description", exact: true })
+    .fill("Build reliable platform services and improve deployment workflows.");
+  await expect(page.getByRole("status")).toContainText("Saved on this device");
+  await saveJobAnalysis(page, {
+    company: "Example Systems",
+    roleTitle: "Platform Engineer",
+    jobDescription:
+      "Build reliable platform services and improve deployment workflows.",
+  });
+  await page.route("**/api/history", (route) => {
+    if (route.request().method() !== "POST") return route.continue();
+    return route.fulfill({ status: 200, body: "" });
+  });
+  await page.goto("/generate?source=demo");
+  await page
+    .getByLabel("Select achievement achievement-service-capacity-design")
+    .check();
+  await page.getByRole("button", { name: "Generate LaTeX" }).click();
+  await expect(page.getByLabel("Generated LaTeX")).toContainText(
+    "Jordan Example",
+  );
+  await expect(
+    page.getByText("Saved to generation history on this device."),
+  ).toHaveCount(0);
+  await expect(page.getByText(/could not be saved to history/)).toBeVisible();
 });

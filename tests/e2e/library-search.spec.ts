@@ -470,6 +470,9 @@ test("composes the query with the other facets", async ({ page }) => {
 
   await chooseLibraryOption(page, "Linked skill", "skill-python");
   await expect(count).toContainText("2 of 13");
+  await expect(
+    page.getByRole("link", { name: /Credentials, \d+ credentials, unfiltered/ }),
+  ).toBeVisible();
 
   await page.getByRole("searchbox", { name: "Search library" }).fill("python");
   await expect(count).toContainText("2 of 13");

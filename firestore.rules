@@ -13,6 +13,7 @@ service cloud.firestore {
     // jobAnalyses/{id}: uid, revision (1..1e9), payload JSON string <=120000 chars,
     //   immutable createdAt and updatedAt timestamps. Company is a label, not the document id.
     // usage/{action}: uid, action, count, windowStart and updatedAt timestamps.
+    //   usage/jobs may also store storedJobs, the saved-analysis total (0..40).
     function owns(uid) {
       return request.auth != null && request.auth.uid == uid
         && request.auth.token.email_verified == true
@@ -94,12 +95,13 @@ service cloud.firestore {
     function validUsage(uid, action) {
       let d = request.resource.data;
       return d.keys().hasAll(['uid', 'action', 'targetId', 'count', 'windowStart', 'updatedAt'])
-        && d.keys().hasOnly(['uid', 'action', 'targetId', 'count', 'windowStart', 'updatedAt'])
+        && d.keys().hasOnly(['uid', 'action', 'targetId', 'count', 'windowStart', 'updatedAt', 'storedJobs'])
         && d.uid is string && d.uid == uid && d.uid.size() <= 128
         && d.targetId is string && d.targetId.size() > 0 && d.targetId.size() <= 200 && d.targetId.matches('^[a-z0-9]+(-[a-z0-9]+)*$')
         && d.action is string && d.action == action && d.action.size() <= 10
         && usageMaximum(action) > 0 && d.count is int && d.count >= 1 && d.count <= usageMaximum(action)
-        && d.windowStart is timestamp && d.updatedAt == request.time;
+        && d.windowStart is timestamp && d.updatedAt == request.time
+        && (!('storedJobs' in d) || (action == 'jobs' && d.storedJobs is int && d.storedJobs >= 0 && d.storedJobs <= 40));
     }
 
     match /accounts/{uid} {

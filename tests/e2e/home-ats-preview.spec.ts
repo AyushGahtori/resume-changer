@@ -401,11 +401,8 @@ for (const theme of ["light", "dark"]) {
       animations: "disabled",
     });
     await page.getByLabel("Company", { exact: true }).fill("Updated context");
-    await expect(
-      page.getByText("This draft differs from the saved analysis.", {
-        exact: false,
-      }),
-    ).toBeVisible();
+    await expect(page.locator(".analysis-status")).toContainText("out of date");
+    await expect(page.locator(".saved-job-unsaved")).toBeVisible();
     await expect(preview.locator(".analysis-role")).toContainText(
       homeAnalysis.targetTitle,
     );

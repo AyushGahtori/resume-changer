@@ -66,13 +66,64 @@ const UpdateChangesSchema = z
     message: "Provide at least one field to update.",
   });
 
+const YearMonthInputSchema = z
+  .string()
+  .regex(/^\d{4}-(0[1-9]|1[0-2])$/, "Use YYYY-MM, for example 2026-09.");
+
+/**
+ * A job or project created in the same save as the first achievement.
+ * An empty personal library has no parent to attach a point to, and the
+ * points route is the only library write the editor can call.
+ */
+export const CreateParentInputSchema = z.discriminatedUnion("type", [
+  z
+    .object({
+      type: z.literal("job"),
+      id: StableIdSchema,
+      company: z.string().trim().min(1),
+      title: z.string().trim().min(1),
+      employmentType: z.enum([
+        "full-time",
+        "part-time",
+        "contract",
+        "internship",
+        "freelance",
+        "other",
+      ]),
+      startDate: YearMonthInputSchema,
+      endDate: YearMonthInputSchema.nullable().optional(),
+    })
+    .strict(),
+  z
+    .object({
+      type: z.literal("project"),
+      id: StableIdSchema,
+      name: z.string().trim().min(1),
+    })
+    .strict(),
+]);
+
 export const CreateAchievementInputSchema = z
   .object({
     parentType: z.enum(["job", "project"]),
     parentId: StableIdSchema,
     point: AchievementPointSchema,
+    createParent: CreateParentInputSchema.optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((value, context) => {
+    if (!value.createParent) return;
+    if (
+      value.createParent.type !== value.parentType ||
+      value.createParent.id !== value.parentId
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["createParent"],
+        message: "The new job or project must be the achievement parent.",
+      });
+    }
+  });
 
 export const UpdateAchievementInputSchema = z
   .object({ changes: UpdateChangesSchema })
@@ -85,6 +136,17 @@ export const CreateSkillInputSchema = z
       .trim()
       .min(1, "Enter a skill name.")
       .max(80, "Use a skill name of 80 characters or fewer."),
+  })
+  .strict();
+
+export const CreateLibraryParentInputSchema = z
+  .object({
+    kind: z.enum(["job", "project"]),
+    name: z
+      .string()
+      .trim()
+      .min(1, "Enter a job or project name.")
+      .max(120, "Use a name of 120 characters or fewer."),
   })
   .strict();
 
@@ -102,6 +164,14 @@ export type CreateAchievementInput = z.infer<
 export type UpdateAchievementInput = z.infer<
   typeof UpdateAchievementInputSchema
 >;
+export type CreateLibraryParentInput = z.infer<
+  typeof CreateLibraryParentInputSchema
+>;
+export type CreatedLibraryParent = {
+  id: string;
+  kind: "job" | "project";
+  label: string;
+};
 
 export class LibraryWriteError extends Error {
   constructor(
@@ -358,27 +428,77 @@ export async function createAchievementPoint(
   }
 
   let created: AchievementPoint | undefined;
-  const library = await commitPointChange((current) => {
-    const collection =
-      parsed.data.parentType === "job" ? current.jobs : current.projects;
-    const parent = collection.find((item) => item.id === parsed.data.parentId);
-    if (!parent) {
-      throw new LibraryWriteError(
-        "not-found",
-        "The selected job or project was not found.",
+  const library = await commitPointChange(
+    (current): NormalizedResumeLibrary => {
+      const isJob = parsed.data.parentType === "job";
+      const collection = isJob ? current.jobs : current.projects;
+      const parent = collection.find(
+        (item) => item.id === parsed.data.parentId,
       );
-    }
-    created = parsed.data.point;
-    return {
-      ...current,
-      [parsed.data.parentType === "job" ? "jobs" : "projects"]: collection.map(
-        (item) =>
+      const point = {
+        ...parsed.data.point,
+        githubEvidence: parsed.data.point.githubEvidence ?? null,
+      };
+      created = point;
+      if (!parent) {
+        const draft = parsed.data.createParent;
+        if (!draft) {
+          throw new LibraryWriteError(
+            "not-found",
+            "The selected job or project was not found.",
+          );
+        }
+        if (draft.type === "job") {
+          return {
+            ...current,
+            jobs: [
+              ...current.jobs,
+              {
+                id: draft.id,
+                company: draft.company,
+                title: draft.title,
+                employmentType: draft.employmentType,
+                startDate: draft.startDate,
+                endDate: draft.endDate ?? null,
+                points: [point],
+              },
+            ],
+          };
+        }
+        return {
+          ...current,
+          projects: [
+            ...current.projects,
+            {
+              id: draft.id,
+              name: draft.name,
+              repositoryAttachments: [],
+              points: [point],
+            },
+          ],
+        };
+      }
+      if (isJob) {
+        return {
+          ...current,
+          jobs: current.jobs.map((item) =>
+            item.id === parsed.data.parentId
+              ? { ...item, points: [...item.points, point] }
+              : item,
+          ),
+        };
+      }
+      return {
+        ...current,
+        projects: current.projects.map((item) =>
           item.id === parsed.data.parentId
-            ? { ...item, points: [...item.points, parsed.data.point] }
+            ? { ...item, points: [...item.points, point] }
             : item,
-      ),
-    };
-  }, options);
+        ),
+      };
+    },
+    options,
+  );
   return { library, point: created! };
 }
 
@@ -457,6 +577,90 @@ export async function createSkill(
     return { ...current, skills: [...current.skills, skill] };
   }, options);
   return { library, skill: created! };
+}
+
+function currentYearMonth(now = new Date()) {
+  const month = String(now.getUTCMonth() + 1).padStart(2, "0");
+  return `${now.getUTCFullYear()}-${month}`;
+}
+
+function parentIdForName(
+  kind: "job" | "project",
+  name: string,
+  used: Set<string>,
+) {
+  const folded = name
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase();
+  let base = folded
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 48)
+    .replace(/-+$/g, "");
+  if (!base) base = "entry";
+  const root = `${kind}-${base}`;
+  if (!used.has(root) && StableIdSchema.safeParse(root).success) return root;
+  for (let index = 2; index < 1000; index += 1) {
+    const candidate = `${root}-${index}`;
+    if (!used.has(candidate) && StableIdSchema.safeParse(candidate).success) {
+      return candidate;
+    }
+  }
+  throw new LibraryWriteError(
+    "invalid-library",
+    "A unique job or project ID could not be chosen.",
+  );
+}
+
+/**
+ * Creates the smallest job or project an achievement can belong to.
+ * A job stores the given name as both title and company. This is not a job editor.
+ */
+export async function createLibraryParent(
+  input: CreateLibraryParentInput,
+  options?: WriteOptions,
+) {
+  const parsed = CreateLibraryParentInputSchema.safeParse(input);
+  if (!parsed.success) {
+    throw new LibraryWriteError(
+      "invalid-input",
+      "Enter a job or project name.",
+    );
+  }
+  const { kind, name } = parsed.data;
+  let created: CreatedLibraryParent | undefined;
+  const library = await commitPointChange((current) => {
+    const used = new Set(collectEntityIds(current));
+    const id = parentIdForName(kind, name, used);
+    if (kind === "project") {
+      created = { id, kind, label: name };
+      return {
+        ...current,
+        projects: [
+          ...current.projects,
+          { id, name, repositoryAttachments: [], points: [] },
+        ],
+      };
+    }
+    created = { id, kind, label: `${name} · ${name}` };
+    return {
+      ...current,
+      jobs: [
+        ...current.jobs,
+        {
+          id,
+          company: name,
+          title: name,
+          employmentType: "other" as const,
+          startDate: currentYearMonth(),
+          endDate: null,
+          points: [],
+        },
+      ],
+    };
+  }, options);
+  return { library, parent: created! };
 }
 
 function skillIdForName(name: string, used: Set<string>): string {

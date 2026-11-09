@@ -59,13 +59,48 @@ export function checkedSavedJobInput(input: unknown) {
   };
 }
 
+export function readStoredJobCount(value: unknown): number | null {
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 0) {
+    return null;
+  }
+  return value;
+}
+
+/** Stored-job total checked inside a hosted save or delete transaction. */
+export function nextStoredJobCount(
+  current: number | null,
+  fallback: number,
+  change: "create" | "update" | "delete",
+) {
+  const base = current ?? fallback;
+  if (!Number.isInteger(base) || base < 0) {
+    throw new SavedJobError(
+      "unavailable",
+      "Saved job analyses could not be updated.",
+    );
+  }
+  if (change === "delete") return Math.max(0, base - 1);
+  if (change === "update") return Math.min(base, MAX_SAVED_JOBS);
+  if (base >= MAX_SAVED_JOBS) {
+    throw new SavedJobError(
+      "limit",
+      "Delete an older saved job before saving another. This account already has 40 saved analyses.",
+    );
+  }
+  return base + 1;
+}
+
 export function nextSavedJob(input: unknown, records: SavedJobRecord[]) {
   const fields = checkedSavedJobInput(input);
   const fingerprint = jobFingerprint(fields);
   const existing = records.find((record) => record.fingerprint === fingerprint);
   const now = new Date().toISOString();
+  const jobUrl =
+    existing && existing.jobUrl.trim() && !fields.jobUrl
+      ? existing.jobUrl
+      : fields.jobUrl;
   const next: SavedJobRecord = existing
-    ? { ...existing, ...fields, fingerprint, updatedAt: now }
+    ? { ...existing, ...fields, jobUrl, fingerprint, updatedAt: now }
     : {
         schemaVersion: 1,
         id: createSavedJobId(),

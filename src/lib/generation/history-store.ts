@@ -232,11 +232,17 @@ async function removeOldArtifacts(
   rootDir: string,
   entry: GenerationHistoryEntry | undefined,
   keep: Set<string>,
+  options: { required?: boolean } = {},
 ) {
   for (const reference of [entry?.texPath, entry?.pdfPath]) {
-    if (reference && !keep.has(reference)) {
-      await rm(fileForReference(rootDir, reference), { force: true }).catch(
-        () => undefined,
+    if (!reference || keep.has(reference)) continue;
+    try {
+      await rm(fileForReference(rootDir, reference), { force: true });
+    } catch (error) {
+      if (isMissingFile(error) || !options.required) continue;
+      throw new GenerationHistoryError(
+        "io-error",
+        "The saved files could not be deleted. The history entry was kept.",
       );
     }
   }
@@ -399,11 +405,11 @@ export async function deleteGenerationHistoryItem(
     const entry = history.entries.find((item) => item.id === parsedId.data);
     if (!entry)
       throw new GenerationHistoryError("not-found", "Generation not found.");
+    await removeOldArtifacts(rootDir, entry, new Set(), { required: true });
     await writeHistory(rootDir, {
       schemaVersion: 1,
       entries: history.entries.filter((item) => item.id !== parsedId.data),
     });
-    await removeOldArtifacts(rootDir, entry, new Set());
     return { deletedId: parsedId.data };
   });
 }

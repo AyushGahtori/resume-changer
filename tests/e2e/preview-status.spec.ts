@@ -195,3 +195,36 @@ test("announces the status without taking the focus", async ({ page }) => {
   });
   expect(focusMovedIntoStatus).toBe(false);
 });
+
+test("does not say the output is ready when compile itself failed", async ({
+  page,
+}) => {
+  let historyPosts = 0;
+  await page.route("**/api/history", (route) => {
+    if (route.request().method() !== "POST") return route.continue();
+    historyPosts += 1;
+    if (historyPosts === 1) return route.continue();
+    return route.fulfill({ status: 200, body: "" });
+  });
+  await page.route("**/api/compile", (route) =>
+    route.fulfill({
+      status: 422,
+      contentType: "application/json",
+      body: JSON.stringify({
+        error:
+          "This resume must fit on one page; the compiled document has 2 pages.",
+      }),
+    }),
+  );
+  await openBuilder(page);
+  await generateDraft(page);
+  await page.getByRole("button", { name: "Create PDF" }).click();
+  await expect(page.locator(`${previewStatus}.status-banner--error`)).toContainText(
+    "2 pages",
+  );
+  await expect(page.getByText(/could not be saved to history/)).toBeVisible();
+  await expect(page.getByText(/output is ready/)).toHaveCount(0);
+  await expect(page.getByLabel("Generated LaTeX")).toContainText(
+    "Jordan Example",
+  );
+});

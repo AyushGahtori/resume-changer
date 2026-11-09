@@ -65,7 +65,16 @@ test("first load, debounced save, restore, explicit save, clear and refresh", as
     "Draft saved in this browser",
   );
   await page.evaluate((key) => localStorage.setItem(key, "stale"), cacheKey);
+  await page.evaluate(() =>
+    localStorage.setItem("resume-changer.selected-job.v1", "job-cleared"),
+  );
   await page.getByRole("button", { name: "Clear draft", exact: true }).click();
+  expect(
+    await page.evaluate(
+      (key) => localStorage.getItem(key),
+      "resume-changer.selected-job.v1",
+    ),
+  ).toBeNull();
   await expect(status).toHaveText("No saved draft");
   expect(
     await page.evaluate((key) => localStorage.getItem(key), cacheKey),

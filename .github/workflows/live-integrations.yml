@@ -22,7 +22,6 @@ jobs:
     # budget covers a full chain walk for the three live tests.
     timeout-minutes: 30
     env:
-      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       # The free tier caps requests per model per day, so the live check
       # leaves the model unset and lets the provider walk its model chain.
       # Pinning a single model here would collapse that chain and spend the
@@ -43,7 +42,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Verify the Gemini secret is configured
+      - name: Verify live Gemini analysis, selection, and drafting
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           set -euo pipefail
           if [ -z "${GEMINI_API_KEY:-}" ]; then
@@ -51,9 +52,7 @@ jobs:
             exit 1
           fi
           echo "The Gemini live check is using the repository secret."
-
-      - name: Verify live Gemini analysis, selection, and drafting
-        run: npm run test:ai-live
+          npm run test:ai-live
 
   pdf-toolchain:
     name: Real Tectonic and PDF toolchain

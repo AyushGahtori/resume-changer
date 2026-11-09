@@ -12,11 +12,15 @@ test("shows live category counts and starts at the page overview", async ({
   const links = navigation.getByRole("link");
 
   await expect(links).toHaveCount(5);
-  await expect(links.nth(0)).toHaveAccessibleName(/^All, \d+ items$/);
-  await expect(links.nth(1)).toHaveAccessibleName(/^Jobs, \d+ items$/);
-  await expect(links.nth(2)).toHaveAccessibleName(/^Projects, \d+ items$/);
-  await expect(links.nth(3)).toHaveAccessibleName(/^Skills, \d+ items$/);
-  await expect(links.nth(4)).toHaveAccessibleName(/^Credentials, \d+ items$/);
+  await expect(links.nth(0)).toHaveAccessibleName(
+    /^All, \d+ achievement points?$/,
+  );
+  await expect(links.nth(1)).toHaveAccessibleName(/^Jobs, \d+ jobs?$/);
+  await expect(links.nth(2)).toHaveAccessibleName(/^Projects, \d+ projects?$/);
+  await expect(links.nth(3)).toHaveAccessibleName(/^Skills, \d+ skills?$/);
+  await expect(links.nth(4)).toHaveAccessibleName(
+    /^Credentials, \d+ credentials?$/,
+  );
   await expect(links.nth(0)).toHaveAttribute("aria-current", "location");
 
   const sectionCounts = await Promise.all(
@@ -39,11 +43,11 @@ test("shows live category counts and starts at the page overview", async ({
   );
 
   expect(navigationCounts).toEqual(sectionCounts);
+  const resultText = await page.locator(".library-result-count").textContent();
+  const visiblePoints = resultText?.match(/^(\d+) of/)?.[1] ?? "";
   await expect(
     navigation.locator('[data-section="all"] .library-category-count'),
-  ).toHaveText(
-    String(sectionCounts.reduce((total, count) => total + count, 0)),
-  );
+  ).toHaveText(visiblePoints);
 });
 
 test("navigates with mouse and keyboard and tracks the section in view", async ({
@@ -76,6 +80,23 @@ test("navigates with mouse and keyboard and tracks the section in view", async (
   await page.keyboard.press("Enter");
   await expect(page).toHaveURL(/#library-skills$/);
   await expect(skills).toHaveAttribute("aria-current", "location");
+  await expect(page.locator("#library-skills")).toHaveJSProperty("open", true);
+  const skillsClear = await page.locator("#library-section-skills").evaluate(
+    (heading) => {
+      let stickyBottom = 0;
+      for (const element of document.querySelectorAll<HTMLElement>(
+        ".library-workspace-frame .topbar, .library-workbench",
+      )) {
+        if (getComputedStyle(element).position !== "sticky") continue;
+        const bounds = element.getBoundingClientRect();
+        if (bounds.top <= stickyBottom + 1) {
+          stickyBottom = Math.max(stickyBottom, bounds.bottom);
+        }
+      }
+      return heading.getBoundingClientRect().top >= stickyBottom - 1;
+    },
+  );
+  expect(skillsClear).toBe(true);
 
   const query = page.getByRole("searchbox", { name: "Search library" });
   await query.fill("platform");

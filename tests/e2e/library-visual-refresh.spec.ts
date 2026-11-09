@@ -4,40 +4,16 @@ test.beforeEach(async ({ page }) => {
   await page.goto("/library?source=demo");
 });
 
-test("keeps the floating accents decorative and disables them for reduced motion", async ({
+test("keeps decorative bubbles out of the header and disables menu motion", async ({
   page,
 }) => {
-  const atmosphere = page.locator(".library-page-atmosphere");
-  await expect(atmosphere).toHaveAttribute("aria-hidden", "true");
-  await expect(atmosphere.locator(".library-bubble")).toHaveCount(4);
-  const bubbleSizes = await atmosphere
-    .locator(".library-bubble")
-    .evaluateAll((bubbles) =>
-      bubbles.map((bubble) =>
-        Number.parseFloat(getComputedStyle(bubble).width),
-      ),
-    );
-  expect(bubbleSizes[0]).toBeGreaterThanOrEqual(64);
-  expect(bubbleSizes[2]).toBeGreaterThanOrEqual(74);
-  await expect
-    .poll(() =>
-      atmosphere
-        .locator(".library-bubble")
-        .first()
-        .evaluate((bubble) => getComputedStyle(bubble).animationName),
-    )
-    .toBe("library-bubble-float");
+  await expect(page.locator(".library-page-atmosphere")).toHaveCount(0);
+  await expect(page.locator(".library-bubble")).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Detailed entry" }),
+  ).toBeVisible();
 
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await expect
-    .poll(() =>
-      atmosphere
-        .locator(".library-bubble")
-        .first()
-        .evaluate((bubble) => getComputedStyle(bubble).animationName),
-    )
-    .toBe("none");
-
   await page.getByRole("combobox", { name: "Tag" }).click();
   await expect
     .poll(() =>

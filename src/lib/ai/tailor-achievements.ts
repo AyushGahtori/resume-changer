@@ -547,7 +547,9 @@ export function createTailoringResponse(args: {
     (args.input.skills ?? [])
       .flatMap((skill) => [skill.name, ...skill.aliases])
       .join(" ");
-  let resumeSummary = result.resumeSummary || buildEvidenceSummary(args.input);
+  const modelSummary = result.resumeSummary?.trim() ?? "";
+  let resumeSummary = modelSummary || buildEvidenceSummary(args.input);
+  const substitutedTemplate = modelSummary.length === 0;
   const badSummaryNumber = [...numericClaims(resumeSummary)].some(
     (value) => !numericClaims(summaryEvidence).has(value),
   );
@@ -561,14 +563,14 @@ export function createTailoringResponse(args: {
   const unsupportedYears =
     /\b\d+(?:\.\d+)?\+?\s+years?\b/i.test(resumeSummary) &&
     !/\b\d+(?:\.\d+)?\+?\s+years?\b/i.test(summaryEvidence);
-  if (
+  const summaryWasReplaced =
     badSummaryNumber ||
     badSummaryTerm ||
     unsupportedTraining ||
     unsupportedYears ||
-    misattributedMetrics(resumeSummary, args.input.achievements).length
-  ) {
-    resumeSummary = buildEvidenceSummary(args.input);
+    misattributedMetrics(resumeSummary, args.input.achievements).length > 0;
+  if (summaryWasReplaced) resumeSummary = buildEvidenceSummary(args.input);
+  if (summaryWasReplaced || substitutedTemplate) {
     allNotes.push(
       "Replaced an unsupported summary with an evidence-backed accomplishment summary.",
     );

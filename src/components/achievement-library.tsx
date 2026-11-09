@@ -28,7 +28,9 @@ import {
 import {
   LIBRARY_CONTENT_ID,
   LIBRARY_SECTION_IDS,
+  scrollLibrarySectionHeading,
 } from "@/components/library/category-navigation";
+import { apiFetch } from "@/lib/cloud/api-fetch";
 import {
   DEFAULT_LIBRARY_SORT,
   EMPTY_LIBRARY_FILTERS,
@@ -61,6 +63,7 @@ type EditorHandlers = { onCancel: () => void; onSaved: () => void };
 type InlineEditorState = {
   pointId: string;
   parents: ParentOption[];
+  canWrite: boolean;
   handlers: EditorHandlers;
 };
 
@@ -206,7 +209,11 @@ function ExperienceGroup({
             activeTag={activeTag}
             editor={
               editor?.pointId === point.id
-                ? { ...editor.handlers, parents }
+                ? {
+                    ...editor.handlers,
+                    canWrite: editor.canWrite,
+                    parents,
+                  }
                 : undefined
             }
             kind={kind}
@@ -227,8 +234,17 @@ export default function AchievementLibrary({ library, source }: Props) {
   const [filters, setFilters] = useState<LibraryFilters>(EMPTY_LIBRARY_FILTERS);
   const [sort, setSort] = useState<LibrarySort>(DEFAULT_LIBRARY_SORT);
   const [editor, setEditor] = useState<EditorState>(null);
+  const [editorSource, setEditorSource] = useState(source);
   const [saveMessage, setSaveMessage] = useState("");
   const [skillsHeldOpen, setSkillsHeldOpen] = useState(false);
+  const [skillsNavOpen, setSkillsNavOpen] = useState(false);
+  const [credentialsHeldOpen, setCredentialsHeldOpen] = useState(false);
+  const [credentialsNavOpen, setCredentialsNavOpen] = useState(false);
+  const [createdParent, setCreatedParent] = useState<ParentOption | null>(null);
+  if (editorSource !== source) {
+    setEditorSource(source);
+    setEditor(null);
+  }
   const [collapsedGroups, setCollapsedGroups] = useState<ReadonlySet<string>>(
     () => new Set<string>(),
   );
@@ -262,18 +278,34 @@ export default function AchievementLibrary({ library, source }: Props) {
   );
   const hasNoData = result.totalPointCount === 0;
   const hasNoMatches = !hasNoData && result.visiblePointCount === 0;
-  const parentOptions = [
-    ...library.jobs.map((job) => ({
-      id: job.id,
-      label: `${job.title} · ${job.company}`,
-      type: "job" as const,
-    })),
-    ...library.projects.map((project) => ({
-      id: project.id,
-      label: project.name,
-      type: "project" as const,
-    })),
-  ];
+  const savedParents = useMemo<ParentOption[]>(
+    () => [
+      ...library.jobs.map((job) => ({
+        id: job.id,
+        label: `${job.title} · ${job.company}`,
+        type: "job" as const,
+      })),
+      ...library.projects.map((project) => ({
+        id: project.id,
+        label: project.name,
+        type: "project" as const,
+      })),
+    ],
+    [library.jobs, library.projects],
+  );
+  const parentOptions = useMemo(() => {
+    if (
+      createdParent &&
+      !savedParents.some(
+        (parent) =>
+          parent.id === createdParent.id && parent.type === createdParent.type,
+      )
+    ) {
+      return [createdParent, ...savedParents];
+    }
+    return savedParents;
+  }, [createdParent, savedParents]);
+  const noParents = library.jobs.length === 0 && library.projects.length === 0;
   function updateFilter<Key extends keyof LibraryFilters>(
     key: Key,
     value: LibraryFilters[Key],
@@ -299,6 +331,18 @@ export default function AchievementLibrary({ library, source }: Props) {
     editorTriggerRef.current = trigger;
     setEditor(next);
   }
+
+  useEffect(() => {
+    if (!createdParent) return;
+    if (
+      savedParents.some(
+        (parent) =>
+          parent.id === createdParent.id && parent.type === createdParent.type,
+      )
+    ) {
+      setCreatedParent(null);
+    }
+  }, [createdParent, savedParents]);
 
   useEffect(() => {
     if (editor) return;
@@ -331,6 +375,57 @@ export default function AchievementLibrary({ library, source }: Props) {
     editorTriggerRef.current = null;
   }
 
+  function revealSection(section: "skills" | "credentials") {
+    if (section === "skills") setSkillsNavOpen(true);
+    else setCredentialsNavOpen(true);
+    const sectionId =
+      section === "skills"
+        ? LIBRARY_SECTION_IDS.skills
+        : LIBRARY_SECTION_IDS.credentials;
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() =>
+        scrollLibrarySectionHeading(sectionId),
+      );
+    });
+  }
+
+  async function createParent(kind: "job" | "project", name: string) {
+    let response: Response;
+    try {
+      response = await apiFetch("/api/library/parents", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kind, name }),
+      });
+    } catch {
+      throw new Error("Could not reach the local save service. Try again.");
+    }
+    let result: {
+      error?: string;
+      parent?: { id: string; kind: "job" | "project"; label: string };
+    } = {};
+    try {
+      result = (await response.json()) as typeof result;
+    } catch {
+      result = {};
+    }
+    if (!response.ok || !result.parent) {
+      throw new Error(result.error ?? "The job or project could not be saved.");
+    }
+    setCreatedParent({
+      id: result.parent.id,
+      type: result.parent.kind,
+      label: result.parent.label,
+    });
+    openEditor({ mode: "create" }, detailedEntryRef.current);
+    setSaveMessage(
+      kind === "job"
+        ? `Added ${name} as a job.`
+        : `Added ${name} as a project.`,
+    );
+    router.refresh();
+  }
+
   function saveEditor() {
     closeEditor();
     setSaveMessage("Saved to your local library.");
@@ -338,10 +433,11 @@ export default function AchievementLibrary({ library, source }: Props) {
   }
 
   const inlineEditor: InlineEditorState | undefined =
-    editor?.mode === "edit"
+    canEdit && editor?.mode === "edit"
       ? {
           pointId: editor.point.id,
           parents: parentOptions,
+          canWrite: true,
           handlers: { onCancel: closeEditor, onSaved: saveEditor },
         }
       : undefined;
@@ -349,12 +445,6 @@ export default function AchievementLibrary({ library, source }: Props) {
   return (
     <div className="library-page">
       <header className="library-page-header">
-        <div className="library-page-atmosphere" aria-hidden="true">
-          <span className="library-bubble library-bubble--warm" />
-          <span className="library-bubble library-bubble--cool" />
-          <span className="library-bubble library-bubble--ring" />
-          <span className="library-bubble library-bubble--small" />
-        </div>
         <div className="library-heading">
           <div className="library-heading-copy">
             <p className="eyebrow">YOUR EXPERIENCE</p>
@@ -401,9 +491,15 @@ export default function AchievementLibrary({ library, source }: Props) {
                   <button
                     className="ui-button ui-button--secondary library-action library-action--secondary"
                     disabled={editor !== null}
-                    onClick={() =>
-                      openEditor({ mode: "create" }, detailedEntryRef.current)
-                    }
+                    onClick={() => {
+                      if (noParents) {
+                        document
+                          .getElementById("library-first-parent-name")
+                          ?.focus();
+                        return;
+                      }
+                      openEditor({ mode: "create" }, detailedEntryRef.current);
+                    }}
                     ref={detailedEntryRef}
                     type="button"
                   >
@@ -461,16 +557,17 @@ export default function AchievementLibrary({ library, source }: Props) {
       {!canEdit ? <LibraryReadOnlyNotice /> : null}
       <ProfileSummary library={library} source={source} />
 
-      {editor?.mode === "create" && (
+      {canEdit && editor?.mode === "create" ? (
         <AchievementPointEditor
           key="new-achievement"
+          canWrite
           focusFirstField
           onCancel={closeEditor}
           onSaved={saveEditor}
           parents={parentOptions}
           skills={library.skills}
         />
-      )}
+      ) : null}
       <SearchWorkbench
         filters={filters}
         hasFilters={hasFilters}
@@ -480,14 +577,16 @@ export default function AchievementLibrary({ library, source }: Props) {
         options={options}
         result={result}
         sort={sort}
+        onRevealSection={revealSection}
         onSortChange={setSort}
       />
 
       <div className="library-content" id={LIBRARY_CONTENT_ID}>
         {hasNoData ? (
           <LibraryEmptyState
+            needsParent={canEdit && noParents}
             onAdd={
-              canEdit
+              canEdit && !noParents
                 ? () =>
                     openEditor(
                       { mode: "create" },
@@ -495,6 +594,7 @@ export default function AchievementLibrary({ library, source }: Props) {
                     )
                 : undefined
             }
+            onCreateParent={canEdit && noParents ? createParent : undefined}
             totalPointCount={result.totalPointCount}
             variant="no-data"
           />
@@ -615,8 +715,16 @@ export default function AchievementLibrary({ library, source }: Props) {
             <details
               className="library-detail library-section"
               id={LIBRARY_SECTION_IDS.skills}
-              onToggle={(event) => setSkillsHeldOpen(event.currentTarget.open)}
-              open={skillsHeldOpen || Boolean(filters.query || filters.skillId)}
+              onToggle={(event) => {
+                const open = event.currentTarget.open;
+                setSkillsHeldOpen(open);
+                if (!open) setSkillsNavOpen(false);
+              }}
+              open={
+                skillsNavOpen ||
+                skillsHeldOpen ||
+                Boolean(filters.query || filters.skillId)
+              }
             >
               <summary className="library-section-header">
                 <LibrarySectionHeader
@@ -644,7 +752,16 @@ export default function AchievementLibrary({ library, source }: Props) {
             <details
               className="library-detail library-section"
               id={LIBRARY_SECTION_IDS.credentials}
-              open={Boolean(filters.query)}
+              onToggle={(event) => {
+                const open = event.currentTarget.open;
+                setCredentialsHeldOpen(open);
+                if (!open) setCredentialsNavOpen(false);
+              }}
+              open={
+                credentialsNavOpen ||
+                credentialsHeldOpen ||
+                Boolean(filters.query)
+              }
             >
               <summary className="library-section-header">
                 <LibrarySectionHeader
@@ -670,7 +787,9 @@ export default function AchievementLibrary({ library, source }: Props) {
                 <p className="secondary-empty">
                   {library.credentials.length === 0
                     ? "No credentials saved in this library."
-                    : "No credentials match this search."}
+                    : filters.query && !filters.skillId
+                      ? "No credentials match this search."
+                      : "No credentials match the current filters."}
                 </p>
               )}
             </details>

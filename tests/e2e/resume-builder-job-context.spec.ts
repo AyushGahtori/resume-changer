@@ -174,3 +174,72 @@ test("follows the selected saved job", async ({ page }) => {
   expect(posted).toContain("Build reliable platform services.");
   expect(posted).not.toContain("A different job description.");
 });
+
+test("places the saved-job chooser before Choose achievements", async ({
+  page,
+}) => {
+  await saveJobAnalysis(page, {
+    roleTitle: "Platform Engineer",
+    company: "Example Systems",
+    jobDescription: "Build reliable platform services.",
+  });
+  for (const viewport of [
+    { width: 390, height: 844 },
+    { width: 1440, height: 900 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await openBuilder(page);
+    const order = await page.evaluate(() => {
+      const jobs = document.querySelector("#builder-saved-jobs-title");
+      const achievements = [...document.querySelectorAll("h2")].find(
+        (heading) => heading.textContent === "Choose achievements",
+      );
+      if (!jobs || !achievements) return "missing";
+      const jobsBox = jobs.getBoundingClientRect();
+      const achievementsBox = achievements.getBoundingClientRect();
+      const follows =
+        (jobs.compareDocumentPosition(achievements) &
+          Node.DOCUMENT_POSITION_FOLLOWING) !==
+        0;
+      return follows && jobsBox.top <= achievementsBox.top ? "before" : "after";
+    });
+    expect(order).toBe("before");
+  }
+});
+
+test("warns when the browser draft differs from the saved analysis", async ({
+  page,
+}) => {
+  const description = "Build reliable platform services.";
+  await page.goto("/");
+  await saveJobAnalysis(page, {
+    company: "Example Systems",
+    roleTitle: "Platform Engineer",
+    jobDescription: description,
+  });
+  await writeDraft(page, {
+    company: "Example Systems",
+    roleTitle: "Platform Engineer",
+    jobDescription: `${description} Also requires GraphQL.`,
+  });
+  await openBuilder(page);
+  await expect(page.locator(".saved-job-unsaved")).toContainText(
+    "This draft differs from the saved analysis.",
+  );
+  await expect(page.locator(".selection-analysis-state")).toHaveText(
+    "Saved analysis",
+  );
+
+  await page.route("**/api/ai/select-achievements", (route) =>
+    route.fulfill({
+      status: 503,
+      contentType: "application/json",
+      body: JSON.stringify({ error: "Suggestions are unavailable." }),
+    }),
+  );
+  const request = page.waitForRequest("**/api/ai/select-achievements");
+  await page.getByRole("button", { name: "Suggest points" }).click();
+  const posted = (await request).postData() ?? "";
+  expect(posted).toContain(description);
+  expect(posted).not.toContain("Also requires GraphQL.");
+});

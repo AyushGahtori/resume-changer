@@ -1000,7 +1000,10 @@ export function createGeminiProvider(
             // lands is visible instead of silent.
             console.warn("Gemini draft correction could not be completed.", {
               task: "draftResume",
-              missing,
+              missingCount: missing.reduce(
+                (sum, item) => sum + item.terms.length,
+                0,
+              ),
               diagnostic: error.diagnosticCode ?? error.code,
               retryable: error.retryable,
             });

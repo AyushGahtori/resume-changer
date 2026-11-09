@@ -144,8 +144,10 @@ export function filterAchievementLibrary(
       includesQuery([skill.name, skill.category, ...skill.aliases], query)
     );
   });
-  const credentials = library.credentials.filter(
-    (credential) =>
+  const credentials = library.credentials.filter((credential) => {
+    // Credentials have no skills. A skill filter must not leave them looking matched.
+    if (filters.skillId) return false;
+    return (
       !query ||
       includesQuery(
         [
@@ -155,8 +157,9 @@ export function filterAchievementLibrary(
           credential.credentialId,
         ],
         query,
-      ),
-  );
+      )
+    );
+  });
   const totalPointCount =
     library.jobs.reduce((count, job) => count + job.points.length, 0) +
     library.projects.reduce(

@@ -32,6 +32,7 @@ import {
   DELETE as deleteJobAnalysis,
   GET as readJobAnalysis,
 } from "@/app/api/job-analyses/[id]/handler";
+import { POST as createParent } from "@/app/api/library/parents/handler";
 import { POST as createPoint } from "@/app/api/library/points/handler";
 import { POST as createSkill } from "@/app/api/library/skills/handler";
 import { PATCH as updatePoint } from "@/app/api/library/points/[id]/handler";
@@ -85,6 +86,7 @@ const staticRoutes: Record<string, ApiMethods> = {
     GET: direct(listJobAnalyses),
     POST: direct(saveJobAnalysis),
   },
+  "library/parents": { POST: direct(createParent) },
   "library/points": { POST: direct(createPoint) },
   "library/skills": { POST: direct(createSkill) },
   "resume/edit": { POST: direct(editResume) },

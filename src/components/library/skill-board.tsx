@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { apiFetch } from "@/lib/cloud/api-fetch";
 import { groupSkills } from "@/lib/skills/group-skills";
 import type { Skill } from "@/lib/schemas/resume-data";
 
@@ -31,14 +32,17 @@ export default function SkillBoard({
     setSaving(true);
     setError("");
     try {
-      const response = await fetch("/api/library/skills", {
+      const response = await apiFetch("/api/library/skills", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: trimmed }),
       });
-      const result = (await response.json()) as { error?: string };
-      if (!response.ok) {
-        setError(result.error ?? "The skill could not be saved.");
+      const result = (await response.json().catch(() => null)) as {
+        error?: string;
+        skill?: unknown;
+      } | null;
+      if (!response.ok || !result?.skill) {
+        setError(result?.error ?? "The skill could not be saved.");
         return;
       }
       setName("");
@@ -110,11 +114,7 @@ export default function SkillBoard({
                       >
                         <span className="skill-chip-name">{skill.name}</span>
                         <span
-                          className={
-                            listed
-                              ? "skill-listed visually-hidden"
-                              : "skill-unlisted visually-hidden"
-                          }
+                          className={listed ? "skill-listed" : "skill-unlisted"}
                         >
                           {listed ? "On current resume" : "Library only"}
                         </span>

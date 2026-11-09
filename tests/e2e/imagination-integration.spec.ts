@@ -105,6 +105,11 @@ test("reviews the suggestion, saves only editor text and retains source/skill at
   await expect(
     page.getByRole("button", { name: "Save achievement", exact: true }),
   ).toBeDisabled();
+  await expect(
+    page.getByText(
+      "Use the suggestion in the editor, or dismiss it, before saving.",
+    ),
+  ).toBeVisible();
   expect(generatedBody).toMatchObject({
     skillIds: [skill.id],
     sources: [
@@ -122,6 +127,9 @@ test("reviews the suggestion, saves only editor text and retains source/skill at
     .getByRole("button", { name: "Use suggestion in editor", exact: true })
     .click();
   await expect(editor(page)).toBeFocused();
+  await page
+    .getByRole("button", { name: "Dismiss suggestion", exact: true })
+    .click();
   await editor(page).fill("The reviewed achievement actually being saved.");
   await page
     .getByRole("button", { name: "Save achievement", exact: true })
