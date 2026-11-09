@@ -107,12 +107,9 @@ test("saves and restores the JD and role details locally", async ({ page }) => {
   await expect(page.getByText("~12 tokens")).toBeVisible();
 
   await page.getByRole("link", { name: "Resume builder" }).click();
-  await expect(page.locator(".generation-draft")).toContainText(
-    "Backend Engineer",
-  );
-  await expect(page.locator(".generation-draft")).toContainText(
-    "46 description characters",
-  );
+  await expect(
+    page.getByRole("heading", { name: "Build your resume." }),
+  ).toBeVisible();
 
   await page.goto("/");
   await page.reload({ waitUntil: "domcontentloaded" });

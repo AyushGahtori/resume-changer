@@ -1605,15 +1605,7 @@ export default function ResumeGenerator({ library, source }: Props) {
       </div>
 
       {savedJobs.length > 0 && (
-        <SavedJobList
-          jobs={savedJobs}
-          selectedId={selectedJobId}
-          title="Build for a saved job"
-          description="Choose the company and role. Suggestions and tailoring use that analysis."
-          titleId="builder-saved-jobs-title"
-          onSelect={(id) => void handleSelectSavedJob(id)}
-          onDelete={(job) => void handleDeleteSavedJob(job)}
-        />
+        <a href="#builder-saved-jobs-title">Choose a saved job</a>
       )}
       <div className="generation-draft">
         <span aria-hidden="true" className="generation-context-icon">
@@ -3239,6 +3231,17 @@ export default function ResumeGenerator({ library, source }: Props) {
           </div>
         )}
       </form>
+      {savedJobs.length > 0 && (
+        <SavedJobList
+          jobs={savedJobs}
+          selectedId={selectedJobId}
+          title="Build for a saved job"
+          description="Choose the company and role. Suggestions and tailoring use that analysis."
+          titleId="builder-saved-jobs-title"
+          onSelect={(id) => void handleSelectSavedJob(id)}
+          onDelete={(job) => void handleDeleteSavedJob(job)}
+        />
+      )}
     </section>
   );
 }
