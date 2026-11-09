@@ -1805,7 +1805,7 @@ a:focus-visible {
   display: flex;
   align-items: end;
   justify-content: space-between;
-  min-height: 26px;
+  min-height: 28px;
   gap: 8px;
 }
 .saved-jobs {
