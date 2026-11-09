@@ -499,12 +499,6 @@ export default function JDWorkspace({
           onSubmit={handleSubmit}
           noValidate
         >
-          <SavedJobList
-            jobs={savedJobs}
-            onDelete={handleDeleteSavedJob}
-            onSelect={handleSelectSavedJob}
-            selectedId={selectedJob?.id ?? null}
-          />
           <div className="form-topline">
             <div>
               <h2 id="role-details-title">Role details</h2>
@@ -678,6 +672,12 @@ export default function JDWorkspace({
               update it, or choose the saved job to restore it.
             </p>
           )}
+          <SavedJobList
+            jobs={savedJobs}
+            onDelete={handleDeleteSavedJob}
+            onSelect={handleSelectSavedJob}
+            selectedId={selectedJob?.id ?? null}
+          />
         </form>
 
         <ATSAnalysisPreview

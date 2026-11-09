@@ -401,7 +401,14 @@ for (const theme of ["light", "dark"]) {
       animations: "disabled",
     });
     await page.getByLabel("Company", { exact: true }).fill("Updated context");
-    await expect(preview.locator(".ats-preview-empty")).toBeVisible();
+    await expect(
+      page.getByText("This draft differs from the saved analysis.", {
+        exact: false,
+      }),
+    ).toBeVisible();
+    await expect(preview.locator(".analysis-role")).toContainText(
+      homeAnalysis.targetTitle,
+    );
     expect(errors).toEqual([]);
   });
 }

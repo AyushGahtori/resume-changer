@@ -86,7 +86,9 @@ test("renders the workspace shell and all primary destinations", async ({
 });
 
 test("saves and restores the JD and role details locally", async ({ page }) => {
-  await page.getByLabel("Company").fill("Example Systems");
+  await page
+    .getByRole("textbox", { name: "Company", exact: true })
+    .fill("Example Systems");
   await page.getByLabel("Role title").fill("Backend Engineer");
   await page.getByLabel("Job link").fill("https://jobs.example/role");
   await page
@@ -114,7 +116,9 @@ test("saves and restores the JD and role details locally", async ({ page }) => {
 
   await page.goto("/");
   await page.reload({ waitUntil: "domcontentloaded" });
-  await expect(page.getByLabel("Company")).toHaveValue("Example Systems");
+  await expect(
+    page.getByRole("textbox", { name: "Company", exact: true }),
+  ).toHaveValue("Example Systems");
   await expect(page.getByLabel("Role title")).toHaveValue("Backend Engineer");
   await expect(page.getByLabel("Job link")).toHaveValue(
     "https://jobs.example/role",
@@ -148,19 +152,25 @@ test("validates empty, oversized, and malformed job descriptions", async ({
 });
 
 test("clears the saved draft", async ({ page }) => {
-  await page.getByLabel("Company").fill("Example Systems");
+  await page
+    .getByRole("textbox", { name: "Company", exact: true })
+    .fill("Example Systems");
   await page
     .getByRole("textbox", { name: "Job description", exact: true })
     .fill("A short job description.");
   await expect(page.getByRole("status")).toContainText("Saved on this device");
 
   await page.getByRole("button", { name: "Clear draft" }).click();
-  await expect(page.getByLabel("Company")).toHaveValue("");
+  await expect(
+    page.getByRole("textbox", { name: "Company", exact: true }),
+  ).toHaveValue("");
   await expect(
     page.getByRole("textbox", { name: "Job description", exact: true }),
   ).toHaveValue("");
   await page.reload({ waitUntil: "domcontentloaded" });
-  await expect(page.getByLabel("Company")).toHaveValue("");
+  await expect(
+    page.getByRole("textbox", { name: "Company", exact: true }),
+  ).toHaveValue("");
   await expect(
     page.getByRole("textbox", { name: "Job description", exact: true }),
   ).toHaveValue("");

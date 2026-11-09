@@ -318,7 +318,9 @@ export default function ResumeGenerator({ library, source }: Props) {
   const [showGenerationSettings, setShowGenerationSettings] = useState(false);
   useEffect(() => {
     if (!showGenerationSettings) return;
-    document.getElementById("resume-editing")?.scrollIntoView({ block: "start" });
+    document
+      .getElementById("resume-editing")
+      ?.scrollIntoView({ block: "start" });
   }, [showGenerationSettings]);
   const [pdfBase64, setPdfBase64] = useState<string | null>(null);
   const [savedSession, setSavedSession] = useState<{
@@ -460,19 +462,19 @@ export default function ResumeGenerator({ library, source }: Props) {
       },
       notice = "",
     ) => {
-    setSelectedJobId(job.id);
-    rememberSelectedJob(job.id);
-    setDraft({
-      schemaVersion: 1,
-      company: job.company,
-      roleTitle: job.roleTitle,
-      jobUrl: job.jobUrl,
-      jobDescription: job.jobDescription,
-    });
-    setAnalysis(job.analysis);
-    setDraftNotice(notice);
-  },
-  [rememberSelectedJob],
+      setSelectedJobId(job.id);
+      rememberSelectedJob(job.id);
+      setDraft({
+        schemaVersion: 1,
+        company: job.company,
+        roleTitle: job.roleTitle,
+        jobUrl: job.jobUrl,
+        jobDescription: job.jobDescription,
+      });
+      setAnalysis(job.analysis);
+      setDraftNotice(notice);
+    },
+    [rememberSelectedJob],
   );
 
   const clearSelectedJob = useCallback(
@@ -1602,15 +1604,17 @@ export default function ResumeGenerator({ library, source }: Props) {
         </div>
       </div>
 
-      <SavedJobList
-        jobs={savedJobs}
-        selectedId={selectedJobId}
-        title="Build for a saved job"
-        description="Choose the company and role. Suggestions and tailoring use that analysis."
-        titleId="builder-saved-jobs-title"
-        onSelect={(id) => void handleSelectSavedJob(id)}
-        onDelete={(job) => void handleDeleteSavedJob(job)}
-      />
+      {savedJobs.length > 0 && (
+        <SavedJobList
+          jobs={savedJobs}
+          selectedId={selectedJobId}
+          title="Build for a saved job"
+          description="Choose the company and role. Suggestions and tailoring use that analysis."
+          titleId="builder-saved-jobs-title"
+          onSelect={(id) => void handleSelectSavedJob(id)}
+          onDelete={(job) => void handleDeleteSavedJob(job)}
+        />
+      )}
       <div className="generation-draft">
         <span aria-hidden="true" className="generation-context-icon">
           <BriefcaseBusiness size={19} strokeWidth={1.8} />
@@ -2602,7 +2606,7 @@ export default function ResumeGenerator({ library, source }: Props) {
                     }),
                   );
                 }}
-                />
+              />
             )}
             {(!result || showGenerationSettings) && groups.length > 0 && (
               <div className="generation-selection-filters">
