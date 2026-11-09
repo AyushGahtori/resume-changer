@@ -9,7 +9,7 @@ private Vercel Blob store in `fra1`. Firebase stays on Spark and Vercel stays on
 Hobby. Storage and service quotas can interrupt availability; there is no promise
 of unlimited free capacity.
 
-Only production receives real Firebase configuration, the server-only Gemini
+Production receives real Firebase configuration, the server-only Gemini
 secret, and the private Blob connection. Preview deployments have no production
 credentials. Never add owner backups or personal JSON to Git, build inputs, test
 fixtures, CI artifacts, or preview configuration.
@@ -58,12 +58,22 @@ is retained explicitly so that link works too. New Preview builds under the
 stable branch hostname do not require another Firebase domain change.
 
 Firebase domains alone are insufficient: Vercel environment variables are scoped
-separately. The approved `phase-one` branch has the five public Firebase settings,
-`RESUME_APP_MODE=firebase` and its exact `RESUME_APP_ORIGIN` configured for Preview
-only, restricted to that branch. Production settings are unchanged. Rebuild after
-changing these values because Next embeds public settings at build time. Other
-Preview branches must receive their own approved configuration; the hosted build
-guard rejects missing account settings rather than publishing a broken sign-in page.
+separately. Every hosted deployment that enables Firebase accounts needs
+`NODE_OPTIONS=--experimental-require-module`; Firebase Admin uses the same
+CommonJS-to-ESM verifier chain for session creation as for GitHub imports. The
+hosted build guard rejects a missing or overriding flag. This requirement applies
+even when GitHub import is disabled. The previous guard checked the option only
+when GitHub import was enabled, while the account browser tests used the Firebase
+emulator and did not reproduce Vercel's Node runtime setting; together these left
+the production session route untested under the actual runtime constraint. Set it
+for Production and each Firebase-enabled Preview environment. The approved
+`phase-one` branch also
+has the five public Firebase settings, `RESUME_APP_MODE=firebase` and its exact
+`RESUME_APP_ORIGIN` configured for Preview only, restricted to that branch.
+Rebuild after changing these values because Next embeds public settings at build
+time. Other Preview branches must receive their own approved configuration; the
+hosted build guard rejects missing account settings rather than publishing a
+broken sign-in page.
 
 This administrative operation uses the operator's CLI login. No administrator
 key is stored in the application or repository. Rule changes require
