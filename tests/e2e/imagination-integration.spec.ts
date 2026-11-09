@@ -2,6 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { copyFile, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { ResumeLibrary } from "../../src/lib/schemas/resume-data";
+import { chooseLibraryOption } from "./support/library-select";
 
 const libraryPath = () =>
   join(process.env.RESUME_LIBRARY_ROOT!, "data", "resume-library.json");
@@ -170,9 +171,7 @@ test("restores the draft/mode and reconciles destination context without losing 
     page.getByRole("button", { name: "More technical", exact: true }),
   ).toHaveAttribute("aria-pressed", "true");
   await expect(connections(page)).toContainText("2 / 10 connected");
-  await page
-    .getByLabel("Resume destination", { exact: true })
-    .selectOption(library.jobs[1].id);
+  await chooseLibraryOption(page, "Resume destination", library.jobs[1].id);
   await expect(connections(page)).toContainText("1 / 10 connected");
   await expect(connections(page)).toContainText(skill.name);
   await expect(

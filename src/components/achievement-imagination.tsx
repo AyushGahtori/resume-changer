@@ -1,6 +1,7 @@
 "use client";
 import { apiFetch as fetch } from "@/lib/cloud/api-fetch";
 import { useWorkspaceStorage } from "./account-session";
+import { Sparkles } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import StudioDialog from "./studio-dialog";
 import { groupSkillsForReview } from "@/lib/generation/review-draft";
@@ -23,6 +24,8 @@ import {
   type ImaginationSaveDestination,
 } from "@/lib/generation/imagination-save";
 import ImaginationSaveFooter from "./imagination-save-footer";
+import { handleCtrlBackspace } from "@/lib/editing/delete-word";
+import LibrarySelect from "@/components/library/library-select";
 
 export type AcceptedAchievement = {
   id: string;
@@ -60,13 +63,13 @@ export default function AchievementImagination({
     destinationGroupId ?? groups[0]?.id ?? "",
   );
   const [text, setText] = useState("");
-  const [instruction, setInstruction] = useState(
+  const suggestedInstruction =
     operation === "merge"
       ? "Combine these achievements into one concise technical bullet, preserving the facts and metrics."
       : operation === "edit"
         ? "Make this achievement clearer and more concise, preserving the technical facts and metrics."
-        : "Create a concise, factual achievement from only the connected context.",
-  );
+        : "Create a concise, factual achievement from only the connected context.";
+  const [instruction, setInstruction] = useState("");
   const [proposed, setProposed] = useState("");
   const [measuredLines, setMeasuredLines] = useState<number | null>(null);
   const [layoutWarning, setLayoutWarning] = useState("");
@@ -216,7 +219,7 @@ export default function AchievementImagination({
           sources: selectedSources,
           skillIds,
           draftText: operation === "create" ? text : "",
-          instruction,
+          instruction: instruction.trim() || suggestedInstruction,
           targetLines,
         }),
       });
@@ -251,7 +254,11 @@ export default function AchievementImagination({
   }
 
   async function accept() {
-    const acceptedText = getImaginationTextToAccept(operation, text, proposed);
+    const acceptedText = (
+      operation === "create" && contextCount > 0 && proposed.trim()
+        ? proposed
+        : getImaginationTextToAccept(operation, text, proposed)
+    ).trim();
     if (!acceptedText) {
       setSaveError("Write or accept an achievement before saving.");
       return;
@@ -357,7 +364,10 @@ export default function AchievementImagination({
           <>
             {savedDraft && (
               <div className="studio-restore" role="status">
-                <p>An unfinished writing draft is saved on this device.</p>
+                <p>
+                  You left this achievement before saving it. Restore that
+                  version, or clear it and start again.
+                </p>
                 <button
                   type="button"
                   onClick={() => {
@@ -377,39 +387,27 @@ export default function AchievementImagination({
                 </button>
               </div>
             )}
-            <label className="studio-field">
-              <span>Resume destination</span>
-              <select
-                value={groupId}
-                onChange={(event) => {
-                  setGroupId(event.target.value);
+            <div className="studio-field">
+              <span id="imagination-resume-destination-label">
+                Resume destination
+              </span>
+              <LibrarySelect
+                aria-label="Resume destination"
+                className="studio-destination-select"
+                onChange={(next) => {
+                  setGroupId(next);
                   setSelectedIds([]);
                   invalidateSuggestion();
                 }}
-              >
-                {groups.map((group) => (
-                  <option key={group.id} value={group.id}>
-                    {group.title} · {group.subtitle}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="studio-field imagination-composer">
-              <span>NEW ACHIEVEMENT</span>
-              <textarea
-                data-studio-focus=""
-                aria-label="Achievement text"
-                rows={4}
-                maxLength={8000}
-                placeholder="Write what you built, improved, or accomplished…"
-                value={text}
-                onChange={(event) => {
-                  setText(event.target.value);
-                  setSaveError("");
-                  invalidateSuggestion();
-                }}
+                options={groups.map((group) => ({
+                  value: group.id,
+                  label: group.subtitle
+                    ? `${group.title} · ${group.subtitle}`
+                    : group.title,
+                }))}
+                value={groupId}
               />
-            </label>
+            </div>
             <div
               className="imagination-context-map"
               onDragOver={(event) => event.preventDefault()}
@@ -430,7 +428,7 @@ export default function AchievementImagination({
               }}
             >
               <span className="imagination-root" aria-hidden="true">
-                ✦
+                <Sparkles size={15} strokeWidth={2} />
               </span>
               <span>{contextCount} / 10 connected</span>
               <div className="imagination-connected">
@@ -456,7 +454,10 @@ export default function AchievementImagination({
                 ))}
               </div>
               {!contextCount && (
-                <p>Select or drag context here to connect it to your draft.</p>
+                <p>
+                  Select points to have Imagination write the achievement. With
+                  nothing connected, the text below is what you save.
+                </p>
               )}
             </div>
             <div className="imagination-context-libraries">
@@ -551,6 +552,35 @@ export default function AchievementImagination({
                 </div>
               </section>
             </div>
+            {contextCount === 0 ? (
+              <label className="studio-field imagination-composer">
+                <span>Your achievement</span>
+                <textarea
+                  data-studio-focus=""
+                  aria-label="Achievement text"
+                  rows={4}
+                  maxLength={8000}
+                  placeholder="Write the point you want to save…"
+                  value={text}
+                  onChange={(event) => {
+                    setText(event.target.value);
+                    setSaveError("");
+                    invalidateSuggestion();
+                  }}
+                  onKeyDown={(event) => handleCtrlBackspace(event, setText)}
+                />
+                <p>
+                  Save this text as the achievement. Connect points above if you
+                  want Imagination to write it from those points instead.
+                </p>
+              </label>
+            ) : (
+              <p className="imagination-mode-note">
+                Imagination writes one achievement from the {contextCount}{" "}
+                connected {contextCount === 1 ? "item" : "items"}. It follows
+                your instruction and does not keep a separate draft.
+              </p>
+            )}
           </>
         ) : (
           <div className="imagination-originals">
@@ -559,56 +589,77 @@ export default function AchievementImagination({
                 ? "Source achievements"
                 : "Current achievement"}
             </h3>
-            {sources.map((point) => (
-              <p key={point.id}>{point.text}</p>
-            ))}
+            {sources.length > 1 ? (
+              <ol>
+                {sources.map((point, index) => (
+                  <li key={point.id}>
+                    <span>{index + 1}</span>
+                    <p>{point.text}</p>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              sources.map((point) => <p key={point.id}>{point.text}</p>)
+            )}
           </div>
         )}
         <div className="imagination-instruction">
-          <div className="studio-quick-actions">
-            {quickActions.map((action) => (
-              <button
-                type="button"
-                key={action}
-                onClick={() =>
-                  setInstruction(
-                    `${action}. Preserve the supplied facts, technical details, and metrics.`,
-                  )
-                }
-              >
-                {action}
-              </button>
-            ))}
-          </div>
-          <label className="studio-field">
-            <span>Your instruction</span>
-            <textarea
-              rows={2}
-              maxLength={2000}
-              value={instruction}
-              onChange={(event) => setInstruction(event.target.value)}
-            />
-          </label>
-          <div className="imagination-request-actions">
-            <label>
-              Target{" "}
-              <select
-                aria-label="Target line count"
-                value={targetLines}
-                onChange={(event) => setTargetLines(Number(event.target.value))}
-              >
-                {[1, 2, 3, 4].map((lines) => (
-                  <option key={lines} value={lines}>
-                    {lines} {lines === 1 ? "line" : "lines"}
-                  </option>
+          {(operation !== "create" || contextCount > 0) && (
+            <>
+              <div className="studio-quick-actions">
+                {quickActions.map((action) => (
+                  <button
+                    type="button"
+                    key={action}
+                    onClick={() =>
+                      setInstruction(
+                        `${action}. Preserve the supplied facts, technical details, and metrics.`,
+                      )
+                    }
+                  >
+                    {action}
+                  </button>
                 ))}
-              </select>
-            </label>
+              </div>
+              <label className="studio-field">
+                <span>Your instruction</span>
+                <textarea
+                  aria-label="Your instruction"
+                  rows={2}
+                  maxLength={2000}
+                  placeholder={suggestedInstruction}
+                  value={instruction}
+                  onChange={(event) => setInstruction(event.target.value)}
+                  onKeyDown={(event) =>
+                    handleCtrlBackspace(event, setInstruction)
+                  }
+                />
+              </label>
+            </>
+          )}
+          <div className="imagination-request-actions">
+            <div
+              className="imagination-target"
+              role="group"
+              aria-label="Target line count"
+            >
+              <span>Target</span>
+              {[1, 2, 3, 4].map((lines) => (
+                <button
+                  key={lines}
+                  type="button"
+                  aria-pressed={targetLines === lines}
+                  onClick={() => setTargetLines(lines)}
+                >
+                  {lines} {lines === 1 ? "line" : "lines"}
+                </button>
+              ))}
+            </div>
             <span>Estimated until compiled</span>
             <button
               className="studio-ai-button"
               type="button"
-              disabled={busy || !instruction.trim() || !groupId}
+              disabled={busy || !groupId}
               onClick={imagine}
             >
               {busy
@@ -647,6 +698,7 @@ export default function AchievementImagination({
                 rows={4}
                 maxLength={8000}
                 value={proposed}
+                onKeyDown={(event) => handleCtrlBackspace(event, setProposed)}
                 onChange={(event) => {
                   setProposed(event.target.value);
                   setMeasuredLines(null);
@@ -656,7 +708,7 @@ export default function AchievementImagination({
                 }}
               />
             </label>
-            {operation === "create" && (
+            {operation === "create" && contextCount === 0 && (
               <button
                 type="button"
                 onClick={() => {
@@ -682,7 +734,12 @@ export default function AchievementImagination({
           hasLibraryDestination={hasLibraryDestination}
           saveTo={saveDestination}
           canSave={Boolean(
-            (operation === "create" ? text : proposed).trim() &&
+            (operation === "create"
+              ? contextCount > 0
+                ? proposed
+                : text
+              : proposed
+            ).trim() &&
             (operation !== "create" || groupId),
           )}
           isBusy={busy}

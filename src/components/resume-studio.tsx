@@ -19,6 +19,8 @@ import {
   REVIEW_SECTIONS,
   sectionToggleLabel,
 } from "@/lib/generation/review-inclusion";
+import { handleCtrlBackspace } from "@/lib/editing/delete-word";
+import { orderExperiencesForResume } from "@/lib/generation/experience-order";
 import {
   documentFromGeneration,
   draftChangeCount,
@@ -310,6 +312,13 @@ export default function ResumeStudio({
   const applyController = useRef<AbortController | null>(null);
   const pointerY = useRef(0);
   const groups = useMemo(() => studioGroups(library), [library]);
+  const experienceOrder = useMemo(() => {
+    const order = new Map<string, number>();
+    orderExperiencesForResume(library.jobs).forEach((job, index) => {
+      order.set(job.id, index);
+    });
+    return order;
+  }, [library.jobs]);
   const points = useMemo(
     () =>
       [...library.jobs, ...library.projects].flatMap((group) =>
@@ -591,11 +600,18 @@ export default function ResumeStudio({
         .toLowerCase()
         .includes(search.toLowerCase()),
   );
-  const displayGroups = groups.filter((group) =>
-    tab === "projects"
-      ? group.section === "projects"
-      : group.section === "experience",
-  );
+  const displayGroups = groups
+    .filter((group) =>
+      tab === "projects"
+        ? group.section === "projects"
+        : group.section === "experience",
+    )
+    .sort((left, right) =>
+      tab === "projects"
+        ? 0
+        : (experienceOrder.get(left.id) ?? 0) -
+          (experienceOrder.get(right.id) ?? 0),
+    );
   const graphMid = graph.ys.length
     ? graph.ys.reduce((sum, y) => sum + y, 0) / graph.ys.length
     : 0;
@@ -1533,6 +1549,11 @@ export default function ResumeStudio({
                 value={manual.text}
                 onChange={(event) =>
                   setManual({ ...manual, text: event.target.value })
+                }
+                onKeyDown={(event) =>
+                  handleCtrlBackspace(event, (text) =>
+                    setManual({ ...manual, text }),
+                  )
                 }
               />
             </label>

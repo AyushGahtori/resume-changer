@@ -18,6 +18,7 @@ import type {
   ResumeSectionType,
   Skill,
 } from "../schemas/resume-data";
+import { orderExperiencesForResume } from "../generation/experience-order";
 import { applyJakeStyleTemplate } from "./jake-template";
 
 const RenderInputSchema = z
@@ -171,11 +172,7 @@ function renderExperience(
   selectedIds: string[],
   textOverrides: Map<string, string>,
 ): string {
-  const orderedJobs = [...library.jobs].sort(
-    (a, b) =>
-      Number(b.endDate === null) - Number(a.endDate === null) ||
-      b.startDate.localeCompare(a.startDate),
-  );
+  const orderedJobs = orderExperiencesForResume(library.jobs);
   const entries = orderedJobs.flatMap((job) => {
     const points = selectedIds
       .map((id) => selectedById.get(id))

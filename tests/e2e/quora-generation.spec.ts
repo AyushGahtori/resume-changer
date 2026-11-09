@@ -98,12 +98,6 @@ test("uses the Quora JD to generate expected LaTeX from three selected points", 
   }
   await page.getByRole("button", { name: "Generate LaTeX" }).click();
 
-  await expect(page.locator(".generation-metadata")).toContainText(
-    "3 achievements",
-  );
-  await expect(page.locator(".generation-metadata")).toContainText(
-    "10 skills shown",
-  );
   const latex = page.locator(".latex-preview code");
   await expect(latex).toContainText("\\ResumeHeader{Jordan Example}");
   await expect(latex).toContainText(

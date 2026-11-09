@@ -311,6 +311,12 @@ export default function ResumeGenerator({ library, source }: Props) {
   >(null);
   const [result, setResult] = useState<ManualGenerationResult | null>(null);
   const [showGenerationSettings, setShowGenerationSettings] = useState(false);
+  useEffect(() => {
+    if (!showGenerationSettings) return;
+    document
+      .getElementById("resume-editing")
+      ?.scrollIntoView({ block: "start" });
+  }, [showGenerationSettings]);
   const [pdfBase64, setPdfBase64] = useState<string | null>(null);
   const [savedSession, setSavedSession] = useState<{
     generation: ManualGenerationResult;
@@ -1400,6 +1406,12 @@ export default function ResumeGenerator({ library, source }: Props) {
   const hasUnapprovedBulkProposals = bulkApprovableIds.some(
     (id) => !approvedTailoredIds.includes(id),
   );
+  const hasRecommendationEdits =
+    JSON.stringify([...selectedIds].sort()) !==
+      JSON.stringify([...recommendedIds].sort()) ||
+    recommendedSkillIds.some(
+      (id) => selectedSkillIds !== null && !selectedSkillIds.includes(id),
+    );
   const requestedSkillCount =
     result?.metadata.studioDocument &&
     !result.metadata.studioDocument.sectionOrder.includes("skills")
@@ -1413,12 +1425,6 @@ export default function ResumeGenerator({ library, source }: Props) {
   const omittedSkillCount = result
     ? Math.max(0, requestedSkillCount - result.metadata.renderedSkillIds.length)
     : 0;
-  const hasRecommendationEdits =
-    JSON.stringify([...selectedIds].sort()) !==
-      JSON.stringify([...recommendedIds].sort()) ||
-    recommendedSkillIds.some(
-      (id) => selectedSkillIds !== null && !selectedSkillIds.includes(id),
-    );
   /**
    * The compile control stays a single utility action: it creates the first
    * PDF, recompiles the current LaTeX once one exists, and reports the

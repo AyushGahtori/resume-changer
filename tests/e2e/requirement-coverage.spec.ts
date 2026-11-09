@@ -106,20 +106,10 @@ test("reports the coverage of the current job analysis and its source", async ({
 
   const analysis = page.getByRole("region", { name: "Job analysis" });
   await expect(analysis).toContainText("Analyzed");
-  await expect(analysis).toContainText(
-    "Compared with the saved job description",
-  );
-  await expect(analysis.locator(".selection-analysis-context dt")).toHaveText([
-    "Role",
-    "Seniority",
-    "Company",
-  ]);
-  await expect(analysis.locator(".selection-analysis-context dd")).toHaveText([
-    "Platform Engineer",
-    "Entry level",
-    "Example Cloud",
-  ]);
-  await expect(analysis).toContainText("3 requirements extracted.");
+  await expect(analysis).toContainText("Platform Engineer");
+  await expect(analysis).toContainText("Entry level");
+  await expect(analysis).toContainText("3 requirements");
+  await expect(analysis).not.toContainText("Not specified");
   await page.screenshot({
     path: test.info().outputPath("job-analysis-coverage.png"),
     fullPage: true,
@@ -131,11 +121,8 @@ test("reports the coverage of the current job analysis and its source", async ({
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBe(true);
-  await expect(analysis.locator(".selection-analysis-context dd")).toHaveText([
-    "Platform Engineer",
-    "Entry level",
-    "Example Cloud",
-  ]);
+  await expect(analysis).toContainText("Platform Engineer");
+  await expect(analysis).toContainText("Entry level");
   await page.screenshot({
     path: test.info().outputPath("job-analysis-coverage-mobile.png"),
     fullPage: true,

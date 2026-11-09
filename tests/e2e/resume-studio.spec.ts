@@ -442,7 +442,6 @@ test("creates an achievement from selected context with a ten-item limit", async
     });
   });
   await page.getByRole("button", { name: "✦ Ask Imagination" }).click();
-  await page.getByRole("button", { name: "Use suggestion in editor" }).click();
   await page.getByRole("button", { name: "Save achievement" }).click();
   expect(context?.skillIds).toHaveLength(9);
   expect(context?.sources).toHaveLength(1);

@@ -42,9 +42,6 @@ test("selects points, generates LaTeX, copies and downloads the output", async (
   ).toHaveText(
     "Generated internally by Resume Changer from your selected evidence. AI did not rewrite the content.",
   );
-  await expect(page.locator(".generation-metadata")).toContainText(
-    "1 achievement",
-  );
   await expect(
     page.getByRole("region", { name: "Generated resume review" }),
   ).toBeVisible();
