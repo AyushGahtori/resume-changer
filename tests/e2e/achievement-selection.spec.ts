@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { chooseLibraryOption } from "./support/library-select";
 
 const jobDescription = "Build reliable AWS platform services.";
 const analysis = {
@@ -206,7 +207,9 @@ test("finds evidence by search and by experience without losing the selection", 
   await page.goto("/generate?source=demo");
 
   const search = page.getByRole("searchbox", { name: "Search achievements" });
-  const experience = page.getByLabel("Filter by experience");
+  const experience = page.getByRole("combobox", {
+    name: "Filter by experience",
+  });
   await expect(search).toBeVisible();
   await expect(experience).toBeVisible();
   await expect(page.locator(".generation-point")).toHaveCount(13);
@@ -226,7 +229,11 @@ test("finds evidence by search and by experience without losing the selection", 
   await expect(page.locator(selectionCount)).toContainText("1 selected");
 
   // The experience filter and the search combine.
-  await experience.selectOption("job-example-cloud-labs");
+  await chooseLibraryOption(
+    page,
+    "Filter by experience",
+    "job-example-cloud-labs",
+  );
   await expect(page.locator(".generation-point")).toHaveCount(0);
   await expect(page.locator(".generation-no-matches")).toBeVisible();
   await expect(page.locator(selectionCount)).toContainText("1 selected");
@@ -234,7 +241,7 @@ test("finds evidence by search and by experience without losing the selection", 
   await page.getByRole("button", { name: "Reset filters" }).click();
   await expect(page.locator(".generation-point")).toHaveCount(13);
   await expect(search).toHaveValue("");
-  await expect(experience).toHaveValue("");
+  await expect(experience).toHaveAttribute("data-value", "");
   await expect(page.locator(selectionCount)).toContainText("1 selected");
 });
 
@@ -288,11 +295,16 @@ test("reaches the search and the experience filter with the keyboard", async ({
   expect(focus.outlineStyle).not.toBe("none");
   expect(Number.parseFloat(focus.outlineWidth)).toBeGreaterThan(0);
 
-  // The experience filter takes the keyboard too.
-  await page.getByLabel("Filter by experience").focus();
+  // The experience filter takes the keyboard too. The first arrow opens the
+  // list on the current value, and the next arrow moves to a real experience.
+  const experience = page.getByRole("combobox", {
+    name: "Filter by experience",
+  });
+  await experience.focus();
+  await page.keyboard.press("ArrowDown");
   await page.keyboard.press("ArrowDown");
   await page.keyboard.press("Enter");
-  await expect(page.getByLabel("Filter by experience")).not.toHaveValue("");
+  await expect(experience).not.toHaveAttribute("data-value", "");
 });
 
 test("keeps the search row inside a narrow viewport", async ({ page }) => {

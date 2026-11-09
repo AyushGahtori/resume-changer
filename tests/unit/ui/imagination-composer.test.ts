@@ -6,6 +6,7 @@ import {
 } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
+import LibrarySelect from "../../../src/components/library/library-select";
 import ImaginationComposer, {
   MAX_ACHIEVEMENT_TEXT_LENGTH,
   reconcileDestinationAchievementIds,
@@ -99,7 +100,10 @@ describe("Imagination Canvas composer", () => {
         );
     }
     expect(html).not.toContain("Software Developer · JoyArc");
-    expect(html).toContain('value="' + firstDestination.id + '" selected=""');
+    expect(html).toContain(
+      'data-value="' + firstDestination.id + '"',
+    );
+    expect(html).toContain('aria-selected="true"');
   });
 
   it("reconciles connected achievements against the selected destination", () => {
@@ -137,12 +141,10 @@ describe("Imagination Canvas composer", () => {
       onDestinationChange,
     });
     const tree = ImaginationComposer(props);
-    const select = findElement(tree, (element) => element.type === "select");
+    const select = findElement(tree, (element) => element.type === LibrarySelect);
 
     expect(select).not.toBeNull();
-    (select!.props.onChange as (event: unknown) => void)({
-      currentTarget: { value: secondDestination.id },
-    });
+    (select!.props.onChange as (value: string) => void)(secondDestination.id);
 
     expect(onDestinationChange).toHaveBeenCalledWith(secondDestination.id, [
       secondAchievement.id,
@@ -243,8 +245,9 @@ describe("Imagination Canvas composer", () => {
       value: draft!.text,
     });
     expect(restoredHtml).toContain(
-      'value="' + draft!.groupId + '" selected=""',
+      'data-value="' + draft!.groupId + '"',
     );
+    expect(restoredHtml).toContain('aria-selected="true"');
     expect(restoredHtml).toContain(draft!.text);
   });
 });

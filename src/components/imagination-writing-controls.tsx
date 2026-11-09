@@ -16,6 +16,7 @@ import type { LucideIcon } from "lucide-react";
 import React from "react";
 import type { CSSProperties, FormEvent } from "react";
 import type { AchievementWritingMode } from "@/lib/ai/achievement-writing";
+import { handleCtrlBackspace } from "@/lib/editing/delete-word";
 
 export type ImaginationWritingMode = AchievementWritingMode;
 
@@ -231,6 +232,14 @@ export default function ImaginationWritingControls({
                 ),
               )
             }
+            onKeyDown={(event) =>
+              handleCtrlBackspace(event, (next) =>
+                onInstructionChange(
+                  next.slice(0, MAX_IMAGINATION_INSTRUCTION_LENGTH),
+                ),
+              )
+            }
+            placeholder="Your instruction"
             rows={3}
             value={instruction}
           />
@@ -259,8 +268,8 @@ export default function ImaginationWritingControls({
         </div>
 
         <div className="imagination-request-actions">
-          <label>
-            <span>Target</span>
+          <label className="imagination-target">
+            <span>Target lines</span>
             <select
               aria-label="Target line count"
               disabled={isLoading}

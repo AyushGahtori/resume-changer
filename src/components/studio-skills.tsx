@@ -51,6 +51,19 @@ export default function StudioSkills({
     () => groupSkillsForReview(library.skills),
     [library.skills],
   );
+  async function copySelected() {
+    try {
+      await navigator.clipboard.writeText(
+        selectedIds
+          .map((id) => library.skills.find((skill) => skill.id === id)?.name)
+          .filter(Boolean)
+          .join(", "),
+      );
+      setCopied(true);
+    } catch {
+      setCopied(false);
+    }
+  }
   const groups = taxonomy.flatMap(({ category, skills }) => {
     const matching = skills.filter((skill) => {
       const selected = selectedIds.includes(skill.id);
@@ -122,6 +135,12 @@ export default function StudioSkills({
           onChange={(event) => setSearch(event.target.value)}
         />
       </label>
+      {recommendedIds.length > 0 && (
+        <p className="studio-skill-legend">
+          <span aria-hidden="true">✦</span>
+          Matches this job.
+        </p>
+      )}
       <div className="studio-filters" aria-label="Skill filters">
         {[
           ["all", "All"],
@@ -211,9 +230,12 @@ export default function StudioSkills({
                     {recommendedIds.includes(skill.id) && (
                       <span
                         className="studio-skill-option-recommended"
-                        aria-hidden="true"
+                        title="Matches this job"
                       >
-                        ✦
+                        <span aria-hidden="true">✦</span>
+                        <span className="studio-visually-hidden">
+                          Matches this job.
+                        </span>
                       </span>
                     )}
                     {badge ? (
@@ -242,8 +264,12 @@ export default function StudioSkills({
         </p>
       )}
       {selectedIds.length > 1 && (
-        <details className="studio-skill-order">
-          <summary>Skill priority order</summary>
+        <div className="studio-skill-order">
+        <details>
+          <summary>
+            <span>Skill priority order</span>
+            <small>{selectedIds.length}</small>
+          </summary>
           <p>The layout preserves this order where space permits.</p>
           <ol>
             {selectedIds.map((id, index) => {
@@ -281,27 +307,16 @@ export default function StudioSkills({
             })}
           </ol>
         </details>
+        <button className="studio-skill-copy" type="button" onClick={copySelected}>
+          {copied ? "Copied selected skills" : "Copy selected skills"}
+        </button>
+        </div>
       )}
-      <button
-        type="button"
-        onClick={async () => {
-          try {
-            await navigator.clipboard.writeText(
-              selectedIds
-                .map(
-                  (id) => library.skills.find((skill) => skill.id === id)?.name,
-                )
-                .filter(Boolean)
-                .join(", "),
-            );
-            setCopied(true);
-          } catch {
-            setCopied(false);
-          }
-        }}
-      >
-        {copied ? "Copied selected skills" : "Copy selected skills"}
-      </button>
+      {selectedIds.length === 1 && (
+        <button className="studio-skill-copy" type="button" onClick={copySelected}>
+          {copied ? "Copied selected skills" : "Copy selected skills"}
+        </button>
+      )}
     </section>
   );
 }

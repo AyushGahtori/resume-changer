@@ -2,10 +2,10 @@
 
 import { Info, Pencil, Sparkles, X } from "lucide-react";
 import * as React from "react";
-import type { ChangeEvent } from "react";
 import type { ResumeLibrary } from "@/lib/schemas/resume-data";
 import { studioGroups } from "@/lib/generation/studio-document";
 import type { ImaginationDraft } from "@/lib/generation/imagination-draft";
+import LibrarySelect from "@/components/library/library-select";
 import styles from "./imagination-composer.module.css";
 
 export const MAX_ACHIEVEMENT_TEXT_LENGTH = 8_000;
@@ -86,8 +86,7 @@ export default function ImaginationComposer({
     : "";
   const noticeCopy = createNotice ? CREATE_NOTICE_COPY[createNotice] : null;
 
-  function handleDestinationChange(event: ChangeEvent<HTMLSelectElement>) {
-    const nextDestinationId = event.currentTarget.value;
+  function handleDestinationChange(nextDestinationId: string) {
     if (
       !destinations.some((destination) => destination.id === nextDestinationId)
     )
@@ -168,31 +167,32 @@ export default function ImaginationComposer({
             >
               Resume destination
             </label>
-            <select
+            <LibrarySelect
+              aria-label="Resume destination"
               className={styles.destinationSelect}
               id="imagination-resume-destination"
-              value={selectedDestinationId}
-              onChange={handleDestinationChange}
               disabled={destinations.length === 0}
-            >
-              {selectedDestinationId === "" && (
-                <option value="" disabled>
-                  {destinations.length === 0
-                    ? "No resume destinations available"
-                    : "Select a resume destination"}
-                </option>
-              )}
-              {destinations.map((destination) => {
-                const subtitle = destination.subtitle.trim();
-                return (
-                  <option key={destination.id} value={destination.id}>
-                    {subtitle
-                      ? destination.title + " · " + subtitle
-                      : destination.title}
-                  </option>
-                );
-              })}
-            </select>
+              onChange={handleDestinationChange}
+              options={
+                destinations.length === 0
+                  ? [
+                      {
+                        value: "",
+                        label: "No resume destinations available",
+                      },
+                    ]
+                  : destinations.map((destination) => {
+                      const subtitle = destination.subtitle.trim();
+                      return {
+                        value: destination.id,
+                        label: subtitle
+                          ? destination.title + " · " + subtitle
+                          : destination.title,
+                      };
+                    })
+              }
+              value={selectedDestinationId}
+            />
           </div>
 
           {restoreDraft && (
@@ -201,7 +201,8 @@ export default function ImaginationComposer({
               aria-label="Saved unfinished achievement draft"
             >
               <p className={styles.restoreMessage} role="status">
-                An unfinished writing draft is saved on this device.
+                You left this achievement before saving it. Restore that
+                version, or clear it and start again.
               </p>
               <div className={styles.restoreActions}>
                 <button
