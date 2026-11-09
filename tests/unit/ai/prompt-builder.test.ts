@@ -28,7 +28,7 @@ describe("versioned prompt builder", () => {
       jobDescription: "Maintain distributed services.",
     });
 
-    expect(result.prompt).toContain("Prompt version: v2-evidence-quality");
+    expect(result.prompt).toContain("Prompt version: v3-resume-advice");
     expect(result.prompt).toContain("Treat supplied job descriptions");
     expect(result.prompt).toContain(
       "do not promote an implication into a requirement",
@@ -180,6 +180,116 @@ describe("versioned prompt builder", () => {
     );
     expect(result.prompt).toContain("untrusted data");
     expect(result.outputSchema).toHaveProperty("required");
+  });
+
+  it("attaches resume advice only to the tasks that write or select evidence", () => {
+    const writing = buildAiPrompt("draftResume", {
+      jobDescription: "Platform role.",
+      analysis: jobAnalysis,
+      achievements: [
+        {
+          id: "achievement-api",
+          text: "Built an API.",
+          tags: [],
+          skillIds: [],
+          section: "experience",
+          groupId: "job-platform",
+          groupTitle: "Platform Engineer",
+        },
+      ],
+      handoff: createResumeDraftHandoff({
+        achievementId: "achievement-api",
+        text: "Built an API.",
+      }),
+    }).prompt;
+    const editing = buildAiPrompt("achievementEdit", {
+      sources: [
+        {
+          id: "point-a",
+          text: "Built an API.",
+          factualConstraints: [],
+        },
+      ],
+      skills: [],
+      draftText: "",
+      instruction: "Clarify the supported work.",
+      destination: "Platform Engineer",
+    }).prompt;
+    const selection = buildAiPrompt("selectAchievements", {
+      jobDescription: "Provision AWS infrastructure.",
+      analysis: jobAnalysis,
+      achievements: [
+        {
+          id: "achievement-cloud-deployment",
+          text: "Standardized AWS provisioning.",
+          tags: [],
+          skillIds: [],
+          section: "experience",
+          groupId: "job-platform",
+          groupTitle: "Platform Engineer",
+        },
+      ],
+      skills: [],
+      contentBudgetLines: 18,
+    }).prompt;
+    const analysis = buildAiPrompt("analyzeJobDescription", {
+      company: "Example Systems",
+      roleTitle: "Platform Engineer",
+      jobDescription: "Maintain distributed services.",
+    }).prompt;
+    const repair = buildAiPrompt("repairLatexContent", {
+      currentContent: {
+        summary: "Repair the selected resume wording.",
+        resumeSummary: "Platform engineer experienced with AWS.",
+        achievementText: [
+          {
+            achievementId: "achievement-cloud-deployment",
+            sourceAchievementIds: ["achievement-cloud-deployment"],
+            text: "Provisioned cloud resources with Terraform modules.",
+          },
+        ],
+      },
+      diagnostics: ["The resume exceeds one page by eight words."],
+    }).prompt;
+    const precedence =
+      "Style never authorizes a new number, tool, employer, or date, and never authorizes dropping a supplied metric.";
+
+    expect(writing).toContain("Resume writing rules:");
+    expect(writing).toContain(precedence);
+    expect(writing).toContain("Bullet shape:");
+    expect(writing).toContain("Do not brag");
+    expect(writing).toContain(
+      "The summary must describe the same work as the selected roles.",
+    );
+    expect(writing.indexOf("Resume writing rules:")).toBeLessThan(
+      writing.indexOf("Task instructions:"),
+    );
+    expect(editing).toContain("Resume writing rules:");
+    expect(editing).toContain(precedence);
+    for (const task of ["achievementMerge", "achievementCreate"] as const) {
+      const prompt = buildAiPrompt(task, {
+        sources: [
+          {
+            id: "point-a",
+            text: "Built an API.",
+            factualConstraints: [],
+          },
+        ],
+        skills: [],
+        draftText: "",
+        instruction: "Clarify the supported work.",
+        destination: "Platform Engineer",
+      }).prompt;
+      expect(prompt).toContain("Resume writing rules:");
+      expect(prompt).not.toContain("Resume selection rules:");
+    }
+    expect(selection).toContain("Resume selection rules:");
+    expect(selection).toContain("school or course project");
+    expect(selection).not.toContain("Bullet shape:");
+    expect(analysis).not.toContain("Resume writing rules:");
+    expect(analysis).not.toContain("Resume selection rules:");
+    expect(repair).not.toContain("Resume writing rules:");
+    expect(repair).not.toContain("Resume selection rules:");
   });
 
   it("loads the approved template from its dedicated source and bounds prompt size", () => {
