@@ -708,7 +708,7 @@ export default function AchievementImagination({
                 }}
               />
             </label>
-            {operation === "create" && (
+            {operation === "create" && contextCount === 0 && (
               <button
                 type="button"
                 onClick={() => {

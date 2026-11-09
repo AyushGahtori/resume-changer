@@ -1,5 +1,4 @@
 import { expect, test } from "@playwright/test";
-import { chooseLibraryOption } from "./support/library-select";
 
 const jobDescription = "Build reliable AWS platform services.";
 const analysis = {
@@ -229,11 +228,7 @@ test("finds evidence by search and by experience without losing the selection", 
   await expect(page.locator(selectionCount)).toContainText("1 selected");
 
   // The experience filter and the search combine.
-  await chooseLibraryOption(
-    page,
-    "Filter by experience",
-    "job-example-cloud-labs",
-  );
+  await experience.selectOption("job-example-cloud-labs");
   await expect(page.locator(".generation-point")).toHaveCount(0);
   await expect(page.locator(".generation-no-matches")).toBeVisible();
   await expect(page.locator(selectionCount)).toContainText("1 selected");
