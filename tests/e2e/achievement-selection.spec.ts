@@ -236,7 +236,7 @@ test("finds evidence by search and by experience without losing the selection", 
   await page.getByRole("button", { name: "Reset filters" }).click();
   await expect(page.locator(".generation-point")).toHaveCount(13);
   await expect(search).toHaveValue("");
-  await expect(experience).toHaveAttribute("data-value", "");
+  await expect(experience).toHaveValue("");
   await expect(page.locator(selectionCount)).toContainText("1 selected");
 });
 
