@@ -20,6 +20,7 @@ const routes: Array<[string, string[]]> = [
   ["/api/history/generation-example", ["DELETE", "GET"]],
   ["/api/history/generation-example/pdf", ["GET"]],
   ["/api/library/points", ["POST"]],
+  ["/api/library/skills", ["POST"]],
   ["/api/library/points/achievement-example", ["PATCH"]],
   ["/api/resume/edit", ["POST"]],
   ["/api/resume/skills", ["GET"]],

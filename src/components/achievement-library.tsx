@@ -17,6 +17,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import AchievementPointEditor from "@/components/achievement-point-editor";
 import type { ParentOption } from "@/components/achievement-point-editor";
 import AchievementCard from "@/components/library/achievement-card";
+import SkillBoard from "@/components/library/skill-board";
 import ProfileSummary from "@/components/library/profile-summary";
 import LibrarySectionHeader from "@/components/library/library-section-header";
 import SearchWorkbench from "@/components/library/search-workbench";
@@ -227,6 +228,7 @@ export default function AchievementLibrary({ library, source }: Props) {
   const [sort, setSort] = useState<LibrarySort>(DEFAULT_LIBRARY_SORT);
   const [editor, setEditor] = useState<EditorState>(null);
   const [saveMessage, setSaveMessage] = useState("");
+  const [skillsHeldOpen, setSkillsHeldOpen] = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState<ReadonlySet<string>>(
     () => new Set<string>(),
   );
@@ -613,7 +615,12 @@ export default function AchievementLibrary({ library, source }: Props) {
             <details
               className="library-detail library-section"
               id={LIBRARY_SECTION_IDS.skills}
-              open={Boolean(filters.query || filters.skillId)}
+              onToggle={(event) =>
+                setSkillsHeldOpen(event.currentTarget.open)
+              }
+              open={
+                skillsHeldOpen || Boolean(filters.query || filters.skillId)
+              }
             >
               <summary className="library-section-header">
                 <LibrarySectionHeader
@@ -624,35 +631,18 @@ export default function AchievementLibrary({ library, source }: Props) {
                   tone="skills"
                 />
               </summary>
-              {result.skills.length ? (
-                <ul className="skill-list">
-                  {result.skills.map((skill) => (
-                    <li key={skill.id}>
-                      <div>
-                        <strong>{skill.name}</strong>
-                        {skill.category && <span>{skill.category}</span>}
-                      </div>
-                      <span
-                        className={
-                          skill.isListedOnCurrentResume
-                            ? "skill-listed"
-                            : "skill-unlisted"
-                        }
-                      >
-                        {skill.isListedOnCurrentResume
-                          ? "On current resume"
-                          : "Library only"}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="secondary-empty">
-                  {library.skills.length === 0
-                    ? "No skills saved in this library."
-                    : "No skills match this search."}
-                </p>
-              )}
+              <SkillBoard
+                activeSkillId={filters.skillId}
+                canEdit={canEdit}
+                libraryIsEmpty={library.skills.length === 0}
+                onAdded={(name) => {
+                  setSkillsHeldOpen(true);
+                  setSaveMessage(`Added ${name} to your library.`);
+                  router.refresh();
+                }}
+                onSkill={(id) => updateFilter("skillId", id)}
+                skills={result.skills}
+              />
             </details>
 
             <details
