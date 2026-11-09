@@ -422,8 +422,11 @@ function cueFamily(phrase: string): FamilyRecord | null {
       if (matched) scores.set(familyId, (scores.get(familyId) ?? 0) + 1);
     }
   }
-  const ranked = [...scores.entries()].sort((left, right) => right[1] - left[1]);
-  if (!ranked.length || (ranked[1] && ranked[0][1] === ranked[1][1])) return null;
+  const ranked = [...scores.entries()].sort(
+    (left, right) => right[1] - left[1],
+  );
+  if (!ranked.length || (ranked[1] && ranked[0][1] === ranked[1][1]))
+    return null;
   return families.find((family) => family.id === ranked[0][0]) ?? null;
 }
 
@@ -431,7 +434,10 @@ function spellingFamily(phrase: string): FamilyRecord | null {
   const compact = letters(phrase);
   if (compact.length < 5) return null;
   const grams = trigrams(compact);
-  const bestByFamily = new Map<string, { family: FamilyRecord; score: number }>();
+  const bestByFamily = new Map<
+    string,
+    { family: FamilyRecord; score: number }
+  >();
   for (const entry of lexiconTrigrams) {
     if (letters(entry.key).length < 5) continue;
     const score = trigramDice(grams, entry.trigrams);
@@ -602,7 +608,10 @@ function compareNormalized(
     closeSpelling ? 0.86 : 0,
     dice,
   );
-  return { score: Math.min(1, score), strong: strong || closeSpelling || score >= 0.86 };
+  return {
+    score: Math.min(1, score),
+    strong: strong || closeSpelling || score >= 0.86,
+  };
 }
 
 function isUnsafePrefix(left: string, right: string): boolean {

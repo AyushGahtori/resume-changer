@@ -8,10 +8,7 @@ import {
   skillNameSimilarity,
 } from "../../../src/lib/skills/group-skills";
 
-function skill(
-  name: string,
-  extras: Partial<Skill> = {},
-): Skill {
+function skill(name: string, extras: Partial<Skill> = {}): Skill {
   return {
     id: `skill-${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
     name,
@@ -49,13 +46,7 @@ describe("skill grouping", () => {
     ).toEqual([
       {
         label: "Machine learning",
-        skills: [
-          "TensorFlow",
-          "scikit-learn",
-          "LightGBM",
-          "XGBoost",
-          "OpenCV",
-        ],
+        skills: ["TensorFlow", "scikit-learn", "LightGBM", "XGBoost", "OpenCV"],
       },
       { label: "Data science", skills: ["NumPy", "pandas"] },
     ]);
@@ -89,7 +80,9 @@ describe("skill grouping", () => {
   });
 
   it("groups an unfamiliar pair by shared words and leaves a loner in Other", () => {
-    expect(skillNameSimilarity("SAP FI", "SAP MM")).toBeGreaterThanOrEqual(0.62);
+    expect(skillNameSimilarity("SAP FI", "SAP MM")).toBeGreaterThanOrEqual(
+      0.62,
+    );
     expect(skillNameSimilarity("SAP FI", "TensorFlow")).toBeLessThan(0.62);
     const groups = groupSkills([
       skill("SAP FI"),
@@ -99,11 +92,16 @@ describe("skill grouping", () => {
     expect(groups).toEqual([
       expect.objectContaining({
         label: "SAP",
-        skills: [expect.objectContaining({ name: "SAP FI" }), expect.objectContaining({ name: "SAP MM" })],
+        skills: [
+          expect.objectContaining({ name: "SAP FI" }),
+          expect.objectContaining({ name: "SAP MM" }),
+        ],
       }),
       expect.objectContaining({
         label: "Other skills",
-        skills: [expect.objectContaining({ name: "Underwater basket weaving" })],
+        skills: [
+          expect.objectContaining({ name: "Underwater basket weaving" }),
+        ],
       }),
     ]);
   });
@@ -200,8 +198,8 @@ describe("skill grouping", () => {
       "Engineering Practices",
       "Reliability",
     ]);
-    expect(groups.reduce((count, group) => count + group.skills.length, 0)).toBe(
-      library.skills.length,
-    );
+    expect(
+      groups.reduce((count, group) => count + group.skills.length, 0),
+    ).toBe(library.skills.length);
   });
 });

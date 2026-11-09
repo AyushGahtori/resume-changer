@@ -615,12 +615,8 @@ export default function AchievementLibrary({ library, source }: Props) {
             <details
               className="library-detail library-section"
               id={LIBRARY_SECTION_IDS.skills}
-              onToggle={(event) =>
-                setSkillsHeldOpen(event.currentTarget.open)
-              }
-              open={
-                skillsHeldOpen || Boolean(filters.query || filters.skillId)
-              }
+              onToggle={(event) => setSkillsHeldOpen(event.currentTarget.open)}
+              open={skillsHeldOpen || Boolean(filters.query || filters.skillId)}
             >
               <summary className="library-section-header">
                 <LibrarySectionHeader

@@ -4880,7 +4880,8 @@ a:focus-visible {
   max-width: 100%;
   min-height: 28px;
   padding: 0 10px;
-  border: 1px solid color-mix(in srgb, var(--color-violet-strong) 32%, transparent);
+  border: 1px solid
+    color-mix(in srgb, var(--color-violet-strong) 32%, transparent);
   border-radius: var(--radius-full);
   background: var(--color-violet-subtle);
   color: var(--color-violet-strong);
