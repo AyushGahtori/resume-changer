@@ -25,6 +25,7 @@ import {
 } from "@/app/api/history/[id]/handler";
 import { GET as readHistoryPdf } from "@/app/api/history/[id]/pdf/handler";
 import { POST as createPoint } from "@/app/api/library/points/handler";
+import { POST as createSkill } from "@/app/api/library/skills/handler";
 import { PATCH as updatePoint } from "@/app/api/library/points/[id]/handler";
 import { POST as editResume } from "@/app/api/resume/edit/handler";
 import { GET as measureSkills } from "@/app/api/resume/skills/handler";
@@ -73,6 +74,7 @@ const staticRoutes: Record<string, ApiMethods> = {
     POST: direct(saveHistory),
   },
   "library/points": { POST: direct(createPoint) },
+  "library/skills": { POST: direct(createSkill) },
   "resume/edit": { POST: direct(editResume) },
   "resume/skills": { GET: direct(measureSkills) },
 };

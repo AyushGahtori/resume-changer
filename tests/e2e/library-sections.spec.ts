@@ -99,7 +99,7 @@ test("states the number of records that each section holds", async ({
   // The secondary sections stay usable as disclosures.
   await skills.locator("summary").click();
   await credentials.locator("summary").click();
-  await expect(skills.locator(".skill-list li")).toHaveCount(14);
+  await expect(skills.locator(".skill-chip-list li")).toHaveCount(14);
   await expect(credentials.locator(".credential-list li")).toHaveCount(2);
 });
 

@@ -13,6 +13,7 @@ import {
   ResumeLibraryV2Schema,
   StableIdSchema,
   type AchievementPoint,
+  type Skill,
   type GithubAchievementEvidence,
   type GithubImportApproval,
   type GithubRepositoryAttachment,
@@ -23,6 +24,7 @@ import {
 import { DataLoadError } from "./loaders";
 import { getPersonalDataRoot } from "./root";
 import { getAppMode } from "../cloud/security";
+import { normalizeSkillName } from "../skills/group-skills";
 import { normalizeResumeLibrary } from "../github/server/library-migration";
 import {
   AnalysisResultSchema,
@@ -74,6 +76,16 @@ export const CreateAchievementInputSchema = z
 
 export const UpdateAchievementInputSchema = z
   .object({ changes: UpdateChangesSchema })
+  .strict();
+
+export const CreateSkillInputSchema = z
+  .object({
+    name: z
+      .string()
+      .trim()
+      .min(1, "Enter a skill name.")
+      .max(80, "Use a skill name of 80 characters or fewer."),
+  })
   .strict();
 
 const ImportedAchievementUpdateSchema = z
@@ -408,6 +420,67 @@ export async function updateAchievementPoint(
     };
   }, options);
   return { library, point: updated! };
+}
+
+export async function createSkill(
+  input: { name: string },
+  options?: WriteOptions,
+) {
+  const parsed = CreateSkillInputSchema.safeParse(input);
+  if (!parsed.success) {
+    throw new LibraryWriteError("invalid-input", "Enter a skill name.");
+  }
+  const name = parsed.data.name;
+  let created: Skill | undefined;
+  const library = await commitPointChange((current) => {
+    const key = normalizeSkillName(name);
+    const duplicate = current.skills.some((skill) =>
+      [skill.name, ...skill.aliases].some(
+        (value) => normalizeSkillName(value) === key,
+      ),
+    );
+    if (duplicate) {
+      throw new LibraryWriteError(
+        "invalid-input",
+        "That skill is already in your library.",
+      );
+    }
+    const skill: Skill = {
+      id: skillIdForName(name, new Set(collectEntityIds(current))),
+      name,
+      aliases: [],
+      sources: ["direct-user"],
+      isListedOnCurrentResume: false,
+      evidenceAchievementIds: [],
+    };
+    created = skill;
+    return { ...current, skills: [...current.skills, skill] };
+  }, options);
+  return { library, skill: created! };
+}
+
+function skillIdForName(name: string, used: Set<string>): string {
+  const folded = name
+    .replace(/c\+\+/gi, "cplusplus")
+    .replace(/c#/gi, "csharp")
+    .replace(/f#/gi, "fsharp")
+    .replace(/\.net/gi, "dotnet");
+  let base = normalizeSkillName(folded)
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 48)
+    .replace(/-+$/g, "");
+  if (!base) base = "skill";
+  const root = `skill-${base}`;
+  if (!used.has(root)) return root;
+  for (let index = 2; index < 1000; index += 1) {
+    const candidate = `${root}-${index}`;
+    if (!used.has(candidate)) return candidate;
+  }
+  throw new LibraryWriteError(
+    "invalid-library",
+    "A unique skill ID could not be chosen.",
+  );
 }
 
 function canonical(value: unknown): string {

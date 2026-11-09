@@ -107,7 +107,7 @@ test("shows the skills and the credentials of the library", async ({
   const credentials = secondary.locator("details").nth(1);
 
   await skills.locator("summary").click();
-  await expect(skills.locator(".skill-list li")).toHaveCount(14);
+  await expect(skills.locator(".skill-chip-list li")).toHaveCount(14);
   await expect(skills.getByText("System Design")).toBeVisible();
   await expect(skills.getByText("On current resume").first()).toBeVisible();
   await expect(skills.getByText("Library only").first()).toBeVisible();
