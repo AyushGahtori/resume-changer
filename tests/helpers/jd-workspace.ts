@@ -1,4 +1,5 @@
 import { expect, type Locator, type Page } from "@playwright/test";
+import { saveJobAnalysis } from "./saved-job";
 
 /**
  * The sidebar navigation link and the job description field share the
@@ -27,4 +28,5 @@ export async function fillJobDraft(page: Page, draft: JobDraft) {
   if (draft.jobUrl) await page.getByLabel("Job link").fill(draft.jobUrl);
   await jobDescriptionField(page).fill(draft.jobDescription);
   await expect(page.getByRole("status")).toContainText("Saved on this device");
+  await saveJobAnalysis(page, draft);
 }

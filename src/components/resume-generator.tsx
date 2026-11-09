@@ -13,7 +13,7 @@ import {
   Search,
   Sparkles,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, FormEvent, KeyboardEvent, ReactNode } from "react";
 import {
   CircleAlert,
@@ -29,11 +29,7 @@ import {
   Plus,
   TriangleAlert,
 } from "lucide-react";
-import {
-  EMPTY_DRAFT,
-  readDraft,
-  type JobDescriptionDraft,
-} from "@/lib/jd-draft";
+import { EMPTY_DRAFT, type JobDescriptionDraft } from "@/lib/jd-draft";
 import {
   AutoTailorResponseSchema,
   AchievementSelectionResponseSchema,
@@ -59,7 +55,14 @@ import {
   summarizeCoverage,
 } from "@/lib/generation/coverage-presentation";
 import { createJobContextId } from "@/lib/ai/job-context";
-import { readJobAnalysisCache } from "@/lib/jd-analysis-cache";
+import { SavedJobList } from "@/components/saved-jobs/saved-job-list";
+import {
+  deleteSavedJobRequest,
+  loadSavedJobs,
+  readSavedJob,
+  SELECTED_SAVED_JOB_KEY,
+} from "@/lib/jobs/saved-job-client";
+import type { SavedJobSummary } from "@/lib/jobs/saved-job";
 import { createResumeFilename } from "@/lib/generation/resume-filename";
 import {
   describeCompiledPdf,
@@ -285,6 +288,8 @@ export default function ResumeGenerator({ library, source }: Props) {
   const [draft, setDraft] = useState<JobDescriptionDraft>(EMPTY_DRAFT);
   const [draftReady, setDraftReady] = useState(false);
   const [draftNotice, setDraftNotice] = useState("");
+  const [savedJobs, setSavedJobs] = useState<SavedJobSummary[]>([]);
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [pointQuery, setPointQuery] = useState("");
   const [experienceFilter, setExperienceFilter] = useState("");
@@ -432,23 +437,149 @@ export default function ResumeGenerator({ library, source }: Props) {
     }
   }
 
+  const rememberSelectedJob = useCallback(
+    (id: string | null) => {
+      try {
+        const storage = getWorkspaceStorage();
+        if (id) storage.setItem(SELECTED_SAVED_JOB_KEY, id);
+        else storage.removeItem(SELECTED_SAVED_JOB_KEY);
+      } catch {
+        /* The visible selection still follows the account record. */
+      }
+    },
+    [getWorkspaceStorage],
+  );
+
+  const showSavedJob = useCallback(
+    (
+      job: {
+        id: string;
+        company: string;
+        roleTitle: string;
+        jobUrl: string;
+        jobDescription: string;
+        analysis: JobAnalysisResult;
+      },
+      notice = "",
+    ) => {
+      setSelectedJobId(job.id);
+      rememberSelectedJob(job.id);
+      setDraft({
+        schemaVersion: 1,
+        company: job.company,
+        roleTitle: job.roleTitle,
+        jobUrl: job.jobUrl,
+        jobDescription: job.jobDescription,
+      });
+      setAnalysis(job.analysis);
+      setDraftNotice(notice);
+    },
+    [rememberSelectedJob],
+  );
+
+  const clearSelectedJob = useCallback(
+    (notice = "") => {
+      setSelectedJobId(null);
+      rememberSelectedJob(null);
+      setDraft(EMPTY_DRAFT);
+      setAnalysis(null);
+      setDraftNotice(notice);
+    },
+    [rememberSelectedJob],
+  );
+
+  async function handleSelectSavedJob(id: string) {
+    try {
+      const job = await readSavedJob(id);
+      showSavedJob(job);
+      setResult(null);
+      setPdfBase64(null);
+      setPdfUrl(null);
+      setRecommendation(null);
+      setTailoring(null);
+      setSelectionError("");
+      setTailoringError("");
+      setSavedSession(null);
+      setSessionReady(false);
+      setSelectedIds([]);
+    } catch (error) {
+      clearSelectedJob(
+        error instanceof Error
+          ? error.message
+          : "That saved job is no longer available.",
+      );
+    }
+  }
+
+  async function handleDeleteSavedJob(job: SavedJobSummary) {
+    if (
+      !window.confirm(
+        `Delete the saved analysis for ${job.company}? Resumes already created stay in history.`,
+      )
+    ) {
+      return;
+    }
+    try {
+      await deleteSavedJobRequest(job.id);
+      const remaining = savedJobs.filter((item) => item.id !== job.id);
+      setSavedJobs(remaining);
+      if (selectedJobId === job.id) {
+        clearSelectedJob(
+          "That saved job is no longer available. Choose another analyzed job.",
+        );
+        setResult(null);
+        setSessionReady(false);
+      }
+    } catch (error) {
+      setDraftNotice(
+        error instanceof Error
+          ? error.message
+          : "The saved job could not be deleted.",
+      );
+    }
+  }
+
   useEffect(() => {
-    const saved = readDraft(getWorkspaceStorage());
-    const cachedAnalysis = readJobAnalysisCache(
-      getWorkspaceStorage(),
-      saved.draft,
-    );
-    setDraft(saved.draft);
-    setAnalysis(cachedAnalysis);
-    setDraftNotice(
-      saved.state === "invalid"
-        ? "The saved job draft could not be restored. Return to Job description and save it again."
-        : saved.state === "unavailable"
-          ? "Browser storage is unavailable, so no saved job draft can be used."
-          : "",
-    );
-    setDraftReady(true);
-  }, [getWorkspaceStorage]);
+    let cancelled = false;
+    void (async () => {
+      try {
+        const jobs = await loadSavedJobs(getWorkspaceStorage());
+        if (cancelled) return;
+        setSavedJobs(jobs);
+        let storedId: string | null = null;
+        try {
+          storedId = getWorkspaceStorage().getItem(SELECTED_SAVED_JOB_KEY);
+        } catch {
+          storedId = null;
+        }
+        if (storedId && !jobs.some((job) => job.id === storedId)) {
+          clearSelectedJob(
+            "That saved job is no longer available. Choose another analyzed job.",
+          );
+          return;
+        }
+        const chosen = storedId
+          ? jobs.find((job) => job.id === storedId)
+          : jobs[0];
+        if (!chosen) {
+          clearSelectedJob("");
+          return;
+        }
+        const job = await readSavedJob(chosen.id);
+        if (cancelled) return;
+        showSavedJob(job);
+      } catch {
+        if (!cancelled) {
+          clearSelectedJob("Saved job analyses could not be loaded.");
+        }
+      } finally {
+        if (!cancelled) setDraftReady(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [clearSelectedJob, getWorkspaceStorage, showSavedJob]);
 
   useEffect(() => {
     return () => {
@@ -465,6 +596,7 @@ export default function ResumeGenerator({ library, source }: Props) {
             `resume-changer.resume-session.v1.${source}`,
           ),
           JSON.stringify([
+            selectedJobId ?? "",
             draft.company,
             draft.roleTitle,
             draft.jobDescription,
@@ -476,7 +608,14 @@ export default function ResumeGenerator({ library, source }: Props) {
       /* Storage can be unavailable without blocking generation. */
     }
     setSessionReady(true);
-  }, [draftReady, sessionReady, source, draft, getWorkspaceStorage]);
+  }, [
+    draftReady,
+    sessionReady,
+    source,
+    draft,
+    selectedJobId,
+    getWorkspaceStorage,
+  ]);
 
   useEffect(() => {
     if (!sessionReady || !result || savedSession) return;
@@ -485,6 +624,7 @@ export default function ResumeGenerator({ library, source }: Props) {
         `resume-changer.resume-session.v1.${source}`,
         JSON.stringify({
           jobSignature: JSON.stringify([
+            selectedJobId ?? "",
             draft.company,
             draft.roleTitle,
             draft.jobDescription,
@@ -500,6 +640,7 @@ export default function ResumeGenerator({ library, source }: Props) {
     result,
     pdfBase64,
     draft,
+    selectedJobId,
     source,
     sessionReady,
     savedSession,
@@ -1463,6 +1604,9 @@ export default function ResumeGenerator({ library, source }: Props) {
         </div>
       </div>
 
+      {savedJobs.length > 0 && (
+        <a href="#builder-saved-jobs-title">Choose a saved job</a>
+      )}
       <div className="generation-draft">
         <span aria-hidden="true" className="generation-context-icon">
           <BriefcaseBusiness size={19} strokeWidth={1.8} />
@@ -3087,6 +3231,17 @@ export default function ResumeGenerator({ library, source }: Props) {
           </div>
         )}
       </form>
+      {savedJobs.length > 0 && (
+        <SavedJobList
+          jobs={savedJobs}
+          selectedId={selectedJobId}
+          title="Build for a saved job"
+          description="Choose the company and role. Suggestions and tailoring use that analysis."
+          titleId="builder-saved-jobs-title"
+          onSelect={(id) => void handleSelectSavedJob(id)}
+          onDelete={(job) => void handleDeleteSavedJob(job)}
+        />
+      )}
     </section>
   );
 }

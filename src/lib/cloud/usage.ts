@@ -15,6 +15,7 @@ export const ACCOUNT_DAILY_LIMITS = {
   library: 120,
   history: 60,
   files: 30,
+  jobs: 60,
 } as const;
 export type UsageAction = keyof typeof ACCOUNT_DAILY_LIMITS;
 

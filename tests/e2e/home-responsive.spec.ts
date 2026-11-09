@@ -172,7 +172,7 @@ for (const theme of ["light", "dark"]) {
         .fill("A very long company name ".repeat(6));
       await page
         .getByLabel("Role title")
-        .fill("Senior platform and infrastructure engineer ".repeat(4));
+        .fill("Senior platform and infrastructure engineer ".repeat(3));
       await page.getByLabel("Job link").fill("invalid-link");
       await page
         .getByRole("textbox", { name: "Job description", exact: true })

@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
 
 import { createOnePagePdf } from "../helpers/pdf-fixture";
+import { saveJobAnalysis } from "../helpers/saved-job";
 
 const previewStatus = ".preview-status";
 
@@ -13,6 +14,12 @@ async function saveDraft(page: Page) {
     .getByRole("textbox", { name: "Job description", exact: true })
     .fill("Build reliable platform services and improve deployment workflows.");
   await expect(page.getByRole("status")).toContainText("Saved on this device");
+  await saveJobAnalysis(page, {
+    company: "Example Systems",
+    roleTitle: "Platform Engineer",
+    jobDescription:
+      "Build reliable platform services and improve deployment workflows.",
+  });
 }
 
 async function openBuilder(page: Page) {

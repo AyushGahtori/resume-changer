@@ -12,6 +12,7 @@ test("editing during an in-flight request cancels stale analysis", async ({
     exact: true,
   });
   await jd.fill("Original description");
+  await page.getByLabel("Company", { exact: true }).fill("Example Systems");
   let release: () => void = () => {};
   const pending = new Promise<void>((resolve) => {
     release = resolve;
@@ -39,6 +40,7 @@ test("loading, failure, panel retry, real result and stale-analysis invalidation
     exact: true,
   });
   await jd.fill("Build reliable APIs with TypeScript and PostgreSQL.");
+  await page.getByLabel("Company", { exact: true }).fill("Example Systems");
   let release: () => void = () => {};
   const pending = new Promise<void>((resolve) => {
     release = resolve;
@@ -112,12 +114,11 @@ test("loading, failure, panel retry, real result and stale-analysis invalidation
   );
   expect(attempts).toBe(2);
   await page.getByLabel("Company", { exact: true }).fill("New context");
-  await expect(page.locator(".analysis-panel")).toHaveCount(0);
-  expect(
-    await page.evaluate(() =>
-      localStorage.getItem("resume-changer.jd-analysis.v1"),
-    ),
-  ).toBeNull();
+  await expect(page.locator(".saved-job-unsaved")).toBeVisible();
+  await expect(page.locator(".analysis-panel")).toBeVisible();
+  await expect(page.locator(".saved-job-open").first()).toContainText(
+    "Example Systems",
+  );
 });
 
 test("empty categories are neutral and cache failure remains readable", async ({
@@ -135,15 +136,25 @@ test("empty categories are neutral and cache failure remains readable", async ({
   await page.route(endpoint, (route) =>
     route.fulfill({ json: { analysis: emptyHomeAnalysis } }),
   );
+  await page.route("**/api/job-analyses", (route) => {
+    if (route.request().method() === "POST") {
+      return route.fulfill({
+        status: 500,
+        json: { error: "Saved job analyses are unavailable. Try again." },
+      });
+    }
+    return route.continue();
+  });
   await page
     .getByRole("textbox", { name: "Job description", exact: true })
     .fill("A short role description.");
+  await page.getByLabel("Company", { exact: true }).fill("Example Systems");
   await page
     .getByRole("button", { name: "Analyze job description", exact: true })
     .click();
   await expect(page.locator(".analysis-empty-category")).toHaveCount(8);
   await expect(page.locator(".analysis-cache-notice")).toContainText(
-    "could not be saved",
+    "not added",
   );
 });
 
@@ -171,6 +182,7 @@ for (const theme of ["light", "dark"]) {
     await page
       .getByRole("textbox", { name: "Job description", exact: true })
       .fill("Build reliable APIs with TypeScript and PostgreSQL.");
+    await page.getByLabel("Company", { exact: true }).fill("Example Systems");
     await page
       .getByRole("button", { name: "Analyze job description", exact: true })
       .click();
@@ -212,3 +224,33 @@ for (const theme of ["light", "dark"]) {
     expect(errors).toEqual([]);
   });
 }
+
+test("shows a saved analysis again after visiting another page", async ({
+  page,
+}) => {
+  await page.goto("/");
+  let analysisCalls = 0;
+  await page.route(endpoint, async (route) => {
+    analysisCalls += 1;
+    await route.fulfill({ json: { analysis: homeAnalysis } });
+  });
+  await page.getByLabel("Company", { exact: true }).fill("BJAK");
+  await page.getByLabel("Role title").fill("Backend Engineer");
+  await page
+    .getByRole("textbox", { name: "Job description", exact: true })
+    .fill("Build APIs for the product.");
+  await page
+    .getByRole("button", { name: "Analyze job description", exact: true })
+    .click();
+  await expect(page.locator(".analysis-panel")).toBeVisible();
+  await page.getByRole("link", { name: "Resume builder" }).click();
+  await page.goto("/");
+  await page
+    .locator(".saved-job-open", { hasText: "Backend Engineer" })
+    .click();
+  await expect(
+    page.getByRole("textbox", { name: "Job description", exact: true }),
+  ).toHaveValue("Build APIs for the product.");
+  await expect(page.locator(".analysis-panel")).toBeVisible();
+  expect(analysisCalls).toBe(1);
+});

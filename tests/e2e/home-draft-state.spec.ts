@@ -124,7 +124,7 @@ test("invalid stored data is explained, edits invalidate analysis, failed clear 
   await page.getByLabel("Company", { exact: true }).fill("New company");
   expect(
     await page.evaluate((key) => localStorage.getItem(key), cacheKey),
-  ).toBeNull();
+  ).toBe("stale");
   await expect(page.locator(".storage-notice")).toHaveCount(0);
   await page.evaluate(() => {
     Storage.prototype.removeItem = () => {

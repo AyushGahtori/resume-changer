@@ -1803,8 +1803,9 @@ a:focus-visible {
 }
 .field-label-row {
   display: flex;
-  align-items: center;
+  align-items: end;
   justify-content: space-between;
+  min-height: 28px;
   gap: 8px;
 }
 .saved-jobs {
@@ -1829,6 +1830,8 @@ a:focus-visible {
 .saved-jobs-list {
   display: grid;
   gap: 8px;
+  max-height: 260px;
+  overflow-y: auto;
   margin: 12px 0 0;
   padding: 0;
   list-style: none;
@@ -1872,11 +1875,13 @@ a:focus-visible {
 }
 .saved-job-role,
 .saved-job-open time {
-  color: var(--color-text-muted);
+  color: var(--color-text-secondary);
   font-size: 12px;
   line-height: 16px;
 }
 .saved-job-delete {
+  min-width: 44px;
+  min-height: 44px;
   padding: 8px 10px;
   font-size: 12px;
   cursor: pointer;

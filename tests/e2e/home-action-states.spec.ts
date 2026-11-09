@@ -312,6 +312,7 @@ test("keeps the analyzing button the same size with a live spinner", async ({
   await page
     .getByRole("textbox", { name: "Job description", exact: true })
     .fill("Build reliable services.");
+  await page.getByLabel("Company", { exact: true }).fill("Example Systems");
 
   let releaseResponse: () => void = () => {};
   const responseGate = new Promise<void>((resolve) => {
@@ -484,6 +485,7 @@ test("honors reduced motion for the loading spinner", async ({ page }) => {
   await page
     .getByRole("textbox", { name: "Job description", exact: true })
     .fill("Build reliable services.");
+  await page.getByLabel("Company", { exact: true }).fill("Example Systems");
 
   await page.route("**/api/ai/analyze-job-description", async (route) => {
     await new Promise((resolve) => setTimeout(resolve, 8000));

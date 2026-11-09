@@ -20,6 +20,8 @@ export type RoleFieldDescriptor = {
   readonly autoComplete: string;
   /** Mobile keyboard hint, when the field benefits from one. */
   readonly inputMode?: "url";
+  /** Company is required before an analysis can be saved. */
+  readonly required?: boolean;
 };
 
 /**
@@ -38,6 +40,7 @@ export const ROLE_FIELDS: readonly RoleFieldDescriptor[] = [
     placeholder: "Company name",
     icon: Building2,
     autoComplete: "organization",
+    required: true,
   },
   {
     field: "roleTitle",

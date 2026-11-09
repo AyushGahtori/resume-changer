@@ -28,10 +28,7 @@ function normalizedDraft(draft: DraftFields) {
   };
 }
 
-export function readJobAnalysisCache(
-  storage: AnalysisCacheStorage,
-  draft: DraftFields,
-): JobAnalysisResult | null {
+export function readStoredJobAnalysisEntry(storage: AnalysisCacheStorage) {
   let raw: string | null;
   try {
     raw = storage.getItem(JD_ANALYSIS_STORAGE_KEY);
@@ -39,25 +36,30 @@ export function readJobAnalysisCache(
     return null;
   }
   if (!raw) return null;
-
-  let value: unknown;
   try {
-    value = JSON.parse(raw);
+    const parsed = AnalysisCacheSchema.safeParse(JSON.parse(raw));
+    return parsed.success ? parsed.data : null;
   } catch {
     return null;
   }
-  const parsed = AnalysisCacheSchema.safeParse(value);
-  if (!parsed.success) return null;
+}
+
+export function readJobAnalysisCache(
+  storage: AnalysisCacheStorage,
+  draft: DraftFields,
+): JobAnalysisResult | null {
+  const stored = readStoredJobAnalysisEntry(storage);
+  if (!stored) return null;
 
   const current = normalizedDraft(draft);
   if (
-    parsed.data.company !== current.company ||
-    parsed.data.roleTitle !== current.roleTitle ||
-    parsed.data.jobDescription !== current.jobDescription
+    stored.company !== current.company ||
+    stored.roleTitle !== current.roleTitle ||
+    stored.jobDescription !== current.jobDescription
   ) {
     return null;
   }
-  return parsed.data.analysis;
+  return stored.analysis;
 }
 
 export function writeJobAnalysisCache(
