@@ -106,9 +106,7 @@ test("reports the coverage of the current job analysis and its source", async ({
 
   const analysis = page.getByRole("region", { name: "Job analysis" });
   await expect(analysis).toContainText("Analyzed");
-  await expect(analysis).toContainText(
-    "Platform Engineer · Entry level",
-  );
+  await expect(analysis).toContainText("Platform Engineer · Entry level");
   await expect(analysis).toContainText("3 requirements");
   await expect(analysis).not.toContainText("Not specified");
   await page.screenshot({

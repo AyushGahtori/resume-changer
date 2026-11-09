@@ -570,8 +570,8 @@ export default function AchievementImagination({
                   onKeyDown={(event) => handleCtrlBackspace(event, setText)}
                 />
                 <p>
-                  Save this text as the achievement. Connect points above if
-                  you want Imagination to write it from those points instead.
+                  Save this text as the achievement. Connect points above if you
+                  want Imagination to write it from those points instead.
                 </p>
               </label>
             ) : (
@@ -638,7 +638,11 @@ export default function AchievementImagination({
             </>
           )}
           <div className="imagination-request-actions">
-            <div className="imagination-target" role="group" aria-label="Target line count">
+            <div
+              className="imagination-target"
+              role="group"
+              aria-label="Target line count"
+            >
               <span>Target</span>
               {[1, 2, 3, 4].map((lines) => (
                 <button

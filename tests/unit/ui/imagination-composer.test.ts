@@ -100,9 +100,7 @@ describe("Imagination Canvas composer", () => {
         );
     }
     expect(html).not.toContain("Software Developer · JoyArc");
-    expect(html).toContain(
-      'data-value="' + firstDestination.id + '"',
-    );
+    expect(html).toContain('data-value="' + firstDestination.id + '"');
     expect(html).toContain('aria-selected="true"');
   });
 
@@ -141,7 +139,10 @@ describe("Imagination Canvas composer", () => {
       onDestinationChange,
     });
     const tree = ImaginationComposer(props);
-    const select = findElement(tree, (element) => element.type === LibrarySelect);
+    const select = findElement(
+      tree,
+      (element) => element.type === LibrarySelect,
+    );
 
     expect(select).not.toBeNull();
     (select!.props.onChange as (value: string) => void)(secondDestination.id);
@@ -244,9 +245,7 @@ describe("Imagination Canvas composer", () => {
       connectedAchievementIds: draft!.selectedIds,
       value: draft!.text,
     });
-    expect(restoredHtml).toContain(
-      'data-value="' + draft!.groupId + '"',
-    );
+    expect(restoredHtml).toContain('data-value="' + draft!.groupId + '"');
     expect(restoredHtml).toContain('aria-selected="true"');
     expect(restoredHtml).toContain(draft!.text);
   });

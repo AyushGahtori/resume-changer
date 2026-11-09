@@ -265,55 +265,63 @@ export default function StudioSkills({
       )}
       {selectedIds.length > 1 && (
         <div className="studio-skill-order">
-        <details>
-          <summary>
-            <span>Skill priority order</span>
-            <small>{selectedIds.length}</small>
-          </summary>
-          <p>The layout preserves this order where space permits.</p>
-          <ol>
-            {selectedIds.map((id, index) => {
-              const name =
-                library.skills.find((skill) => skill.id === id)?.name ?? id;
-              const reorder = (direction: -1 | 1) => {
-                const next = [...selectedIds];
-                [next[index], next[index + direction]] = [
-                  next[index + direction],
-                  next[index],
-                ];
-                onChange(next);
-              };
-              return (
-                <li key={id}>
-                  <span>{name}</span>
-                  <button
-                    type="button"
-                    aria-label={`Raise skill priority: ${name}`}
-                    disabled={index === 0}
-                    onClick={() => reorder(-1)}
-                  >
-                    ↑
-                  </button>
-                  <button
-                    type="button"
-                    aria-label={`Lower skill priority: ${name}`}
-                    disabled={index === selectedIds.length - 1}
-                    onClick={() => reorder(1)}
-                  >
-                    ↓
-                  </button>
-                </li>
-              );
-            })}
-          </ol>
-        </details>
-        <button className="studio-skill-copy" type="button" onClick={copySelected}>
-          {copied ? "Copied selected skills" : "Copy selected skills"}
-        </button>
+          <details>
+            <summary>
+              <span>Skill priority order</span>
+              <small>{selectedIds.length}</small>
+            </summary>
+            <p>The layout preserves this order where space permits.</p>
+            <ol>
+              {selectedIds.map((id, index) => {
+                const name =
+                  library.skills.find((skill) => skill.id === id)?.name ?? id;
+                const reorder = (direction: -1 | 1) => {
+                  const next = [...selectedIds];
+                  [next[index], next[index + direction]] = [
+                    next[index + direction],
+                    next[index],
+                  ];
+                  onChange(next);
+                };
+                return (
+                  <li key={id}>
+                    <span>{name}</span>
+                    <button
+                      type="button"
+                      aria-label={`Raise skill priority: ${name}`}
+                      disabled={index === 0}
+                      onClick={() => reorder(-1)}
+                    >
+                      ↑
+                    </button>
+                    <button
+                      type="button"
+                      aria-label={`Lower skill priority: ${name}`}
+                      disabled={index === selectedIds.length - 1}
+                      onClick={() => reorder(1)}
+                    >
+                      ↓
+                    </button>
+                  </li>
+                );
+              })}
+            </ol>
+          </details>
+          <button
+            className="studio-skill-copy"
+            type="button"
+            onClick={copySelected}
+          >
+            {copied ? "Copied selected skills" : "Copy selected skills"}
+          </button>
         </div>
       )}
       {selectedIds.length === 1 && (
-        <button className="studio-skill-copy" type="button" onClick={copySelected}>
+        <button
+          className="studio-skill-copy"
+          type="button"
+          onClick={copySelected}
+        >
           {copied ? "Copied selected skills" : "Copy selected skills"}
         </button>
       )}

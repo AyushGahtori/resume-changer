@@ -1308,7 +1308,8 @@
   padding-right: 2px;
   overflow: auto;
   overscroll-behavior: contain;
-  scrollbar-color: color-mix(in srgb, var(--accent) 70%, transparent) transparent;
+  scrollbar-color: color-mix(in srgb, var(--accent) 70%, transparent)
+    transparent;
   scrollbar-width: thin;
 }
 .imagination-context-list::-webkit-scrollbar {
