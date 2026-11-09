@@ -14,6 +14,7 @@ const configured = {
   NEXT_PUBLIC_FIREBASE_PROJECT_ID: "example",
   NEXT_PUBLIC_FIREBASE_APP_ID: "fictional-app",
   NEXT_PUBLIC_FIREBASE_DATABASE_ID: "resume-changer",
+  NODE_OPTIONS: "--experimental-require-module",
 };
 describe("hosted sign-in configuration", () => {
   it("tags incomplete browser config so sign-in can explain the real failure", () => {
@@ -43,6 +44,18 @@ describe("hosted sign-in configuration", () => {
   it("accepts complete hosted configuration and keeps local builds independent", () => {
     expect(() => checkHostedAccountConfig(configured)).not.toThrow();
     expect(() => checkHostedAccountConfig({})).not.toThrow();
+  });
+  it("rejects hosted Firebase builds that cannot load the session verifier", () => {
+    for (const NODE_OPTIONS of [
+      undefined,
+      "",
+      "--max-old-space-size=2048",
+      "--experimental-require-module --no-experimental-require-module",
+    ]) {
+      expect(() =>
+        checkHostedAccountConfig({ ...configured, NODE_OPTIONS }),
+      ).toThrow(/NODE_OPTIONS=--experimental-require-module/);
+    }
   });
   it("rejects local auth mode and emulator access in hosted builds", () => {
     expect(() =>

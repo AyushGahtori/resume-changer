@@ -3,22 +3,6 @@ import { fileURLToPath } from "node:url";
 
 export function checkHostedAccountConfig(environment) {
   if (environment.VERCEL !== "1") return;
-  // firebase-admin/auth -> jwks-rsa 4 -> jose 6 requires Node's require(ESM).
-  // Vercel disables that capability unless NODE_OPTIONS explicitly enables it.
-  if (environment.GITHUB_RUNTIME_ENABLED === "1") {
-    const flags = (environment.NODE_OPTIONS ?? "")
-      .split(/\s+/)
-      .filter((flag) =>
-        [
-          "--experimental-require-module",
-          "--no-experimental-require-module",
-        ].includes(flag),
-      );
-    if (flags.at(-1) !== "--experimental-require-module")
-      throw new Error(
-        "Hosted GitHub imports require NODE_OPTIONS=--experimental-require-module in this deployment environment.",
-      );
-  }
   const required = [
     "NEXT_PUBLIC_FIREBASE_API_KEY",
     "NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN",
@@ -30,6 +14,21 @@ export function checkHostedAccountConfig(environment) {
   if (missing.length)
     throw new Error(
       `Hosted account configuration is missing: ${missing.join(", ")}. Configure this deployment environment before building.`,
+    );
+  // Firebase Admin's verifier imports jwks-rsa -> jose from CommonJS. Vercel
+  // disables Node's require(ESM) capability unless explicitly enabled. This
+  // is required by every hosted session request, not only GitHub imports.
+  const flags = (environment.NODE_OPTIONS ?? "")
+    .split(/\s+/)
+    .filter((flag) =>
+      [
+        "--experimental-require-module",
+        "--no-experimental-require-module",
+      ].includes(flag),
+    );
+  if (flags.at(-1) !== "--experimental-require-module")
+    throw new Error(
+      "Hosted Firebase accounts require NODE_OPTIONS=--experimental-require-module in this deployment environment.",
     );
   if (environment.RESUME_APP_MODE && environment.RESUME_APP_MODE !== "firebase")
     throw new Error("Hosted account mode must be firebase.");
