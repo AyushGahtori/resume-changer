@@ -181,7 +181,7 @@ describe("Gemini adapter", () => {
         model: string;
         outputSchema: Record<string, unknown>;
       }) => {
-        expect(value.prompt).toContain("Prompt version: v2-evidence-quality");
+        expect(value.prompt).toContain("Prompt version: v3-resume-advice");
         expect(value.prompt).toContain("Task instructions:");
         expect(value.prompt).toContain('"roleTitle":"Platform Engineer"');
         return JSON.stringify(analysis);
