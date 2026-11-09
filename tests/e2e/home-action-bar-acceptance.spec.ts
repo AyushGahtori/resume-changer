@@ -90,6 +90,7 @@ for (const theme of ["light", "dark"]) {
       await expect(page.locator("#jd-error")).toBeVisible();
       await capture(page, `${theme}-${width}-validation`);
       await jd.fill("Build reliable APIs with TypeScript and PostgreSQL.");
+      await page.getByLabel("Company", { exact: true }).fill("Example Systems");
       await expect(page.locator("#jd-error")).toHaveCount(0);
       for (const [name, button] of [
         ["clear", clear],

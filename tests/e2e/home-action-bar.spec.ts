@@ -249,6 +249,7 @@ test("keeps the AI action disabled and the same size while analysis loads", asyn
   await page
     .getByRole("textbox", { name: "Job description", exact: true })
     .fill("Build reliable services.");
+  await page.getByLabel("Company", { exact: true }).fill("Example Systems");
 
   let releaseResponse: () => void = () => {};
   const responseGate = new Promise<void>((resolve) => {

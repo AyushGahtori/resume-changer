@@ -18,6 +18,16 @@ import {
   clearJobAnalysisCache,
   writeJobAnalysisCache,
 } from "@/lib/jd-analysis-cache";
+import { SavedJobList } from "@/components/saved-jobs/saved-job-list";
+import {
+  deleteSavedJobRequest,
+  loadSavedJobs,
+  readSavedJob,
+  saveAnalyzedJob,
+  SELECTED_SAVED_JOB_KEY,
+} from "@/lib/jobs/saved-job-client";
+import { normalizeJobText, savedJobSummary } from "@/lib/jobs/saved-job";
+import type { SavedJobRecord, SavedJobSummary } from "@/lib/jobs/saved-job";
 import {
   clearDraft,
   EMPTY_DRAFT,
@@ -54,13 +64,20 @@ export default function JDWorkspace({
   const [analysis, setAnalysis] = useState<JobAnalysisResult | null>(null);
   const [analysisError, setAnalysisError] = useState("");
   const [analysisCacheSaved, setAnalysisCacheSaved] = useState(false);
+  const [savedJobs, setSavedJobs] = useState<SavedJobSummary[]>([]);
+  const [selectedJob, setSelectedJob] = useState<SavedJobRecord | null>(null);
+  const [jobsNotice, setJobsNotice] = useState("");
   const analysisRequest = useRef<AbortController | null>(null);
   const autosaveTimeout = useRef<number | null>(null);
   const draftChanged = useRef(false);
 
-  function focusField(field: "jobDescription" | "jobUrl") {
+  function focusField(field: "jobDescription" | "jobUrl" | "company") {
     const input = document.getElementById(
-      field === "jobDescription" ? "job-description" : "job-url",
+      field === "jobDescription"
+        ? "job-description"
+        : field === "company"
+          ? "company"
+          : "job-url",
     );
     window.requestAnimationFrame(() => {
       if (input?.isConnected) input.focus();
@@ -128,6 +145,21 @@ export default function JDWorkspace({
   }, [localStorageOrUnavailable]);
 
   useEffect(() => {
+    let cancelled = false;
+    void loadSavedJobs(localStorageOrUnavailable())
+      .then((jobs) => {
+        if (!cancelled) setSavedJobs(jobs);
+      })
+      .catch(() => {
+        if (!cancelled)
+          setJobsNotice("Saved job analyses could not be loaded.");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [localStorageOrUnavailable]);
+
+  useEffect(() => {
     if (!isReady || !draftChanged.current) return;
 
     setSaveState("saving");
@@ -151,19 +183,100 @@ export default function JDWorkspace({
   function updateField(field: keyof DraftFields, value: string) {
     draftChanged.current = true;
     setRestoreMessage("");
-    clearJobAnalysisCache(localStorageOrUnavailable());
-    setAnalysisCacheSaved(false);
     analysisRequest.current?.abort();
     analysisRequest.current = null;
-    setAnalysis(null);
-    setAnalysisError("");
-    setAnalysisState("idle");
+    setAnalysisState((current) => {
+      if (current !== "loading") return current;
+      setAnalysis(null);
+      setAnalysisError("");
+      setAnalysisCacheSaved(false);
+      return "idle";
+    });
     setDraft((current) => ({ ...current, [field]: value }));
     setErrors((current) => ({ ...current, [field]: undefined }));
     setSaveFeedback("");
   }
 
+  function applySavedJob(job: SavedJobRecord) {
+    draftChanged.current = true;
+    setSelectedJob(job);
+    try {
+      localStorageOrUnavailable().setItem(SELECTED_SAVED_JOB_KEY, job.id);
+    } catch {
+      /* Choosing a saved job still updates the form. */
+    }
+    setDraft({
+      schemaVersion: 1,
+      company: job.company,
+      roleTitle: job.roleTitle,
+      jobUrl: job.jobUrl,
+      jobDescription: job.jobDescription,
+    });
+    setAnalysis(job.analysis);
+    setAnalysisError("");
+    setAnalysisState("success");
+    setAnalysisCacheSaved(true);
+    setErrors({});
+    setJobsNotice("");
+  }
+
+  async function handleSelectSavedJob(id: string) {
+    try {
+      applySavedJob(await readSavedJob(id));
+    } catch (error) {
+      setJobsNotice(
+        error instanceof Error ? error.message : "Saved job not found.",
+      );
+    }
+  }
+
+  async function handleDeleteSavedJob(job: SavedJobSummary) {
+    const confirmed = window.confirm(
+      `Delete the saved analysis for ${job.company}? Resumes already created stay in history.`,
+    );
+    if (!confirmed) return;
+    try {
+      await deleteSavedJobRequest(job.id);
+      setSavedJobs((current) => current.filter((item) => item.id !== job.id));
+      if (selectedJob?.id === job.id) {
+        if (autosaveTimeout.current !== null)
+          window.clearTimeout(autosaveTimeout.current);
+        draftChanged.current = false;
+        clearJobAnalysisCache(localStorageOrUnavailable());
+        setAnalysisCacheSaved(false);
+        setSelectedJob(null);
+        setAnalysis(null);
+        setAnalysisError("");
+        setAnalysisState("idle");
+        clearDraft(localStorageOrUnavailable());
+        setDraft(EMPTY_DRAFT);
+        setErrors({});
+        setSaveFeedback("");
+        setSaveState("idle");
+      }
+      setJobsNotice("");
+    } catch (error) {
+      setJobsNotice(
+        error instanceof Error
+          ? error.message
+          : "The saved job could not be deleted.",
+      );
+    }
+  }
+
   async function handleAnalyze() {
+    const company = draft.company.trim();
+    if (!company) {
+      setErrors((current) => ({
+        ...current,
+        company: "Enter a company name before analyzing.",
+      }));
+      setAnalysisError("Enter a company name before analyzing.");
+      setAnalysisState("error");
+      focusField("company");
+      return;
+    }
+
     const description = draft.jobDescription.trim();
     if (!description || description.length > MAX_JD_CHARACTERS) {
       setErrors((current) => ({
@@ -175,6 +288,15 @@ export default function JDWorkspace({
       setAnalysisError("Check the job description and try again.");
       setAnalysisState("error");
       focusField("jobDescription");
+      return;
+    }
+
+    const urlError = validateDraft(draft).jobUrl;
+    if (urlError) {
+      setErrors((current) => ({ ...current, jobUrl: urlError }));
+      setAnalysisError(urlError);
+      setAnalysisState("error");
+      focusField("jobUrl");
       return;
     }
 
@@ -210,13 +332,40 @@ export default function JDWorkspace({
           result.error || "Job description analysis failed. Try again.",
         );
       }
-      setAnalysisCacheSaved(
-        writeJobAnalysisCache(
-          localStorageOrUnavailable(),
-          draft,
-          result.analysis,
-        ),
+      writeJobAnalysisCache(
+        localStorageOrUnavailable(),
+        draft,
+        result.analysis,
       );
+      let accountSaved = false;
+      try {
+        const job = await saveAnalyzedJob({
+          company,
+          roleTitle: draft.roleTitle.trim(),
+          jobUrl: draft.jobUrl.trim(),
+          jobDescription: description,
+          analysis: result.analysis,
+        });
+        setSelectedJob(job);
+        setSavedJobs((current) => [
+          savedJobSummary(job),
+          ...current.filter((item) => item.id !== job.id),
+        ]);
+        try {
+          localStorageOrUnavailable().setItem(SELECTED_SAVED_JOB_KEY, job.id);
+        } catch {
+          /* The account copy is already stored. */
+        }
+        accountSaved = true;
+        setJobsNotice("");
+      } catch (error) {
+        setJobsNotice(
+          error instanceof Error
+            ? error.message
+            : "This analysis was not added to your saved jobs. You can retry the analysis.",
+        );
+      }
+      setAnalysisCacheSaved(accountSaved);
       setAnalysis(result.analysis);
       setAnalysisState("success");
     } catch (error) {
@@ -265,6 +414,7 @@ export default function JDWorkspace({
     draftChanged.current = false;
     clearJobAnalysisCache(localStorageOrUnavailable());
     setAnalysisCacheSaved(false);
+    setSelectedJob(null);
     analysisRequest.current?.abort();
     analysisRequest.current = null;
     setAnalysis(null);
@@ -303,6 +453,16 @@ export default function JDWorkspace({
   );
   const isSaving = saveState === "saving" && hasDraftContent;
   const isAnalyzing = analysisState === "loading";
+  const formDiffersFromSavedJob = Boolean(
+    selectedJob &&
+    (normalizeJobText(draft.company) !==
+      normalizeJobText(selectedJob.company) ||
+      normalizeJobText(draft.roleTitle) !==
+        normalizeJobText(selectedJob.roleTitle) ||
+      normalizeJobText(draft.jobDescription) !==
+        normalizeJobText(selectedJob.jobDescription) ||
+      draft.jobUrl.trim() !== selectedJob.jobUrl.trim()),
+  );
 
   return (
     <section className="jd-page" aria-labelledby="page-title">
@@ -325,6 +485,12 @@ export default function JDWorkspace({
           {restoreMessage}
         </p>
       )}
+      {jobsNotice && (
+        <p className="storage-notice">
+          <span aria-hidden="true">ⓘ</span>
+          {jobsNotice}
+        </p>
+      )}
 
       <div className="jd-work-grid">
         <form
@@ -333,6 +499,12 @@ export default function JDWorkspace({
           onSubmit={handleSubmit}
           noValidate
         >
+          <SavedJobList
+            jobs={savedJobs}
+            onDelete={handleDeleteSavedJob}
+            onSelect={handleSelectSavedJob}
+            selectedId={selectedJob?.id ?? null}
+          />
           <div className="form-topline">
             <div>
               <h2 id="role-details-title">Role details</h2>
@@ -500,6 +672,12 @@ export default function JDWorkspace({
               {saveFeedback}
             </p>
           )}
+          {formDiffersFromSavedJob && analysisState === "success" && (
+            <p className="saved-job-unsaved">
+              This draft differs from the saved analysis. Analyze again to
+              update it, or choose the saved job to restore it.
+            </p>
+          )}
         </form>
 
         <ATSAnalysisPreview
@@ -515,7 +693,10 @@ export default function JDWorkspace({
         <span className="note-mark" aria-hidden="true">
           <Asterisk aria-hidden="true" size={16} />
         </span>
-        <span>Drafts are stored locally in this browser.</span>
+        <span>
+          Unfinished drafts stay in this browser. Analyzed jobs stay on this
+          account.
+        </span>
       </div>
     </section>
   );

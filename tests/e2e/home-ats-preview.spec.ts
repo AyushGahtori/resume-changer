@@ -83,6 +83,7 @@ for (const theme of ["light", "dark"]) {
     await page
       .getByRole("textbox", { name: "Job description", exact: true })
       .fill("Build reliable APIs with TypeScript and PostgreSQL.");
+    await page.getByLabel("Company", { exact: true }).fill("Example Systems");
     await page
       .getByRole("button", { name: "Analyze job description", exact: true })
       .click();
@@ -157,7 +158,8 @@ for (const theme of ["light", "dark"]) {
       style: "nextjs-portal {display:none}",
     });
     await page.getByLabel("Company", { exact: true }).fill("New draft context");
-    await expect(signals).toHaveCount(0);
+    await expect(page.locator(".saved-job-unsaved")).toBeVisible();
+    await expect(signals).toBeVisible();
     expect(browserErrors).toEqual([]);
   });
 }
@@ -207,6 +209,7 @@ for (const theme of ["light", "dark"]) {
     await page
       .getByRole("textbox", { name: "Job description", exact: true })
       .fill("Build accessible and reliable services.");
+    await page.getByLabel("Company", { exact: true }).fill("Example Systems");
     for (const result of [
       homeAnalysis,
       emptyHomeAnalysis,
@@ -372,6 +375,7 @@ for (const theme of ["light", "dark"]) {
     await page
       .getByRole("textbox", { name: "Job description", exact: true })
       .fill("Build reliable APIs with TypeScript and PostgreSQL.");
+    await page.getByLabel("Company", { exact: true }).fill("Example Systems");
     await page
       .getByRole("button", { name: "Analyze job description", exact: true })
       .click();
@@ -424,6 +428,7 @@ test("long response values wrap within the single preview surface", async ({
   await page
     .getByRole("textbox", { name: "Job description", exact: true })
     .fill("Long role description.");
+  await page.getByLabel("Company", { exact: true }).fill("Example Systems");
   await page
     .getByRole("button", { name: "Analyze job description", exact: true })
     .click();

@@ -189,8 +189,7 @@ test("reports a stale job analysis instead of an outdated one", async ({
 }) => {
   await saveJobDraft(page);
   await analyzeJob(page, baseAnalysis);
-  // The job description changes after the analysis, so the saved analysis no
-  // longer describes the current draft.
+  // Editing the draft leaves the saved analysis in place for the builder.
   await page
     .getByRole("textbox", { name: "Job description", exact: true })
     .fill("Build reliable Kubernetes platform services.");
@@ -200,13 +199,13 @@ test("reports a stale job analysis instead of an outdated one", async ({
   await openBuilder(page);
 
   const analysis = page.getByRole("region", { name: "Job analysis" });
-  await expect(analysis).toContainText("Not analyzed");
-  await expect(analysis).toContainText(
-    "No job analysis is available for this job description yet.",
+  await expect(analysis).toContainText("Analyzed");
+  await expect(page.locator(".generation-draft")).toContainText(
+    "Example Cloud",
   );
-  await expect(analysis.getByRole("link")).toHaveText(
-    "Analyze this job description",
-  );
+  await expect(
+    page.getByRole("button", { name: "Suggest points" }),
+  ).toBeEnabled();
 });
 
 test("reports a failed request without claiming coverage", async ({ page }) => {

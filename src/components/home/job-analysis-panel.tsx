@@ -99,8 +99,8 @@ export function JobAnalysisPanel({
         <>
           {!cacheSaved && (
             <p className="analysis-cache-notice" role="status">
-              This analysis could not be saved in this browser. Resume builder
-              recommendations may require analyzing the job again.
+              This analysis was not added to your saved jobs. You can retry the
+              analysis.
             </p>
           )}
           <dl className="analysis-role">

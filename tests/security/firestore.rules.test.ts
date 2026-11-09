@@ -517,4 +517,38 @@ describe("Firestore account isolation and schema enforcement", () => {
       }),
     );
   });
+
+  it("lets an owner save a job analysis and hides it from other accounts", async () => {
+    const id = "job-a1b2c3d4";
+    const alice = database("alice");
+    const batch = writeBatch(alice);
+    await usageProof(alice, batch, "jobs", id);
+    batch.set(doc(alice, "accounts", "alice", "jobAnalyses", id), {
+      uid: "alice",
+      revision: 1,
+      payload: '{"schemaVersion":1}',
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+    await assertSucceeds(batch.commit());
+    await assertSucceeds(
+      getDoc(doc(alice, "accounts", "alice", "jobAnalyses", id)),
+    );
+    const bob = database("bob");
+    await assertFails(getDoc(doc(bob, "accounts", "alice", "jobAnalyses", id)));
+    await assertFails(
+      getDocs(
+        query(collection(bob, "accounts", "alice", "jobAnalyses"), limit(10)),
+      ),
+    );
+    await assertFails(
+      setDoc(doc(bob, "accounts", "bob", "jobAnalyses", id), {
+        uid: "bob",
+        revision: 1,
+        payload: "{}",
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      }),
+    );
+  });
 });

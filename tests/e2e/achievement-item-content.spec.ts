@@ -2,6 +2,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
+import { saveJobAnalysis } from "../helpers/saved-job";
 
 const longBullet =
   "Rebuilt the multi-region deployment pipeline so that a single reviewed pull request now rolls out to every availability zone, cutting the release window from four hours to twenty minutes while keeping a documented rollback path for every migration.";
@@ -131,6 +132,11 @@ async function openBuilder(page: import("@playwright/test").Page) {
     .getByRole("textbox", { name: "Job description", exact: true })
     .fill("Keep the deployment pipeline reliable.");
   await expect(page.getByRole("status")).toContainText("Saved on this device");
+  await saveJobAnalysis(page, {
+    company: "Fixture Systems",
+    roleTitle: "Platform Engineer",
+    jobDescription: "Keep the deployment pipeline reliable.",
+  });
   await page.goto("/generate");
   await expect(
     page.getByRole("heading", { name: "Choose achievements" }),

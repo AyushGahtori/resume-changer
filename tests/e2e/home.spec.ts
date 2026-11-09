@@ -28,6 +28,7 @@ test("clearing during analysis cannot restore an obsolete result or local cache"
     exact: true,
   });
   await jd.fill("Description to clear while its analysis is pending.");
+  await page.getByLabel("Company", { exact: true }).fill("Example Systems");
   await page
     .getByRole("button", { name: "Analyze job description", exact: true })
     .click();

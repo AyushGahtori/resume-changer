@@ -34,12 +34,16 @@ export default function RoleDetailField({
     label,
     name,
     placeholder,
+    required,
   } = descriptor;
   const errorId = error ? `${id}-error` : undefined;
 
   return (
     <div className="field-group">
-      <label htmlFor={id}>{label}</label>
+      <div className="field-label-row">
+        <label htmlFor={id}>{label}</label>
+        {required ? <span className="required-label">Required</span> : null}
+      </div>
       <div className="field-control">
         <span aria-hidden="true" className="field-icon">
           <Icon size={17} strokeWidth={1.8} />
@@ -47,6 +51,7 @@ export default function RoleDetailField({
         <input
           aria-describedby={errorId}
           aria-invalid={error ? true : undefined}
+          aria-required={required ? true : undefined}
           autoComplete={autoComplete}
           disabled={disabled}
           id={id}

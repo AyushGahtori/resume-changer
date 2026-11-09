@@ -24,6 +24,14 @@ import {
   GET as readHistoryItem,
 } from "@/app/api/history/[id]/handler";
 import { GET as readHistoryPdf } from "@/app/api/history/[id]/pdf/handler";
+import {
+  GET as listJobAnalyses,
+  POST as saveJobAnalysis,
+} from "@/app/api/job-analyses/handler";
+import {
+  DELETE as deleteJobAnalysis,
+  GET as readJobAnalysis,
+} from "@/app/api/job-analyses/[id]/handler";
 import { POST as createPoint } from "@/app/api/library/points/handler";
 import { PATCH as updatePoint } from "@/app/api/library/points/[id]/handler";
 import { POST as editResume } from "@/app/api/resume/edit/handler";
@@ -72,6 +80,10 @@ const staticRoutes: Record<string, ApiMethods> = {
     GET: direct(readHistory),
     POST: direct(saveHistory),
   },
+  "job-analyses": {
+    GET: direct(listJobAnalyses),
+    POST: direct(saveJobAnalysis),
+  },
   "library/points": { POST: direct(createPoint) },
   "resume/edit": { POST: direct(editResume) },
   "resume/skills": { GET: direct(measureSkills) },
@@ -112,6 +124,15 @@ export function resolveApiRequest(pathname: string): ApiRouteMatch | null {
   const staticKey = routePath.join("/");
   if (Object.hasOwn(staticRoutes, staticKey))
     return { methods: staticRoutes[staticKey], context: emptyContext };
+
+  if (routePath.length === 2 && routePath[0] === "job-analyses" && routePath[1])
+    return {
+      methods: {
+        GET: withId(readJobAnalysis),
+        DELETE: withId(deleteJobAnalysis),
+      },
+      context: { params: Promise.resolve({ id: routePath[1] }) },
+    };
 
   if (routePath.length === 2 && routePath[0] === "history" && routePath[1])
     return {

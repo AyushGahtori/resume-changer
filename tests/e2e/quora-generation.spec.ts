@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { copyFile, mkdir } from "node:fs/promises";
 import { dirname } from "node:path";
-import { JD_DRAFT_STORAGE_KEY } from "../../src/lib/jd-draft";
+import { saveJobAnalysis } from "../helpers/saved-job";
 import {
   createPersonalLibraryGuard,
   exampleLibraryPath,
@@ -68,21 +68,11 @@ test.afterAll(async () => {
 test("uses the Quora JD to generate expected LaTeX from three selected points", async ({
   page,
 }) => {
-  await page.addInitScript(
-    ({ storageKey, draft }) => {
-      window.localStorage.setItem(storageKey, JSON.stringify(draft));
-    },
-    {
-      storageKey: JD_DRAFT_STORAGE_KEY,
-      draft: {
-        schemaVersion: 1,
-        company: "Quora",
-        roleTitle: "Software Engineer New Grad, Machine Learning Platform",
-        jobUrl: "",
-        jobDescription: QUORA_JOB_DESCRIPTION,
-      },
-    },
-  );
+  await saveJobAnalysis(page, {
+    company: "Quora",
+    roleTitle: "Software Engineer New Grad, Machine Learning Platform",
+    jobDescription: QUORA_JOB_DESCRIPTION,
+  });
 
   await page.goto("/generate");
   await expect(page.locator(".generation-draft")).toContainText("Quora");

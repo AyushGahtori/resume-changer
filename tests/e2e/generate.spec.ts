@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 import { createOnePagePdf } from "../helpers/pdf-fixture";
+import { saveJobAnalysis } from "../helpers/saved-job";
 
 async function generateResume(page: import("@playwright/test").Page) {
   await page
@@ -20,6 +21,12 @@ test.beforeEach(async ({ page }) => {
     .getByRole("textbox", { name: "Job description", exact: true })
     .fill("Build reliable platform services and improve deployment workflows.");
   await expect(page.getByRole("status")).toContainText("Saved on this device");
+  await saveJobAnalysis(page, {
+    company: "Example Systems",
+    roleTitle: "Platform Engineer",
+    jobDescription:
+      "Build reliable platform services and improve deployment workflows.",
+  });
   await page.goto("/generate?source=demo");
 });
 
