@@ -43,7 +43,8 @@ function writeJobUsage(
 ) {
   const maximum = ACCOUNT_DAILY_LIMITS.jobs;
   const prior = saved.data();
-  const windowStart = prior?.windowStart as { toMillis?: () => number } | undefined;
+  const windowStart = prior?.windowStart as
+    { toMillis?: () => number } | undefined;
   const active =
     typeof windowStart?.toMillis === "function" &&
     Date.now() < windowStart.toMillis() + 86_400_000;

@@ -340,12 +340,15 @@ test("drags unused achievements into compatible destinations and rejects wrong a
   await expect(page.locator(".studio-achievement-card")).toHaveCount(3);
 });
 
-test("reorders skill priority and moves a user-authored point without changing source attribution", async ({
+test("reorders skill priority and keeps an unsourced point off the resume", async ({
   page,
 }) => {
   await openStudio(page);
   await page.getByRole("button", { name: "Skills", exact: true }).click();
-  await page.getByText("Skill priority order", { exact: true }).click();
+  const skillOrder = page.locator(".studio-skill-order details");
+  await skillOrder.scrollIntoViewIfNeeded();
+  await skillOrder.locator("summary").click();
+  await expect(skillOrder).toHaveJSProperty("open", true);
   const firstName = await page
     .locator(".studio-skill-order li span")
     .first()
@@ -374,23 +377,12 @@ test("reorders skill priority and moves a user-authored point without changing s
   await page
     .getByLabel("Achievement text")
     .fill("User-authored work without connected source claims.");
-  await page
-    .getByRole("button", { name: "Save achievement", exact: true })
-    .click();
-  const authored = page
-    .locator(".studio-achievement-card")
-    .filter({ hasText: "User-authored work without connected source claims." });
-  await authored
-    .getByRole("button", { name: /^Edit achievement .*$/, exact: true })
-    .first()
-    .click();
-  await page
-    .getByLabel("Achievement destination")
-    .selectOption(studioLibrary.jobs[1].id);
-  await page.getByRole("button", { name: "Save draft", exact: true }).click();
   await expect(
-    page.locator(".studio-destination").filter({ has: authored }),
-  ).toContainText(studioLibrary.jobs[1].company);
+    page.getByRole("button", { name: "Save achievement", exact: true }),
+  ).toBeDisabled();
+  await expect(page.locator("#imagination-save-hint")).toContainText(
+    "Connect an achievement before adding this point to the resume.",
+  );
 });
 
 test("creates an achievement from selected context with a ten-item limit", async ({
@@ -535,6 +527,10 @@ test("starts a fresh studio when generation is run again", async ({ page }) => {
     .click();
   await page
     .getByRole("button", { name: "Generate LaTeX", exact: true })
+    .click();
+  await page
+    .getByRole("dialog", { name: "Replace this resume?" })
+    .getByRole("button", { name: "OK", exact: true })
     .click();
   await expect(
     page

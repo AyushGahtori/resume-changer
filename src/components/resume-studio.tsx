@@ -373,7 +373,9 @@ export default function ResumeStudio({
 
   useEffect(() => {
     const controller = new AbortController();
-    apiFetch(`/api/resume/skills?source=${source}`, { signal: controller.signal })
+    apiFetch(`/api/resume/skills?source=${source}`, {
+      signal: controller.signal,
+    })
       .then(async (response) => {
         const payload = (await response.json().catch(() => null)) as {
           source?: string;
@@ -384,7 +386,8 @@ export default function ResumeStudio({
           throw new Error(
             payload?.error ?? "Layout measurements are unavailable.",
           );
-        if (!controller.signal.aborted) setMeasurements(payload as SkillMeasurements);
+        if (!controller.signal.aborted)
+          setMeasurements(payload as SkillMeasurements);
       })
       .catch((failure) => {
         if (!controller.signal.aborted)
@@ -1302,7 +1305,9 @@ export default function ResumeStudio({
                           have not been reassessed.
                         </p>
                         {group.items.map((item) => (
-                          <details key={`${group.priority}:${item.requirement}`}>
+                          <details
+                            key={`${group.priority}:${item.requirement}`}
+                          >
                             <summary>
                               {item.requirement} ·{" "}
                               {coverageStatusLabel(item.status)}

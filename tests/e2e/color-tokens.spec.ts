@@ -195,18 +195,21 @@ test("applies shared color tokens in light and dark themes", async ({
   });
 });
 
-test("keeps the orange save action legible and the focus ring contrasted", async ({
+test("keeps the orange analyze action legible and the focus ring contrasted", async ({
   page,
 }) => {
   const jobDescription = page.getByRole("textbox", {
     name: "Job description",
     exact: true,
   });
+  const analyzeButton = page.getByRole("button", {
+    name: "Analyze job description",
+  });
   const saveButton = page.getByRole("button", { name: "Save draft" });
 
   const focusAppearance = async () => {
-    await expect(saveButton).toBeFocused();
-    const appearance = await saveButton.evaluate((button) => {
+    await expect(analyzeButton).toBeFocused();
+    const appearance = await analyzeButton.evaluate((button) => {
       const style = getComputedStyle(button);
       const rootStyle = getComputedStyle(document.documentElement);
       const token = (name: string) => rootStyle.getPropertyValue(name).trim();
@@ -244,13 +247,17 @@ test("keeps the orange save action legible and the focus ring contrasted", async
 
   await jobDescription.fill("Synthetic engineering role.");
   await jobDescription.focus();
-  await page.keyboard.press("Tab");
+  // Clear draft, then Analyze. Save draft is the next stop and is no longer
+  // the orange action.
   await page.keyboard.press("Tab");
   await page.keyboard.press("Tab");
 
-  await expect(saveButton).toBeFocused();
-  await expect(saveButton).toHaveCSS("background-color", "rgb(255, 122, 69)");
-  const lightColors = await saveButton.evaluate((button) => {
+  await expect(analyzeButton).toBeFocused();
+  await expect(analyzeButton).toHaveCSS(
+    "background-color",
+    "rgb(255, 122, 69)",
+  );
+  const lightColors = await analyzeButton.evaluate((button) => {
     const style = getComputedStyle(button);
     return { backgroundColor: style.backgroundColor, color: style.color };
   });
@@ -260,9 +267,9 @@ test("keeps the orange save action legible and the focus ring contrasted", async
   });
   await focusAppearance();
 
-  await saveButton.hover();
-  await expect(saveButton).toHaveCSS("background-color", "rgb(178, 60, 12)");
-  await expect(saveButton).toHaveCSS("color", "rgb(255, 255, 255)");
+  await analyzeButton.hover();
+  await expect(analyzeButton).toHaveCSS("background-color", "rgb(178, 60, 12)");
+  await expect(analyzeButton).toHaveCSS("color", "rgb(255, 255, 255)");
 
   await saveButton.click();
   await expect(page.locator(".form-save-feedback")).toContainText(
@@ -273,12 +280,14 @@ test("keeps the orange save action legible and the focus ring contrasted", async
   await jobDescription.focus();
   await page.keyboard.press("Tab");
   await page.keyboard.press("Tab");
-  await page.keyboard.press("Tab");
 
-  await expect(saveButton).toBeFocused();
-  await expect(saveButton).toHaveCSS("color", "rgb(21, 21, 34)");
-  await expect(saveButton).toHaveCSS("background-color", "rgb(255, 122, 69)");
-  const darkColors = await saveButton.evaluate((button) => {
+  await expect(analyzeButton).toBeFocused();
+  await expect(analyzeButton).toHaveCSS("color", "rgb(21, 21, 34)");
+  await expect(analyzeButton).toHaveCSS(
+    "background-color",
+    "rgb(255, 122, 69)",
+  );
+  const darkColors = await analyzeButton.evaluate((button) => {
     const style = getComputedStyle(button);
     return { backgroundColor: style.backgroundColor, color: style.color };
   });

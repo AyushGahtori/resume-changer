@@ -244,12 +244,15 @@ test("shows a saved analysis again after visiting another page", async ({
   await page
     .getByRole("button", { name: "Analyze job description", exact: true })
     .click();
-  await expect(page.locator(".analysis-panel")).toBeVisible();
+  await expect(page.locator(".analysis-panel")).toContainText(
+    "Job description analysis ready.",
+  );
+  await expect(
+    page.locator(".saved-job-open", { hasText: "BJAK" }),
+  ).toBeVisible();
   await page.getByRole("link", { name: "Resume builder" }).click();
   await page.goto("/");
-  await page
-    .locator(".saved-job-open", { hasText: "Backend Engineer" })
-    .click();
+  await page.locator(".saved-job-open", { hasText: "BJAK" }).click();
   await expect(
     page.getByRole("textbox", { name: "Job description", exact: true }),
   ).toHaveValue("Build APIs for the product.");
@@ -282,7 +285,12 @@ test("keeps the saved job link after opening another page", async ({
   await page
     .getByRole("button", { name: "Analyze job description", exact: true })
     .click();
-  await expect(page.locator(".analysis-panel")).toBeVisible();
+  await expect(page.locator(".analysis-panel")).toContainText(
+    "Job description analysis ready.",
+  );
+  await expect(
+    page.locator(".saved-job-open", { hasText: "Northwind Labs" }),
+  ).toBeVisible();
   await page.getByRole("link", { name: "Resume builder" }).click();
   await page.goto("/");
   const listed = await page.request.get("/api/job-analyses");
@@ -342,7 +350,10 @@ test("deleting a saved analysis keeps the text in the form", async ({
     .getByRole("button", { name: /Delete saved analysis for Kept Labs/ })
     .click();
   await expect(page.getByRole("dialog")).toContainText("form stays");
-  await page.getByRole("button", { name: "Delete saved analysis" }).click();
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Delete saved analysis", exact: true })
+    .click();
   await expect(page.getByLabel("Company", { exact: true })).toHaveValue(
     "Kept Labs",
   );
@@ -377,7 +388,10 @@ test("an empty delete response keeps the draft and the saved job", async ({
       name: /Delete saved analysis for Empty Delete Labs/,
     })
     .click();
-  await page.getByRole("button", { name: "Delete saved analysis" }).click();
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Delete saved analysis", exact: true })
+    .click();
   await expect(page.getByText(/could not be deleted/i)).toBeVisible();
   await expect(page.getByLabel("Company", { exact: true })).toHaveValue(
     "Empty Delete Labs",
@@ -402,13 +416,14 @@ test("a saved-job load failure names the server error and can be retried", async
     return route.continue();
   });
   await page.goto("/");
-  await expect(page.getByRole("alert")).toContainText(
+  const loadError = page.locator(".saved-jobs").getByRole("alert");
+  await expect(loadError).toContainText(
     "Sign in again before loading saved jobs.",
   );
   await expect(page.getByText("No analyzed jobs yet")).toHaveCount(0);
   failList = false;
   await page.getByRole("button", { name: "Retry", exact: true }).click();
-  await expect(page.getByRole("alert")).toHaveCount(0);
+  await expect(loadError).toHaveCount(0);
 });
 
 test("opening a saved job uses not-found only for a missing job", async ({

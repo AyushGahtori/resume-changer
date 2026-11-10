@@ -190,7 +190,7 @@ export default function ImaginationComposer({
               disabled={destinations.length === 0}
               onChange={handleDestinationChange}
               options={
-                  destinations.length === 0
+                destinations.length === 0
                   ? [
                       {
                         value: "",

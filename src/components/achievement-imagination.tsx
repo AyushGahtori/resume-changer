@@ -266,7 +266,9 @@ export default function AchievementImagination({
             : null,
         );
         setLayoutWarning(
-          typeof payload.layoutWarning === "string" ? payload.layoutWarning : "",
+          typeof payload.layoutWarning === "string"
+            ? payload.layoutWarning
+            : "",
         );
       }
     } catch (failure) {

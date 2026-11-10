@@ -66,10 +66,7 @@ import {
   readSavedJob,
   SELECTED_SAVED_JOB_KEY,
 } from "@/lib/jobs/saved-job-client";
-import {
-  normalizeJobText,
-  type SavedJobSummary,
-} from "@/lib/jobs/saved-job";
+import { normalizeJobText, type SavedJobSummary } from "@/lib/jobs/saved-job";
 import { createResumeFilename } from "@/lib/generation/resume-filename";
 import {
   describeCompiledPdf,
@@ -253,7 +250,8 @@ function historyRecordId(value: unknown): boolean {
 /** A history save counts only when the body is a stored record, not merely HTTP 200. */
 export function isSavedHistoryRecord(value: unknown): boolean {
   if (!historyRecordId(value)) {
-    if (!value || typeof value !== "object" || !("entry" in value)) return false;
+    if (!value || typeof value !== "object" || !("entry" in value))
+      return false;
     return historyRecordId(value.entry);
   }
   return true;
@@ -631,9 +629,7 @@ export default function ResumeGenerator({ library, source }: Props) {
   const fallbackResolverRef = useRef<((accepted: boolean) => void) | null>(
     null,
   );
-  const replaceResolverRef = useRef<((accepted: boolean) => void) | null>(
-    null,
-  );
+  const replaceResolverRef = useRef<((accepted: boolean) => void) | null>(null);
   selectedIdsRef.current = selectedIds;
   selectedSkillIdsRef.current = selectedSkillIds;
   const pdfViewportRef = useRef<HTMLDivElement>(null);
@@ -1142,7 +1138,8 @@ export default function ResumeGenerator({ library, source }: Props) {
         controller.signal,
         confirmFallback,
       );
-      if (controller.signal.aborted || selectedJobIdRef.current !== jobId) return;
+      if (controller.signal.aborted || selectedJobIdRef.current !== jobId)
+        return;
       if (!response.ok) {
         throw new Error(
           responseErrorMessage(
@@ -1158,7 +1155,8 @@ export default function ResumeGenerator({ library, source }: Props) {
           "The recommendation service returned an invalid response. Try again.",
         );
       }
-      if (controller.signal.aborted || selectedJobIdRef.current !== jobId) return;
+      if (controller.signal.aborted || selectedJobIdRef.current !== jobId)
+        return;
 
       setRecommendation(parsed.data);
       clearTailoring();
@@ -1185,7 +1183,8 @@ export default function ResumeGenerator({ library, source }: Props) {
       setRequestError("");
       setCopyMessage("");
     } catch (error) {
-      if (controller.signal.aborted || selectedJobIdRef.current !== jobId) return;
+      if (controller.signal.aborted || selectedJobIdRef.current !== jobId)
+        return;
       setSelectionError(
         error instanceof Error
           ? error.message
@@ -1271,7 +1270,8 @@ export default function ResumeGenerator({ library, source }: Props) {
           analysis,
         }),
       };
-      if (controller.signal.aborted || selectedJobIdRef.current !== jobId) return;
+      if (controller.signal.aborted || selectedJobIdRef.current !== jobId)
+        return;
       const { response, payload } = await postWithFallbackConsent(
         "/api/ai/tailor-achievements",
         {
@@ -1285,7 +1285,8 @@ export default function ResumeGenerator({ library, source }: Props) {
         controller.signal,
         confirmFallback,
       );
-      if (controller.signal.aborted || selectedJobIdRef.current !== jobId) return;
+      if (controller.signal.aborted || selectedJobIdRef.current !== jobId)
+        return;
       if (!response.ok) {
         throw new Error(
           responseErrorMessage(
@@ -1301,7 +1302,8 @@ export default function ResumeGenerator({ library, source }: Props) {
           "The tailoring service returned an invalid response. Try again.",
         );
       }
-      if (controller.signal.aborted || selectedJobIdRef.current !== jobId) return;
+      if (controller.signal.aborted || selectedJobIdRef.current !== jobId)
+        return;
       setTailoring(parsed.data);
       setSummaryApproved(false);
       setTailoringWorkflow("guided");
@@ -1314,7 +1316,8 @@ export default function ResumeGenerator({ library, source }: Props) {
         ),
       );
     } catch (error) {
-      if (controller.signal.aborted || selectedJobIdRef.current !== jobId) return;
+      if (controller.signal.aborted || selectedJobIdRef.current !== jobId)
+        return;
       setTailoringError(
         error instanceof Error
           ? error.message
@@ -1367,14 +1370,16 @@ export default function ResumeGenerator({ library, source }: Props) {
         analysis,
         job,
       };
-      if (controller.signal.aborted || selectedJobIdRef.current !== jobId) return;
+      if (controller.signal.aborted || selectedJobIdRef.current !== jobId)
+        return;
       const { response, payload } = await postWithFallbackConsent(
         "/api/ai/auto-tailor",
         requestBody,
         controller.signal,
         confirmFallback,
       );
-      if (controller.signal.aborted || selectedJobIdRef.current !== jobId) return;
+      if (controller.signal.aborted || selectedJobIdRef.current !== jobId)
+        return;
       if (!response.ok) {
         throw new Error(
           responseErrorMessage(
@@ -1391,7 +1396,8 @@ export default function ResumeGenerator({ library, source }: Props) {
         );
       }
 
-      if (controller.signal.aborted || selectedJobIdRef.current !== jobId) return;
+      if (controller.signal.aborted || selectedJobIdRef.current !== jobId)
+        return;
       const auto = parsed.data;
       const nextIds = auto.recommendation.recommendations.selections.map(
         (item) => item.achievementId,
@@ -1467,7 +1473,8 @@ export default function ResumeGenerator({ library, source }: Props) {
         return;
       }
 
-      if (controller.signal.aborted || selectedJobIdRef.current !== jobId) return;
+      if (controller.signal.aborted || selectedJobIdRef.current !== jobId)
+        return;
       const generated = await requestGeneration({
         selectedIds: nextIds,
         selectedSkillIds: auto.selectedSkillIds,
@@ -1478,7 +1485,8 @@ export default function ResumeGenerator({ library, source }: Props) {
         tailoredText: nextTailoredText,
         workflow: "auto",
       });
-      if (controller.signal.aborted || selectedJobIdRef.current !== jobId) return;
+      if (controller.signal.aborted || selectedJobIdRef.current !== jobId)
+        return;
       if (!generated) {
         setAutoTailorStatus(
           "Auto Tailor selected and drafted the content, but LaTeX generation failed. Review the error below.",
@@ -1486,9 +1494,11 @@ export default function ResumeGenerator({ library, source }: Props) {
         return;
       }
 
-      if (controller.signal.aborted || selectedJobIdRef.current !== jobId) return;
+      if (controller.signal.aborted || selectedJobIdRef.current !== jobId)
+        return;
       const pdfReady = await compilePdf(generated);
-      if (controller.signal.aborted || selectedJobIdRef.current !== jobId) return;
+      if (controller.signal.aborted || selectedJobIdRef.current !== jobId)
+        return;
       setAutoTailorStatus(
         pdfReady
           ? auto.draftingMode === "ai"
@@ -1497,7 +1507,8 @@ export default function ResumeGenerator({ library, source }: Props) {
           : "LaTeX was prepared, but PDF compilation did not verify a one-page result. Review the compiler message.",
       );
     } catch (error) {
-      if (controller.signal.aborted || selectedJobIdRef.current !== jobId) return;
+      if (controller.signal.aborted || selectedJobIdRef.current !== jobId)
+        return;
       setTailoringError(
         error instanceof Error
           ? error.message
@@ -1549,10 +1560,7 @@ export default function ResumeGenerator({ library, source }: Props) {
       setRequestError("Select at least one enabled achievement point.");
       return null;
     }
-    if (
-      generateAbortRef.current &&
-      !generateAbortRef.current.signal.aborted
-    ) {
+    if (generateAbortRef.current && !generateAbortRef.current.signal.aborted) {
       return null;
     }
 
@@ -1591,7 +1599,8 @@ export default function ResumeGenerator({ library, source }: Props) {
                     (proposal) =>
                       options.approvedTailoredIds.includes(
                         proposal.achievementId,
-                      ) && submittedAchievementIds.includes(proposal.achievementId),
+                      ) &&
+                      submittedAchievementIds.includes(proposal.achievementId),
                   )
                   .map((proposal) => ({
                     achievementId: proposal.achievementId,
@@ -2089,23 +2098,18 @@ export default function ResumeGenerator({ library, source }: Props) {
     : 0;
   const selectionStale = Boolean(
     result &&
-      (!sameSelectionIds(
-        selectedIds,
-        result.metadata.selectedAchievementIds,
-      ) ||
-        (selectedSkillIds !== null &&
-          !sameSelectionIds(
-            selectedSkillIds,
-            result.metadata.selectedSkillIds ??
-              library.skills
-                .filter((skill) => skill.isListedOnCurrentResume)
-                .map((skill) => skill.id),
-          ))),
+    (!sameSelectionIds(selectedIds, result.metadata.selectedAchievementIds) ||
+      (selectedSkillIds !== null &&
+        !sameSelectionIds(
+          selectedSkillIds,
+          result.metadata.selectedSkillIds ??
+            library.skills
+              .filter((skill) => skill.isListedOnCurrentResume)
+              .map((skill) => skill.id),
+        ))),
   );
   const savedDescriptionDiffers = Boolean(
-    browserDraft &&
-      analysis &&
-      savedAnalysisDraftDiffers(browserDraft, draft),
+    browserDraft && analysis && savedAnalysisDraftDiffers(browserDraft, draft),
   );
   const disabledPointCount = countDisabledAchievementPoints(library);
   const libraryHref = source === "demo" ? "/library?source=demo" : "/library";
@@ -2185,9 +2189,7 @@ export default function ResumeGenerator({ library, source }: Props) {
             </p>
           )}
           {savedDescriptionDiffers && (
-            <p className="saved-job-unsaved">
-              {SAVED_ANALYSIS_DIFFERS_NOTICE}
-            </p>
+            <p className="saved-job-unsaved">{SAVED_ANALYSIS_DIFFERS_NOTICE}</p>
           )}
         </div>
         {/*
@@ -3955,8 +3957,8 @@ export default function ResumeGenerator({ library, source }: Props) {
           onClose={() => settleReplaceResume(false)}
         >
           <p>
-            Studio has unsaved edits. Generate LaTeX replaces the current
-            resume and those edits.
+            Studio has unsaved edits. Generate LaTeX replaces the current resume
+            and those edits.
           </p>
           <div className="studio-dialog-footer">
             <button

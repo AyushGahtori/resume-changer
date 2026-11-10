@@ -222,9 +222,9 @@ describe("local generation history store", () => {
       deleteGenerationHistoryItem(saved.id, { rootDir }),
     ).rejects.toMatchObject({ code: "io-error" });
     await expect(listGenerationHistory({ rootDir })).resolves.toEqual([saved]);
-    await expect(readFile(join(rootDir, saved.texPath!), "utf8")).resolves.toContain(
-      "\\documentclass",
-    );
+    await expect(
+      readFile(join(rootDir, saved.texPath!), "utf8"),
+    ).resolves.toContain("\\documentclass");
     await expect(readFile(join(rootDir, saved.pdfPath!))).resolves.toBeTruthy();
   });
 
@@ -242,9 +242,9 @@ describe("local generation history store", () => {
     expect(entries.find((entry) => entry.id === demo.id)?.dataSource).toBe(
       "demo",
     );
-    expect(
-      entries.find((entry) => entry.id === older.id),
-    ).not.toHaveProperty("dataSource");
+    expect(entries.find((entry) => entry.id === older.id)).not.toHaveProperty(
+      "dataSource",
+    );
 
     await expect(
       saveGenerationHistoryItem(input({ dataSource: "public" }), { rootDir }),

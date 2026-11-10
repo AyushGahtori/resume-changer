@@ -72,9 +72,9 @@ export default function SearchWorkbench({
     !filters.skillId &&
     Boolean(
       filters.tag ||
-        filters.experienceId ||
-        filters.sourceType ||
-        filters.status !== "all",
+      filters.experienceId ||
+      filters.sourceType ||
+      filters.status !== "all",
     );
 
   useEffect(() => {

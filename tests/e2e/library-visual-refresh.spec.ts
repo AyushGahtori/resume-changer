@@ -9,19 +9,17 @@ test("keeps decorative bubbles out of the header and disables menu motion", asyn
 }) => {
   await expect(page.locator(".library-page-atmosphere")).toHaveCount(0);
   await expect(page.locator(".library-bubble")).toHaveCount(0);
+  await expect(page.getByText("Demo data is read-only.")).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Detailed entry" }),
-  ).toBeVisible();
+  ).toHaveCount(0);
 
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.getByRole("combobox", { name: "Tag" }).click();
+  const menu = page.getByRole("listbox", { name: "Options for Tag" });
+  await expect(menu).toBeVisible();
   await expect
-    .poll(() =>
-      page
-        .locator(".library-select-menu")
-        .first()
-        .evaluate((menu) => getComputedStyle(menu).animationName),
-    )
+    .poll(() => menu.evaluate((node) => getComputedStyle(node).animationName))
     .toBe("none");
 });
 

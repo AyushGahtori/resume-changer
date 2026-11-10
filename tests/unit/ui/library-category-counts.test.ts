@@ -60,9 +60,7 @@ describe("library category counts", () => {
     );
 
     expect(markup).toContain("unfiltered");
-    expect(markup).toContain(
-      `${result.visiblePointCount} achievement points`,
-    );
+    expect(markup).toContain(`${result.visiblePointCount} achievement points`);
     expect(markup).not.toContain("No save destination is available");
   });
 });

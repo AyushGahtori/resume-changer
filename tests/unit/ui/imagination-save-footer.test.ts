@@ -72,7 +72,9 @@ describe("Imagination Canvas save footer", () => {
     expect(suggestionMarkup).toContain(
       "Use the suggestion in the editor, or dismiss it, before saving.",
     );
-    expect(suggestionMarkup).not.toContain("Write an achievement before saving.");
+    expect(suggestionMarkup).not.toContain(
+      "Write an achievement before saving.",
+    );
 
     const unavailableMarkup = renderFooter({
       source: "demo",

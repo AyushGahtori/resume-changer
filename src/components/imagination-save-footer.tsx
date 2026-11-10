@@ -55,7 +55,11 @@ export default function ImaginationSaveFooter({
     operation === "create" && source === "personal" && !hasLibraryDestination;
   const destinations = jobOrProjectRequired
     ? []
-    : getImaginationSaveDestinations(source, allowResume, hasLibraryDestination);
+    : getImaginationSaveDestinations(
+        source,
+        allowResume,
+        hasLibraryDestination,
+      );
   const selectedDestination =
     saveTo && destinations.includes(saveTo) ? saveTo : "";
   const hasDestination = operation !== "create" || destinations.length > 0;
@@ -74,19 +78,20 @@ export default function ImaginationSaveFooter({
     operation !== "create" ||
     selectedDestination === "resume" ||
     selectedDestination === "both";
-  const saveHint = !saveDisabled || isSaving
-    ? ""
-    : isBusy
-      ? imaginationSaveCopy.saveBusy
-      : unavailableCopy
-        ? ""
-        : disabledReason
-          ? disabledReason
-          : operation === "create" && !selectedDestination
-            ? imaginationSaveCopy.saveNeedsDestination
-            : !canSave
-              ? imaginationSaveCopy.saveNeedsText
-              : "";
+  const saveHint =
+    !saveDisabled || isSaving
+      ? ""
+      : isBusy
+        ? imaginationSaveCopy.saveBusy
+        : unavailableCopy
+          ? ""
+          : disabledReason
+            ? disabledReason
+            : operation === "create" && !selectedDestination
+              ? imaginationSaveCopy.saveNeedsDestination
+              : !canSave
+                ? imaginationSaveCopy.saveNeedsText
+                : "";
   const destinationOptions = [
     ...(selectedDestination
       ? []

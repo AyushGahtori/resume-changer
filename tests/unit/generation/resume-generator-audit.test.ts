@@ -40,9 +40,9 @@ describe("resume builder audit helpers", () => {
   it("uses rendered skills only after a resume exists", () => {
     expect(skillIdsForCoverage(undefined, ["skill-a"])).toEqual(["skill-a"]);
     expect(skillIdsForCoverage(null, null)).toBeUndefined();
-    expect(skillIdsForCoverage(["skill-shown"], ["skill-a", "skill-b"])).toEqual(
-      ["skill-shown"],
-    );
+    expect(
+      skillIdsForCoverage(["skill-shown"], ["skill-a", "skill-b"]),
+    ).toEqual(["skill-shown"]);
   });
 
   it("does not point at coverage until that list is rendered", () => {
@@ -54,9 +54,9 @@ describe("resume builder audit helpers", () => {
   });
 
   it("counts disabled points without calling the library empty", () => {
-    expect(
-      disabledAchievementPointsCopy(1),
-    ).toBe("1 achievement point is turned off.");
+    expect(disabledAchievementPointsCopy(1)).toBe(
+      "1 achievement point is turned off.",
+    );
     expect(disabledAchievementPointsCopy(13)).toBe(
       "13 achievement points are turned off.",
     );

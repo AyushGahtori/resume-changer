@@ -81,8 +81,9 @@ test("navigates with mouse and keyboard and tracks the section in view", async (
   await expect(page).toHaveURL(/#library-skills$/);
   await expect(skills).toHaveAttribute("aria-current", "location");
   await expect(page.locator("#library-skills")).toHaveJSProperty("open", true);
-  const skillsClear = await page.locator("#library-section-skills").evaluate(
-    (heading) => {
+  const skillsClear = await page
+    .locator("#library-section-skills")
+    .evaluate((heading) => {
       let stickyBottom = 0;
       for (const element of document.querySelectorAll<HTMLElement>(
         ".library-workspace-frame .topbar, .library-workbench",
@@ -94,8 +95,7 @@ test("navigates with mouse and keyboard and tracks the section in view", async (
         }
       }
       return heading.getBoundingClientRect().top >= stickyBottom - 1;
-    },
-  );
+    });
   expect(skillsClear).toBe(true);
 
   const query = page.getByRole("searchbox", { name: "Search library" });

@@ -16,43 +16,43 @@ These replace the stricter wording in `docs/architecture.md` and the README wher
 
 ### Pages
 
-| Route | Entry component | Notes |
-|---|---|---|
-| `/sign-in` | `SignIn` | Hosted only. Local mode skips it. |
-| `/` | `JDWorkspace` | Job description draft, analysis panel, saved analyses (#162). |
-| `/library` | `AchievementLibrary` | Jobs, projects, skills (#159 chips), credentials, point editor. |
-| `/library/imagination` | `ImaginationCanvasClient` | Imagination Canvas: connect points, write or merge an achievement, choose a destination. |
-| `/library/github/new`, `/library/github/[importId]` | `ImportWorkspace` | GitHub import; the in-tab session flow is the live path. |
-| `/generate` | `ResumeGenerator` with embedded `ResumeStudio` | Builder steps, generation settings (#161), Studio, PDF preview. |
-| `/history` | `GenerationHistory` | Saved generations, LaTeX and PDF download, delete. |
-| `/settings` | `AccountDataTools` | Export, import, Check PDF service (hosted). |
-| `/e2e/*` | Test harnesses | Only rendered when `GITHUB_IMPORT_E2E_HARNESS=1` outside Vercel. |
+| Route                                               | Entry component                                | Notes                                                                                    |
+| --------------------------------------------------- | ---------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `/sign-in`                                          | `SignIn`                                       | Hosted only. Local mode skips it.                                                        |
+| `/`                                                 | `JDWorkspace`                                  | Job description draft, analysis panel, saved analyses (#162).                            |
+| `/library`                                          | `AchievementLibrary`                           | Jobs, projects, skills (#159 chips), credentials, point editor.                          |
+| `/library/imagination`                              | `ImaginationCanvasClient`                      | Imagination Canvas: connect points, write or merge an achievement, choose a destination. |
+| `/library/github/new`, `/library/github/[importId]` | `ImportWorkspace`                              | GitHub import; the in-tab session flow is the live path.                                 |
+| `/generate`                                         | `ResumeGenerator` with embedded `ResumeStudio` | Builder steps, generation settings (#161), Studio, PDF preview.                          |
+| `/history`                                          | `GenerationHistory`                            | Saved generations, LaTeX and PDF download, delete.                                       |
+| `/settings`                                         | `AccountDataTools`                             | Export, import, Check PDF service (hosted).                                              |
+| `/e2e/*`                                            | Test harnesses                                 | Only rendered when `GITHUB_IMPORT_E2E_HARNESS=1` outside Vercel.                         |
 
 Navigation lives in `src/components/workspace-shell.tsx`: Job description, Achievement library, Resume builder, History, Settings, plus the theme toggle and account control.
 
 ### API (one function, `src/app/api/[...path]/route.ts`, dispatched by `src/lib/api/dispatch.ts`)
 
-| Path | Methods | Handler |
-|---|---|---|
-| `auth/session` | GET, POST, DELETE | `api/auth/session/handler.ts` |
-| `account/library` | GET, PUT | `api/account/library/handler.ts` |
-| `account/import/history` | POST | `api/account/import/history/handler.ts` |
-| `ai/analyze-job-description` | POST | `api/ai/analyze-job-description/handler.ts` |
-| `ai/select-achievements` | POST | `api/ai/select-achievements/handler.ts` |
-| `ai/tailor-achievements` | POST | `api/ai/tailor-achievements/handler.ts` |
-| `ai/auto-tailor` | POST | `api/ai/auto-tailor/handler.ts` |
-| `ai/achievement` | POST | `api/ai/achievement/handler.ts` (Imagination writing) |
-| `job-analyses`, `job-analyses/{id}` | GET, POST / GET, DELETE | #162 saved job analyses |
-| `library/points`, `library/points/{id}` | POST / PATCH | point create and edit |
-| `library/skills` | POST | skill create (#159) |
-| `generate` | POST | manual generation |
-| `compile` | POST | LaTeX to PDF |
-| `resume/edit` | POST | Studio apply |
-| `resume/skills` | GET | skill width measurement (runs the compiler) |
-| `history`, `history/{id}`, `history/{id}/pdf` | GET, POST / GET, DELETE / GET | generation history |
-| `github/session` | POST | in-tab GitHub import session |
-| `github/connection/*` | start, callback, repositories, disconnect | GitHub App connection |
-| `github/imports/*`, `github/jobs/*`, `library/notifications*` | various | Return 410 outside the test harness. |
+| Path                                                          | Methods                                   | Handler                                               |
+| ------------------------------------------------------------- | ----------------------------------------- | ----------------------------------------------------- |
+| `auth/session`                                                | GET, POST, DELETE                         | `api/auth/session/handler.ts`                         |
+| `account/library`                                             | GET, PUT                                  | `api/account/library/handler.ts`                      |
+| `account/import/history`                                      | POST                                      | `api/account/import/history/handler.ts`               |
+| `ai/analyze-job-description`                                  | POST                                      | `api/ai/analyze-job-description/handler.ts`           |
+| `ai/select-achievements`                                      | POST                                      | `api/ai/select-achievements/handler.ts`               |
+| `ai/tailor-achievements`                                      | POST                                      | `api/ai/tailor-achievements/handler.ts`               |
+| `ai/auto-tailor`                                              | POST                                      | `api/ai/auto-tailor/handler.ts`                       |
+| `ai/achievement`                                              | POST                                      | `api/ai/achievement/handler.ts` (Imagination writing) |
+| `job-analyses`, `job-analyses/{id}`                           | GET, POST / GET, DELETE                   | #162 saved job analyses                               |
+| `library/points`, `library/points/{id}`                       | POST / PATCH                              | point create and edit                                 |
+| `library/skills`                                              | POST                                      | skill create (#159)                                   |
+| `generate`                                                    | POST                                      | manual generation                                     |
+| `compile`                                                     | POST                                      | LaTeX to PDF                                          |
+| `resume/edit`                                                 | POST                                      | Studio apply                                          |
+| `resume/skills`                                               | GET                                       | skill width measurement (runs the compiler)           |
+| `history`, `history/{id}`, `history/{id}/pdf`                 | GET, POST / GET, DELETE / GET             | generation history                                    |
+| `github/session`                                              | POST                                      | in-tab GitHub import session                          |
+| `github/connection/*`                                         | start, callback, repositories, disconnect | GitHub App connection                                 |
+| `github/imports/*`, `github/jobs/*`, `library/notifications*` | various                                   | Return 410 outside the test harness.                  |
 
 ### Background work
 

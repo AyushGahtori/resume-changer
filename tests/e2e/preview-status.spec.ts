@@ -219,9 +219,9 @@ test("does not say the output is ready when compile itself failed", async ({
   await openBuilder(page);
   await generateDraft(page);
   await page.getByRole("button", { name: "Create PDF" }).click();
-  await expect(page.locator(`${previewStatus}.status-banner--error`)).toContainText(
-    "2 pages",
-  );
+  await expect(
+    page.locator(`${previewStatus}.status-banner--error`),
+  ).toContainText("2 pages");
   await expect(page.getByText(/could not be saved to history/)).toBeVisible();
   await expect(page.getByText(/output is ready/)).toHaveCount(0);
   await expect(page.getByLabel("Generated LaTeX")).toContainText(

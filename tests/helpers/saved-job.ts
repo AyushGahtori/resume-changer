@@ -26,18 +26,27 @@ export async function saveJobAnalysis(
     }
   }
 
-  const response = await page.request.post("/api/job-analyses", {
-    data: {
-      company: input.company,
-      roleTitle: input.roleTitle ?? "",
-      jobUrl: input.jobUrl ?? "",
-      jobDescription: input.jobDescription,
-      analysis: {
-        ...homeAnalysis,
-        targetTitle: input.roleTitle?.trim() || homeAnalysis.targetTitle,
-      },
+  const payload = {
+    company: input.company,
+    roleTitle: input.roleTitle ?? "",
+    jobUrl: input.jobUrl ?? "",
+    jobDescription: input.jobDescription,
+    analysis: {
+      ...homeAnalysis,
+      targetTitle: input.roleTitle?.trim() || homeAnalysis.targetTitle,
     },
+  };
+  let response = await page.request.post("/api/job-analyses", {
+    data: payload,
   });
+  for (
+    let attempt = 0;
+    response.status() === 409 && attempt < 6;
+    attempt += 1
+  ) {
+    await new Promise((resolve) => setTimeout(resolve, 40 * (attempt + 1)));
+    response = await page.request.post("/api/job-analyses", { data: payload });
+  }
   if (!response.ok()) {
     throw new Error(
       `Saving the analyzed job failed (${response.status()}): ${await response.text()}`,

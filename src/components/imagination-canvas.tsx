@@ -177,7 +177,11 @@ export default function ImaginationCanvas({
   }
 
   function restore(draft: ImaginationDraft) {
-    if (text.trim() && text.trim() !== draft.text.trim() && !restoreConfirming) {
+    if (
+      text.trim() &&
+      text.trim() !== draft.text.trim() &&
+      !restoreConfirming
+    ) {
       setRestoreConfirming(true);
       return;
     }
@@ -336,7 +340,9 @@ export default function ImaginationCanvas({
     connectedAchievementIds: selectedIds,
     value: text,
     onDestinationChange: (id, compatibleIds) => {
-      const dropped = selectedIds.filter((item) => !compatibleIds.includes(item));
+      const dropped = selectedIds.filter(
+        (item) => !compatibleIds.includes(item),
+      );
       setDroppedAchievements(
         dropped.length
           ? { count: dropped.length, groupId, selectedIds: [...selectedIds] }
@@ -461,7 +467,7 @@ export default function ImaginationCanvas({
             canSubmit={
               Boolean(
                 groupId &&
-                  (text.trim() || selectedSources.length || skillIds.length),
+                (text.trim() || selectedSources.length || skillIds.length),
               ) && !saving
             }
             isLoading={busy}

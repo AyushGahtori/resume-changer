@@ -241,12 +241,14 @@ export default function GenerationHistory() {
     setDetailLoading(true);
     setError("");
     try {
-      const response = await apiFetch(`/api/history/${encodeURIComponent(id)}`, {
-        cache: "no-store",
-      });
+      const response = await apiFetch(
+        `/api/history/${encodeURIComponent(id)}`,
+        {
+          cache: "no-store",
+        },
+      );
       const payload = (await readJson(response)) as
-        | (HistoryDetail & { error?: string })
-        | null;
+        (HistoryDetail & { error?: string }) | null;
       if (!response.ok || !payload?.entry || typeof payload.latex !== "string")
         throw new Error(
           payload?.error ?? "This saved generation could not be opened.",
@@ -370,13 +372,13 @@ export default function GenerationHistory() {
             {loaded ? (
               <>
                 <strong role="status">{entries.length}</strong>
-                <span>
-                  saved {entries.length === 1 ? "resume" : "resumes"}
-                </span>
+                <span>saved {entries.length === 1 ? "resume" : "resumes"}</span>
               </>
             ) : (
               <span>
-                {loading ? "Loading saved resumes" : "Saved resumes unavailable"}
+                {loading
+                  ? "Loading saved resumes"
+                  : "Saved resumes unavailable"}
               </span>
             )}
           </span>
@@ -651,10 +653,7 @@ export default function GenerationHistory() {
                       Download .tex
                     </button>
                   ) : pdfUrl ? (
-                    <a
-                      download={`resume-${detail.entry.id}.pdf`}
-                      href={pdfUrl}
-                    >
+                    <a download={`resume-${detail.entry.id}.pdf`} href={pdfUrl}>
                       Download PDF
                     </a>
                   ) : null}
@@ -757,7 +756,10 @@ export default function GenerationHistory() {
             >
               Cancel
             </button>
-            <button onClick={() => void deleteEntry(pendingDelete)} type="button">
+            <button
+              onClick={() => void deleteEntry(pendingDelete)}
+              type="button"
+            >
               Delete
             </button>
           </div>

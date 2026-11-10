@@ -276,7 +276,10 @@ export default function ImaginationWritingControls({
           {instruction.length}/{MAX_IMAGINATION_INSTRUCTION_LENGTH}
         </div>
 
-        <div className="imagination-request-actions" style={{ flexWrap: "wrap" }}>
+        <div
+          className="imagination-request-actions"
+          style={{ flexWrap: "wrap" }}
+        >
           <div
             aria-label="Target line count"
             className="imagination-target"

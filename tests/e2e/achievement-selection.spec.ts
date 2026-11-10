@@ -152,7 +152,8 @@ test("analyzes a saved JD, retries point suggestions, and allows grounded overri
   });
   await expect(recommendation).toContainText("Requirement coverage");
   await expect(recommendation).toContainText("AWS provisioning");
-  await expect(recommendation).toContainText("2 / 2 supported");
+  await expect(recommendation).toContainText("Required 1 of 1 covered");
+  await expect(recommendation).toContainText("Responsibilities 1 of 1 covered");
   await expect(
     recommendation.getByRole("progressbar", {
       name: "Requirements covered by selected achievements",
@@ -184,7 +185,8 @@ test("analyzes a saved JD, retries point suggestions, and allows grounded overri
   });
   await expect(suggestedSkill).toBeChecked();
   await page.getByLabel(`Select achievement ${cloudAchievementId}`).uncheck();
-  await expect(recommendation).toContainText("0 / 2 supported");
+  await expect(recommendation).toContainText("Required 0 of 1 covered");
+  await expect(recommendation).toContainText("Responsibilities 0 of 1 covered");
   await expect(recommendation).toContainText("Not selected");
   await expect(suggestedSkill).toBeEnabled();
   await expect(suggestedSkill).toBeChecked();

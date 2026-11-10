@@ -411,10 +411,12 @@ test("Auto Tailor reports wording repair and exposes summary, partial coverage a
             finalCoverage: [
               {
                 requirement: "AWS provisioning",
+                priority: "required",
                 coveredByAchievementIds: [achievementId],
                 availableAchievementIds: [achievementId],
                 status: "partial",
                 evidence: [],
+                facets: [],
                 missingComponents: ["More deployment evidence"],
                 reason: "Related evidence supports part of the requirement.",
               },
@@ -444,7 +446,7 @@ test("Auto Tailor reports wording repair and exposes summary, partial coverage a
   ).toBeVisible();
   await page.getByRole("button", { name: "Job match", exact: true }).click();
   await expect(
-    page.getByText("0 / 1 supported · 1 partial", { exact: true }),
+    page.getByText("Required: 0 of 1 covered · 1 Partial", { exact: true }),
   ).toBeVisible();
   await expect(
     page.getByText(

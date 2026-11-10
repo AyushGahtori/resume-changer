@@ -5,7 +5,15 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { act, createElement, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 import sampleLibrary from "../../../examples/sample-resume-library.json";
 import { JD_DRAFT_STORAGE_KEY } from "../../../src/lib/jd-draft";
 import type { ManualGenerationResult } from "../../../src/lib/generation/manual-generation";
@@ -76,8 +84,9 @@ let root: Root | null = null;
 let host: HTMLDivElement | null = null;
 
 beforeAll(() => {
-  (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT =
-    true;
+  (
+    globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
+  ).IS_REACT_ACT_ENVIRONMENT = true;
   class ResizeObserverStub {
     observe() {}
     unobserve() {}
@@ -141,7 +150,10 @@ function click(element: Element) {
   });
 }
 
-function setControlValue(element: HTMLInputElement | HTMLTextAreaElement, value: string) {
+function setControlValue(
+  element: HTMLInputElement | HTMLTextAreaElement,
+  value: string,
+) {
   const prototype =
     element instanceof HTMLTextAreaElement
       ? window.HTMLTextAreaElement.prototype
@@ -180,9 +192,8 @@ describe("launch audit source invariants", () => {
 
 describe("skill board", () => {
   it("saves through apiFetch and does not claim success for an empty body", async () => {
-    const { default: SkillBoard } = await import(
-      "../../../src/components/library/skill-board"
-    );
+    const { default: SkillBoard } =
+      await import("../../../src/components/library/skill-board");
     const onAdded = vi.fn();
     apiFetch.mockResolvedValue(new Response("", { status: 200 }));
     await act(async () => {
@@ -211,7 +222,9 @@ describe("skill board", () => {
       expect.objectContaining({ method: "POST" }),
     );
     expect(onAdded).not.toHaveBeenCalled();
-    expect(document.body.textContent).toContain("The skill could not be saved.");
+    expect(document.body.textContent).toContain(
+      "The skill could not be saved.",
+    );
 
     apiFetch.mockResolvedValue(
       Response.json({ skill: { name: "LightGBM" } }, { status: 201 }),
@@ -226,9 +239,8 @@ describe("skill board", () => {
 
 describe("generation history", () => {
   async function renderHistory() {
-    const { default: GenerationHistory } = await import(
-      "../../../src/components/generation-history"
-    );
+    const { default: GenerationHistory } =
+      await import("../../../src/components/generation-history");
     await act(async () => {
       root?.render(createElement(GenerationHistory));
     });
@@ -260,7 +272,10 @@ describe("generation history", () => {
     );
 
     apiFetch.mockResolvedValueOnce(
-      new Response("", { status: 200, headers: { "Content-Type": "text/plain" } }),
+      new Response("", {
+        status: 200,
+        headers: { "Content-Type": "text/plain" },
+      }),
     );
     click(buttonNamed("Refresh"));
     await settle();
@@ -293,7 +308,10 @@ describe("generation history", () => {
         return Response.json({ error: "<not a pdf>" }, { status: 502 });
       }
       if (url.endsWith("/gen-1")) {
-        return Response.json({ entry: historyEntry, latex: "\\documentclass{x}" });
+        return Response.json({
+          entry: historyEntry,
+          latex: "\\documentclass{x}",
+        });
       }
       return Response.json({ entries: [historyEntry], nextCursor: null });
     });
@@ -357,9 +375,8 @@ describe("resume builder", () => {
   }
 
   async function renderBuilder(nextLibrary: ResumeLibrary = library) {
-    const { default: ResumeGenerator } = await import(
-      "../../../src/components/resume-generator"
-    );
+    const { default: ResumeGenerator } =
+      await import("../../../src/components/resume-generator");
     await act(async () => {
       root?.render(
         createElement(ResumeGenerator, {
@@ -484,9 +501,7 @@ describe("resume builder", () => {
       text: "Rendered bullet",
     }));
     await act(async () => {
-      releaseGenerate?.(
-        Response.json(generation),
-      );
+      releaseGenerate?.(Response.json(generation));
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
     expect(document.body.textContent).toContain("GENERATED-LATEX-STAYS");
@@ -533,30 +548,31 @@ describe("resume builder", () => {
 
 describe("resume studio", () => {
   it("labels coverage, reports pending edits, and cancel leaves the draft", async () => {
-    const { default: ResumeStudio } = await import(
-      "../../../src/components/resume-studio"
-    );
+    const { default: ResumeStudio } =
+      await import("../../../src/components/resume-studio");
     const pending: number[] = [];
     let editSignal: AbortSignal | undefined;
-    apiFetch.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
-      const url = String(input);
-      if (url.includes("/api/resume/skills")) {
-        return Response.json({ error: "unavailable" }, { status: 404 });
-      }
-      if (url.endsWith("/api/resume/edit")) {
-        editSignal = init?.signal ?? undefined;
-        return new Promise((_resolve, reject) => {
-          const abort = () => {
-            const error = new Error("aborted");
-            error.name = "AbortError";
-            reject(error);
-          };
-          if (init?.signal?.aborted) abort();
-          else init?.signal?.addEventListener("abort", abort, { once: true });
-        });
-      }
-      return Response.json({});
-    });
+    apiFetch.mockImplementation(
+      async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if (url.includes("/api/resume/skills")) {
+          return Response.json({ error: "unavailable" }, { status: 404 });
+        }
+        if (url.endsWith("/api/resume/edit")) {
+          editSignal = init?.signal ?? undefined;
+          return new Promise((_resolve, reject) => {
+            const abort = () => {
+              const error = new Error("aborted");
+              error.name = "AbortError";
+              reject(error);
+            };
+            if (init?.signal?.aborted) abort();
+            else init?.signal?.addEventListener("abort", abort, { once: true });
+          });
+        }
+        return Response.json({});
+      },
+    );
     const generation = {
       latex: "STUDIO-LATEX",
       metadata: {

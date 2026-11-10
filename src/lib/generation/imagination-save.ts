@@ -42,8 +42,7 @@ export function getImaginationTextToAccept(
 export const imaginationSaveCopy = {
   jobRequired:
     "A job or project is required before you can save an achievement.",
-  sourceUnavailable:
-    "No save destination is available for this data source.",
+  sourceUnavailable: "No save destination is available for this data source.",
   skillOnly:
     "Connect an achievement to use this suggestion. Skills alone cannot be saved as a point.",
   resumeNeedsAchievement:
@@ -93,7 +92,8 @@ export function decideImaginationAcceptance(input: {
       input.editorText,
       input.proposedText,
     );
-    if (!text) return { ok: false, error: imaginationSaveCopy.emptyAchievement };
+    if (!text)
+      return { ok: false, error: imaginationSaveCopy.emptyAchievement };
     return {
       ok: true,
       text,

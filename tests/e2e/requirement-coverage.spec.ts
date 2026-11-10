@@ -141,12 +141,13 @@ test("reports the coverage of the current job analysis and its source", async ({
 
   const coverage = page.getByRole("region", { name: "AI recommendations" });
   // Two of the three analyzed requirements are supported by the evidence.
-  await expect(coverage).toContainText("2 / 3 supported");
+  await expect(coverage).toContainText("Required 1 of 2 covered");
+  await expect(coverage).toContainText("Responsibilities 1 of 1 covered");
   await expect(coverage).toContainText(
     "3 job requirements analyzed from this job description.",
   );
-  await expect(coverage).toContainText("1 no match");
-  await expect(coverage).toContainText("No match found");
+  await expect(coverage).toContainText("1 Not found");
+  await expect(coverage).toContainText("Not found");
   await expect(
     coverage.getByRole("progressbar", {
       name: "Requirements covered by selected achievements",
@@ -186,7 +187,10 @@ test("reports a stale job analysis instead of an outdated one", async ({
   await openBuilder(page);
 
   const analysis = page.getByRole("region", { name: "Job analysis" });
-  await expect(analysis).toContainText("Analyzed");
+  await expect(analysis).toContainText("Saved analysis");
+  await expect(page.locator(".saved-job-unsaved")).toContainText(
+    "differs from the saved analysis",
+  );
   await expect(page.locator(".generation-draft")).toContainText(
     "Example Cloud",
   );

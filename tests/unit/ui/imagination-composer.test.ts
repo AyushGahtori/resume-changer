@@ -204,7 +204,9 @@ describe("Imagination Canvas composer", () => {
     expect(resumeHtml).toContain(
       "Your PDF updates only after you Apply changes.",
     );
-    expect(bothHtml).toContain("Your PDF updates only after you Apply changes.");
+    expect(bothHtml).toContain(
+      "Your PDF updates only after you Apply changes.",
+    );
     expect(resumeHtml).toContain(
       "adds the reviewed achievement to your resume draft.",
     );
