@@ -1306,6 +1306,10 @@ h1 {
   opacity: 0.65;
 }
 
+.primary-button:disabled:not([aria-busy="true"]) {
+  cursor: not-allowed;
+}
+
 .home-action-button {
   display: inline-flex;
   min-width: 0;

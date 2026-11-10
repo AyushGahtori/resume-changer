@@ -3871,9 +3871,26 @@ export default function ResumeGenerator({ library, source }: Props) {
                 {SELECTION_CHANGED_NOTICE}
               </p>
             )}
+            {draftReady && !isGenerating && selectedIds.length === 0 && (
+              <p className="generation-notice" id="generate-needs-selection">
+                Select an achievement, or run Suggest points or Auto Tailor,
+                before generating.
+              </p>
+            )}
             <button
+              aria-busy={isGenerating}
+              aria-describedby={
+                draftReady && !isGenerating && selectedIds.length === 0
+                  ? "generate-needs-selection"
+                  : undefined
+              }
               className="primary-button"
-              disabled={isGenerating || isCompiling || !draftReady}
+              disabled={
+                isGenerating ||
+                isCompiling ||
+                !draftReady ||
+                selectedIds.length === 0
+              }
               type="submit"
             >
               {isGenerating ? "Generating…" : "Generate LaTeX"}
