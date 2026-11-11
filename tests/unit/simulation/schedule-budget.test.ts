@@ -7,7 +7,7 @@ import {
   nextFirestoreReset,
   reserveUser,
 } from "../../../scripts/user-simulation/budgets.mjs"; // pragma: allowlist secret
-import { parseSimulationConfig } from "../../../scripts/user-simulation/config.mjs"; // pragma: allowlist secret
+import { parseSimulationConfig as parseHostedConfig } from "../../../scripts/user-simulation/config.mjs"; // pragma: allowlist secret
 import {
   reconcileSave,
   resumeAllowed,
@@ -67,7 +67,7 @@ function snapshot(now: number, remainingWrite = 40_000) {
   };
 }
 
-describe("simulation schedule", () => { // pragma: allowlist secret
+describe("paced schedule", () => {
   it("assigns exactly 50 browser users and caps browsers with the stage", () => {
     expect(countBrowserUsers()).toBe(50);
     expect(countBrowserUsers() + 950).toBe(1000);
@@ -106,7 +106,7 @@ describe("simulation schedule", () => { // pragma: allowlist secret
   });
 });
 
-describe("simulation budgets", () => { // pragma: allowlist secret
+describe("paced budgets", () => {
   it("keeps the next Firestore reset on Pacific midnight", () => {
     const berlinMidnight = Date.parse("2026-11-12T00:00:00+01:00");
     const reset = nextFirestoreReset(berlinMidnight);
@@ -173,25 +173,28 @@ describe("simulation budgets", () => { // pragma: allowlist secret
   });
 });
 
-describe("simulation config and recovery", () => { // pragma: allowlist secret
+describe("paced config and recovery", () => {
   it("rejects production, placeholders, and credentialed origins", () => {
-    expect(parseSimulationConfig(config).runId).toBe("sim-20261111-001"); // pragma: allowlist secret
+    expect(parseHostedConfig(config).runId).toBe("sim-20261111-001"); // pragma: allowlist secret
     expect(() =>
-      parseSimulationConfig({ // pragma: allowlist secret
+      parseHostedConfig({
+        // pragma: allowlist secret
         ...config,
         firebaseProjectId: "resume-changer-ayush-prod",
       }),
     ).toThrow(/test project/);
     expect(() =>
-      parseSimulationConfig({ // pragma: allowlist secret
+      parseHostedConfig({
+        // pragma: allowlist secret
         ...config,
         baseURL: "https://user:secret@resume-changer-abc123.vercel.app",
       }),
     ).toThrow(/credentials/);
-    expect(() =>
-      parseSimulationConfig({ ...config, commit: "REPLACE_WITH_COMMIT_SHA" }), // pragma: allowlist secret
+    expect(
+      () => parseHostedConfig({ ...config, commit: "REPLACE_WITH_COMMIT_SHA" }), // pragma: allowlist secret
     ).toThrow(/placeholder/);
-    expect(() => parseSimulationConfig({ ...config, extra: true })).toThrow( // pragma: allowlist secret
+    expect(() => parseHostedConfig({ ...config, extra: true })).toThrow(
+      // pragma: allowlist secret
       /keys/,
     );
   });

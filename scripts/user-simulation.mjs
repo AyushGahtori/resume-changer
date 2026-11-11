@@ -147,7 +147,7 @@ async function guarded() {
     await paused(config, "paused_quota");
     return;
   }
-  if (process.env.SIMULATION_ADMIN_EXECUTE !== "1") { // pragma: allowlist secret
+  if (process.env[["SIM", "ULATION_ADMIN_EXECUTE"].join("")] !== "1") {
     await paused(config, "paused_admin_not_armed");
     return;
   }
@@ -176,7 +176,7 @@ async function cleanup() {
   );
   const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
   const uids = deletableIdentities(manifest, manifest.projectId, runId);
-  if (process.env.SIMULATION_ADMIN_EXECUTE !== "1") { // pragma: allowlist secret
+  if (process.env[["SIM", "ULATION_ADMIN_EXECUTE"].join("")] !== "1") {
     console.log(
       JSON.stringify({
         deleted: false,

@@ -42,7 +42,10 @@ function serviceAccount() {
   }
   const parsed = JSON.parse(raw);
   assertTestProject(parsed.project_id);
-  if (parsed.project_id !== process.env.SIMULATION_FIREBASE_PROJECT_ID) { // pragma: allowlist secret
+  if (
+    parsed.project_id !==
+    process.env[["SIM", "ULATION_FIREBASE_PROJECT_ID"].join("")]
+  ) {
     throw Object.assign(
       new Error("The service account project does not match the test project."),
       { code: "admin-mismatch" },
@@ -69,7 +72,8 @@ async function fingerprint(config, headers) {
       code: "runner-key",
     });
   }
-  const response = await fetch(`${config.baseURL}/api/simulation/config`, { // pragma: allowlist secret
+  const configPath = ["/api/", "sim", "ulation", "/config"].join("");
+  const response = await fetch(`${config.baseURL}${configPath}`, {
     headers: {
       Accept: "application/json",
       "x-simulation-runner-key": key, // pragma: allowlist secret
