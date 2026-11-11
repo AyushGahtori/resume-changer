@@ -1,9 +1,12 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   dispatchApiRequest,
   optionsForApiRequest,
   resolveApiRequest,
 } from "@/lib/api/dispatch";
+import { createAiProvider } from "@/lib/ai/provider-factory-core";
+
+afterEach(() => vi.unstubAllEnvs());
 
 const routes: Array<[string, string[]]> = [
   ["/api/account/import/history", ["POST"]],
@@ -21,7 +24,8 @@ const routes: Array<[string, string[]]> = [
   ["/api/history/generation-example/pdf", ["GET"]],
   ["/api/library/parents", ["POST"]],
   ["/api/library/points", ["POST"]],
-  ["/api/library/skills", ["POST"]],
+  ["/api/library/skills", ["POST", "PUT"]],
+  ["/api/load-test/safety", ["GET"]],
   ["/api/library/skills/bulk", ["POST"]],
   ["/api/library/profile", ["PATCH"]],
   ["/api/library/education", ["POST"]],
@@ -30,8 +34,8 @@ const routes: Array<[string, string[]]> = [
   ["/api/library/projects", ["POST"]],
   ["/api/library/notes", ["POST"]],
   ["/api/library/points/achievement-example", ["PATCH"]],
-  ["/api/library/jobs/job-example", ["DELETE", "PATCH"]],
-  ["/api/library/projects/project-example", ["DELETE", "PATCH"]],
+  ["/api/library/jobs/job-example", ["DELETE", "PATCH", "PUT"]],
+  ["/api/library/projects/project-example", ["DELETE", "PATCH", "PUT"]],
   ["/api/library/education/education-example", ["DELETE", "PATCH"]],
   ["/api/library/credentials/credential-example", ["DELETE", "PATCH"]],
   ["/api/resume/edit", ["POST"]],
@@ -53,6 +57,8 @@ describe("shared API route dispatcher", () => {
 
     expect(await history?.context.params).toEqual({ id: "generation example" });
     expect(await point?.context.params).toEqual({ id: "achievement example" });
+    const job = resolveApiRequest("/api/library/jobs/job%2Dexample");
+    expect(await job?.context.params).toEqual({ id: "job-example" });
   });
 
   it("rejects malformed and unknown paths", () => {
@@ -85,5 +91,39 @@ describe("shared API route dispatcher", () => {
     );
     expect(response.status).toBe(204);
     expect(response.headers.get("allow")).toBe("DELETE, GET, HEAD, OPTIONS");
+  });
+
+  it("hides the load-test safety response and keeps AI available outside the local runtime", async () => {
+    vi.stubEnv("RESUME_LOAD_TEST", "");
+    const safety = await dispatchApiRequest(
+      new Request("http://127.0.0.1:3020/api/load-test/safety"),
+    );
+    expect(safety.status).toBe(404);
+  });
+
+  it("refuses AI and other expensive routes in the local load-test runtime", async () => {
+    vi.stubEnv("RESUME_LOAD_TEST", "1");
+    vi.stubEnv("VERCEL", "");
+    vi.stubEnv("RESUME_APP_MODE", "firebase");
+    vi.stubEnv(
+      "NEXT_PUBLIC_FIREBASE_PROJECT_ID",
+      "demo-resume-changer-loadtest",
+    );
+    vi.stubEnv("NEXT_PUBLIC_FIREBASE_DATABASE_ID", "(default)");
+    vi.stubEnv("FIREBASE_AUTH_EMULATOR_HOST", "127.0.0.1:9098");
+    vi.stubEnv("NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST", "127.0.0.1:9098");
+    vi.stubEnv("FIRESTORE_EMULATOR_HOST", "127.0.0.1:8088");
+    const denied = await dispatchApiRequest(
+      new Request("http://127.0.0.1:3020/api/ai/analyze-job-description", {
+        method: "POST",
+      }),
+    );
+    expect(denied.status).toBe(403);
+    expect(await denied.json()).toMatchObject({ code: "load-test-forbidden" });
+    const allowed = resolveApiRequest("/api/library/points");
+    expect(allowed?.methods.POST).toBeTypeOf("function");
+    expect(() => createAiProvider({ AI_PROVIDER: "mock" })).toThrow(
+      /disabled for the local load test/,
+    );
   });
 });

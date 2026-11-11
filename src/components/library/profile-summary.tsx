@@ -4,6 +4,7 @@ import {
   formatMetricCount,
   getLibraryMetricCounts,
 } from "@/lib/data/library-summary";
+import { profileDisplayName } from "@/lib/data/library-labels";
 import type { ResumeLibrary } from "@/lib/schemas/resume-data";
 
 type Props = {
@@ -84,7 +85,7 @@ export default function ProfileSummary({ library, source }: Props) {
     <section className="library-overview" aria-label="Library summary">
       <div className="library-identity library-owner">
         <p className="library-source-label source-indicator">{sourceLabel}</p>
-        <h2>{library.profile.fullName}</h2>
+        <h2>{profileDisplayName(library.profile.fullName)}</h2>
         {library.profile.headline ? (
           <p className="library-headline">{library.profile.headline}</p>
         ) : null}

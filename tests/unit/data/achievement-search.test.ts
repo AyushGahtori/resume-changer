@@ -186,6 +186,53 @@ describe("achievement library search", () => {
     expect(disabled.visiblePointCount).toBe(0);
   });
 
+  it("keeps a saved job or project that has metadata and no achievements", () => {
+    const job: Job = {
+      ...library.jobs[0],
+      id: "job-metadata-only",
+      title: "",
+      company: "Fictional Partial Company",
+      points: [],
+    };
+    const project: Project = {
+      ...library.projects[0],
+      id: "project-metadata-only",
+      name: "",
+      role: "Fictional Partial Role",
+      points: [],
+    };
+    const source: ResumeLibrary = {
+      ...library,
+      jobs: [...library.jobs, job],
+      projects: [...library.projects, project],
+    };
+
+    const visible = filterAchievementLibrary(source, EMPTY_LIBRARY_FILTERS);
+    expect(visible.jobs.map((item) => item.id)).toContain("job-metadata-only");
+    expect(visible.projects.map((item) => item.id)).toContain(
+      "project-metadata-only",
+    );
+
+    const byCompany = filterAchievementLibrary(
+      source,
+      filters({ query: "fictional partial company" }),
+    );
+    expect(byCompany.jobs.map((item) => item.id)).toEqual([
+      "job-metadata-only",
+    ]);
+
+    const bySkill = filterAchievementLibrary(
+      source,
+      filters({ skillId: "skill-python" }),
+    );
+    expect(bySkill.jobs.map((item) => item.id)).not.toContain(
+      "job-metadata-only",
+    );
+    expect(bySkill.projects.map((item) => item.id)).not.toContain(
+      "project-metadata-only",
+    );
+  });
+
   it("returns stable, deduplicated tag options and reset defaults", () => {
     const options = getLibraryFilterOptions(library);
 

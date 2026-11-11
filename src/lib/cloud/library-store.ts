@@ -12,6 +12,12 @@ import { writeUsageInTransaction } from "./usage";
 import { AccountAccessError } from "./security";
 import { emptyAccountLibrary, validateCloudLibrary } from "./library-contract";
 
+type CloudMutation<T> = {
+  library: ResumeLibrary;
+  value: T;
+  persist: boolean;
+};
+
 export const getCloudLibrary = cache(async (): Promise<ResumeLibrary> => {
   const { account, db } = await ensureCloudAccount();
   const reference = doc(db, "accounts", account.uid, "libraries", "current");
@@ -21,13 +27,19 @@ export const getCloudLibrary = cache(async (): Promise<ResumeLibrary> => {
   return changeCloudLibrary((current) => current);
 });
 
-export async function changeCloudLibrary(
-  change: (library: ResumeLibrary) => ResumeLibrary,
+/**
+ * Reads and validates inside the library transaction. A `persist: false`
+ * result returns without writing the library or its usage counter, so an
+ * unchanged metadata save does not spend quota or rewrite a v1 document.
+ */
+export async function mutateCloudLibrary<T>(
+  change: (library: ResumeLibrary) => CloudMutation<T>,
   expectedRevision?: number,
-) {
+): Promise<{ library: ResumeLibrary; value: T }> {
   const { account, db } = await ensureCloudAccount();
   const reference = doc(db, "accounts", account.uid, "libraries", "current");
   let observedRevision = -1;
+  let value!: T;
   const commit = () =>
     runTransaction(db, async (transaction) => {
       const saved = await transaction.get(reference);
@@ -52,7 +64,10 @@ export async function changeCloudLibrary(
       const prior = saved.exists()
         ? validateCloudLibrary(JSON.parse(saved.data().payload))
         : emptyAccountLibrary(account);
-      const next = validateCloudLibrary(change(prior));
+      const mutation = change(prior);
+      value = mutation.value;
+      const next = validateCloudLibrary(mutation.library);
+      if (!mutation.persist) return next;
       await writeUsageInTransaction(
         transaction,
         db,
@@ -71,7 +86,8 @@ export async function changeCloudLibrary(
     });
   for (let attempt = 0; ; attempt += 1) {
     try {
-      return await commit();
+      const library = await commit();
+      return { library, value };
     } catch (error) {
       // Some optimistic conflicts are evaluated by Rules before the storage
       // precondition and arrive as permission-denied rather than ABORTED. Retry
@@ -92,6 +108,21 @@ export async function changeCloudLibrary(
         throw error;
     }
   }
+}
+
+export async function changeCloudLibrary(
+  change: (library: ResumeLibrary) => ResumeLibrary,
+  expectedRevision?: number,
+) {
+  const result = await mutateCloudLibrary(
+    (library) => ({
+      library: change(library),
+      value: undefined,
+      persist: true,
+    }),
+    expectedRevision,
+  );
+  return result.library;
 }
 
 export async function importCloudLibrary(input: unknown, replace = false) {

@@ -61,6 +61,11 @@ import {
   type ExperienceRange,
 } from "@/lib/data/experience-dates";
 import { LIBRARY_ACTIONS } from "@/lib/ui/library-actions";
+import {
+  jobDisplayTitle,
+  jobFilterLabel,
+  projectDisplayName,
+} from "@/lib/data/library-labels";
 import type {
   AchievementPoint,
   Job,
@@ -151,7 +156,9 @@ function ExperienceGroup({
   const isJob = kind === "job";
   const job = isJob ? (item as Job) : null;
   const project = isJob ? null : (item as Project);
-  const title = job?.title ?? project?.name ?? "";
+  const title = job
+    ? jobDisplayTitle(job.title)
+    : projectDisplayName(project?.name ?? "");
   const organization = job?.company ?? project?.role;
   const range = formatExperienceRange(
     job ? job.startDate : project?.startDate,
@@ -311,12 +318,12 @@ export default function AchievementLibrary({ library, source }: Props) {
     () => [
       ...library.jobs.map((job) => ({
         id: job.id,
-        label: `${job.title} · ${job.company}`,
+        label: jobFilterLabel(job),
         type: "job" as const,
       })),
       ...library.projects.map((project) => ({
         id: project.id,
-        label: project.name,
+        label: projectDisplayName(project.name),
         type: "project" as const,
       })),
     ],
@@ -799,11 +806,21 @@ export default function AchievementLibrary({ library, source }: Props) {
               canEdit && noParents ? (
                 <div className="library-first-setup" id="library-first-parent">
                   <AddJobButton
-                    onSaved={() => savedLibrary("Added a job to your library.")}
+                    onSaved={(changed) =>
+                      savedLibrary(
+                        changed === false
+                          ? "No job changes to save."
+                          : "Added a job to your library.",
+                      )
+                    }
                   />
                   <AddProjectButton
-                    onSaved={() =>
-                      savedLibrary("Added a project to your library.")
+                    onSaved={(changed) =>
+                      savedLibrary(
+                        changed === false
+                          ? "No project changes to save."
+                          : "Added a project to your library.",
+                      )
                     }
                   />
                 </div>
@@ -838,7 +855,13 @@ export default function AchievementLibrary({ library, source }: Props) {
             <div className="library-section-body">
               {canEdit ? (
                 <AddJobButton
-                  onSaved={() => savedLibrary("Added a job to your library.")}
+                  onSaved={(changed) =>
+                    savedLibrary(
+                      changed === false
+                        ? "No job changes to save."
+                        : "Added a job to your library.",
+                    )
+                  }
                 />
               ) : null}
               {result.jobs.length > 0 ? (
@@ -893,8 +916,12 @@ export default function AchievementLibrary({ library, source }: Props) {
             <div className="library-section-body">
               {canEdit ? (
                 <AddProjectButton
-                  onSaved={() =>
-                    savedLibrary("Added a project to your library.")
+                  onSaved={(changed) =>
+                    savedLibrary(
+                      changed === false
+                        ? "No project changes to save."
+                        : "Added a project to your library.",
+                    )
                   }
                 />
               ) : null}

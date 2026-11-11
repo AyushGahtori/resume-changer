@@ -81,7 +81,9 @@ export function escapeLatexText(value: string): string {
 }
 
 function formatMonth(value: string): string {
-  const [year, month] = value.split("-");
+  const match = /^(\d{4})-(0[1-9]|1[0-2])$/.exec(value);
+  if (!match) return "";
+  const [, year, month] = match;
   const monthNames = [
     "Jan",
     "Feb",
@@ -100,11 +102,11 @@ function formatMonth(value: string): string {
 }
 
 function formatRange(start?: string, end?: string | null): string {
-  if (!start) return "";
-  if (end === null) return `${formatMonth(start)} -- Present`;
-  return end
-    ? `${formatMonth(start)} -- ${formatMonth(end)}`
-    : formatMonth(start);
+  const startLabel = start ? formatMonth(start) : "";
+  if (end === null) return startLabel ? `${startLabel} -- Present` : "Present";
+  const endLabel = end ? formatMonth(end) : "";
+  if (startLabel && endLabel) return `${startLabel} -- ${endLabel}`;
+  return startLabel || endLabel;
 }
 
 function renderHeader(
@@ -144,7 +146,7 @@ function renderHeader(
       : "";
 
   return [
-    `\\ResumeHeader{${escapeLatexText(profile.fullName)}}{${contacts.join(" \\textbar{} ")}}`,
+    `\\ResumeHeader{${escapeLatexText(profile.fullName.trim())}}{${contacts.join(" \\textbar{} ")}}`,
     profileSummary,
   ]
     .filter(Boolean)
@@ -184,11 +186,11 @@ function renderExperience(
     if (points.length === 0) return [];
 
     const subheading = [job.company, job.employmentType]
-      .filter(Boolean)
+      .filter((part): part is string => Boolean(part?.trim()))
       .map(escapeLatexText)
       .join(" $\\cdot$ ");
     return [
-      `\\ResumeEntry{${escapeLatexText(job.title)}}{${formatRange(job.startDate, job.endDate)}}{${subheading}}{${escapeLatexText(job.location ?? "")}}`,
+      `\\ResumeEntry{${escapeLatexText(job.title.trim())}}{${formatRange(job.startDate, job.endDate)}}{${subheading}}{${escapeLatexText(job.location ?? "")}}`,
       renderBullets(points, textOverrides),
     ];
   });
@@ -212,7 +214,7 @@ function renderProjects(
       );
     if (points.length === 0) return [];
     return [
-      `\\ResumeEntry{${escapeLatexText(project.name)}}{${formatRange(project.startDate, project.endDate)}}{${escapeLatexText(project.role ?? "")}}{}`,
+      `\\ResumeEntry{${escapeLatexText(project.name.trim())}}{${formatRange(project.startDate, project.endDate)}}{${escapeLatexText(project.role ?? "")}}{}`,
       renderBullets(points, textOverrides),
     ];
   });

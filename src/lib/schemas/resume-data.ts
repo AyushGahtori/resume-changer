@@ -2,6 +2,47 @@ import { z } from "zod";
 
 const nonEmptyText = z.string().trim().min(1, "Must not be empty.");
 
+/**
+ * Profile, job, and project labels may be omitted. Readers still receive a
+ * string, and a blank value is not replaced with a placeholder fact.
+ */
+const storedLabel = z
+  .union([z.string(), z.null()])
+  .optional()
+  .transform((value) => (typeof value === "string" ? value.trim() : ""));
+
+const employmentTypeSchema = z.enum([
+  "full-time",
+  "part-time",
+  "contract",
+  "internship",
+  "freelance",
+  "other",
+]);
+
+function assertKnownDateOrder(
+  value: { startDate?: string; endDate?: string | null },
+  context: {
+    addIssue: (issue: {
+      code: "custom";
+      path: ["endDate"];
+      message: string;
+    }) => void;
+  },
+) {
+  if (
+    value.startDate &&
+    typeof value.endDate === "string" &&
+    value.endDate < value.startDate
+  ) {
+    context.addIssue({
+      code: "custom",
+      path: ["endDate"],
+      message: "End date must be the same as or later than start date.",
+    });
+  }
+}
+
 export const StableIdSchema = z
   .string()
   .regex(
@@ -658,7 +699,7 @@ export const EducationSchema = z
 export const ProfileSchema = z
   .object({
     id: StableIdSchema,
-    fullName: nonEmptyText,
+    fullName: storedLabel,
     headline: nonEmptyText.optional(),
     email: z.email().optional(),
     phone: nonEmptyText.optional(),
@@ -679,61 +720,35 @@ export const ProfileSchema = z
 export const JobSchema = z
   .object({
     id: StableIdSchema,
-    company: nonEmptyText,
-    title: nonEmptyText,
-    employmentType: z.enum([
-      "full-time",
-      "part-time",
-      "contract",
-      "internship",
-      "freelance",
-      "other",
-    ]),
+    company: storedLabel,
+    title: storedLabel,
+    employmentType: employmentTypeSchema.optional(),
     location: nonEmptyText.optional(),
-    startDate: YearMonthSchema,
-    endDate: YearMonthSchema.nullable(),
+    startDate: YearMonthSchema.optional(),
+    endDate: YearMonthSchema.nullable().optional(),
     description: nonEmptyText.optional(),
     points: z.array(AchievementPointV1Schema),
   })
   .strict()
   .superRefine((job, context) => {
-    if (job.endDate !== null && job.endDate < job.startDate) {
-      context.addIssue({
-        code: "custom",
-        path: ["endDate"],
-        message: "End date must be the same as or later than start date.",
-      });
-    }
+    assertKnownDateOrder(job, context);
   });
 
 export const JobV2Schema = z
   .object({
     id: StableIdSchema,
-    company: nonEmptyText,
-    title: nonEmptyText,
-    employmentType: z.enum([
-      "full-time",
-      "part-time",
-      "contract",
-      "internship",
-      "freelance",
-      "other",
-    ]),
+    company: storedLabel,
+    title: storedLabel,
+    employmentType: employmentTypeSchema.optional(),
     location: nonEmptyText.optional(),
-    startDate: YearMonthSchema,
-    endDate: YearMonthSchema.nullable(),
+    startDate: YearMonthSchema.optional(),
+    endDate: YearMonthSchema.nullable().optional(),
     description: nonEmptyText.optional(),
     points: z.array(AchievementPointV2Schema),
   })
   .strict()
   .superRefine((job, context) => {
-    if (job.endDate !== null && job.endDate < job.startDate) {
-      context.addIssue({
-        code: "custom",
-        path: ["endDate"],
-        message: "End date must be the same as or later than start date.",
-      });
-    }
+    assertKnownDateOrder(job, context);
     job.points.forEach((point, pointIndex) => {
       if (point.source.type === "github-repository") {
         context.addIssue({
@@ -749,7 +764,7 @@ export const JobV2Schema = z
 export const ProjectSchema = z
   .object({
     id: StableIdSchema,
-    name: nonEmptyText,
+    name: storedLabel,
     role: nonEmptyText.optional(),
     url: z.url().optional(),
     description: nonEmptyText.optional(),
@@ -775,7 +790,7 @@ export const ProjectSchema = z
 export const ProjectV2Schema = z
   .object({
     id: StableIdSchema,
-    name: nonEmptyText,
+    name: storedLabel,
     role: nonEmptyText.optional(),
     url: z.url().optional(),
     description: nonEmptyText.optional(),

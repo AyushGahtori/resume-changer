@@ -6,6 +6,7 @@ import type {
   ResumeLibrary,
   Skill,
 } from "../schemas/resume-data";
+import { jobDisplayTitle, projectDisplayName } from "./library-labels";
 
 export type LibraryFilters = {
   query: string;
@@ -104,45 +105,58 @@ function pointMatches(
   );
 }
 
-function emptyParentMatchesSearch<T extends Job | Project>(
-  item: T,
-  kind: "job" | "project",
-  filters: LibraryFilters,
-) {
-  const query = normalize(filters.query);
-  const identity = includesQuery(
-    kind === "job"
-      ? [
-          (item as Job).company,
-          (item as Job).title,
-          (item as Job).location,
-          (item as Job).description,
-        ]
-      : [
-          (item as Project).name,
-          (item as Project).role,
-          (item as Project).description,
-        ],
-    query,
-  );
-  if (!query || !identity) return false;
-  return (
-    !filters.sourceType &&
-    !filters.skillId &&
-    !filters.tag &&
-    !filters.experienceId &&
-    filters.status === "all"
+function hasPointLevelFilter(filters: LibraryFilters) {
+  return Boolean(
+    filters.skillId ||
+    filters.tag ||
+    filters.sourceType ||
+    filters.status !== "all",
   );
 }
 
-function filtersNarrowTheLibrary(filters: LibraryFilters) {
+function hasExperienceMetadata(item: Job | Project, kind: "job" | "project") {
+  if (kind === "job") {
+    const job = item as Job;
+    return Boolean(
+      job.company.trim() ||
+      job.title.trim() ||
+      job.employmentType ||
+      job.location?.trim() ||
+      job.startDate ||
+      job.endDate === null ||
+      typeof job.endDate === "string" ||
+      job.description?.trim(),
+    );
+  }
+  const project = item as Project;
   return Boolean(
-    filters.query ||
-    filters.sourceType ||
-    filters.skillId ||
-    filters.tag ||
-    filters.experienceId ||
-    filters.status !== "all",
+    project.name.trim() ||
+    project.role?.trim() ||
+    project.url?.trim() ||
+    project.description?.trim() ||
+    project.startDate ||
+    project.endDate === null ||
+    typeof project.endDate === "string",
+  );
+}
+
+function metadataMatchesQuery(
+  item: Job | Project,
+  kind: "job" | "project",
+  query: string,
+) {
+  if (!query) return true;
+  if (kind === "job") {
+    const job = item as Job;
+    return includesQuery(
+      [job.title, job.company, job.location, job.description],
+      query,
+    );
+  }
+  const project = item as Project;
+  return includesQuery(
+    [project.name, project.role, project.description, project.url],
+    query,
   );
 }
 
@@ -152,7 +166,6 @@ function filterExperiences<T extends Job | Project>(
   skillsById: Map<string, Skill>,
   filters: LibraryFilters,
 ): FilteredExperience<T>[] {
-  const keepEmptyParents = !filtersNarrowTheLibrary(filters);
   return items.flatMap((item) => {
     const experienceId = `${kind}:${item.id}`;
     const experienceName =
@@ -163,10 +176,15 @@ function filterExperiences<T extends Job | Project>(
       pointMatches(point, experienceName, experienceId, skillsById, filters),
     );
 
-    if (points.length > 0 || keepEmptyParents) return [{ ...item, points }];
-    if (emptyParentMatchesSearch(item, kind, filters))
-      return [{ ...item, points }];
-    return [];
+    if (points.length > 0) return [{ ...item, points }];
+    // A saved job or project can exist before its first achievement.
+    // Point-level filters still hide it, because it has nothing that matches.
+    if (hasPointLevelFilter(filters)) return [];
+    if (filters.experienceId && filters.experienceId !== experienceId)
+      return [];
+    if (!hasExperienceMetadata(item, kind)) return [];
+    if (!metadataMatchesQuery(item, kind, normalize(filters.query))) return [];
+    return [{ ...item, points }];
   });
 }
 
@@ -263,24 +281,30 @@ type Recency = {
 };
 
 /**
- * How recent an experience is. An ongoing role is the most recent one and is
- * ordered by the month it started, a finished role is as recent as its end
- * date, and an experience without any date has no recency at all.
+ * How recent an experience is. Only an explicit null end date is current.
+ * A finished role is as recent as its end month. A start without an end is
+ * dated, not current. An experience with no date has no recency at all.
  */
 function experienceRecency(item: Job | Project): Recency | null {
-  // A missing end date means the experience is still running, which is how
-  // the library shows it as "Present".
-  if (!item.endDate) {
-    if (item.startDate) {
-      return { group: 0, month: monthIndex(item.startDate) };
-    }
-    return null;
+  if (item.endDate === null) {
+    return {
+      group: 0,
+      month: item.startDate
+        ? monthIndex(item.startDate)
+        : Number.NEGATIVE_INFINITY,
+    };
   }
-  return { group: 1, month: monthIndex(item.endDate) };
+  if (typeof item.endDate === "string") {
+    return { group: 1, month: monthIndex(item.endDate) };
+  }
+  if (item.startDate) return { group: 1, month: monthIndex(item.startDate) };
+  return null;
 }
 
 function experienceTitle(item: Job | Project) {
-  return "title" in item ? item.title : item.name;
+  return "title" in item
+    ? jobDisplayTitle(item.title)
+    : projectDisplayName(item.name);
 }
 
 /**

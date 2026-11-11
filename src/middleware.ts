@@ -5,11 +5,20 @@ export function middleware(request: NextRequest) {
   if (process.env.VERCEL !== "1" && process.env.RESUME_APP_MODE !== "firebase")
     return NextResponse.next();
   const nonce = btoa(crypto.randomUUID());
+  const emulatorEnabled =
+    process.env.VERCEL !== "1" &&
+    Boolean(process.env.FIREBASE_AUTH_EMULATOR_HOST);
   const policy = contentSecurityPolicy(
     nonce,
     process.env.NODE_ENV === "development",
-    process.env.VERCEL !== "1" &&
-      Boolean(process.env.FIREBASE_AUTH_EMULATOR_HOST),
+    emulatorEnabled,
+    emulatorEnabled
+      ? [
+          process.env.FIREBASE_AUTH_EMULATOR_HOST,
+          process.env.NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST,
+          process.env.FIRESTORE_EMULATOR_HOST,
+        ].filter((host): host is string => Boolean(host))
+      : [],
   );
   const headers = new Headers(request.headers);
   headers.set("x-nonce", nonce);

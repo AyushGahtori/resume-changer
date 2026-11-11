@@ -154,7 +154,7 @@ function buildDraftHandoff(args: {
     text: evidence.text,
     section: evidence.section,
     groupId: evidence.groupId,
-    groupTitle: evidence.groupTitle,
+    groupTitle: evidence.groupTitle ?? "",
     ...(evidence.groupSubtitle
       ? { groupSubtitle: evidence.groupSubtitle }
       : {}),

@@ -118,10 +118,13 @@ export function assessResumeQuality(args: {
     const labels = [
       ...library.jobs
         .filter((job) => groups.has(job.id))
-        .flatMap((job) => [job.title, job.company]),
+        .flatMap((job) =>
+          [job.title, job.company].filter((label) => label.trim()),
+        ),
       ...library.projects
         .filter((project) => groups.has(project.id))
-        .map((project) => project.name),
+        .map((project) => project.name)
+        .filter((label) => label.trim()),
     ];
     machine.push(
       finding(
@@ -148,7 +151,7 @@ export function assessResumeQuality(args: {
     const selectedJobDates = library.jobs
       .filter((job) => groups.has(job.id))
       .flatMap((job) => [
-        renderedMonth(job.startDate),
+        ...(job.startDate ? [renderedMonth(job.startDate)] : []),
         ...(job.endDate === null
           ? ["Present"]
           : job.endDate

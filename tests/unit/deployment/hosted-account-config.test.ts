@@ -48,6 +48,11 @@ describe("hosted sign-in configuration", () => {
     expect(() => checkHostedAccountConfig(configured)).not.toThrow();
     expect(() => checkHostedAccountConfig({})).not.toThrow();
   });
+  it("rejects the local load-test flag in a hosted build", () => {
+    expect(() =>
+      checkHostedAccountConfig({ ...configured, RESUME_LOAD_TEST: "1" }),
+    ).toThrow(/local load-test runtime/);
+  });
   it("rejects hosted Firebase builds that cannot load the session verifier", () => {
     for (const NODE_OPTIONS of [
       undefined,

@@ -127,6 +127,7 @@ export default function ProfileEditor({
     <form
       aria-label="Profile and contact"
       className="library-entry"
+      noValidate
       onSubmit={save}
     >
       <div className="point-editor-heading">
@@ -142,7 +143,6 @@ export default function ProfileEditor({
             autoComplete="name"
             name="fullName"
             onChange={(event) => setFullName(event.target.value)}
-            required
             value={fullName}
           />
         </label>

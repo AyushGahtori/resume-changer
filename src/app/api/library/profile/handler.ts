@@ -4,6 +4,10 @@ import { NextResponse } from "next/server";
 import { DataLoadError } from "@/lib/data/loaders";
 import { LibraryWriteError } from "@/lib/data/writers";
 import {
+  UpdateProfileInputSchema as MetadataProfileInputSchema,
+  updateProfile,
+} from "@/lib/data/writers";
+import {
   UpdateProfileInputSchema,
   updateResumeProfile,
 } from "@/lib/data/profile-records";
@@ -54,6 +58,19 @@ async function PATCHForAccount(request: Request) {
     );
   }
 
+  if (body && typeof body === "object" && Object.hasOwn(body, "changes")) {
+    const parsed = MetadataProfileInputSchema.safeParse(body);
+    if (!parsed.success)
+      return NextResponse.json(
+        { error: schemaError(parsed.error.issues) },
+        { status: 400 },
+      );
+    try {
+      return NextResponse.json(await updateProfile(parsed.data));
+    } catch (error) {
+      return failureResponse(error);
+    }
+  }
   const parsed = UpdateProfileInputSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
@@ -63,8 +80,8 @@ async function PATCHForAccount(request: Request) {
   }
 
   try {
-    const { profile } = await updateResumeProfile(parsed.data);
-    return NextResponse.json({ profile }, { status: 200 });
+    const { profile, changed } = await updateResumeProfile(parsed.data);
+    return NextResponse.json({ profile, changed }, { status: 200 });
   } catch (error) {
     return failureResponse(error);
   }

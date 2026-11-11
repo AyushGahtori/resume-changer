@@ -301,6 +301,8 @@ test("keeps the builder palette in the dark theme on the same tokens", async ({
     "accent-color",
     rgbString(normalized["--color-violet"]),
   );
+  await checkbox.check();
+  await expect(primary).toBeEnabled();
 
   await checkbox.check();
   await expect(primary).toBeEnabled();

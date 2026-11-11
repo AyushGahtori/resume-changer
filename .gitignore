@@ -31,3 +31,10 @@ pnpm-debug.log*
 .vscode/
 /.swc
 /src/app/.well-known/workflow/
+
+# Copied into the app only while the local load-test build runs.
+/src/app/e2e/load-test-auth/
+# Generated so Firebase can see the rules from the repository root.
+/firebase.load-test.json
+# Left behind when an emulator is interrupted during export.
+/firebase-export-*/

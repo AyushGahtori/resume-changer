@@ -25,7 +25,7 @@ const linkInputSchema = z
  */
 export const UpdateProfileInputSchema = z
   .object({
-    fullName: optionalText.min(1, "Enter a preferred name."),
+    fullName: optionalText,
     headline: optionalText.optional(),
     email: optionalText
       .optional()
@@ -117,12 +117,19 @@ export async function updateResumeProfile(
       );
     }
 
+    const changed =
+      JSON.stringify(ProfileSchema.parse(current)) !==
+      JSON.stringify(checked.data);
     return {
       library: { ...library, profile: checked.data },
-      value: checked.data,
-      persist: true,
+      value: { profile: checked.data, changed },
+      persist: changed,
     };
   }, options);
 
-  return { library: result.library, profile: result.library.profile };
+  return {
+    library: result.library,
+    profile: result.value.profile,
+    changed: result.value.changed,
+  };
 }

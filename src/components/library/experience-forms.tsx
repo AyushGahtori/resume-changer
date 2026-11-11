@@ -1,7 +1,7 @@
 "use client";
 
 import { Plus } from "lucide-react";
-import { useId, useState, type FormEvent, type ReactNode } from "react";
+import { useId, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { apiFetch } from "@/lib/cloud/api-fetch";
 
 const SAVE_ERROR = "Could not save this change. Try again.";
@@ -43,7 +43,7 @@ export type ProjectFormValues = {
 type FormProps<T> = {
   mode: "create" | "edit";
   initial?: T;
-  onSaved: () => void;
+  onSaved: (changed?: boolean) => void;
   onCancel?: () => void;
 };
 
@@ -51,13 +51,9 @@ function isEmploymentType(value: string): value is EmploymentType {
   return employmentTypes.some(([item]) => item === value);
 }
 
-function monthOrNull(value: string) {
-  return /^\d{4}-(0[1-9]|1[0-2])$/.test(value) ? value : null;
-}
-
 async function sendJson(
   url: string,
-  method: "POST" | "PATCH" | "DELETE",
+  method: "POST" | "PUT" | "PATCH" | "DELETE",
   body?: unknown,
 ) {
   const response = await apiFetch(url, {
@@ -68,6 +64,7 @@ async function sendJson(
   });
   const result = (await response.json().catch(() => null)) as {
     error?: string;
+    changed?: boolean;
   } | null;
   return { response, result };
 }
@@ -129,10 +126,11 @@ export function JobForm({
   onCancel,
 }: FormProps<JobFormValues>) {
   const errorId = useId();
+  const recordId = useRef(initial?.id ?? "");
   const [company, setCompany] = useState(initial?.company ?? "");
   const [title, setTitle] = useState(initial?.title ?? "");
-  const [employmentType, setEmploymentType] = useState<EmploymentType>(
-    initial?.employmentType ?? "full-time",
+  const [employmentType, setEmploymentType] = useState<EmploymentType | "">(
+    initial?.employmentType ?? "",
   );
   const [location, setLocation] = useState(initial?.location ?? "");
   const [startDate, setStartDate] = useState(initial?.startDate ?? "");
@@ -155,30 +153,25 @@ export function JobForm({
     }
     setSaving(true);
     setError("");
-    const path =
-      mode === "create"
-        ? "/api/library/jobs"
-        : `/api/library/jobs/${encodeURIComponent(initial?.id ?? "")}`;
+    recordId.current ||= "job-" + crypto.randomUUID();
+    const path = `/api/library/jobs/${encodeURIComponent(recordId.current)}`;
     try {
-      const { response, result } = await sendJson(
-        path,
-        mode === "create" ? "POST" : "PATCH",
-        {
+      const { response, result } = await sendJson(path, "PUT", {
+        changes: {
           company,
           title,
           employmentType,
           location,
           startDate,
-          endDate: monthOrNull(endDate),
+          endDate: currentlyEmployed ? null : endDate,
           description,
-          currentlyEmployed,
         },
-      );
+      });
       if (!response.ok) {
         setError(result?.error || SAVE_ERROR);
         return;
       }
-      onSaved();
+      onSaved(result?.changed !== false);
     } catch {
       setError(SAVE_ERROR);
     } finally {
@@ -207,7 +200,6 @@ export function JobForm({
             autoComplete="organization"
             name="company"
             onChange={(event) => setCompany(event.target.value)}
-            required
             value={company}
           />
         </Field>
@@ -216,7 +208,6 @@ export function JobForm({
             autoComplete="organization-title"
             name="title"
             onChange={(event) => setTitle(event.target.value)}
-            required
             value={title}
           />
         </Field>
@@ -224,12 +215,16 @@ export function JobForm({
           <select
             name="employmentType"
             onChange={(event) => {
-              if (isEmploymentType(event.target.value)) {
+              if (
+                event.target.value === "" ||
+                isEmploymentType(event.target.value)
+              ) {
                 setEmploymentType(event.target.value);
               }
             }}
             value={employmentType}
           >
+            <option value="">Not specified</option>
             {employmentTypes.map(([value, label]) => (
               <option key={value} value={value}>
                 {label}
@@ -249,7 +244,6 @@ export function JobForm({
           <input
             name="startDate"
             onChange={(event) => setStartDate(event.target.value)}
-            required
             type="month"
             value={startDate}
           />
@@ -259,7 +253,6 @@ export function JobForm({
             disabled={currentlyEmployed}
             name="endDate"
             onChange={(event) => setEndDate(event.target.value)}
-            required={!currentlyEmployed}
             type="month"
             value={endDate}
           />
@@ -299,6 +292,7 @@ export function ProjectForm({
   onCancel,
 }: FormProps<ProjectFormValues>) {
   const errorId = useId();
+  const recordId = useRef(initial?.id ?? "");
   const [name, setName] = useState(initial?.name ?? "");
   const [role, setRole] = useState(initial?.role ?? "");
   const [url, setUrl] = useState(initial?.url ?? "");
@@ -324,29 +318,24 @@ export function ProjectForm({
     }
     setSaving(true);
     setError("");
-    const path =
-      mode === "create"
-        ? "/api/library/projects"
-        : `/api/library/projects/${encodeURIComponent(initial?.id ?? "")}`;
+    recordId.current ||= "project-" + crypto.randomUUID();
+    const path = `/api/library/projects/${encodeURIComponent(recordId.current)}`;
     try {
-      const { response, result } = await sendJson(
-        path,
-        mode === "create" ? "POST" : "PATCH",
-        {
+      const { response, result } = await sendJson(path, "PUT", {
+        changes: {
           name,
           role,
           url,
           description,
-          startDate: monthOrNull(startDate),
-          endDate: monthOrNull(endDate),
-          ongoing,
+          startDate,
+          endDate: ongoing ? null : endDate,
         },
-      );
+      });
       if (!response.ok) {
         setError(result?.error || SAVE_ERROR);
         return;
       }
-      onSaved();
+      onSaved(result?.changed !== false);
     } catch {
       setError(SAVE_ERROR);
     } finally {
@@ -374,7 +363,6 @@ export function ProjectForm({
           <input
             name="name"
             onChange={(event) => setName(event.target.value)}
-            required
             value={name}
           />
         </Field>
@@ -439,7 +427,11 @@ export function ProjectForm({
   );
 }
 
-export function AddJobButton({ onSaved }: { onSaved: () => void }) {
+export function AddJobButton({
+  onSaved,
+}: {
+  onSaved: (changed?: boolean) => void;
+}) {
   const [open, setOpen] = useState(false);
   if (!open) {
     return (
@@ -457,15 +449,19 @@ export function AddJobButton({ onSaved }: { onSaved: () => void }) {
     <JobForm
       mode="create"
       onCancel={() => setOpen(false)}
-      onSaved={() => {
+      onSaved={(changed) => {
         setOpen(false);
-        onSaved();
+        onSaved(changed);
       }}
     />
   );
 }
 
-export function AddProjectButton({ onSaved }: { onSaved: () => void }) {
+export function AddProjectButton({
+  onSaved,
+}: {
+  onSaved: (changed?: boolean) => void;
+}) {
   const [open, setOpen] = useState(false);
   if (!open) {
     return (
@@ -483,9 +479,9 @@ export function AddProjectButton({ onSaved }: { onSaved: () => void }) {
     <ProjectForm
       mode="create"
       onCancel={() => setOpen(false)}
-      onSaved={() => {
+      onSaved={(changed) => {
         setOpen(false);
-        onSaved();
+        onSaved(changed);
       }}
     />
   );
