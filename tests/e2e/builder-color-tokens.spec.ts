@@ -246,7 +246,9 @@ test("maps the builder palette onto the shared app-wide tokens", async ({
   // keyboard ring; a plain focus() call does not match :focus-visible.
   await primary.evaluate((element) => {
     if (!(element instanceof HTMLElement)) return;
-    element.focus({ focusVisible: true });
+    const options: FocusOptions = {};
+    Object.assign(options, { focusVisible: true });
+    element.focus(options);
   });
   const outline = await primary.evaluate((element) => {
     const style = getComputedStyle(element);
@@ -308,7 +310,9 @@ test("keeps the builder palette in the dark theme on the same tokens", async ({
 
   await primary.evaluate((element) => {
     if (!(element instanceof HTMLElement)) return;
-    element.focus({ focusVisible: true });
+    const options: FocusOptions = {};
+    Object.assign(options, { focusVisible: true });
+    element.focus(options);
   });
   const outline = await primary.evaluate((element) => {
     const style = getComputedStyle(element);
