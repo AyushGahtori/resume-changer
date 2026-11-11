@@ -65,6 +65,7 @@ export async function runBrowserUser({
   const recordIds = { jobs: [], projects: [], skills: [] };
 
   const pageStarted = new Map();
+  const apiStarted = new Map();
   page.on("request", (request) => {
     const url = new URL(request.url());
     if (!url.pathname.startsWith("/api/"))
@@ -73,19 +74,42 @@ export async function runBrowserUser({
   page.on("response", (response) => {
     const request = response.request();
     const url = new URL(request.url());
-    if (url.pathname.startsWith("/api/")) return;
-    if (url.hostname !== "127.0.0.1" && url.hostname !== "localhost") return;
-    const started = pageStarted.get(request);
-    pageStarted.delete(request);
+    const api = url.pathname.startsWith("/api/");
+    if (!api && url.hostname !== "127.0.0.1" && url.hostname !== "localhost")
+      return;
+    const started = api
+      ? apiStarted.get(request)?.started
+      : pageStarted.get(request);
+    const limiterWaitMs = api
+      ? (apiStarted.get(request)?.limiterWaitMs ?? 0)
+      : 0;
+    if (api) apiStarted.delete(request);
+    else pageStarted.delete(request);
     void onEvent?.({
       type: "response",
       user: assignment.userNumber,
-      channel: "page",
+      channel: api ? "api" : "page",
       op: `${request.method()} ${url.pathname}`,
       status: response.status(),
-      limiterWaitMs: 0,
+      limiterWaitMs,
       latencyMs: started == null ? 0 : performance.now() - started,
       error: response.status() >= 500,
+      at: Date.now(),
+    });
+  });
+  page.on("requestfailed", (request) => {
+    const url = new URL(request.url());
+    if (!url.pathname.startsWith("/api/")) return;
+    const meta = apiStarted.get(request);
+    apiStarted.delete(request);
+    void onEvent?.({
+      type: "transport",
+      user: assignment.userNumber,
+      channel: "api",
+      op: `${request.method()} ${url.pathname}`,
+      limiterWaitMs: meta?.limiterWaitMs ?? 0,
+      latencyMs: meta?.started == null ? 0 : performance.now() - meta.started,
+      error: true,
       at: Date.now(),
     });
   });
@@ -109,40 +133,11 @@ export async function runBrowserUser({
       await route.abort().catch(() => undefined);
       return;
     }
-    if (!url.pathname.startsWith("/api/")) {
-      await route.continue().catch(() => undefined);
-      return;
+    if (url.pathname.startsWith("/api/")) {
+      const limiterWaitMs = await limiter.acquire();
+      apiStarted.set(request, { started: performance.now(), limiterWaitMs });
     }
-    const limiterWaitMs = await limiter.acquire();
-    const started = performance.now();
-    try {
-      const response = await route.fetch();
-      const latencyMs = performance.now() - started;
-      await onEvent?.({
-        type: "response",
-        user: assignment.userNumber,
-        channel: "api",
-        op: `${request.method()} ${url.pathname}`,
-        status: response.status(),
-        limiterWaitMs,
-        latencyMs,
-        error: response.status() >= 500,
-        at: Date.now(),
-      });
-      await route.fulfill({ response });
-    } catch {
-      await onEvent?.({
-        type: "transport",
-        user: assignment.userNumber,
-        channel: "api",
-        op: `${request.method()} ${url.pathname}`,
-        limiterWaitMs,
-        latencyMs: performance.now() - started,
-        error: true,
-        at: Date.now(),
-      });
-      await route.abort().catch(() => undefined);
-    }
+    await route.continue().catch(() => undefined);
   });
 
   try {
