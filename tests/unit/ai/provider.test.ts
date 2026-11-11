@@ -119,6 +119,17 @@ describe("AI provider contracts and selection", () => {
     );
   });
 
+  it("refuses a live AI provider while user simulation mode is enabled", () => {
+    vi.stubEnv("RESUME_SIMULATION_MODE", "1");
+    expect(() =>
+      createAiProvider({
+        AI_PROVIDER: "gemini",
+        GEMINI_API_KEY: "test-key",
+      }),
+    ).toThrow(/user simulation/);
+    vi.unstubAllEnvs();
+  });
+
   it("rejects unsupported provider configuration", () => {
     expect(() => createAiProvider({ AI_PROVIDER: "other" })).toThrow(
       expect.objectContaining({ code: "REQUEST_FAILED" }),

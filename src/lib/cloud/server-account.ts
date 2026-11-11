@@ -8,11 +8,8 @@ import { connectFirestoreEmulator, getFirestore } from "firebase/firestore";
 import { createRemoteJWKSet, jwtVerify } from "jose";
 import { z } from "zod";
 import { getFirebaseClientConfig, getFirestoreDatabaseId } from "./config";
-import {
-  AccountAccessError,
-  assertSafeEmulator,
-  requireSafeUid,
-} from "./security";
+import { acceptIdentityClaims } from "@/lib/simulation/runtime";
+import { AccountAccessError, assertSafeEmulator } from "./security";
 
 export type CloudAccount = {
   uid: string;
@@ -41,6 +38,9 @@ const AuthUserSchema = z.object({
   displayName: z.string().optional(),
   validSince: z.string().regex(/^\d+$/).optional(),
   disabled: z.boolean().optional(),
+});
+const SimulationAuthUserSchema = AuthUserSchema.extend({
+  emailVerified: z.boolean(),
 });
 
 export function sessionCookieName(): string {
@@ -73,30 +73,7 @@ export async function verifyAccountToken(
       claims = verified.payload;
     }
     const now = Math.floor(Date.now() / 1000);
-    const provider =
-      claims.firebase &&
-      typeof claims.firebase === "object" &&
-      "sign_in_provider" in claims.firebase
-        ? claims.firebase.sign_in_provider
-        : undefined;
-    if (
-      claims.aud !== config.projectId ||
-      claims.iss !== `https://securetoken.google.com/${config.projectId}` ||
-      typeof claims.sub !== "string" ||
-      typeof claims.exp !== "number" ||
-      claims.exp <= now ||
-      typeof claims.auth_time !== "number" ||
-      claims.auth_time < 0 ||
-      claims.auth_time > now + 15 ||
-      claims.email_verified !== true ||
-      provider !== "google.com"
-    )
-      throw authFailure();
-    try {
-      requireSafeUid(claims.sub);
-    } catch {
-      throw authFailure();
-    }
+    const identity = acceptIdentityClaims(claims, config.projectId ?? "", now);
     const authOrigin = emulator
       ? `http://${process.env.FIREBASE_AUTH_EMULATOR_HOST}/identitytoolkit.googleapis.com`
       : "https://identitytoolkit.googleapis.com";
@@ -111,17 +88,21 @@ export async function verifyAccountToken(
       },
     );
     if (!response.ok) throw authFailure();
+    const userSchema =
+      identity === "simulation" ? SimulationAuthUserSchema : AuthUserSchema;
     const result = z
-      .object({ users: z.array(AuthUserSchema).length(1) })
+      .object({ users: z.array(userSchema).length(1) })
       .parse(await response.json());
     const user = result.users[0];
     if (
       user.disabled ||
       user.localId !== claims.sub ||
       user.email.toLowerCase() !== String(claims.email).toLowerCase() ||
-      Number(user.validSince ?? "0") > claims.auth_time
+      (typeof claims.auth_time === "number" &&
+        Number(user.validSince ?? "0") > claims.auth_time)
     )
       throw authFailure();
+    if (typeof claims.exp !== "number") throw authFailure();
     return {
       uid: user.localId,
       email: user.email,

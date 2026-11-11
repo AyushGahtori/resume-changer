@@ -46,6 +46,8 @@ import { GET as loadTestSafety } from "@/lib/load-test/safety-handler";
 import { POST as editResume } from "@/app/api/resume/edit/handler";
 import { GET as measureSkills } from "@/app/api/resume/skills/handler";
 import { loadTestForbidden } from "@/lib/load-test/runtime";
+import { GET as simulationConfig } from "@/app/api/simulation/config/handler";
+import { simulationForbidden } from "@/lib/simulation/runtime";
 import { resolveGithubApiRoute } from "./github-routes";
 
 type ApiMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
@@ -98,6 +100,7 @@ const staticRoutes: Record<string, ApiMethods> = {
   "library/points": { POST: direct(createPoint) },
   "library/profile": { PATCH: direct(updateProfile) },
   "load-test/safety": { GET: direct(loadTestSafety) },
+  "simulation/config": { GET: direct(simulationConfig) },
   "library/skills": { POST: direct(createSkill), PUT: direct(mergeSkillBatch) },
   "resume/edit": { POST: direct(editResume) },
   "resume/skills": { GET: direct(measureSkills) },
@@ -228,6 +231,15 @@ export async function dispatchApiRequest(request: Request): Promise<Response> {
       {
         error: "This operation is disabled for the local load test.",
         code: "load-test-forbidden",
+      },
+      { status: 403, headers: { "Cache-Control": "no-store" } },
+    );
+  }
+  if (simulationForbidden(path, request.method.toUpperCase())) {
+    return Response.json(
+      {
+        error: "This operation is disabled for the user simulation.",
+        code: "simulation-forbidden",
       },
       { status: 403, headers: { "Cache-Control": "no-store" } },
     );
