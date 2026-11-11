@@ -51,7 +51,9 @@ jobs:
 
   account-security:
     name: Account security
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.0-noble
     timeout-minutes: 15
     env:
       NEXT_TELEMETRY_DISABLED: "1"
@@ -66,8 +68,6 @@ jobs:
           distribution: temurin
           java-version: "21"
       - run: npm ci
-      - name: Install Chromium for account browser tests
-        run: npx playwright install --with-deps chromium
       - name: Attack account rules and verify authenticated API flows
         run: npm run test:security
 
@@ -89,7 +89,9 @@ jobs:
 
   browser-regressions:
     name: Browser regressions (${{ matrix.shard }}/4)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.0-noble
     timeout-minutes: 15
     strategy:
       fail-fast: false
@@ -104,8 +106,6 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - name: Install Chromium
-        run: npx playwright install --with-deps chromium
       - name: Build and verify browser regression shard
         run: npm run test:e2e -- --shard=${{ matrix.shard }}/4
       - name: Upload fictional browser failure evidence
@@ -118,7 +118,9 @@ jobs:
 
   github-import-journey:
     name: GitHub import assembled journey
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.0-noble
     timeout-minutes: 15
     env:
       NEXT_TELEMETRY_DISABLED: "1"
@@ -129,7 +131,6 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
       - name: Verify browser, API, worker, exact approval and responsive layouts with fictional data
         run: npm run test:github-journey
       - name: Upload fictional journey evidence

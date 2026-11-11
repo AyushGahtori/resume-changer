@@ -43,6 +43,28 @@ import { PATCH as updateProfile } from "@/app/api/library/profile/handler";
 import { PUT as upsertJob } from "@/app/api/library/jobs/[id]/handler";
 import { PUT as upsertProject } from "@/app/api/library/projects/[id]/handler";
 import { GET as loadTestSafety } from "@/lib/load-test/safety-handler";
+import { POST as createSkillsBulk } from "@/app/api/library/skills/bulk-handler";
+import { POST as createEducation } from "@/app/api/library/education/handler";
+import {
+  DELETE as deleteEducation,
+  PATCH as updateEducation,
+} from "@/app/api/library/education/item-handler";
+import { POST as createCredential } from "@/app/api/library/credentials/handler";
+import {
+  DELETE as deleteCredential,
+  PATCH as updateCredential,
+} from "@/app/api/library/credentials/item-handler";
+import { POST as createJob } from "@/app/api/library/jobs/handler";
+import {
+  DELETE as deleteJob,
+  PATCH as updateJob,
+} from "@/app/api/library/jobs/item-handler";
+import { POST as createProject } from "@/app/api/library/projects/handler";
+import {
+  DELETE as deleteProject,
+  PATCH as updateProject,
+} from "@/app/api/library/projects/item-handler";
+import { POST as saveNotes } from "@/app/api/library/notes/handler";
 import { POST as editResume } from "@/app/api/resume/edit/handler";
 import { GET as measureSkills } from "@/app/api/resume/skills/handler";
 import { loadTestForbidden } from "@/lib/load-test/runtime";
@@ -96,9 +118,15 @@ const staticRoutes: Record<string, ApiMethods> = {
   },
   "library/parents": { POST: direct(createParent) },
   "library/points": { POST: direct(createPoint) },
-  "library/profile": { PATCH: direct(updateProfile) },
-  "load-test/safety": { GET: direct(loadTestSafety) },
   "library/skills": { POST: direct(createSkill), PUT: direct(mergeSkillBatch) },
+  "load-test/safety": { GET: direct(loadTestSafety) },
+  "library/skills/bulk": { POST: direct(createSkillsBulk) },
+  "library/profile": { PATCH: direct(updateProfile) },
+  "library/education": { POST: direct(createEducation) },
+  "library/credentials": { POST: direct(createCredential) },
+  "library/jobs": { POST: direct(createJob) },
+  "library/projects": { POST: direct(createProject) },
+  "library/notes": { POST: direct(saveNotes) },
   "resume/edit": { POST: direct(editResume) },
   "resume/skills": { GET: direct(measureSkills) },
 };
@@ -179,18 +207,31 @@ export function resolveApiRequest(pathname: string): ApiRouteMatch | null {
       context: { params: Promise.resolve({ id: routePath[2] }) },
     };
 
-  if (
-    routePath.length === 3 &&
-    routePath[0] === "library" &&
-    (routePath[1] === "jobs" || routePath[1] === "projects") &&
-    routePath[2]
-  )
-    return {
-      methods: {
-        PUT: withId(routePath[1] === "jobs" ? upsertJob : upsertProject),
+  if (routePath.length === 3 && routePath[0] === "library" && routePath[2]) {
+    const context = { params: Promise.resolve({ id: routePath[2] }) };
+    const recordRoutes: Record<string, ApiMethods> = {
+      jobs: {
+        PUT: withId(upsertJob),
+        PATCH: withId(updateJob),
+        DELETE: withId(deleteJob),
       },
-      context: { params: Promise.resolve({ id: routePath[2] }) },
+      projects: {
+        PUT: withId(upsertProject),
+        PATCH: withId(updateProject),
+        DELETE: withId(deleteProject),
+      },
+      education: {
+        PATCH: withId(updateEducation),
+        DELETE: withId(deleteEducation),
+      },
+      credentials: {
+        PATCH: withId(updateCredential),
+        DELETE: withId(deleteCredential),
+      },
     };
+    const methods = recordRoutes[routePath[1]];
+    if (methods) return { methods, context };
+  }
 
   return null;
 }

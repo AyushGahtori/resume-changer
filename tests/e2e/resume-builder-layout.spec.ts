@@ -137,11 +137,53 @@ for (const theme of themes) {
       const primaryAction = page.getByRole("button", {
         name: "Generate LaTeX",
       });
+      if (viewport.width <= 390) {
+        // The footer remains reachable before scrolling and at the end of
+        // the workspace, in either theme and at the narrowest supported size.
+        for (const scrollToEnd of [false, true]) {
+          if (scrollToEnd) {
+            await page.evaluate(() =>
+              window.scrollTo(0, document.body.scrollHeight),
+            );
+          }
+          const box = await primaryAction.boundingBox();
+          expect(box).not.toBeNull();
+          expect(box!.y).toBeGreaterThanOrEqual(0);
+          expect(box!.y + box!.height).toBeLessThanOrEqual(viewport.height);
+        }
+      }
       await primaryAction.scrollIntoViewIfNeeded();
       await expect(primaryAction).toBeVisible();
     });
   }
 }
+
+test("submits the mobile generation form from the sticky action bar", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 740 });
+  await page.goto("/");
+  await page.getByLabel("Company").fill("Example Systems");
+  await page.getByLabel("Role title").fill("Platform Engineer");
+  await page
+    .getByRole("textbox", { name: "Job description", exact: true })
+    .fill("Build reliable platform services and improve deployment workflows.");
+  await expect(page.getByRole("status")).toContainText("Saved on this device");
+  await saveJobAnalysis(page, {
+    company: "Example Systems",
+    roleTitle: "Platform Engineer",
+    jobDescription:
+      "Build reliable platform services and improve deployment workflows.",
+  });
+  await openBuilder(page);
+  await page
+    .getByLabel("Select achievement achievement-service-capacity-design")
+    .check();
+  const action = page.getByRole("button", { name: "Generate LaTeX" });
+  await expect(action).toBeEnabled();
+  await action.click();
+  await expect(page.getByLabel("Generated LaTeX")).toBeVisible();
+});
 
 test("resizes the preview pane from the resizer", async ({ page }) => {
   await page.setViewportSize({ width: 1600, height: 1000 });

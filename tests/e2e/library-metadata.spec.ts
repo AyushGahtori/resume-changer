@@ -18,16 +18,15 @@ test("optional library metadata saves partial records and rejects a bad email", 
   await page.getByRole("button", { name: "Edit profile" }).click();
   await expect(fields.first()).not.toHaveAttribute("required", "");
   await expect(fields.first()).not.toHaveAttribute("aria-required", "true");
-  await page.getByLabel("Resume contact email").fill("not-an-email");
+  await page.getByLabel("Professional email").fill("not-an-email");
   await page.getByRole("button", { name: "Save profile" }).click();
   await expect(
-    page.locator(".library-metadata-editor").getByRole("alert"),
+    page.getByRole("form", { name: "Profile and contact" }).getByRole("alert"),
   ).toBeVisible();
-  await expect(page.getByLabel("Resume contact email")).toHaveValue(
+  await expect(page.getByLabel("Professional email")).toHaveValue(
     "not-an-email",
   );
-  page.once("dialog", (dialog) => dialog.accept());
-  await page.getByRole("button", { name: "Cancel" }).click();
+  await page.getByRole("button", { name: "Close profile" }).click();
 
   await page.getByRole("button", { name: "Add job" }).click();
   await page.getByRole("button", { name: "Save job" }).click();
@@ -39,7 +38,7 @@ test("optional library metadata saves partial records and rejects a bad email", 
   );
 
   await page.getByRole("button", { name: "Add job" }).click();
-  await page.getByLabel("Company").fill("Fictional Partial Company");
+  await page.getByLabel("Employer").fill("Fictional Partial Company");
   const saved = page.waitForResponse(
     (response) =>
       /\/api\/library\/jobs\/[^/]+$/.test(new URL(response.url()).pathname) &&

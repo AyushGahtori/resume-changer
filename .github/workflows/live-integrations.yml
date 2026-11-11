@@ -19,8 +19,9 @@ jobs:
     runs-on: ubuntu-latest
     # A free-tier request can take up to two minutes, and a run walks the
     # provider's model chain when one model has no daily quota left. The
-    # budget covers a full chain walk for the three live tests.
-    timeout-minutes: 30
+    # budget covers two full chain walks per test if an upstream outage
+    # requires the one bounded live-check retry.
+    timeout-minutes: 65
     env:
       # The free tier caps requests per model per day, so the live check
       # leaves the model unset and lets the provider walk its model chain.
@@ -56,7 +57,7 @@ jobs:
 
   pdf-toolchain:
     name: Real Tectonic and PDF toolchain
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -68,8 +69,11 @@ jobs:
 
       - name: Install pdfinfo
         run: |
-          sudo apt-get update
-          sudo apt-get install --yes poppler-utils
+          set -euo pipefail
+          if ! command -v pdfinfo >/dev/null 2>&1; then
+            sudo apt-get -o Acquire::Retries=5 update
+            sudo apt-get -o Acquire::Retries=5 install --yes poppler-utils
+          fi
           pdfinfo -v
 
       - name: Install pinned Tectonic release
