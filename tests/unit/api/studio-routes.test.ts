@@ -105,6 +105,7 @@ describe("atomic resume editing API", () => {
     const badJson = await apply(
       new Request("http://localhost/api/resume/edit", {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: "{",
       }),
     );
