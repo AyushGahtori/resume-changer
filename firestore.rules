@@ -10,7 +10,10 @@ service cloud.firestore {
     //   immutable createdAt and updatedAt timestamps. PDF bytes live in private Vercel Blob.
     // generations/{id}/content/latex: uid, revision, latex <=150000 chars,
     //   sha256, immutable createdAt and updatedAt timestamps.
+    // jobAnalyses/{id}: uid, revision (1..1e9), payload JSON string <=120000 chars,
+    //   immutable createdAt and updatedAt timestamps. Company is a label, not the document id.
     // usage/{action}: uid, action, count, windowStart and updatedAt timestamps.
+    //   usage/jobs may also store storedJobs, the saved-analysis total (0..40).
     function owns(uid) {
       return request.auth != null && request.auth.uid == uid
         && request.auth.token.email_verified == true
@@ -63,6 +66,15 @@ service cloud.firestore {
         && d.sha256 is string && d.sha256.matches('^[a-f0-9]{64}$')
         && d.createdAt is timestamp && d.updatedAt == request.time;
     }
+    function validJobAnalysis(uid) {
+      let d = request.resource.data;
+      return d.keys().hasAll(['uid', 'revision', 'payload', 'createdAt', 'updatedAt'])
+        && d.keys().hasOnly(['uid', 'revision', 'payload', 'createdAt', 'updatedAt'])
+        && d.uid is string && d.uid == uid && d.uid.size() <= 128
+        && d.revision is int && d.revision >= 1 && d.revision <= 1000000000
+        && d.payload is string && d.payload.size() > 0 && d.payload.size() <= 120000
+        && d.createdAt is timestamp && d.updatedAt == request.time;
+    }
     function consumed(uid, action, targetId) {
       let path = /databases/$(database)/documents/accounts/$(uid)/usage/$(action);
       let next = getAfter(path).data;
@@ -78,17 +90,18 @@ service cloud.firestore {
         && d.uid is string && d.uid == uid && d.createdAt == request.time;
     }
     function usageMaximum(action) {
-      return action == 'ai' ? 20 : action == 'compile' ? 60 : action == 'library' ? 120 : action == 'history' ? 60 : action == 'files' ? 30 : 0;
+      return action == 'ai' ? 20 : action == 'compile' ? 60 : action == 'library' ? 120 : action == 'history' ? 60 : action == 'files' ? 30 : action == 'jobs' ? 60 : 0;
     }
     function validUsage(uid, action) {
       let d = request.resource.data;
       return d.keys().hasAll(['uid', 'action', 'targetId', 'count', 'windowStart', 'updatedAt'])
-        && d.keys().hasOnly(['uid', 'action', 'targetId', 'count', 'windowStart', 'updatedAt'])
+        && d.keys().hasOnly(['uid', 'action', 'targetId', 'count', 'windowStart', 'updatedAt', 'storedJobs'])
         && d.uid is string && d.uid == uid && d.uid.size() <= 128
         && d.targetId is string && d.targetId.size() > 0 && d.targetId.size() <= 200 && d.targetId.matches('^[a-z0-9]+(-[a-z0-9]+)*$')
         && d.action is string && d.action == action && d.action.size() <= 10
         && usageMaximum(action) > 0 && d.count is int && d.count >= 1 && d.count <= usageMaximum(action)
-        && d.windowStart is timestamp && d.updatedAt == request.time;
+        && d.windowStart is timestamp && d.updatedAt == request.time
+        && (!('storedJobs' in d) || (action == 'jobs' && d.storedJobs is int && d.storedJobs >= 0 && d.storedJobs <= 40));
     }
 
     match /accounts/{uid} {
@@ -154,6 +167,17 @@ service cloud.firestore {
           && !existsAfter(/databases/$(database)/documents/accounts/$(uid)/generations/$(id));
         allow delete: if owns(uid) && parentExists(uid) && consumed(uid, 'history', id)
           && deleted(uid, id) && !exists(/databases/$(database)/documents/accounts/$(uid)/generations/$(id));
+      }
+      match /jobAnalyses/{id} {
+        allow get: if owns(uid) && parentExists(uid);
+        allow list: if owns(uid) && parentExists(uid) && request.query.limit > 0 && request.query.limit <= 50;
+        allow create: if owns(uid) && parentAfterWrite(uid) && validJobAnalysis(uid) && consumed(uid, 'jobs', id)
+          && id.matches('^[a-z0-9]+(-[a-z0-9]+)*$') && id.size() <= 200
+          && request.resource.data.revision == 1 && request.resource.data.createdAt == request.time;
+        allow update: if owns(uid) && parentAfterWrite(uid) && validJobAnalysis(uid) && consumed(uid, 'jobs', id)
+          && request.resource.data.revision == resource.data.revision + 1
+          && request.resource.data.createdAt == resource.data.createdAt;
+        allow delete: if owns(uid) && parentExists(uid) && consumed(uid, 'jobs', id);
       }
       match /usage/{action} {
         allow get: if owns(uid) && parentExists(uid);

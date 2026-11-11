@@ -16,6 +16,7 @@ import type {
 import {
   LibraryWriteError,
   createAchievementPoint,
+  createLibraryParent,
   updateAchievementPoint,
 } from "../../../src/lib/data/writers";
 
@@ -205,6 +206,113 @@ describe("local achievement writer", () => {
       ),
     ).rejects.toMatchObject({ code: "io-error" });
 
+    expect(await readFile(file, "utf8")).toBe(original);
+  });
+});
+
+const emptyLibrary = {
+  schemaVersion: 1,
+  profile: {
+    id: "profile-empty-parent",
+    fullName: "Empty Parent Person",
+    links: [],
+    education: [],
+  },
+  jobs: [],
+  projects: [],
+  skills: [],
+  credentials: [],
+  preferences: {
+    sectionOrder: [
+      "experience",
+      "projects",
+      "education",
+      "skills",
+      "credentials",
+    ],
+    maxPages: 1,
+  },
+};
+
+describe("library parent writer", () => {
+  it("creates a project from a name and lets an achievement belong to it", async () => {
+    const root = await mkdtemp(join(tmpdir(), "resume-changer-parent-test-"));
+    temporaryRoots.push(root);
+    await mkdir(join(root, "data"), { recursive: true });
+    const file = join(root, "data", "resume-library.json");
+    await writeFile(file, `${JSON.stringify(emptyLibrary)}\n`, "utf8");
+
+    const created = await createLibraryParent(
+      { kind: "project", name: "Field Notes" },
+      { rootDir: root },
+    );
+
+    expect(created.parent).toMatchObject({
+      id: "project-field-notes",
+      kind: "project",
+      label: "Field Notes",
+    });
+    expect(created.library.projects).toEqual([
+      expect.objectContaining({
+        id: "project-field-notes",
+        name: "Field Notes",
+        points: [],
+      }),
+    ]);
+
+    const saved = await createAchievementPoint(
+      {
+        parentType: "project",
+        parentId: created.parent.id,
+        point: {
+          ...newPoint("achievement-first-empty-library"),
+          skillIds: [],
+        },
+      },
+      { rootDir: root },
+    );
+
+    expect(saved.library.projects[0].points.map((point) => point.id)).toEqual([
+      "achievement-first-empty-library",
+    ]);
+    expect((await readLibrary(file)).projects[0].points).toHaveLength(1);
+  }, 20_000);
+
+  it("creates a job stub from one name without editing the other jobs", async () => {
+    const { root, file, original } = await createRoot();
+    const before = JSON.parse(original) as ResumeLibrary;
+
+    const created = await createLibraryParent(
+      { kind: "job", name: "Synthetic Role" },
+      { rootDir: root },
+    );
+
+    expect(created.parent.kind).toBe("job");
+    expect(created.parent.id).toBe("job-synthetic-role");
+    expect(created.parent.label).toBe("Synthetic Role · Synthetic Role");
+    const job = created.library.jobs.find(
+      (item) => item.id === "job-synthetic-role",
+    );
+    expect(job).toMatchObject({
+      company: "Synthetic Role",
+      title: "Synthetic Role",
+      employmentType: "other",
+      endDate: null,
+      points: [],
+    });
+    expect(job?.startDate).toMatch(/^\d{4}-(0[1-9]|1[0-2])$/);
+    expect(created.library.jobs).toHaveLength(before.jobs.length + 1);
+    expect((await readLibrary(file)).jobs.at(-1)?.id).toBe(
+      "job-synthetic-role",
+    );
+  });
+
+  it("rejects a blank parent name and leaves the library unchanged", async () => {
+    const { root, file, original } = await createRoot();
+
+    await expect(
+      createLibraryParent({ kind: "project", name: "   " }, { rootDir: root }),
+    ).rejects.toMatchObject({ code: "invalid-input" });
     expect(await readFile(file, "utf8")).toBe(original);
   });
 });

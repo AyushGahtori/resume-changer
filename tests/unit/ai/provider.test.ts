@@ -181,7 +181,7 @@ describe("Gemini adapter", () => {
         model: string;
         outputSchema: Record<string, unknown>;
       }) => {
-        expect(value.prompt).toContain("Prompt version: v2-evidence-quality");
+        expect(value.prompt).toContain("Prompt version: v3-resume-advice");
         expect(value.prompt).toContain("Task instructions:");
         expect(value.prompt).toContain('"roleTitle":"Platform Engineer"');
         return JSON.stringify(analysis);
@@ -419,13 +419,23 @@ describe("Gemini adapter", () => {
     // otherwise valid and grounded. The omitted phrase is disclosed in the
     // response quality notes instead, so the omission is visible to the
     // person reviewing the wording.
-    const result = await provider.draftResume(input);
-    expect(result).toEqual(initial);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const result = await provider.draftResume(input);
+      const logged = warn.mock.calls.find(
+        (call) => call[0] === "Gemini draft correction could not be completed.",
+      )?.[1];
+      expect(logged).toMatchObject({ missingCount: 1 });
+      expect(JSON.stringify(logged)).not.toContain("Infrastructure as Code");
+      expect(result).toEqual(initial);
 
-    const response = createTailoringResponse({ input, result });
-    expect(response.proposals[0].qualityNotes?.join(" ")).toContain(
-      "Infrastructure as Code",
-    );
+      const response = createTailoringResponse({ input, result });
+      expect(response.proposals[0].qualityNotes?.join(" ")).toContain(
+        "Infrastructure as Code",
+      );
+    } finally {
+      warn.mockRestore();
+    }
   });
 
   it("classifies quota, authentication, timeout, and malformed response failures", async () => {

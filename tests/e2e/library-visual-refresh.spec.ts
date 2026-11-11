@@ -4,48 +4,22 @@ test.beforeEach(async ({ page }) => {
   await page.goto("/library?source=demo");
 });
 
-test("keeps the floating accents decorative and disables them for reduced motion", async ({
+test("keeps decorative bubbles out of the header and disables menu motion", async ({
   page,
 }) => {
-  const atmosphere = page.locator(".library-page-atmosphere");
-  await expect(atmosphere).toHaveAttribute("aria-hidden", "true");
-  await expect(atmosphere.locator(".library-bubble")).toHaveCount(4);
-  const bubbleSizes = await atmosphere
-    .locator(".library-bubble")
-    .evaluateAll((bubbles) =>
-      bubbles.map((bubble) =>
-        Number.parseFloat(getComputedStyle(bubble).width),
-      ),
-    );
-  expect(bubbleSizes[0]).toBeGreaterThanOrEqual(64);
-  expect(bubbleSizes[2]).toBeGreaterThanOrEqual(74);
-  await expect
-    .poll(() =>
-      atmosphere
-        .locator(".library-bubble")
-        .first()
-        .evaluate((bubble) => getComputedStyle(bubble).animationName),
-    )
-    .toBe("library-bubble-float");
+  await expect(page.locator(".library-page-atmosphere")).toHaveCount(0);
+  await expect(page.locator(".library-bubble")).toHaveCount(0);
+  await expect(page.getByText("Demo data is read-only.")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Detailed entry" }),
+  ).toHaveCount(0);
 
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await expect
-    .poll(() =>
-      atmosphere
-        .locator(".library-bubble")
-        .first()
-        .evaluate((bubble) => getComputedStyle(bubble).animationName),
-    )
-    .toBe("none");
-
   await page.getByRole("combobox", { name: "Tag" }).click();
+  const menu = page.getByRole("listbox", { name: "Options for Tag" });
+  await expect(menu).toBeVisible();
   await expect
-    .poll(() =>
-      page
-        .locator(".library-select-menu")
-        .first()
-        .evaluate((menu) => getComputedStyle(menu).animationName),
-    )
+    .poll(() => menu.evaluate((node) => getComputedStyle(node).animationName))
     .toBe("none");
 });
 

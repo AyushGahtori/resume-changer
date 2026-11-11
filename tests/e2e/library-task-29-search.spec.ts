@@ -55,7 +55,7 @@ test("finds the points and the skill that share a linked skill", async ({
   await expect(
     page
       .getByRole("region", { name: "Skills and credentials" })
-      .locator(".skill-list")
+      .locator(".skill-chip-list")
       .getByText("GitHub Actions"),
   ).toBeVisible();
 });

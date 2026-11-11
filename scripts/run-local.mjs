@@ -188,17 +188,40 @@ startupTimer.unref();
 process.once("SIGINT", () => beginShutdown(0, "SIGINT"));
 process.once("SIGTERM", () => beginShutdown(0, "SIGTERM"));
 
+function localNextHostnameArguments(nextArguments, environment) {
+  const specified = nextArguments.some(
+    (argument, index) =>
+      argument === "--hostname" ||
+      argument.startsWith("--hostname=") ||
+      argument === "-H" ||
+      nextArguments[index - 1] === "--hostname" ||
+      nextArguments[index - 1] === "-H",
+  );
+  if (specified) return [];
+  const configured = environment.RESUME_DEV_HOSTNAME?.trim();
+  return ["--hostname", configured || "127.0.0.1"];
+}
+
 try {
   await startupStatus;
   clearTimeout(startupTimer);
   if (!stopping) {
-    app = spawn(process.execPath, [nextCli, mode, ...nextArguments], {
-      cwd: projectRoot,
-      env: process.env,
-      stdio: "inherit",
-      detached: process.platform !== "win32",
-      windowsHide: true,
-    });
+    app = spawn(
+      process.execPath,
+      [
+        nextCli,
+        mode,
+        ...localNextHostnameArguments(nextArguments, process.env),
+        ...nextArguments,
+      ],
+      {
+        cwd: projectRoot,
+        env: process.env,
+        stdio: "inherit",
+        detached: process.platform !== "win32",
+        windowsHide: true,
+      },
+    );
     children.add(app);
     attachChild(app, "app");
   }

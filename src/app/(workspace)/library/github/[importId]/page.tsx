@@ -26,9 +26,10 @@ export default async function GithubImportPage({
     }));
     return (
       <ImportWorkspace
+        key={importId}
         source={source}
         importId={importId}
-        routeState="analysis"
+        routeState="setup"
         initialState={null}
         installationUrl={githubInstallationUrl(process.env.GITHUB_APP_SLUG)}
         projects={projects}

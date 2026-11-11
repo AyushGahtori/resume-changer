@@ -28,9 +28,14 @@
   line-height: var(--type-helper-line-height);
 }
 
-.reviewStatus {
+.reviewStatus,
+.helper {
   margin-top: var(--space-4) !important;
   color: var(--muted);
+}
+
+.helper {
+  max-width: 46ch;
 }
 
 .destination {
@@ -42,11 +47,21 @@
   line-height: var(--type-label-line-height);
 }
 
-.destination select {
-  width: auto;
+.destinationSelect {
   min-width: 0;
-  max-width: 100%;
-  padding: var(--space-8);
+  flex: 1;
+}
+
+.destinationSelect :global(.library-select-trigger) {
+  width: 100%;
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-soft);
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
 }
 
 .pdfNote {
@@ -81,24 +96,14 @@
   cursor: pointer;
   white-space: nowrap;
 }
-.destination select {
-  min-height: 36px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: var(--surface-soft);
-  color: var(--ink);
-  font: inherit;
-  font-size: 12px;
-}
-
 .actions button:focus-visible,
-.destination select:focus-visible {
+.destinationSelect :global(.library-select-trigger):focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
 
 .actions button:disabled,
-.destination select:disabled {
+.destinationSelect :global(.library-select-trigger):disabled {
   cursor: not-allowed;
 }
 
@@ -134,7 +139,7 @@
     justify-content: space-between;
   }
 
-  .destination select {
+  .destinationSelect {
     flex: 1;
   }
 

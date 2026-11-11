@@ -196,6 +196,11 @@ const STOP = new Set(
     " ",
   ),
 );
+const GENERIC_REQUIREMENT_WORDS = new Set(
+  "bachelor master masters doctor doctorate degree proven demonstrated excellent solid working internal tooling tool dashboard dashboards operations senior junior plus including preferred required building year modern hands".split(
+    " ",
+  ),
+);
 
 function tokenSet(text: string) {
   return new Set(
@@ -204,6 +209,34 @@ function tokenSet(text: string) {
       .filter((token) => token.length > 2 && !STOP.has(token))
       .map((token) => token.replace(/(ing|ed|s)$/, "").replace(/e$/, "")),
   );
+}
+
+const ACTION_WORDS = new Set(
+  Object.entries(ACTIONS).flatMap(([action, aliases]) => [action, ...aliases]),
+);
+
+/** Capitalized requirement words that name a technology, not a verb or filler. */
+function distinctiveTechnologyTokens(requirement: string, keys: string[]) {
+  if (keys.length) return [];
+  const words = requirement.match(/[A-Za-z][A-Za-z0-9+#]*/g) ?? [];
+  const tokens: string[] = [];
+  for (const word of words) {
+    const lower = word.toLowerCase();
+    if (
+      lower.length <= 2 ||
+      STOP.has(lower) ||
+      GENERIC_REQUIREMENT_WORDS.has(lower) ||
+      ACTION_WORDS.has(lower) ||
+      /(?:ize|ise)$/.test(lower)
+    )
+      continue;
+    const capitalized =
+      word[0] === word[0].toUpperCase() && word[0] !== word[0].toLowerCase();
+    if (!capitalized) continue;
+    const normalized = normalizeEvidence(word);
+    if (normalized && !tokens.includes(normalized)) tokens.push(normalized);
+  }
+  return tokens;
 }
 
 export function requirementComponents(requirement: string) {
@@ -376,6 +409,7 @@ type IndexedRequirement = {
   documentWord: boolean;
   portfolio: boolean;
   specificTokens: string[] | null;
+  technologyTokens: string[];
 };
 
 type CoverageIndex = {
@@ -506,6 +540,7 @@ function buildCoverageIndex(
     options.requirements ?? getCoverageRequirements(input.analysis)
   ).map((requirement) => {
     const keys = requirementComponents(requirement);
+    const technologyTokens = distinctiveTechnologyTokens(requirement, keys);
     const facets = buildRequirementFacets(requirement);
     const degree = /bachelor|master|doctorate|degree/i.test(requirement);
     const practical =
@@ -523,7 +558,23 @@ function buildCoverageIndex(
     const facetHits: boolean[][] = [];
     for (const sourceIndex of eligible) {
       const source = sources[sourceIndex];
-      score.push(degree ? 0 : semanticMatchScore(source.quote, requirement));
+      let quoteScore = degree
+        ? 0
+        : semanticMatchScore(source.quote, requirement);
+      if (
+        !degree &&
+        technologyTokens.length > 0 &&
+        source.achievement &&
+        options.renderedTexts?.has(source.id) &&
+        quoteScore < 0.5 &&
+        technologyTokens.some((token) => includesPhrase(source.quote, token))
+      ) {
+        // The compiled sentence names the technology. A ratio under one half
+        // would otherwise hide that bullet. Stay under the 0.75 full-coverage
+        // line so one token is not treated as Covered.
+        quoteScore = 0.5;
+      }
+      score.push(quoteScore);
       const terms = options.inferredTermsById?.get(source.id) ?? [];
       inferred.push(
         terms.some(
@@ -564,6 +615,7 @@ function buildCoverageIndex(
         /portfolio.*(?:machine learning|ml).*projects?/i.test(requirement) &&
         /\bor\b/i.test(requirement),
       specificTokens: keys.length === 1 && tokens.length >= 3 ? tokens : null,
+      technologyTokens,
     } satisfies IndexedRequirement;
   });
 
@@ -739,6 +791,22 @@ function assessIndexedRequirement(
         index.sources[sourceIndex].machineLearning,
     );
   }
+  if (
+    requirement.technologyTokens.length > 0 &&
+    !activeLocals.some(({ sourceIndex }) => {
+      const source = index.sources[sourceIndex];
+      return (
+        source.kind !== "skill" &&
+        requirement.technologyTokens.every((token) =>
+          includesPhrase(source.quote, token),
+        )
+      );
+    })
+  )
+    full = false;
+  // A skill chip can support a requirement only in part. Covered requires a
+  // selected achievement, project, education entry, or credential.
+  if (full && !active.some((source) => source.kind !== "skill")) full = false;
   const directComponents = componentCoverage(
     requirement.requirement,
     requirement.keys,

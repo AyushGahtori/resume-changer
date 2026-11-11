@@ -71,7 +71,7 @@ test("says a library with no data is empty, not filtered", async ({ page }) => {
     page.getByRole("heading", { name: "No achievements saved yet" }),
   ).toBeVisible();
   await expect(page.locator(".library-state-message")).toHaveText(
-    "This library is empty. Add an achievement to start filling it, or open the demo library to see a full one.",
+    "This library has no job or project yet. Name one so the first achievement has a place to belong, or open the demo library to see a full one.",
   );
 
   // The filtered message is not shown, because nothing was filtered.
@@ -81,21 +81,19 @@ test("says a library with no data is empty, not filtered", async ({ page }) => {
   await expect(page.locator("article.library-point")).toHaveCount(0);
 });
 
-test("offers the first achievement from an empty personal library", async ({
+test("asks for a job or project before the first achievement", async ({
   page,
 }) => {
   await writeLibrary(emptyLibrary);
   await page.goto("/library");
 
-  await page
-    .locator(".library-state")
-    .getByRole("button", { name: "Add achievement" })
-    .click();
-
+  await expect(page.getByLabel("Project name")).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "Add achievement" }),
-  ).toBeVisible();
-  await expect(page.getByLabel("Achievement ID")).toBeFocused();
+  ).toHaveCount(0);
+  await page.getByRole("button", { name: "Detailed entry" }).click();
+  await expect(page.getByLabel("Project name")).toBeFocused();
+  await expect(page.getByLabel("Achievement ID")).toHaveCount(0);
 });
 
 test("says a filtered library matched nothing and offers the way back", async ({

@@ -1,6 +1,7 @@
 "use client";
 import { apiFetch as fetch } from "@/lib/cloud/api-fetch";
 import { useWorkspaceStorage } from "./account-session";
+import { Sparkles } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import StudioDialog from "./studio-dialog";
 import { groupSkillsForReview } from "@/lib/generation/review-draft";
@@ -17,12 +18,21 @@ import {
 } from "@/lib/generation/imagination-draft";
 import {
   buildImaginationLibraryPoint,
+  decideImaginationAcceptance,
   getDefaultImaginationSaveDestination,
   getImaginationSaveDestinations,
-  getImaginationTextToAccept,
+  imaginationSaveCopy,
+  readImaginationPayload,
+  readableImaginationError,
   type ImaginationSaveDestination,
 } from "@/lib/generation/imagination-save";
 import ImaginationSaveFooter from "./imagination-save-footer";
+import { handleCtrlBackspace } from "@/lib/editing/delete-word";
+import LibrarySelect from "@/components/library/library-select";
+import {
+  disconnectedAchievementNotice,
+  reconcileDestinationAchievementIds,
+} from "./imagination-composer";
 
 export type AcceptedAchievement = {
   id: string;
@@ -60,13 +70,13 @@ export default function AchievementImagination({
     destinationGroupId ?? groups[0]?.id ?? "",
   );
   const [text, setText] = useState("");
-  const [instruction, setInstruction] = useState(
+  const suggestedInstruction =
     operation === "merge"
       ? "Combine these achievements into one concise technical bullet, preserving the facts and metrics."
       : operation === "edit"
         ? "Make this achievement clearer and more concise, preserving the technical facts and metrics."
-        : "Create a concise, factual achievement from only the connected context.",
-  );
+        : "Create a concise, factual achievement from only the connected context.";
+  const [instruction, setInstruction] = useState("");
   const [proposed, setProposed] = useState("");
   const [measuredLines, setMeasuredLines] = useState<number | null>(null);
   const [layoutWarning, setLayoutWarning] = useState("");
@@ -87,7 +97,14 @@ export default function AchievementImagination({
   );
   const [saveError, setSaveError] = useState("");
   const controller = useRef<AbortController | null>(null);
+  const draftEdited = useRef(false);
   const [savedDraft, setSavedDraft] = useState<ImaginationDraft | null>(null);
+  const [restoreConfirming, setRestoreConfirming] = useState(false);
+  const [droppedConnection, setDroppedConnection] = useState<{
+    count: number;
+    groupId: string;
+    selectedIds: string[];
+  } | null>(null);
   const [storageReady, setStorageReady] = useState(false);
   const storageKey = `resume-changer.imagination-draft.v1:${source}:${library.profile.id}`;
   const points = [...library.jobs, ...library.projects].flatMap((group) =>
@@ -132,12 +149,11 @@ export default function AchievementImagination({
   useEffect(() => {
     if (operation !== "create") return;
     try {
-      setSavedDraft(
-        parseImaginationDraft(
-          getWorkspaceStorage().getItem(storageKey),
-          library,
-        ),
+      const draft = parseImaginationDraft(
+        getWorkspaceStorage().getItem(storageKey),
+        library,
       );
+      if (!draftEdited.current) setSavedDraft(draft);
     } catch {
       /* Writing remains available without browser storage. */
     }
@@ -175,6 +191,12 @@ export default function AchievementImagination({
     getWorkspaceStorage,
   ]);
 
+  function noteEdit() {
+    draftEdited.current = true;
+    setRestoreConfirming(false);
+    setSavedDraft(null);
+  }
+
   function invalidateSuggestion() {
     controller.current?.abort();
     setBusy(false);
@@ -184,6 +206,7 @@ export default function AchievementImagination({
   }
 
   function toggleContext(id: string, kind: "achievement" | "skill") {
+    noteEdit();
     invalidateSuggestion();
     const selected = kind === "achievement" ? selectedIds : skillIds;
     const update = kind === "achievement" ? setSelectedIds : setSkillIds;
@@ -216,34 +239,45 @@ export default function AchievementImagination({
           sources: selectedSources,
           skillIds,
           draftText: operation === "create" ? text : "",
-          instruction,
+          instruction: instruction.trim() || suggestedInstruction,
           targetLines,
         }),
       });
-      const payload = await response.json();
+      const payload = await readImaginationPayload(
+        response,
+        imaginationSaveCopy.unreadableResponse,
+      );
+      const suggestionText = payload.text;
       if (
         !response.ok ||
-        typeof payload.text !== "string" ||
-        !payload.text.trim()
+        typeof suggestionText !== "string" ||
+        !suggestionText.trim()
       )
         throw new Error(
-          payload.error ?? "No suggestion was returned. Try again.",
+          typeof payload.error === "string" && payload.error.trim()
+            ? payload.error
+            : "No suggestion was returned. Try again.",
         );
       if (!abort.signal.aborted) {
-        setProposed(payload.text);
+        setProposed(suggestionText);
         setMeasuredLines(
           typeof payload.measuredLines === "number"
             ? payload.measuredLines
             : null,
         );
-        setLayoutWarning(payload.layoutWarning ?? "");
+        setLayoutWarning(
+          typeof payload.layoutWarning === "string"
+            ? payload.layoutWarning
+            : "",
+        );
       }
     } catch (failure) {
       if (!abort.signal.aborted)
         setError(
-          failure instanceof Error
-            ? failure.message
-            : "Imagination is unavailable. Your draft is preserved.",
+          readableImaginationError(
+            failure,
+            imaginationSaveCopy.unreadableResponse,
+          ),
         );
     } finally {
       if (controller.current === abort) setBusy(false);
@@ -251,27 +285,29 @@ export default function AchievementImagination({
   }
 
   async function accept() {
-    const acceptedText = getImaginationTextToAccept(operation, text, proposed);
-    if (!acceptedText) {
-      setSaveError("Write or accept an achievement before saving.");
-      return;
-    }
-    if (operation === "create" && !saveDestination) {
-      setSaveError("No save destination is available for this data source.");
+    const decision = decideImaginationAcceptance({
+      operation,
+      editorText: text,
+      proposedText: proposed,
+      sourceAchievementIds: sourceIds,
+      connectedSkillCount: skillIds.length,
+      saveDestination,
+      source,
+      hasLibraryDestination,
+      allowResume,
+      groupId,
+    });
+    if (!decision.ok) {
+      setSaveError(decision.error);
       return;
     }
     setSaving(true);
     setSaveError("");
     let id = `studio-${crypto.randomUUID()}`;
     try {
-      if (
-        operation === "create" &&
-        (saveDestination === "library" || saveDestination === "both")
-      ) {
+      if (decision.saveToLibrary) {
         if (source !== "personal")
-          throw new Error(
-            "Switch to your personal library to save an achievement.",
-          );
+          throw new Error(imaginationSaveCopy.personalLibrarySwitch);
         id = `achievement-${crypto.randomUUID()}`;
         const parentType = library.jobs.some((job) => job.id === groupId)
           ? "job"
@@ -284,29 +320,30 @@ export default function AchievementImagination({
               parentType,
               parentId: groupId,
               pointId: id,
-              reviewedText: acceptedText,
+              reviewedText: decision.text,
               skillIds,
               sourceAchievementIds: sourceIds,
             }),
           ),
         });
-        const payload = await response.json();
+        const payload = await readImaginationPayload(
+          response,
+          imaginationSaveCopy.unreadableSave,
+        );
         if (!response.ok)
           throw new Error(
-            payload.error ?? "The achievement could not be saved.",
+            typeof payload.error === "string" && payload.error.trim()
+              ? payload.error
+              : "The achievement could not be saved.",
           );
         onLibrarySaved?.();
       }
-      if (
-        operation !== "create" ||
-        saveDestination !== "library" ||
-        !allowResume
-      )
+      if (decision.resumeSourceIds)
         onAccept({
           id,
-          text: acceptedText,
+          text: decision.text,
           groupId,
-          sourceAchievementIds: sourceIds,
+          sourceAchievementIds: decision.resumeSourceIds,
           skillIds: [
             ...new Set([
               ...skillIds,
@@ -324,15 +361,25 @@ export default function AchievementImagination({
       onClose();
     } catch (failure) {
       setSaveError(
-        failure instanceof Error
-          ? failure.message
-          : "The achievement could not be saved.",
+        readableImaginationError(failure, imaginationSaveCopy.unreadableSave),
       );
     } finally {
       setSaving(false);
     }
   }
 
+  const acceptance = decideImaginationAcceptance({
+    operation,
+    editorText: text,
+    proposedText: proposed,
+    sourceAchievementIds: sourceIds,
+    connectedSkillCount: skillIds.length,
+    saveDestination,
+    source,
+    hasLibraryDestination,
+    allowResume,
+    groupId,
+  });
   const quickActions = [
     "Make shorter",
     "More technical",
@@ -357,10 +404,23 @@ export default function AchievementImagination({
           <>
             {savedDraft && (
               <div className="studio-restore" role="status">
-                <p>An unfinished writing draft is saved on this device.</p>
+                <p>
+                  You left this achievement before saving it. Restore that
+                  version, or clear it and start again.
+                </p>
                 <button
                   type="button"
                   onClick={() => {
+                    if (
+                      text.trim() &&
+                      text.trim() !== savedDraft.text.trim() &&
+                      !restoreConfirming
+                    ) {
+                      setRestoreConfirming(true);
+                      return;
+                    }
+                    draftEdited.current = true;
+                    setRestoreConfirming(false);
                     setGroupId(savedDraft.groupId);
                     setText(savedDraft.text);
                     setInstruction(savedDraft.instruction);
@@ -370,46 +430,83 @@ export default function AchievementImagination({
                     setSavedDraft(null);
                   }}
                 >
-                  Restore writing draft
+                  {restoreConfirming
+                    ? "Replace what you typed"
+                    : "Restore writing draft"}
                 </button>
-                <button type="button" onClick={() => setSavedDraft(null)}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    draftEdited.current = true;
+                    setRestoreConfirming(false);
+                    setSavedDraft(null);
+                  }}
+                >
                   Start a new achievement
                 </button>
               </div>
             )}
-            <label className="studio-field">
-              <span>Resume destination</span>
-              <select
-                value={groupId}
-                onChange={(event) => {
-                  setGroupId(event.target.value);
-                  setSelectedIds([]);
+            <div className="studio-field">
+              <span id="imagination-resume-destination-label">
+                Resume destination
+              </span>
+              <LibrarySelect
+                aria-label="Resume destination"
+                className="studio-destination-select"
+                disabled={groups.length === 0}
+                onChange={(next) => {
+                  noteEdit();
+                  const nextIds = reconcileDestinationAchievementIds(
+                    library,
+                    next,
+                    selectedIds,
+                  );
+                  const dropped = selectedIds.filter(
+                    (id) => !nextIds.includes(id),
+                  ).length;
+                  setDroppedConnection(
+                    dropped > 0
+                      ? {
+                          count: dropped,
+                          groupId,
+                          selectedIds: [...selectedIds],
+                        }
+                      : null,
+                  );
+                  setGroupId(next);
+                  setSelectedIds(nextIds);
                   invalidateSuggestion();
                 }}
-              >
-                {groups.map((group) => (
-                  <option key={group.id} value={group.id}>
-                    {group.title} · {group.subtitle}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="studio-field imagination-composer">
-              <span>NEW ACHIEVEMENT</span>
-              <textarea
-                data-studio-focus=""
-                aria-label="Achievement text"
-                rows={4}
-                maxLength={8000}
-                placeholder="Write what you built, improved, or accomplished…"
-                value={text}
-                onChange={(event) => {
-                  setText(event.target.value);
-                  setSaveError("");
-                  invalidateSuggestion();
-                }}
+                options={
+                  groups.length === 0
+                    ? [{ value: "", label: "A job or project is required." }]
+                    : groups.map((group) => ({
+                        value: group.id,
+                        label: group.subtitle
+                          ? `${group.title} · ${group.subtitle}`
+                          : group.title,
+                      }))
+                }
+                value={groups.length === 0 ? "" : groupId}
               />
-            </label>
+              {droppedConnection && (
+                <p className="studio-restore" role="status">
+                  {disconnectedAchievementNotice(droppedConnection.count)}{" "}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      noteEdit();
+                      setGroupId(droppedConnection.groupId);
+                      setSelectedIds(droppedConnection.selectedIds);
+                      setDroppedConnection(null);
+                      invalidateSuggestion();
+                    }}
+                  >
+                    Undo
+                  </button>
+                </p>
+              )}
+            </div>
             <div
               className="imagination-context-map"
               onDragOver={(event) => event.preventDefault()}
@@ -430,7 +527,7 @@ export default function AchievementImagination({
               }}
             >
               <span className="imagination-root" aria-hidden="true">
-                ✦
+                <Sparkles size={15} strokeWidth={2} />
               </span>
               <span>{contextCount} / 10 connected</span>
               <div className="imagination-connected">
@@ -456,7 +553,10 @@ export default function AchievementImagination({
                 ))}
               </div>
               {!contextCount && (
-                <p>Select or drag context here to connect it to your draft.</p>
+                <p>
+                  Select points to have Imagination write the achievement. With
+                  nothing connected, the text below is what you save.
+                </p>
               )}
             </div>
             <div className="imagination-context-libraries">
@@ -551,6 +651,41 @@ export default function AchievementImagination({
                 </div>
               </section>
             </div>
+            {contextCount === 0 ? (
+              <label className="studio-field imagination-composer">
+                <span>Your achievement</span>
+                <textarea
+                  data-studio-focus=""
+                  aria-label="Achievement text"
+                  rows={4}
+                  maxLength={8000}
+                  placeholder="Write the point you want to save…"
+                  value={text}
+                  onChange={(event) => {
+                    noteEdit();
+                    setText(event.target.value);
+                    setSaveError("");
+                    invalidateSuggestion();
+                  }}
+                  onKeyDown={(event) =>
+                    handleCtrlBackspace(event, (next) => {
+                      noteEdit();
+                      setText(next);
+                    })
+                  }
+                />
+                <p>
+                  Save this text as the achievement. Connect points above if you
+                  want Imagination to write it from those points instead.
+                </p>
+              </label>
+            ) : (
+              <p className="imagination-mode-note">
+                Imagination writes one achievement from the {contextCount}{" "}
+                connected {contextCount === 1 ? "item" : "items"}. It follows
+                your instruction and does not keep a separate draft.
+              </p>
+            )}
           </>
         ) : (
           <div className="imagination-originals">
@@ -559,56 +694,88 @@ export default function AchievementImagination({
                 ? "Source achievements"
                 : "Current achievement"}
             </h3>
-            {sources.map((point) => (
-              <p key={point.id}>{point.text}</p>
-            ))}
+            {sources.length > 1 ? (
+              <ol>
+                {sources.map((point, index) => (
+                  <li key={point.id}>
+                    <span>{index + 1}</span>
+                    <p>{point.text}</p>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              sources.map((point) => <p key={point.id}>{point.text}</p>)
+            )}
           </div>
         )}
         <div className="imagination-instruction">
-          <div className="studio-quick-actions">
-            {quickActions.map((action) => (
-              <button
-                type="button"
-                key={action}
-                onClick={() =>
-                  setInstruction(
-                    `${action}. Preserve the supplied facts, technical details, and metrics.`,
-                  )
-                }
-              >
-                {action}
-              </button>
-            ))}
-          </div>
-          <label className="studio-field">
-            <span>Your instruction</span>
-            <textarea
-              rows={2}
-              maxLength={2000}
-              value={instruction}
-              onChange={(event) => setInstruction(event.target.value)}
-            />
-          </label>
-          <div className="imagination-request-actions">
-            <label>
-              Target{" "}
-              <select
-                aria-label="Target line count"
-                value={targetLines}
-                onChange={(event) => setTargetLines(Number(event.target.value))}
-              >
-                {[1, 2, 3, 4].map((lines) => (
-                  <option key={lines} value={lines}>
-                    {lines} {lines === 1 ? "line" : "lines"}
-                  </option>
+          {(operation !== "create" || contextCount > 0) && (
+            <>
+              <div className="studio-quick-actions">
+                {quickActions.map((action) => (
+                  <button
+                    type="button"
+                    key={action}
+                    onClick={() => {
+                      noteEdit();
+                      setInstruction(
+                        `${action}. Preserve the supplied facts, technical details, and metrics.`,
+                      );
+                    }}
+                  >
+                    {action}
+                  </button>
                 ))}
-              </select>
-            </label>
+              </div>
+              <label className="studio-field">
+                <span>Your instruction</span>
+                <textarea
+                  aria-label="Your instruction"
+                  rows={2}
+                  maxLength={2000}
+                  placeholder={suggestedInstruction}
+                  value={instruction}
+                  onChange={(event) => {
+                    noteEdit();
+                    setInstruction(event.target.value);
+                  }}
+                  onKeyDown={(event) =>
+                    handleCtrlBackspace(event, (next) => {
+                      noteEdit();
+                      setInstruction(next);
+                    })
+                  }
+                />
+              </label>
+            </>
+          )}
+          <div className="imagination-request-actions">
+            <div
+              className="imagination-target"
+              role="group"
+              aria-label="Target line count"
+            >
+              <span>Target</span>
+              {[1, 2, 3, 4].map((lines) => (
+                <button
+                  key={lines}
+                  type="button"
+                  aria-pressed={targetLines === lines}
+                  onClick={() => {
+                    noteEdit();
+                    setTargetLines(lines);
+                  }}
+                >
+                  {lines} {lines === 1 ? "line" : "lines"}
+                </button>
+              ))}
+            </div>
             <span>Estimated until compiled</span>
             <button
               className="studio-ai-button"
               type="button"
-              disabled={busy || !instruction.trim() || !groupId}
+              disabled={busy || !groupId}
+              aria-describedby={!groupId ? "imagination-ask-hint" : undefined}
               onClick={imagine}
             >
               {busy
@@ -629,6 +796,11 @@ export default function AchievementImagination({
               </button>
             )}
           </div>
+          {!busy && !groupId && (
+            <p id="imagination-ask-hint" role="status">
+              {imaginationSaveCopy.askNeedsJob}
+            </p>
+          )}
         </div>
         {busy && (
           <p className="imagination-progress" role="status">
@@ -647,6 +819,7 @@ export default function AchievementImagination({
                 rows={4}
                 maxLength={8000}
                 value={proposed}
+                onKeyDown={(event) => handleCtrlBackspace(event, setProposed)}
                 onChange={(event) => {
                   setProposed(event.target.value);
                   setMeasuredLines(null);
@@ -656,7 +829,7 @@ export default function AchievementImagination({
                 }}
               />
             </label>
-            {operation === "create" && (
+            {operation === "create" && contextCount === 0 && (
               <button
                 type="button"
                 onClick={() => {
@@ -681,10 +854,8 @@ export default function AchievementImagination({
           allowResume={allowResume}
           hasLibraryDestination={hasLibraryDestination}
           saveTo={saveDestination}
-          canSave={Boolean(
-            (operation === "create" ? text : proposed).trim() &&
-            (operation !== "create" || groupId),
-          )}
+          canSave={acceptance.ok}
+          disabledReason={acceptance.ok ? "" : acceptance.error}
           isBusy={busy}
           isSaving={saving}
           error={saveError}

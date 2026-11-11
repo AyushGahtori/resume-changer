@@ -65,7 +65,16 @@ test("first load, debounced save, restore, explicit save, clear and refresh", as
     "Draft saved in this browser",
   );
   await page.evaluate((key) => localStorage.setItem(key, "stale"), cacheKey);
+  await page.evaluate(() =>
+    localStorage.setItem("resume-changer.selected-job.v1", "job-cleared"),
+  );
   await page.getByRole("button", { name: "Clear draft", exact: true }).click();
+  expect(
+    await page.evaluate(
+      (key) => localStorage.getItem(key),
+      "resume-changer.selected-job.v1",
+    ),
+  ).toBeNull();
   await expect(status).toHaveText("No saved draft");
   expect(
     await page.evaluate((key) => localStorage.getItem(key), cacheKey),
@@ -124,7 +133,7 @@ test("invalid stored data is explained, edits invalidate analysis, failed clear 
   await page.getByLabel("Company", { exact: true }).fill("New company");
   expect(
     await page.evaluate((key) => localStorage.getItem(key), cacheKey),
-  ).toBeNull();
+  ).toBe("stale");
   await expect(page.locator(".storage-notice")).toHaveCount(0);
   await page.evaluate(() => {
     Storage.prototype.removeItem = () => {

@@ -21,6 +21,7 @@ test("settles while an animation that never finishes is on screen", async ({
   });
 
   await jobDescriptionField(page).fill("Build reliable services.");
+  await page.getByLabel("Company", { exact: true }).fill("Example Systems");
   await page.getByRole("button", { name: "Analyze job description" }).click();
 
   // The button shows a spinner while the analysis runs. The spinner rotates

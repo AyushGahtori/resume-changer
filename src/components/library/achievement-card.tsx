@@ -16,6 +16,7 @@ import type { AchievementPoint, Skill } from "@/lib/schemas/resume-data";
 
 type InlineEditor = {
   parents: ParentOption[];
+  canWrite?: boolean;
   onCancel: () => void;
   onSaved: () => void;
 };
@@ -210,6 +211,7 @@ export default function AchievementCard({
       {editor ? (
         <AchievementPointEditor
           key={point.id}
+          canWrite={editor.canWrite ?? true}
           initialPoint={point}
           inline
           onCancel={editor.onCancel}

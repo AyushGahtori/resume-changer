@@ -17,10 +17,13 @@ function rows(...statuses: CoverageStatus[]) {
 describe("requirement coverage presentation", () => {
   it("names every coverage state in plain language", () => {
     expect(coverageStatusLabel("supported")).toBe("Covered");
-    expect(coverageStatusLabel("partial")).toBe("Partial support");
+    expect(coverageStatusLabel("partial")).toBe("Partial");
     expect(coverageStatusLabel("uncertain")).toBe("Needs confirmation");
     expect(coverageStatusLabel("evidence-not-selected")).toBe("Not selected");
-    expect(coverageStatusLabel("no-evidence-found")).toBe("No match found");
+    expect(coverageStatusLabel("no-evidence-found")).toBe("Not found");
+    expect(coverageStatusLabel("evidence-not-selected")).not.toBe(
+      "evidence-not-selected",
+    );
   });
 
   it("maps every coverage state to a tone the styles can distinguish", () => {
@@ -47,16 +50,16 @@ describe("requirement coverage presentation", () => {
     );
 
     expect(summary.breakdowns).toEqual([
-      { status: "partial", label: "partial", tone: "partial", count: 1 },
+      { status: "partial", label: "Partial", tone: "partial", count: 1 },
       {
         status: "uncertain",
-        label: "need confirmation",
+        label: "Needs confirmation",
         tone: "uncertain",
         count: 1,
       },
       {
         status: "evidence-not-selected",
-        label: "not selected",
+        label: "Not selected",
         tone: "missing",
         count: 1,
       },
@@ -72,7 +75,51 @@ describe("requirement coverage presentation", () => {
     expect(summary.total).toBe(0);
     expect(summary.supported).toBe(0);
     expect(summary.headline).toBe("0 / 0 supported");
+    expect(summary.required).toMatchObject({ supported: 0, total: 0 });
+    expect(summary.responsibilities).toMatchObject({ supported: 0, total: 0 });
+    expect(summary.preferred).toMatchObject({ supported: 0, total: 0 });
     expect(summary.breakdowns).toEqual([]);
+  });
+
+  it("counts required and preferred support separately and keeps responsibilities visible", () => {
+    const summary = summarizeCoverage([
+      { status: "supported", priority: "required" },
+      { status: "supported", priority: "required" },
+      { status: "partial", priority: "required" },
+      { status: "supported", priority: "responsibility" },
+      { status: "no-evidence-found", priority: "preferred" },
+      { status: "supported", priority: "preferred" },
+    ]);
+
+    expect(summary.required).toEqual({
+      priority: "required",
+      label: "Required",
+      supported: 2,
+      total: 3,
+      headline: "2 of 3 covered",
+    });
+    expect(summary.responsibilities).toEqual({
+      priority: "responsibility",
+      label: "Responsibilities",
+      supported: 1,
+      total: 1,
+      headline: "1 of 1 covered",
+    });
+    expect(summary.preferred).toEqual({
+      priority: "preferred",
+      label: "Preferred",
+      supported: 1,
+      total: 2,
+      headline: "1 of 2 covered",
+    });
+    expect(summary.headline).toBe(
+      "Required 2 of 3 covered · Responsibilities 1 of 1 covered · Preferred 1 of 2 covered",
+    );
+    expect(summary.supported).toBe(4);
+    expect(summary.total).toBe(6);
+    expect(
+      summary.breakdowns.some((tally) => tally.label.includes("evidence-")),
+    ).toBe(false);
   });
 
   it("explains the denominator in requirements, never as a score", () => {

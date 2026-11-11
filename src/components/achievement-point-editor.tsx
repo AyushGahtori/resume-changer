@@ -2,6 +2,7 @@
 import { apiFetch as fetch } from "@/lib/cloud/api-fetch";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import LibrarySelect from "@/components/library/library-select";
 import { LIBRARY_ACTIONS } from "@/lib/ui/library-actions";
 import { metricOpportunities } from "@/lib/ai/metric-opportunities";
 import type {
@@ -24,6 +25,8 @@ type Props = {
   skills: Skill[];
   onCancel: () => void;
   onSaved: () => void;
+  /** Demo data must not write, even if a form is still mounted. */
+  canWrite?: boolean;
   /**
    * Moves focus to the first field when the editor opens. Only the new
    * entry flow uses it, so a keyboard user lands on the identifier field
@@ -55,6 +58,7 @@ export default function AchievementPointEditor({
   onCancel,
   onSaved,
   focusFirstField = false,
+  canWrite = true,
 }: Props) {
   const isEditing = Boolean(initialPoint);
   const idFieldRef = useRef<HTMLInputElement>(null);
@@ -120,6 +124,25 @@ export default function AchievementPointEditor({
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const viewingDemo =
+      typeof window !== "undefined" &&
+      new URLSearchParams(window.location.search).get("source") === "demo";
+    if (saving) return;
+    if (!canWrite || viewingDemo) {
+      setError(
+        "Demo data is read-only. Switch to My data to add or edit achievements.",
+      );
+      return;
+    }
+
+    const parent = parents.find(
+      (option) => `${option.type}:${option.id}` === parentKey,
+    );
+    if (!isEditing && !parent) {
+      setError("Choose a job or project for this achievement.");
+      return;
+    }
+
     setSaving(true);
     setError("");
 
@@ -151,9 +174,6 @@ export default function AchievementPointEditor({
     };
 
     try {
-      const parent = parents.find(
-        (option) => `${option.type}:${option.id}` === parentKey,
-      );
       const response = await fetch(
         isEditing
           ? `/api/library/points/${encodeURIComponent(pointId)}`
@@ -221,23 +241,24 @@ export default function AchievementPointEditor({
               value={pointId}
             />
           </label>
-          <label className="editor-field">
+          <div className="editor-field">
             <span>Job or project</span>
-            <select
-              onChange={(event) => setParentKey(event.target.value)}
-              required
-              value={parentKey}
-            >
-              {parents.map((parent) => (
-                <option
-                  key={`${parent.type}:${parent.id}`}
-                  value={`${parent.type}:${parent.id}`}
-                >
-                  {parent.label}
-                </option>
-              ))}
-            </select>
-          </label>
+            {parents.length > 0 ? (
+              <LibrarySelect
+                aria-label="Job or project for this achievement"
+                onChange={setParentKey}
+                options={parents.map((parent) => ({
+                  label: parent.label,
+                  value: `${parent.type}:${parent.id}`,
+                }))}
+                value={parentKey}
+              />
+            ) : (
+              <p className="secondary-empty">
+                Add a job or project before saving an achievement.
+              </p>
+            )}
+          </div>
         </div>
       )}
 
@@ -261,21 +282,20 @@ export default function AchievementPointEditor({
             value={tags}
           />
         </label>
-        <label className="editor-field">
+        <div className="editor-field">
           <span>Provenance type</span>
-          <select
-            onChange={(event) =>
-              setSourceType(event.target.value as AchievementSource["type"])
+          <LibrarySelect
+            aria-label="Provenance type"
+            onChange={(value) =>
+              setSourceType(value as AchievementSource["type"])
             }
+            options={sourceTypes.map((type) => ({
+              label: type,
+              value: type,
+            }))}
             value={sourceType}
-          >
-            {sourceTypes.map((type) => (
-              <option key={type} value={type}>
-                {type}
-              </option>
-            ))}
-          </select>
-        </label>
+          />
+        </div>
         <label className="editor-field">
           <span>Source label</span>
           <input
@@ -292,28 +312,36 @@ export default function AchievementPointEditor({
         </label>
       </div>
 
-      <label className="editor-field editor-skills">
-        <span>Linked skills</span>
-        <select
-          multiple
-          onChange={(event) =>
-            setSkillIds(
-              Array.from(
-                event.currentTarget.selectedOptions,
-                (option) => option.value,
-              ),
-            )
-          }
-          size={Math.min(6, Math.max(3, skills.length))}
-          value={skillIds}
-        >
-          {skills.map((skill) => (
-            <option key={skill.id} value={skill.id}>
-              {skill.name}
-            </option>
-          ))}
-        </select>
-      </label>
+      <div
+        aria-labelledby="linked-skills-label"
+        className="editor-field editor-skills"
+        role="group"
+      >
+        <span id="linked-skills-label">Linked skills</span>
+        {skills.length === 0 ? (
+          <p className="secondary-empty">No skills saved in this library.</p>
+        ) : (
+          <ul className="skill-chip-list">
+            {skills.map((skill) => {
+              const selected = skillIds.includes(skill.id);
+              return (
+                <li key={skill.id}>
+                  <button
+                    aria-pressed={selected}
+                    className={
+                      selected ? "skill-chip" : "skill-chip is-unlisted"
+                    }
+                    onClick={() => toggleSkill(skill.id)}
+                    type="button"
+                  >
+                    <span className="skill-chip-name">{skill.name}</span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
 
       <section className="metric-editor" aria-label="Achievement metrics">
         <div className="metric-editor-heading">
@@ -448,14 +476,17 @@ export default function AchievementPointEditor({
         ))}
       </section>
 
-      <label className="editor-enabled">
-        <input
-          checked={enabled}
-          onChange={(event) => setEnabled(event.target.checked)}
-          type="checkbox"
-        />
+      <div className="editor-enabled">
+        <button
+          aria-pressed={enabled}
+          className="ui-button ui-button--secondary ui-button--compact"
+          onClick={() => setEnabled((current) => !current)}
+          type="button"
+        >
+          {enabled ? "Enabled" : "Disabled"}
+        </button>
         <span>Use this point in resume selection</span>
-      </label>
+      </div>
 
       {error && (
         <p className="editor-error" role="alert">

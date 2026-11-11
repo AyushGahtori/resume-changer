@@ -12,6 +12,7 @@ import {
   runTransaction,
   serverTimestamp,
   startAfter,
+  type QueryDocumentSnapshot,
 } from "firebase/firestore";
 import { z } from "zod";
 import {
@@ -265,32 +266,51 @@ export async function deleteCloudHistory(id: string) {
 
 async function retryPendingDeletion() {
   const { account, db } = await ensureCloudAccount();
-  const pending = await getDocs(
-    query(
-      collection(db, "accounts", account.uid, "pendingDeletions"),
-      orderBy("createdAt", "asc"),
-      limit(1),
-    ),
-  );
-  const item = pending.docs[0];
-  if (!item || Date.now() < item.data().createdAt.toMillis() + 60_000) return;
-  try {
-    if (await deletePrivatePdfVersions(item.id)) {
-      await runTransaction(db, async (transaction) => {
-        await transaction.get(item.ref);
-        await writeUsageInTransaction(
-          transaction,
-          db,
-          account.uid,
-          "history",
-          item.id,
-        );
-        transaction.delete(item.ref);
+  // Rules allow one pending deletion per list. Page through every due item.
+  // The 60s grace period and the deletedGenerations tombstone stay as they are.
+  let cursor: QueryDocumentSnapshot | undefined;
+  const seen = new Set<string>();
+  for (;;) {
+    const pending = await getDocs(
+      query(
+        collection(db, "accounts", account.uid, "pendingDeletions"),
+        orderBy("createdAt", "asc"),
+        ...(cursor ? [startAfter(cursor)] : []),
+        limit(1),
+      ),
+    );
+    const item = pending.docs[0];
+    if (!item || seen.has(item.id)) return;
+    seen.add(item.id);
+    const createdAt = item.data().createdAt;
+    const millis =
+      createdAt && typeof createdAt.toMillis === "function"
+        ? createdAt.toMillis()
+        : null;
+    if (millis === null) {
+      cursor = item;
+      continue;
+    }
+    if (Date.now() < millis + 60_000) return;
+    cursor = item;
+    try {
+      if (await deletePrivatePdfVersions(item.id)) {
+        await runTransaction(db, async (transaction) => {
+          await transaction.get(item.ref);
+          await writeUsageInTransaction(
+            transaction,
+            db,
+            account.uid,
+            "history",
+            item.id,
+          );
+          transaction.delete(item.ref);
+        });
+      }
+    } catch {
+      console.error("Private file cleanup will be retried.", {
+        code: "FILE_CLEANUP_PENDING",
       });
     }
-  } catch {
-    console.error("Private file cleanup will be retried.", {
-      code: "FILE_CLEANUP_PENDING",
-    });
   }
 }

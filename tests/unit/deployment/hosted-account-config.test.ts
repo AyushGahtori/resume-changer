@@ -1,4 +1,7 @@
 import { spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { checkHostedAccountConfig } from "../../../scripts/check-hosted-account-config.mjs";
 import { signInErrorMessage } from "../../../src/lib/cloud/sign-in-error";
@@ -56,6 +59,80 @@ describe("hosted sign-in configuration", () => {
         checkHostedAccountConfig({ ...configured, NODE_OPTIONS }),
       ).toThrow(/NODE_OPTIONS=--experimental-require-module/);
     }
+  });
+  it("rejects a Preview service account for the production Firebase project", () => {
+    const productionProject = JSON.parse(
+      readFileSync(
+        resolve(
+          dirname(fileURLToPath(import.meta.url)),
+          "../../../.firebaserc",
+        ),
+        "utf8",
+      ),
+    ).projects.default;
+    const sentinel = "BEGIN-PRIVATE-KEY-SENTINEL";
+    const productionAccount = JSON.stringify({
+      type: "service_account",
+      project_id: productionProject,
+      private_key: sentinel,
+      client_email: "github-phase-one@example.iam.gserviceaccount.com",
+    });
+    expect(() =>
+      checkHostedAccountConfig({
+        ...configured,
+        VERCEL_ENV: "preview",
+        GITHUB_FIREBASE_SERVICE_ACCOUNT: productionAccount,
+      }),
+    ).toThrow(/production Firebase project/);
+    try {
+      checkHostedAccountConfig({
+        ...configured,
+        VERCEL_ENV: "preview",
+        GITHUB_FIREBASE_SERVICE_ACCOUNT: productionAccount,
+      });
+    } catch (error) {
+      expect(String(error)).not.toContain(sentinel);
+      expect(String(error)).not.toContain(productionProject);
+    }
+    expect(() =>
+      checkHostedAccountConfig({
+        ...configured,
+        VERCEL_ENV: "preview",
+        GITHUB_FIREBASE_SERVICE_ACCOUNT: `not-json ${sentinel}`,
+      }),
+    ).toThrow(/non-production Firebase project/);
+    try {
+      checkHostedAccountConfig({
+        ...configured,
+        VERCEL_ENV: "preview",
+        GITHUB_FIREBASE_SERVICE_ACCOUNT: `not-json ${sentinel}`,
+      });
+    } catch (error) {
+      expect(String(error)).not.toContain(sentinel);
+    }
+    expect(() =>
+      checkHostedAccountConfig({
+        ...configured,
+        VERCEL_ENV: "production",
+        GITHUB_FIREBASE_SERVICE_ACCOUNT: productionAccount,
+      }),
+    ).not.toThrow();
+    expect(() =>
+      checkHostedAccountConfig({
+        ...configured,
+        VERCEL_ENV: "preview",
+        GITHUB_FIREBASE_SERVICE_ACCOUNT: JSON.stringify({
+          type: "service_account",
+          project_id: "resume-changer-preview",
+          private_key: sentinel,
+        }),
+      }),
+    ).not.toThrow();
+    expect(() =>
+      checkHostedAccountConfig({
+        GITHUB_FIREBASE_SERVICE_ACCOUNT: productionAccount,
+      }),
+    ).not.toThrow();
   });
   it("rejects local auth mode and emulator access in hosted builds", () => {
     expect(() =>

@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { saveJobAnalysis } from "../helpers/saved-job";
 import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
@@ -57,16 +58,26 @@ function demoLink(page: Page) {
 }
 
 async function seedDraft(page: Page) {
-  await page.addInitScript((draft) => {
-    try {
-      window.localStorage.setItem(
-        "resume-changer.jd-draft.v1",
-        JSON.stringify(draft),
-      );
-    } catch {
-      // The page still renders the empty job context.
-    }
-  }, DRAFT);
+  const saved = await saveJobAnalysis(page, {
+    company: DRAFT.company,
+    roleTitle: DRAFT.roleTitle,
+    jobDescription: DRAFT.jobDescription,
+  });
+  await page.addInitScript(
+    ({ draft, jobId }) => {
+      try {
+        window.localStorage.setItem(
+          "resume-changer.jd-draft.v1",
+          JSON.stringify(draft),
+        );
+        window.localStorage.setItem("resume-changer.selected-job.v1", jobId);
+      } catch {
+        // The page still renders the empty job context.
+      }
+    },
+    { draft: DRAFT, jobId: saved.job.id },
+  );
+  return saved.job.id;
 }
 
 async function writePersonalLibraryWithAnExtraPoint() {
@@ -282,47 +293,51 @@ test.describe("a source choice that changes the loaded library", () => {
   test("keeps a saved session with the source that produced it", async ({
     page,
   }) => {
-    await seedDraft(page);
+    const jobId = await seedDraft(page);
     /*
      * The builder stores a finished session under the source it was
      * generated from, and refuses to restore it under the other one.
      */
-    await page.addInitScript((draft) => {
-      const session = {
-        jobSignature: JSON.stringify([
-          draft.company,
-          draft.roleTitle,
-          draft.jobDescription,
-        ]),
-        pdfBase64: null,
-        generation: {
-          latex:
-            "\\documentclass{article}\\begin{document}Example\\end{document}",
-          metadata: {
-            id: "generation-source-fixture",
-            generatedAt: "2026-01-01T00:00:00.000Z",
-            dataSource: "demo",
-            company: draft.company,
-            roleTitle: draft.roleTitle,
-            jobUrl: draft.jobUrl,
-            tailoringMode: "manual",
-            selectedAchievementIds: [],
-            renderedSkillIds: [],
-            generatedBullets: [],
-            sourceProvenance: [],
-            visibleWordCount: 1,
+    await page.addInitScript(
+      ({ draft, jobId }) => {
+        const session = {
+          jobSignature: JSON.stringify([
+            jobId,
+            draft.company,
+            draft.roleTitle,
+            draft.jobDescription,
+          ]),
+          pdfBase64: null,
+          generation: {
+            latex:
+              "\\documentclass{article}\\begin{document}Example\\end{document}",
+            metadata: {
+              id: "generation-source-fixture",
+              generatedAt: "2026-01-01T00:00:00.000Z",
+              dataSource: "demo",
+              company: draft.company,
+              roleTitle: draft.roleTitle,
+              jobUrl: draft.jobUrl,
+              tailoringMode: "manual",
+              selectedAchievementIds: [],
+              renderedSkillIds: [],
+              generatedBullets: [],
+              sourceProvenance: [],
+              visibleWordCount: 1,
+            },
           },
-        },
-      };
-      try {
-        window.localStorage.setItem(
-          "resume-changer.resume-session.v1.demo",
-          JSON.stringify(session),
-        );
-      } catch {
-        // The page still renders without a saved session.
-      }
-    }, DRAFT);
+        };
+        try {
+          window.localStorage.setItem(
+            "resume-changer.resume-session.v1.demo",
+            JSON.stringify(session),
+          );
+        } catch {
+          // The page still renders without a saved session.
+        }
+      },
+      { draft: DRAFT, jobId },
+    );
 
     await page.goto("/generate?source=demo");
     await expect(

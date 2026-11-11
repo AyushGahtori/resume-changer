@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { saveJobAnalysis } from "../helpers/saved-job";
 
 /**
  * The builder is one workspace inside the shared shell: a selection region
@@ -151,6 +152,12 @@ test("resizes the preview pane from the resizer", async ({ page }) => {
     .getByRole("textbox", { name: "Job description", exact: true })
     .fill("Build reliable platform services and improve deployment workflows.");
   await expect(page.getByRole("status")).toContainText("Saved on this device");
+  await saveJobAnalysis(page, {
+    company: "Example Systems",
+    roleTitle: "Platform Engineer",
+    jobDescription:
+      "Build reliable platform services and improve deployment workflows.",
+  });
   await page.goto("/generate?source=demo");
   await page
     .getByLabel("Select achievement achievement-service-capacity-design")

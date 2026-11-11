@@ -6,8 +6,10 @@ import {
 } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
+import LibrarySelect from "../../../src/components/library/library-select";
 import ImaginationComposer, {
   MAX_ACHIEVEMENT_TEXT_LENGTH,
+  disconnectedAchievementNotice,
   reconcileDestinationAchievementIds,
   type ImaginationComposerProps,
 } from "../../../src/components/imagination-composer";
@@ -99,7 +101,8 @@ describe("Imagination Canvas composer", () => {
         );
     }
     expect(html).not.toContain("Software Developer · JoyArc");
-    expect(html).toContain('value="' + firstDestination.id + '" selected=""');
+    expect(html).toContain('data-value="' + firstDestination.id + '"');
+    expect(html).toContain('aria-selected="true"');
   });
 
   it("reconciles connected achievements against the selected destination", () => {
@@ -137,12 +140,13 @@ describe("Imagination Canvas composer", () => {
       onDestinationChange,
     });
     const tree = ImaginationComposer(props);
-    const select = findElement(tree, (element) => element.type === "select");
+    const select = findElement(
+      tree,
+      (element) => element.type === LibrarySelect,
+    );
 
     expect(select).not.toBeNull();
-    (select!.props.onChange as (event: unknown) => void)({
-      currentTarget: { value: secondDestination.id },
-    });
+    (select!.props.onChange as (value: string) => void)(secondDestination.id);
 
     expect(onDestinationChange).toHaveBeenCalledWith(secondDestination.id, [
       secondAchievement.id,
@@ -153,7 +157,7 @@ describe("Imagination Canvas composer", () => {
     const html = renderMarkup({ value: "A restored editable draft." });
 
     expect(html).toContain("New achievement");
-    expect(html).toContain("Start with a draft");
+    expect(html).not.toContain("Start with a draft");
     expect(html).toContain(
       'placeholder="Write what you built, improved, or accomplished…"',
     );
@@ -195,6 +199,13 @@ describe("Imagination Canvas composer", () => {
     expect(libraryHtml).toContain("Create mode");
     expect(libraryHtml).toContain(
       "saves to your Achievement Library. It does not update your PDF yet.",
+    );
+    expect(libraryHtml).not.toContain("Apply changes");
+    expect(resumeHtml).toContain(
+      "Your PDF updates only after you Apply changes.",
+    );
+    expect(bothHtml).toContain(
+      "Your PDF updates only after you Apply changes.",
     );
     expect(resumeHtml).toContain(
       "adds the reviewed achievement to your resume draft.",
@@ -242,9 +253,46 @@ describe("Imagination Canvas composer", () => {
       connectedAchievementIds: draft!.selectedIds,
       value: draft!.text,
     });
-    expect(restoredHtml).toContain(
-      'value="' + draft!.groupId + '" selected=""',
-    );
+    expect(restoredHtml).toContain('data-value="' + draft!.groupId + '"');
+    expect(restoredHtml).toContain('aria-selected="true"');
     expect(restoredHtml).toContain(draft!.text);
+  });
+
+  it("requires a job or project when the personal library has no destination", () => {
+    const html = renderMarkup({
+      library: { ...studioLibrary, jobs: [], projects: [] },
+      destinationGroupId: "",
+    });
+
+    expect(html).toContain("A job or project is required.");
+    expect(html).not.toContain("No resume destinations available");
+    expect(html).not.toContain(
+      "No save destination is available for this data source.",
+    );
+  });
+
+  it("says how many achievements a destination change disconnected and offers undo", () => {
+    const onUndoDestination = vi.fn();
+    const tree = ImaginationComposer(
+      makeProps({ disconnectedCount: 2, onUndoDestination }),
+    );
+    const undo = findElement(
+      tree,
+      (element) =>
+        element.type === "button" &&
+        renderedText(element.props.children as ReactNode) === "Undo",
+    );
+
+    expect(disconnectedAchievementNotice(1)).toBe(
+      "1 connected achievement was disconnected because it belongs to another job or project.",
+    );
+    expect(renderedText(tree)).toContain(
+      "2 connected achievements were disconnected because they belong to another job or project.",
+    );
+    (undo!.props.onClick as () => void)();
+    expect(onUndoDestination).toHaveBeenCalledOnce();
+    expect(
+      renderedText(ImaginationComposer(makeProps({ disconnectedCount: 0 }))),
+    ).not.toContain("Undo");
   });
 });

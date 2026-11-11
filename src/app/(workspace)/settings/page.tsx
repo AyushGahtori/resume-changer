@@ -1,4 +1,3 @@
-import WorkspacePlaceholder from "@/components/workspace-placeholder";
 import AccountDataTools from "@/components/account-data-tools";
 import { getAppMode } from "@/lib/cloud/security";
 
@@ -11,5 +10,14 @@ export default function SettingsPage() {
         <AccountDataTools />
       </section>
     );
-  return <WorkspacePlaceholder eyebrow="PREFERENCES" title="Settings" />;
+  return (
+    <section className="placeholder-page" aria-labelledby="settings-title">
+      <p className="eyebrow">PREFERENCES</p>
+      <h1 id="settings-title">Settings</h1>
+      <p className="page-intro">
+        Your library, saved analyses, and resume history stay on this device.
+        Use the theme toggle in the top bar to switch between light and dark.
+      </p>
+    </section>
+  );
 }

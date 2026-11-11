@@ -126,7 +126,7 @@ test.describe("achievement library baseline", () => {
     );
 
     await details.nth(0).locator("summary").click();
-    await expect(page.locator(".skill-list li")).toHaveCount(14);
+    await expect(page.locator(".skill-chip-list li")).toHaveCount(14);
     await expect(page.locator(".skill-listed").first()).toHaveText(
       "On current resume",
     );

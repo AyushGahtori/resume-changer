@@ -30,6 +30,7 @@ describe("Imagination Canvas save footer", () => {
     expect(markup).toContain("Review the facts before accepting this draft.");
     expect(markup).toContain("Your PDF updates only after Apply changes.");
     expect(markup).toContain('aria-label="Save achievement to"');
+    expect(markup).not.toContain("<select");
     expect(markup).toContain("Current resume");
     expect(markup).toContain("Achievement Library");
     expect(markup).toContain("Resume and library");
@@ -50,11 +51,30 @@ describe("Imagination Canvas save footer", () => {
     expect(libraryMarkup).toContain("Achievement Library");
     expect(libraryMarkup).not.toContain("Current resume");
     expect(libraryMarkup).not.toContain("Resume and library");
+    expect(libraryMarkup).not.toContain(
+      "Your PDF updates only after Apply changes.",
+    );
+
+    const bothMarkup = renderFooter({ saveTo: "both" });
+    expect(bothMarkup).toContain("Your PDF updates only after Apply changes.");
   });
 
   it("disables saving when there is no reviewed text or destination", () => {
     const emptyMarkup = renderFooter({ canSave: false });
     expect(emptyMarkup).toContain('disabled=""');
+    expect(emptyMarkup).toContain("Write an achievement before saving.");
+
+    const suggestionMarkup = renderFooter({
+      canSave: false,
+      disabledReason:
+        "Use the suggestion in the editor, or dismiss it, before saving.",
+    });
+    expect(suggestionMarkup).toContain(
+      "Use the suggestion in the editor, or dismiss it, before saving.",
+    );
+    expect(suggestionMarkup).not.toContain(
+      "Write an achievement before saving.",
+    );
 
     const unavailableMarkup = renderFooter({
       source: "demo",
@@ -64,8 +84,27 @@ describe("Imagination Canvas save footer", () => {
     expect(unavailableMarkup).toContain(
       "No save destination is available for this data source.",
     );
+    expect(unavailableMarkup).not.toContain(
+      "A job or project is required before you can save an achievement.",
+    );
     expect(unavailableMarkup).toContain('disabled=""');
     expect(unavailableMarkup).not.toContain('aria-label="Save achievement to"');
+
+    const emptyPersonalMarkup = renderFooter({
+      source: "personal",
+      allowResume: true,
+      hasLibraryDestination: false,
+      saveTo: null,
+    });
+    expect(emptyPersonalMarkup).toContain(
+      "A job or project is required before you can save an achievement.",
+    );
+    expect(emptyPersonalMarkup).not.toContain(
+      "No save destination is available for this data source.",
+    );
+    expect(emptyPersonalMarkup).not.toContain(
+      "Your PDF updates only after Apply changes.",
+    );
   });
 
   it("keeps saving and generating states disabled and announces save errors", () => {

@@ -10,6 +10,7 @@ import type {
   AnalysisStatusProps,
   EvidencePanelProps,
   ImportLayoutProps,
+  ImportReviewState,
   ImportStep,
   ImportTrustRailProps,
   MeasurementFieldsProps,
@@ -45,6 +46,79 @@ function errorText(error: { message: string } | null) {
   return error?.message ?? "";
 }
 
+const recoveryLinkStyle = {
+  color: "var(--color-violet, #5b35d5)",
+  fontWeight: 700,
+  textDecoration: "underline",
+  textUnderlineOffset: "0.15em",
+} as const;
+
+function missingImportDetail(message: string | null | undefined) {
+  if (!message || /connect github before starting an import/i.test(message))
+    return null;
+  return message;
+}
+
+/** A step is current only after a live import for this id has loaded. */
+export function visibleImportStep(input: {
+  importId: string | null;
+  loading: boolean;
+  review: ImportReviewState | null;
+  forceSetup: boolean;
+  routeState: ImportStep;
+}): "missing" | "pending" | ImportStep {
+  const live =
+    input.review &&
+    (!input.importId || input.review.import.id === input.importId)
+      ? input.review
+      : null;
+  if (input.importId && !input.loading && !live) return "missing";
+  if (input.forceSetup && live) return "setup";
+  if (live) return stepForImportState(live);
+  if (input.importId) return "pending";
+  return input.routeState;
+}
+
+function MissingImportNotice({
+  source,
+  detail,
+}: {
+  source: "personal" | "demo";
+  detail: string | null;
+}) {
+  const libraryHref = source === "demo" ? "/library?source=demo" : "/library";
+  const newImportHref =
+    source === "demo"
+      ? "/library/github/new?source=demo"
+      : "/library/github/new";
+  return (
+    <div
+      data-github-import=""
+      className={styles.page}
+      data-testid="github-import-workspace"
+      data-step="missing"
+    >
+      <section
+        className={styles.header}
+        aria-labelledby="github-import-missing-heading"
+      >
+        <p className={styles.eyebrow}>GitHub import</p>
+        <h1 id="github-import-missing-heading">This import was not found</h1>
+        <p>This link does not match an import that is still open.</p>
+        {detail ? <p>{detail}</p> : null}
+        <nav className={styles.actions} aria-label="Import recovery">
+          <Link href={newImportHref} style={recoveryLinkStyle}>
+            Start a new import
+          </Link>
+          <Link href={libraryHref} style={recoveryLinkStyle}>
+            Return to the library
+          </Link>
+        </nav>
+      </section>
+    </div>
+  );
+}
+
 export function ImportWorkspace(props: ImportWorkspacePageProps) {
   const workspace = useImportWorkspace(props);
   const [interviewComplete, setInterviewComplete] = useState(false);
@@ -72,11 +146,33 @@ export function ImportWorkspace(props: ImportWorkspacePageProps) {
     [setProjectContext, setRole],
   );
   const review = workspace.review;
-  const step = workspace.forceSetup
-    ? "setup"
-    : review
-      ? stepForImportState(review)
-      : props.routeState;
+  const step = visibleImportStep({
+    importId: props.importId,
+    loading: workspace.loading,
+    review,
+    forceSetup: workspace.forceSetup,
+    routeState: props.routeState,
+  });
+  if (step === "missing") {
+    return (
+      <MissingImportNotice
+        source={workspace.source}
+        detail={missingImportDetail(workspace.actionError?.message)}
+      />
+    );
+  }
+  if (step === "pending") {
+    return (
+      <div
+        data-github-import=""
+        className={styles.page}
+        data-testid="github-import-workspace"
+        data-step="pending"
+      >
+        <p role="status">Loading the saved import…</p>
+      </div>
+    );
+  }
   const stage = review
     ? stageLabel(review.import.lifecycle)
     : workspace.importId
@@ -410,9 +506,6 @@ export function ImportWorkspace(props: ImportWorkspacePageProps) {
         <button type="button" onClick={() => void workspace.cancel()}>
           Cancel current request
         </button>
-      ) : null}
-      {workspace.importId && !workspace.loading && !review ? (
-        <Link href="/library/github/new">Start a new import</Link>
       ) : null}
       {workspace.source === "demo" && (
         <aside className={styles.banner} role="status">

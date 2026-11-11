@@ -7,10 +7,17 @@ const arg = (name) => process.argv[process.argv.indexOf(name) + 1];
 const project = arg("--project"),
   firebasePackage = arg("--firebase-cli-package"),
   vercelCli = arg("--vercel-cli");
+const productionProject = JSON.parse(readFileSync(".firebaserc", "utf8"))
+  .projects.default;
+// A Preview must not receive a key for the production database. Stop before
+// any CLI, IAM, or secret publication, and do not delete existing keys.
+if (project === productionProject)
+  throw new Error(
+    "Refusing to publish a service-account key for the production Firebase project in .firebaserc.",
+  );
 if (
   !process.argv.includes("--apply") ||
-  project !==
-    JSON.parse(readFileSync(".firebaserc", "utf8")).projects.default ||
+  !project ||
   !firebasePackage ||
   !vercelCli
 )

@@ -16,6 +16,8 @@ import type { LucideIcon } from "lucide-react";
 import React from "react";
 import type { CSSProperties, FormEvent } from "react";
 import type { AchievementWritingMode } from "@/lib/ai/achievement-writing";
+import { handleCtrlBackspace } from "@/lib/editing/delete-word";
+import { imaginationSaveCopy } from "@/lib/generation/imagination-save";
 
 export type ImaginationWritingMode = AchievementWritingMode;
 
@@ -64,6 +66,7 @@ export type ImaginationWritingControlsProps = {
   onTargetLinesChange: (targetLines: ImaginationTargetLineCount) => void;
   targetLineFeedback?: ImaginationTargetLineFeedback;
   canSubmit: boolean;
+  blockedReason?: string;
   isLoading: boolean;
   onSubmit: () => void;
   onCancel: () => void;
@@ -95,14 +98,21 @@ export default function ImaginationWritingControls({
   onTargetLinesChange,
   targetLineFeedback = { status: "estimated" },
   canSubmit,
+  blockedReason = "",
   isLoading,
   onSubmit,
   onCancel,
 }: ImaginationWritingControlsProps) {
   const instructionTooLong =
     instruction.length > MAX_IMAGINATION_INSTRUCTION_LENGTH;
-  const submitDisabled =
-    !canSubmit || isLoading || !instruction.trim() || instructionTooLong;
+  const submitDisabled = !canSubmit || isLoading || instructionTooLong;
+  const askHint = isLoading
+    ? ""
+    : instructionTooLong
+      ? imaginationSaveCopy.instructionTooLong
+      : !canSubmit
+        ? blockedReason || imaginationSaveCopy.askNeedsDraft
+        : "";
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -231,6 +241,14 @@ export default function ImaginationWritingControls({
                 ),
               )
             }
+            onKeyDown={(event) =>
+              handleCtrlBackspace(event, (next) =>
+                onInstructionChange(
+                  next.slice(0, MAX_IMAGINATION_INSTRUCTION_LENGTH),
+                ),
+              )
+            }
+            placeholder={DEFAULT_IMAGINATION_INSTRUCTION}
             rows={3}
             value={instruction}
           />
@@ -258,31 +276,34 @@ export default function ImaginationWritingControls({
           {instruction.length}/{MAX_IMAGINATION_INSTRUCTION_LENGTH}
         </div>
 
-        <div className="imagination-request-actions">
-          <label>
-            <span>Target</span>
-            <select
-              aria-label="Target line count"
-              disabled={isLoading}
-              onChange={(event) => {
-                const next = Number(event.currentTarget.value);
-                if (
-                  TARGET_LINE_COUNTS.includes(
-                    next as ImaginationTargetLineCount,
-                  )
-                ) {
-                  onTargetLinesChange(next as ImaginationTargetLineCount);
-                }
-              }}
-              value={targetLines}
-            >
-              {TARGET_LINE_COUNTS.map((lines) => (
-                <option key={lines} value={lines}>
-                  {lines} {lines === 1 ? "line" : "lines"}
-                </option>
-              ))}
-            </select>
-          </label>
+        <div
+          className="imagination-request-actions"
+          style={{ flexWrap: "wrap" }}
+        >
+          <div
+            aria-label="Target line count"
+            className="imagination-target"
+            role="group"
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              alignItems: "center",
+              gap: 6,
+            }}
+          >
+            <span>Target lines</span>
+            {TARGET_LINE_COUNTS.map((lines) => (
+              <button
+                aria-pressed={targetLines === lines}
+                disabled={isLoading}
+                key={lines}
+                onClick={() => onTargetLinesChange(lines)}
+                type="button"
+              >
+                {lines} {lines === 1 ? "line" : "lines"}
+              </button>
+            ))}
+          </div>
 
           <span role="status" aria-live="polite">
             {describeTargetLineFeedback(targetLineFeedback)}
@@ -291,6 +312,7 @@ export default function ImaginationWritingControls({
           <button
             aria-busy={isLoading}
             className="studio-ai-button imagination-writing-submit"
+            aria-describedby={askHint ? "imagination-ask-hint" : undefined}
             disabled={submitDisabled}
             style={submitButtonStyle}
             type="submit"
@@ -320,6 +342,11 @@ export default function ImaginationWritingControls({
             </button>
           )}
         </div>
+        {askHint && (
+          <p id="imagination-ask-hint" role="status" style={{ margin: 0 }}>
+            {askHint}
+          </p>
+        )}
       </form>
     </section>
   );

@@ -17,6 +17,10 @@ import { ANALYZE_JOB_DESCRIPTION_INSTRUCTIONS } from "./prompts/v1/analyze-job-d
 import { DRAFT_RESUME_INSTRUCTIONS } from "./prompts/v1/draft-resume";
 import { REPAIR_LATEX_CONTENT_INSTRUCTIONS } from "./prompts/v1/repair-latex-content";
 import { SELECT_ACHIEVEMENTS_INSTRUCTIONS } from "./prompts/v1/select-achievements";
+import {
+  RESUME_SELECTION_RULES,
+  RESUME_WRITING_RULES,
+} from "./prompts/v1/resume-writing-advice";
 import { PROMPT_VERSION, SHARED_INSTRUCTIONS } from "./prompts/v1/shared";
 import { JAKE_STYLE_TEMPLATE } from "../latex/jake-template";
 import { AiProviderError } from "./provider";
@@ -134,9 +138,19 @@ export function buildAiPrompt<T extends AiTask>(
       validatedInput as ResumeDraftInput,
     );
   }
+  const advice =
+    task === "draftResume" ||
+    task === "achievementEdit" ||
+    task === "achievementMerge" ||
+    task === "achievementCreate"
+      ? `Resume writing rules:\n${RESUME_WRITING_RULES}`
+      : task === "selectAchievements"
+        ? `Resume selection rules:\n${RESUME_SELECTION_RULES}`
+        : undefined;
   const sections = [
     `Prompt version: ${PROMPT_VERSION}`,
     `Shared instructions:\n${SHARED_INSTRUCTIONS}`,
+    ...(advice ? [advice] : []),
     `Task instructions:\n${configuration.instructions}`,
     ...(task === "achievementCreate" && writingMode
       ? [

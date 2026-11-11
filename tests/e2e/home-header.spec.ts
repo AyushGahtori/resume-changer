@@ -238,7 +238,10 @@ test("keeps restore notices adjacent and announces draft saves", async ({
   await page.keyboard.press("Enter");
 
   await expect(page.locator(".form-save-feedback")).toContainText(
-    "Draft saved in this browser. You can open Resume builder now.",
+    "Draft saved in this browser.",
+  );
+  await expect(page.getByText("You can open Resume builder now.")).toHaveCount(
+    0,
   );
   await expect(page.locator(".draft-state")).toContainText(
     "Saved on this device",

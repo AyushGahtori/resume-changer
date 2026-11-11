@@ -149,10 +149,6 @@ test("carries a job description through analysis, selection, PDF, overrides, and
   await expect(latex).toContainText(
     "Standardized AWS environment provisioning",
   );
-  await expect(page.locator(".generation-metadata")).toContainText(
-    "2 achievements",
-  );
-
   // 5. Compile the PDF and confirm the one-page result.
   await page.getByRole("button", { name: "Create PDF" }).click();
   await expect(page.getByText("PDF ready · 1 page.")).toBeVisible();

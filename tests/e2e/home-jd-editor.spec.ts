@@ -71,7 +71,7 @@ for (const theme of ["light", "dark"] as const) {
         .querySelector(".description-heading label")!
         .getBoundingClientRect();
       const badgeBox = form
-        .querySelector(".required-label")!
+        .querySelector(".description-heading .required-label")!
         .getBoundingClientRect();
       const helperBox = form
         .querySelector("#jd-helper")!
@@ -258,7 +258,7 @@ test("wraps the label and badge gracefully on narrow screens", async ({
       const heading = form.querySelector(".description-heading")!;
       const label = heading.querySelector("label")!.getBoundingClientRect();
       const badge = heading
-        .querySelector(".required-label")!
+        .querySelector(".description-heading .required-label")!
         .getBoundingClientRect();
       const helper = form.querySelector("#jd-helper")!.getBoundingClientRect();
       const textarea = form.querySelector("textarea")!.getBoundingClientRect();

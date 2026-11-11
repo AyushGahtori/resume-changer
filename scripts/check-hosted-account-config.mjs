@@ -1,8 +1,56 @@
-import { resolve } from "node:path";
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+
+function defaultFirebaseProjectId() {
+  const path = resolve(
+    dirname(fileURLToPath(import.meta.url)),
+    "../.firebaserc",
+  );
+  let parsed;
+  try {
+    parsed = JSON.parse(readFileSync(path, "utf8"));
+  } catch {
+    throw new Error(
+      "Preview service-account checks need the default project in .firebaserc.",
+    );
+  }
+  const project = parsed?.projects?.default;
+  if (typeof project !== "string" || !project.trim())
+    throw new Error(
+      "Preview service-account checks need the default project in .firebaserc.",
+    );
+  return project;
+}
+
+function assertPreviewServiceAccount(environment) {
+  if (environment.VERCEL_ENV !== "preview") return;
+  const raw = environment.GITHUB_FIREBASE_SERVICE_ACCOUNT;
+  if (typeof raw !== "string" || !raw.trim()) return;
+  let credentials;
+  try {
+    credentials = JSON.parse(raw);
+  } catch {
+    throw new Error(
+      "Preview deployments cannot accept GITHUB_FIREBASE_SERVICE_ACCOUNT unless it is JSON for a non-production Firebase project.",
+    );
+  }
+  const projectId =
+    credentials &&
+    typeof credentials === "object" &&
+    !Array.isArray(credentials) &&
+    typeof credentials.project_id === "string"
+      ? credentials.project_id
+      : "";
+  if (!projectId || projectId === defaultFirebaseProjectId())
+    throw new Error(
+      "Preview deployments cannot hold a service account for the production Firebase project. Give Preview its own non-production project.",
+    );
+}
 
 export function checkHostedAccountConfig(environment) {
   if (environment.VERCEL !== "1") return;
+  assertPreviewServiceAccount(environment);
   const required = [
     "NEXT_PUBLIC_FIREBASE_API_KEY",
     "NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN",

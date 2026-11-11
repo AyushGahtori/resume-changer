@@ -247,19 +247,17 @@ test("local matching is offered only after explaining the AI failure and request
     });
   });
 
-  let confirmationMessage = "";
-  page.once("dialog", async (dialog) => {
-    confirmationMessage = dialog.message();
-    await dialog.accept();
-  });
   const suggestButton = page.getByRole("button", { name: "Suggest points" });
   await expect(suggestButton).toBeEnabled();
   await suggestButton.click();
-  await expect.poll(() => requestBodies).toHaveLength(2);
-  expect(confirmationMessage).toContain(
+  const consent = page.getByRole("dialog", { name: "Continue without AI" });
+  await expect(consent).toBeVisible();
+  await expect(consent).toContainText(
     "Gemini's free-tier request limit was reached.",
   );
-  expect(confirmationMessage).toContain("Continue with local-matching?");
+  await expect(consent).toContainText("Continue with local-matching?");
+  await consent.getByRole("button", { name: "OK" }).click();
+  await expect.poll(() => requestBodies).toHaveLength(2);
   expect(requestBodies[0]).not.toHaveProperty("allowLocalFallback", true);
   expect(requestBodies[1]).toMatchObject({ allowLocalFallback: true });
 });
@@ -413,10 +411,12 @@ test("Auto Tailor reports wording repair and exposes summary, partial coverage a
             finalCoverage: [
               {
                 requirement: "AWS provisioning",
+                priority: "required",
                 coveredByAchievementIds: [achievementId],
                 availableAchievementIds: [achievementId],
                 status: "partial",
                 evidence: [],
+                facets: [],
                 missingComponents: ["More deployment evidence"],
                 reason: "Related evidence supports part of the requirement.",
               },
@@ -446,7 +446,7 @@ test("Auto Tailor reports wording repair and exposes summary, partial coverage a
   ).toBeVisible();
   await page.getByRole("button", { name: "Job match", exact: true }).click();
   await expect(
-    page.getByText("0 / 1 supported · 1 partial", { exact: true }),
+    page.getByText("Required: 0 of 1 covered · 1 Partial", { exact: true }),
   ).toBeVisible();
   await expect(
     page.getByText(

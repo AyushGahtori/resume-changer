@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { saveJobAnalysis } from "../helpers/saved-job";
 
 /**
  * The job context card states the job the user is applying for. It has to be
@@ -44,9 +45,8 @@ async function openBuilder(page: import("@playwright/test").Page) {
 test("shows the restored role, company, and description length", async ({
   page,
 }) => {
-  const description = "Build reliable platform services. ".repeat(40);
-  await page.goto("/");
-  await writeDraft(page, {
+  const description = "Build reliable platform services. ".repeat(40).trim();
+  await saveJobAnalysis(page, {
     roleTitle: "Platform Engineer",
     company: "Example Systems",
     jobDescription: description,
@@ -72,6 +72,13 @@ test("shows the restored role, company, and description length", async ({
 test("keeps the context empty and points to the job description page", async ({
   page,
 }) => {
+  const listed = await page.request.get("/api/job-analyses");
+  if (listed.ok()) {
+    const body = (await listed.json()) as { jobs?: { id: string }[] };
+    for (const job of body.jobs ?? []) {
+      await page.request.delete(`/api/job-analyses/${job.id}`);
+    }
+  }
   await openBuilder(page);
 
   const card = page.locator(".generation-draft");
@@ -84,8 +91,10 @@ test("keeps the context empty and points to the job description page", async ({
 
 test("never fills the context in from a sample", async ({ page }) => {
   const description = "Maintain internal tooling for the data platform team.";
-  await page.goto("/");
-  await writeDraft(page, { jobDescription: description });
+  await saveJobAnalysis(page, {
+    company: "Example Systems",
+    jobDescription: description,
+  });
   await openBuilder(page);
 
   const card = page.locator(".generation-draft");
@@ -103,13 +112,10 @@ test("keeps a long role title and company inside the card", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/");
-  await writeDraft(page, {
-    roleTitle:
-      "Senior Staff Software Engineer, Distributed Systems and Developer Platform Infrastructure",
-    company:
-      "Example Systems International Group Holdings and Operations Limited Partnership",
-    jobDescription: "Build reliable platform services. ".repeat(40),
+  await saveJobAnalysis(page, {
+    roleTitle: "Senior Staff Software Engineer, Distributed Systems",
+    company: "Example Systems International Group",
+    jobDescription: "Build reliable platform services.",
   });
   await openBuilder(page);
 
@@ -140,27 +146,100 @@ test("keeps a long role title and company inside the card", async ({
   );
 });
 
-test("follows the draft when the job context changes", async ({ page }) => {
-  await page.goto("/");
-  await writeDraft(page, {
+test("follows the selected saved job", async ({ page }) => {
+  await saveJobAnalysis(page, {
     roleTitle: "Platform Engineer",
     company: "Example Systems",
     jobDescription: "Build reliable platform services.",
   });
-  await openBuilder(page);
-
-  const card = page.locator(".generation-draft");
-  await expect(card).toContainText("Platform Engineer");
-  await expect(card).toContainText("Example Systems");
-
-  await writeDraft(page, {
+  await saveJobAnalysis(page, {
     roleTitle: "Site Reliability Engineer",
     company: "Other Systems",
     jobDescription: "A different job description.",
   });
-  await page.reload();
+  await openBuilder(page);
 
+  const card = page.locator(".generation-draft");
   await expect(card).toContainText("Site Reliability Engineer");
   await expect(card).toContainText("Other Systems");
-  await expect(card).not.toContainText("Platform Engineer");
+
+  const request = page.waitForRequest("**/api/ai/select-achievements");
+  await page
+    .locator(".saved-job-open", { hasText: "Platform Engineer" })
+    .click();
+  await expect(card).toContainText("Platform Engineer");
+  await expect(card).toContainText("Example Systems");
+  await page.getByRole("button", { name: "Suggest points" }).click();
+  const posted = (await request).postData() ?? "";
+  expect(posted).toContain("Build reliable platform services.");
+  expect(posted).not.toContain("A different job description.");
+});
+
+test("places the saved-job chooser before Choose achievements", async ({
+  page,
+}) => {
+  await saveJobAnalysis(page, {
+    roleTitle: "Platform Engineer",
+    company: "Example Systems",
+    jobDescription: "Build reliable platform services.",
+  });
+  for (const viewport of [
+    { width: 390, height: 844 },
+    { width: 1440, height: 900 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await openBuilder(page);
+    const order = await page.evaluate(() => {
+      const jobs = document.querySelector("#builder-saved-jobs-title");
+      const achievements = [...document.querySelectorAll("h2")].find(
+        (heading) => heading.textContent === "Choose achievements",
+      );
+      if (!jobs || !achievements) return "missing";
+      const jobsBox = jobs.getBoundingClientRect();
+      const achievementsBox = achievements.getBoundingClientRect();
+      const follows =
+        (jobs.compareDocumentPosition(achievements) &
+          Node.DOCUMENT_POSITION_FOLLOWING) !==
+        0;
+      return follows && jobsBox.top <= achievementsBox.top ? "before" : "after";
+    });
+    expect(order).toBe("before");
+  }
+});
+
+test("warns when the browser draft differs from the saved analysis", async ({
+  page,
+}) => {
+  const description = "Build reliable platform services.";
+  await page.goto("/");
+  await saveJobAnalysis(page, {
+    company: "Example Systems",
+    roleTitle: "Platform Engineer",
+    jobDescription: description,
+  });
+  await writeDraft(page, {
+    company: "Example Systems",
+    roleTitle: "Platform Engineer",
+    jobDescription: `${description} Also requires GraphQL.`,
+  });
+  await openBuilder(page);
+  await expect(page.locator(".saved-job-unsaved")).toContainText(
+    "This draft differs from the saved analysis.",
+  );
+  await expect(page.locator(".selection-analysis-state")).toHaveText(
+    "Saved analysis",
+  );
+
+  await page.route("**/api/ai/select-achievements", (route) =>
+    route.fulfill({
+      status: 503,
+      contentType: "application/json",
+      body: JSON.stringify({ error: "Suggestions are unavailable." }),
+    }),
+  );
+  const request = page.waitForRequest("**/api/ai/select-achievements");
+  await page.getByRole("button", { name: "Suggest points" }).click();
+  const posted = (await request).postData() ?? "";
+  expect(posted).toContain(description);
+  expect(posted).not.toContain("Also requires GraphQL.");
 });

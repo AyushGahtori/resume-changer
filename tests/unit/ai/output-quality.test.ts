@@ -198,7 +198,7 @@ describe("complete evidence and coverage quality", () => {
     const rows = assessRequirementCoverage(input, [source.id]);
     expect(rows.map((r) => r.status)).toEqual([
       "partial",
-      "supported",
+      "partial",
       "partial",
       "partial",
     ]);
@@ -256,6 +256,54 @@ describe("complete evidence and coverage quality", () => {
     expect(rows.find((r) => r.requirement === "Python")?.status).not.toBe(
       "supported",
     );
+  });
+
+  it("acknowledges a compiled bullet that names the requirement technology", () => {
+    const input = selectionInput();
+    const requirement = "React for internal tooling dashboards";
+    const achievementId = "achievement-queueboard-operations-view";
+    input.analysis = {
+      ...analysis,
+      requiredQualifications: [],
+      responsibilities: [],
+      preferredQualifications: [requirement],
+    };
+    input.achievements = [
+      {
+        ...source,
+        id: achievementId,
+        text: "Created an operations view that groups queue health, retry counts, and recent failures for quick investigation.",
+        tags: ["observability"],
+        supportedSkills: ["React"],
+      },
+    ];
+    input.skills = [
+      {
+        id: "skill-react",
+        name: "React",
+        aliases: [],
+        isListedOnCurrentResume: true,
+        evidenceAchievementIds: [achievementId],
+      },
+    ];
+    const acknowledged = assessRequirementCoverage(input, [achievementId], {
+      renderedTexts: new Map([
+        [achievementId, "Created an operations view using React"],
+      ]),
+    });
+    expect(acknowledged[0].status).not.toBe("no-evidence-found");
+    expect(acknowledged[0].status).not.toBe("supported");
+    expect(acknowledged[0].coveredByAchievementIds).toContain(achievementId);
+
+    const absent = assessRequirementCoverage(input, [achievementId], {
+      renderedTexts: new Map([
+        [
+          achievementId,
+          "Built internal tooling dashboards for operations review",
+        ],
+      ]),
+    });
+    expect(absent[0].status).not.toBe("supported");
   });
 
   it("keeps a mixed direct/inferred framework match uncertain rather than confirmed", () => {

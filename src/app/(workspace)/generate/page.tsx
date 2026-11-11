@@ -34,7 +34,7 @@ export default async function GeneratePage({
       <section className="generation-error" role="alert">
         <p className="eyebrow">RESUME DATA UNAVAILABLE</p>
         <h1>Resume builder</h1>
-        <p>{message}</p>
+        <p style={{ whiteSpace: "pre-line" }}>{message}</p>
         <Link className="library-switch-link" href={alternateHref}>
           Open {alternateSource === "demo" ? "fictional demo data" : "my data"}
         </Link>

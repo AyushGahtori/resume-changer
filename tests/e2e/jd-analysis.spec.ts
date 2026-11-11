@@ -21,6 +21,7 @@ test.beforeEach(async ({ page }) => {
 test("shows structured JD analysis with evidence distinctions and terminology", async ({
   page,
 }) => {
+  await page.getByLabel("Company", { exact: true }).fill("Example Systems");
   await page.getByLabel("Role title").fill("ML Platform Engineer");
   await page
     .getByRole("textbox", { name: "Job description", exact: true })
@@ -52,6 +53,7 @@ test("shows a retry action after transient analysis failure and keeps the draft"
   await page
     .getByRole("textbox", { name: "Job description", exact: true })
     .fill("Build reliable services.");
+  await page.getByLabel("Company", { exact: true }).fill("Example Systems");
   let attempts = 0;
   await page.route("**/api/ai/analyze-job-description", async (route) => {
     attempts += 1;

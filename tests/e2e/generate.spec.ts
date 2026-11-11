@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 import { createOnePagePdf } from "../helpers/pdf-fixture";
+import { saveJobAnalysis } from "../helpers/saved-job";
 
 async function generateResume(page: import("@playwright/test").Page) {
   await page
@@ -20,6 +21,12 @@ test.beforeEach(async ({ page }) => {
     .getByRole("textbox", { name: "Job description", exact: true })
     .fill("Build reliable platform services and improve deployment workflows.");
   await expect(page.getByRole("status")).toContainText("Saved on this device");
+  await saveJobAnalysis(page, {
+    company: "Example Systems",
+    roleTitle: "Platform Engineer",
+    jobDescription:
+      "Build reliable platform services and improve deployment workflows.",
+  });
   await page.goto("/generate?source=demo");
 });
 
@@ -31,19 +38,18 @@ test("selects points, generates LaTeX, copies and downloads the output", async (
   const point = page.getByLabel(
     "Select achievement achievement-service-capacity-design",
   );
+  await expect(page.locator(".generation-step-chip")).toHaveText("02 / 04");
   await point.check();
   await page.getByRole("button", { name: "Generate LaTeX" }).click();
 
   const preview = page.getByLabel("Generated LaTeX");
   await expect(preview).toContainText("Jordan Example");
+  await expect(page.locator(".generation-step-chip")).toHaveText("03 / 04");
   await expect(preview).toContainText("Redesigned service boundaries");
   await expect(
     page.getByRole("status", { name: "Generation method" }),
   ).toHaveText(
     "Generated internally by Resume Changer from your selected evidence. AI did not rewrite the content.",
-  );
-  await expect(page.locator(".generation-metadata")).toContainText(
-    "1 achievement",
   );
   await expect(
     page.getByRole("region", { name: "Generated resume review" }),
@@ -143,6 +149,7 @@ test("compiles, previews, zooms, exits full screen, and downloads a PDF", async 
   ).toBeVisible();
   await expect(page.getByTitle("Generated resume PDF")).toBeVisible();
   await expect(page.getByText("PDF ready · 1 page.")).toBeVisible();
+  await expect(page.locator(".generation-step-chip")).toHaveText("04 / 04");
   await expect(
     page.getByText("Saved to generation history on this device."),
   ).toBeVisible();
@@ -297,4 +304,34 @@ test("keeps the generation layout within the viewport width on mobile", async ({
   await expect(
     page.getByRole("button", { name: "Generate LaTeX" }),
   ).toBeVisible();
+});
+
+test("disables point choices while generating and cancel keeps the selection", async ({
+  page,
+}) => {
+  let release: (() => void) | undefined;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route("**/api/generate", async (route) => {
+    await gate;
+    await route.fulfill({
+      status: 500,
+      contentType: "application/json",
+      body: JSON.stringify({ error: "Generation was still running." }),
+    });
+  });
+  const point = page.getByLabel(
+    "Select achievement achievement-service-capacity-design",
+  );
+  await point.check();
+  await page.getByRole("button", { name: "Generate LaTeX" }).click();
+  await expect(point).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Select all" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Clear" })).toBeDisabled();
+  await page.getByRole("button", { name: "Cancel generation" }).click();
+  release?.();
+  await expect(point).toBeEnabled();
+  await expect(point).toBeChecked();
+  await expect(page.getByLabel("Generated LaTeX")).toHaveCount(0);
 });

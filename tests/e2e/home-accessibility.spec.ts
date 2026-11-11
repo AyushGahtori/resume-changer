@@ -98,6 +98,7 @@ for (const theme of ["light", "dark"]) {
           : { json: { analysis: homeAnalysis } },
       );
     });
+    await page.getByLabel("Company", { exact: true }).fill("Example Systems");
     await page
       .getByRole("button", { name: "Analyze job description", exact: true })
       .click();

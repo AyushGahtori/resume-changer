@@ -216,7 +216,76 @@ describe("RepositorySetup", () => {
     expect(unavailable.textContent).toContain(
       "GitHub is temporarily unavailable.",
     );
+    expect(buttonNamed(unavailable, "Reconnect GitHub")).toBeTruthy();
     expect(unavailable.querySelector('[data-readiness="ready"]')).toBeNull();
+  });
+
+  it("does not offer reconnect when the GitHub callback URL is not configured", () => {
+    const messages = [
+      "GitHub App callback setup is missing on this server.",
+      "GitHub App callback setup is invalid on this server.",
+      "GitHub App callback setup must use the exact callback URL.",
+      "Hosted GitHub connections require an HTTPS callback URL.",
+      "The GitHub callback URL must use the configured app origin.",
+    ];
+    for (const message of messages) {
+      const host = mount(
+        baseProps({
+          connectionState: "error",
+          connectionPresentationState: "unavailable",
+          connectionStatusMessage: message,
+          error: {
+            code: "unavailable",
+            message,
+            retryable: false,
+          },
+          ready: false,
+          repositories: [],
+          selectedRepositoryId: null,
+        }),
+      );
+      expect(host.textContent).toContain(
+        "GitHub import is not available on this server.",
+      );
+      expect(host.textContent).not.toContain(message);
+      expect(host.textContent).not.toContain(
+        "Connect GitHub above to get started.",
+      );
+      const labels = [...host.querySelectorAll("button")].map((button) =>
+        button.textContent?.replace(/\s+/g, " ").trim(),
+      );
+      expect(labels).not.toContain("Reconnect GitHub");
+      expect(labels).not.toContain("Connect GitHub");
+    }
+
+    const expired = mount(
+      baseProps({
+        connectionState: "error",
+        connectionPresentationState: "expired",
+        connectionStatusMessage:
+          "GitHub App callback setup is missing on this server.",
+        error: {
+          code: "unavailable",
+          message: "GitHub App callback setup is missing on this server.",
+          retryable: false,
+        },
+        ready: false,
+      }),
+    );
+    expect(buttonNamed(expired, "Reconnect GitHub")).toBeTruthy();
+
+    const denied = mount(
+      baseProps({
+        connectionState: "error",
+        connectionPresentationState: "denied",
+        connectionStatusMessage: "GitHub authorization was declined.",
+        error: null,
+        ready: false,
+        repositories: [],
+        selectedRepositoryId: null,
+      }),
+    );
+    expect(buttonNamed(denied, "Review GitHub access")).toBeTruthy();
   });
 
   it("keeps the PR picker pending, supports empty and partial states, and offers the manual fallback", () => {

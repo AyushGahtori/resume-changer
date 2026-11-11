@@ -1,5 +1,5 @@
 "use client";
-import { apiFetch as fetch } from "@/lib/cloud/api-fetch";
+import { apiFetch } from "@/lib/cloud/api-fetch";
 import { useWorkspaceStorage } from "./account-session";
 
 import Link from "next/link";
@@ -13,7 +13,7 @@ import {
   Search,
   Sparkles,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, FormEvent, KeyboardEvent, ReactNode } from "react";
 import {
   CircleAlert,
@@ -59,7 +59,14 @@ import {
   summarizeCoverage,
 } from "@/lib/generation/coverage-presentation";
 import { createJobContextId } from "@/lib/ai/job-context";
-import { readJobAnalysisCache } from "@/lib/jd-analysis-cache";
+import { SavedJobList } from "@/components/saved-jobs/saved-job-list";
+import {
+  deleteSavedJobRequest,
+  loadSavedJobs,
+  readSavedJob,
+  SELECTED_SAVED_JOB_KEY,
+} from "@/lib/jobs/saved-job-client";
+import { normalizeJobText, type SavedJobSummary } from "@/lib/jobs/saved-job";
 import { createResumeFilename } from "@/lib/generation/resume-filename";
 import {
   describeCompiledPdf,
@@ -71,6 +78,7 @@ import {
   filterSelectionGroups,
 } from "@/lib/generation/selection-filter";
 import ResumeStudio from "./resume-studio";
+import StudioDialog from "./studio-dialog";
 import { parseStudioSession } from "@/lib/generation/studio-session";
 import { getGenerationOriginNotice } from "@/lib/generation/generation-origin";
 import type { ManualGenerationResult } from "@/lib/generation/manual-generation";
@@ -94,7 +102,6 @@ type PointGroup = {
   points: AchievementPoint[];
 };
 
-type ApiResponse = ManualGenerationResult | { error?: string };
 type CompileErrorResponse = {
   error?: string;
   code?: string;
@@ -176,7 +183,7 @@ function getSafeJobUrl(value: string): string | null {
   }
 }
 
-function createHistoryRequest(
+export function createHistoryRequest(
   generation: ManualGenerationResult,
   status: "drafted" | "compiled" | "failed",
   pdfBase64?: string,
@@ -202,6 +209,203 @@ function createHistoryRequest(
     repairAttemptCount: metadata.fitting?.repairAttempts ?? 0,
     latex: generation.latex,
     ...(pdfBase64 ? { pdfBase64 } : {}),
+    ...(metadata.dataSource ? { dataSource: metadata.dataSource } : {}),
+  };
+}
+
+export const HISTORY_SAVED_NOTICE =
+  "Saved to generation history on this device.";
+export const SELECTION_CHANGED_NOTICE =
+  "Selection changed. Generate LaTeX to rebuild.";
+export const SAVED_ANALYSIS_DIFFERS_NOTICE =
+  "This draft differs from the saved analysis. Analyze again to update it, or choose the saved job to restore it.";
+
+export function historyOutputReady(status: "drafted" | "compiled" | "failed") {
+  return status !== "failed";
+}
+
+export function historySaveFailureNotice(outputReady: boolean, error?: string) {
+  const detail = error ?? "Try again from the History page.";
+  return outputReady
+    ? `Resume output is ready, but it could not be saved to history. ${detail}`
+    : `This resume could not be saved to history. ${detail}`;
+}
+
+export function historyUnreachableNotice(outputReady: boolean) {
+  return outputReady
+    ? "Resume output is ready, but local history could not be reached. You can keep using this output; try again later."
+    : "Local history could not be reached. Try again later.";
+}
+
+function historyRecordId(value: unknown): boolean {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "id" in value &&
+    typeof value.id === "string" &&
+    value.id.length > 0
+  );
+}
+
+/** A history save counts only when the body is a stored record, not merely HTTP 200. */
+export function isSavedHistoryRecord(value: unknown): boolean {
+  if (!historyRecordId(value)) {
+    if (!value || typeof value !== "object" || !("entry" in value))
+      return false;
+    return historyRecordId(value.entry);
+  }
+  return true;
+}
+
+export async function historyNoticeFromResponse(
+  response: Pick<Response, "ok" | "json">,
+  outputReady: boolean,
+): Promise<string> {
+  let record: unknown;
+  try {
+    record = await response.json();
+  } catch {
+    return historySaveFailureNotice(outputReady);
+  }
+  if (response.ok && isSavedHistoryRecord(record)) return HISTORY_SAVED_NOTICE;
+  const error =
+    record &&
+    typeof record === "object" &&
+    "error" in record &&
+    typeof record.error === "string"
+      ? record.error
+      : undefined;
+  return historySaveFailureNotice(outputReady, error);
+}
+
+export function sameSelectionIds(
+  left: readonly string[] | null,
+  right: readonly string[] | null,
+): boolean {
+  if (left === null || right === null) return left === right;
+  if (left.length !== right.length) return false;
+  const sortedLeft = [...left].sort();
+  const sortedRight = [...right].sort();
+  return sortedLeft.every((id, index) => id === sortedRight[index]);
+}
+
+export function jobResponseApplies(
+  requestedJobId: string | null,
+  currentJobId: string | null,
+  aborted: boolean,
+) {
+  return !aborted && requestedJobId === currentJobId;
+}
+
+export function generateResponseApplies(input: {
+  requestedJobId: string | null;
+  currentJobId: string | null;
+  submittedAchievementIds: readonly string[];
+  currentAchievementIds: readonly string[];
+  submittedSkillIds: readonly string[] | null;
+  currentSkillIds: readonly string[] | null;
+  aborted: boolean;
+}) {
+  return (
+    jobResponseApplies(
+      input.requestedJobId,
+      input.currentJobId,
+      input.aborted,
+    ) &&
+    sameSelectionIds(
+      input.submittedAchievementIds,
+      input.currentAchievementIds,
+    ) &&
+    sameSelectionIds(input.submittedSkillIds, input.currentSkillIds)
+  );
+}
+
+export function generationStepChip(input: {
+  hasLatex: boolean;
+  hasPdf: boolean;
+}) {
+  const step = input.hasPdf ? "04" : input.hasLatex ? "03" : "02";
+  return `${step} / 04`;
+}
+
+export function skillIdsForCoverage(
+  renderedSkillIds: readonly string[] | null | undefined,
+  selectedSkillIds: readonly string[] | null | undefined,
+): string[] | undefined {
+  if (renderedSkillIds != null) return [...renderedSkillIds];
+  if (selectedSkillIds != null) return [...selectedSkillIds];
+  return undefined;
+}
+
+export function analysisCoverageSentence(coverageVisible: boolean) {
+  return coverageVisible
+    ? "The coverage below shows how selected evidence supports each one."
+    : "Suggest points to see how selected evidence supports each one.";
+}
+
+export function countDisabledAchievementPoints(library: {
+  jobs: ReadonlyArray<{ points: ReadonlyArray<{ enabled: boolean }> }>;
+  projects: ReadonlyArray<{ points: ReadonlyArray<{ enabled: boolean }> }>;
+}) {
+  return [...library.jobs, ...library.projects].reduce(
+    (total, group) =>
+      total + group.points.filter((point) => !point.enabled).length,
+    0,
+  );
+}
+
+export function disabledAchievementPointsCopy(count: number) {
+  return count === 1
+    ? "1 achievement point is turned off."
+    : `${count} achievement points are turned off.`;
+}
+
+export function restoredGenerationSelection(metadata: {
+  selectedAchievementIds: readonly string[];
+  selectedSkillIds?: readonly string[] | null;
+}) {
+  return {
+    selectedIds: [...metadata.selectedAchievementIds],
+    ...(metadata.selectedSkillIds
+      ? { selectedSkillIds: [...metadata.selectedSkillIds] }
+      : {}),
+  };
+}
+
+export function savedAnalysisDraftDiffers(
+  stored: { company: string; roleTitle: string; jobDescription: string },
+  saved: { company: string; roleTitle: string; jobDescription: string },
+) {
+  return (
+    normalizeJobText(stored.company) === normalizeJobText(saved.company) &&
+    normalizeJobText(stored.roleTitle) === normalizeJobText(saved.roleTitle) &&
+    normalizeJobText(stored.jobDescription) !==
+      normalizeJobText(saved.jobDescription)
+  );
+}
+
+export function previewCompileControl(input: {
+  isCompiling: boolean;
+  isGenerating: boolean;
+  hasPdf: boolean;
+  studioPending: boolean;
+  selectionStale: boolean;
+}) {
+  if (input.isCompiling) {
+    return {
+      disabled: true,
+      label: input.hasPdf ? "Compiling…" : "Creating PDF…",
+    };
+  }
+  if (input.studioPending || input.selectionStale) {
+    return {
+      disabled: true,
+      label: input.hasPdf ? "Recompile last applied version" : "Create PDF",
+    };
+  }
+  return {
+    disabled: input.isGenerating,
+    label: input.hasPdf ? "Recompile" : "Create PDF",
   };
 }
 
@@ -213,19 +417,82 @@ function normalizeKeywordText(value: string): string {
     .trim();
 }
 
+class ResponseReadError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ResponseReadError";
+  }
+}
+
+function retryAfterSentence(response: Pick<Response, "status" | "headers">) {
+  if (response.status !== 429) return "";
+  const header = response.headers.get("Retry-After")?.trim() ?? "";
+  if (!/^\d+$/.test(header)) return "";
+  return `Try again in ${Number(header)} seconds.`;
+}
+
+function responseErrorMessage(
+  response: Response,
+  payload: unknown,
+  fallback: string,
+) {
+  const reported =
+    payload &&
+    typeof payload === "object" &&
+    "error" in payload &&
+    typeof payload.error === "string" &&
+    payload.error.trim()
+      ? payload.error.trim()
+      : fallback;
+  const retry = retryAfterSentence(response);
+  return retry ? `${reported} ${retry}` : reported;
+}
+
+async function readJsonPayload(response: Response): Promise<unknown> {
+  let text = "";
+  try {
+    text = await response.text();
+  } catch {
+    throw new ResponseReadError(
+      "The server returned a response this page could not read. Try again.",
+    );
+  }
+  if (!text.trim()) {
+    throw new ResponseReadError(
+      response.ok
+        ? "The server returned an empty response. Try again."
+        : "The server could not complete this request. Try again.",
+    );
+  }
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    throw new ResponseReadError(
+      "The server returned a response this page could not read. Try again.",
+    );
+  }
+}
+
+type FallbackConsent = (
+  error: string,
+  fallbackType: string,
+  signal: AbortSignal,
+) => Promise<boolean>;
+
 async function postWithFallbackConsent(
   url: string,
   body: Record<string, unknown>,
   signal: AbortSignal,
+  confirmFallback: FallbackConsent,
 ) {
   const send = async (requestBody: Record<string, unknown>) => {
-    const response = await fetch(url, {
+    const response = await apiFetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(requestBody),
       signal,
     });
-    return { response, payload: (await response.json()) as unknown };
+    return { response, payload: await readJsonPayload(response) };
   };
 
   let result = await send(body);
@@ -236,19 +503,18 @@ async function postWithFallbackConsent(
     "fallbackAvailable" in result.payload &&
     result.payload.fallbackAvailable === true
   ) {
-    const error =
-      "error" in result.payload && typeof result.payload.error === "string"
-        ? result.payload.error
-        : "The AI step failed.";
+    const error = responseErrorMessage(
+      result.response,
+      result.payload,
+      "The AI step failed.",
+    );
     const fallbackType =
       "fallbackType" in result.payload &&
       typeof result.payload.fallbackType === "string"
         ? result.payload.fallbackType
         : "local fallback";
-    const accepted = window.confirm(
-      `${error}\n\nThe AI did not complete this step. Continue with ${fallbackType}? No fallback will run unless you choose OK.`,
-    );
-    if (accepted) {
+    const accepted = await confirmFallback(error, fallbackType, signal);
+    if (accepted && !signal.aborted) {
       const consentedBody =
         fallbackType === "original-wording"
           ? { ...body, allowOriginalsFallback: true }
@@ -285,6 +551,8 @@ export default function ResumeGenerator({ library, source }: Props) {
   const [draft, setDraft] = useState<JobDescriptionDraft>(EMPTY_DRAFT);
   const [draftReady, setDraftReady] = useState(false);
   const [draftNotice, setDraftNotice] = useState("");
+  const [savedJobs, setSavedJobs] = useState<SavedJobSummary[]>([]);
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [pointQuery, setPointQuery] = useState("");
   const [experienceFilter, setExperienceFilter] = useState("");
@@ -311,6 +579,12 @@ export default function ResumeGenerator({ library, source }: Props) {
   >(null);
   const [result, setResult] = useState<ManualGenerationResult | null>(null);
   const [showGenerationSettings, setShowGenerationSettings] = useState(false);
+  useEffect(() => {
+    if (!showGenerationSettings) return;
+    document
+      .getElementById("resume-editing")
+      ?.scrollIntoView({ block: "start" });
+  }, [showGenerationSettings]);
   const [pdfBase64, setPdfBase64] = useState<string | null>(null);
   const [savedSession, setSavedSession] = useState<{
     generation: ManualGenerationResult;
@@ -327,6 +601,17 @@ export default function ResumeGenerator({ library, source }: Props) {
   const [compileStatus, setCompileStatus] = useState("");
   const [viewerNotice, setViewerNotice] = useState("");
   const [historyNotice, setHistoryNotice] = useState("");
+  const [browserDraft, setBrowserDraft] = useState<JobDescriptionDraft | null>(
+    null,
+  );
+  const [studioPendingCount, setStudioPendingCount] = useState(0);
+  const [fallbackPrompt, setFallbackPrompt] = useState<{
+    error: string;
+    fallbackType: string;
+  } | null>(null);
+  const [replacePromptOpen, setReplacePromptOpen] = useState(false);
+  const [jobPendingDelete, setJobPendingDelete] =
+    useState<SavedJobSummary | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [outputView, setOutputView] = useState<"latex" | "pdf">("latex");
   const [pdfZoom, setPdfZoom] = useState(100);
@@ -336,6 +621,17 @@ export default function ResumeGenerator({ library, source }: Props) {
   const compileAbortRef = useRef<AbortController | null>(null);
   const selectionAbortRef = useRef<AbortController | null>(null);
   const tailoringAbortRef = useRef<AbortController | null>(null);
+  const generateAbortRef = useRef<AbortController | null>(null);
+  const savedJobRequestRef = useRef(0);
+  const selectedJobIdRef = useRef<string | null>(null);
+  const selectedIdsRef = useRef(selectedIds);
+  const selectedSkillIdsRef = useRef(selectedSkillIds);
+  const fallbackResolverRef = useRef<((accepted: boolean) => void) | null>(
+    null,
+  );
+  const replaceResolverRef = useRef<((accepted: boolean) => void) | null>(null);
+  selectedIdsRef.current = selectedIds;
+  selectedSkillIdsRef.current = selectedSkillIds;
   const pdfViewportRef = useRef<HTMLDivElement>(null);
   const latexTabRef = useRef<HTMLButtonElement>(null);
   const pdfTabRef = useRef<HTMLButtonElement>(null);
@@ -404,45 +700,243 @@ export default function ResumeGenerator({ library, source }: Props) {
     savedPdfBase64?: string,
   ) {
     try {
-      const response = await fetch("/api/history", {
+      const response = await apiFetch("/api/history", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(
           createHistoryRequest(generation, status, savedPdfBase64),
         ),
       });
-      const payload = (await response.json().catch(() => ({}))) as {
-        error?: string;
-      };
-      setHistoryNotice(
-        response.ok
-          ? "Saved to generation history on this device."
-          : `Resume output is ready, but it could not be saved to history. ${payload.error ?? "Try again from the History page."}`,
-      );
+      const outputReady = historyOutputReady(status);
+      const retry = retryAfterSentence(response);
+      let notice = await historyNoticeFromResponse(response, outputReady);
+      if (retry) notice = `${notice} ${retry}`;
+      setHistoryNotice(notice);
     } catch {
-      setHistoryNotice(
-        "Resume output is ready, but local history could not be reached. You can keep using this output; try again later.",
+      setHistoryNotice(historyUnreachableNotice(historyOutputReady(status)));
+    }
+  }
+
+  const reportStudioPending = useCallback((count: number) => {
+    setStudioPendingCount(count);
+  }, []);
+
+  const confirmFallback = useCallback(
+    (error: string, fallbackType: string, signal: AbortSignal) =>
+      new Promise<boolean>((resolve) => {
+        if (signal.aborted) {
+          resolve(false);
+          return;
+        }
+        let settled = false;
+        const settle = (accepted: boolean) => {
+          if (settled) return;
+          settled = true;
+          signal.removeEventListener("abort", onAbort);
+          fallbackResolverRef.current = null;
+          setFallbackPrompt(null);
+          resolve(accepted);
+        };
+        const onAbort = () => settle(false);
+        signal.addEventListener("abort", onAbort);
+        fallbackResolverRef.current = settle;
+        setFallbackPrompt({ error, fallbackType });
+      }),
+    [],
+  );
+
+  function confirmReplaceResume() {
+    return new Promise<boolean>((resolve) => {
+      replaceResolverRef.current = (accepted) => {
+        replaceResolverRef.current = null;
+        setReplacePromptOpen(false);
+        resolve(accepted);
+      };
+      setReplacePromptOpen(true);
+    });
+  }
+
+  function settleReplaceResume(accepted: boolean) {
+    replaceResolverRef.current?.(accepted);
+  }
+
+  const rememberSelectedJob = useCallback(
+    (id: string | null) => {
+      try {
+        const storage = getWorkspaceStorage();
+        if (id) storage.setItem(SELECTED_SAVED_JOB_KEY, id);
+        else storage.removeItem(SELECTED_SAVED_JOB_KEY);
+      } catch {
+        /* The visible selection still follows the account record. */
+      }
+    },
+    [getWorkspaceStorage],
+  );
+
+  const showSavedJob = useCallback(
+    (
+      job: {
+        id: string;
+        company: string;
+        roleTitle: string;
+        jobUrl: string;
+        jobDescription: string;
+        analysis: JobAnalysisResult;
+      },
+      notice = "",
+    ) => {
+      selectedJobIdRef.current = job.id;
+      setSelectedJobId(job.id);
+      rememberSelectedJob(job.id);
+      setDraft({
+        schemaVersion: 1,
+        company: job.company,
+        roleTitle: job.roleTitle,
+        jobUrl: job.jobUrl,
+        jobDescription: job.jobDescription,
+      });
+      setAnalysis(job.analysis);
+      const stored = readDraft(getWorkspaceStorage());
+      setBrowserDraft(stored.state === "restored" ? stored.draft : null);
+      setDraftNotice(notice);
+    },
+    [getWorkspaceStorage, rememberSelectedJob],
+  );
+
+  const clearSelectedJob = useCallback(
+    (notice = "") => {
+      selectedJobIdRef.current = null;
+      setSelectedJobId(null);
+      rememberSelectedJob(null);
+      setDraft(EMPTY_DRAFT);
+      setAnalysis(null);
+      setDraftNotice(notice);
+    },
+    [rememberSelectedJob],
+  );
+
+  async function handleSelectSavedJob(id: string) {
+    const requestId = savedJobRequestRef.current + 1;
+    savedJobRequestRef.current = requestId;
+    selectedJobIdRef.current = id;
+    selectionAbortRef.current?.abort();
+    tailoringAbortRef.current?.abort();
+    generateAbortRef.current?.abort();
+    compileAbortRef.current?.abort();
+    fallbackResolverRef.current?.(false);
+    replaceResolverRef.current?.(false);
+    try {
+      const job = await readSavedJob(id);
+      if (requestId !== savedJobRequestRef.current) return;
+      showSavedJob(job);
+      setResult(null);
+      setPdfBase64(null);
+      setPdfUrl(null);
+      setRecommendation(null);
+      setTailoring(null);
+      setSelectionError("");
+      setTailoringError("");
+      setRequestError("");
+      setHistoryNotice("");
+      setCompileStatus("");
+      setCompileError(null);
+      setIsGenerating(false);
+      setIsRecommending(false);
+      setIsTailoring(false);
+      setIsAutoTailoring(false);
+      setSavedSession(null);
+      setSessionReady(false);
+      selectedIdsRef.current = [];
+      selectedSkillIdsRef.current = null;
+      setSelectedIds([]);
+      setSelectedSkillIds(null);
+    } catch (error) {
+      if (requestId !== savedJobRequestRef.current) return;
+      clearSelectedJob(
+        error instanceof Error
+          ? error.message
+          : "That saved job is no longer available.",
+      );
+      setResult(null);
+      setHistoryNotice("");
+    }
+  }
+
+  function handleDeleteSavedJob(job: SavedJobSummary) {
+    setJobPendingDelete(job);
+  }
+
+  async function confirmDeleteSavedJob() {
+    const job = jobPendingDelete;
+    if (!job) return;
+    setJobPendingDelete(null);
+    try {
+      await deleteSavedJobRequest(job.id);
+      const remaining = savedJobs.filter((item) => item.id !== job.id);
+      setSavedJobs(remaining);
+      if (selectedJobId === job.id) {
+        clearSelectedJob(
+          "That saved job is no longer available. Choose another analyzed job.",
+        );
+        setResult(null);
+        setHistoryNotice("");
+        setSessionReady(false);
+      }
+    } catch (error) {
+      setDraftNotice(
+        error instanceof Error
+          ? error.message
+          : "The saved job could not be deleted.",
       );
     }
   }
 
   useEffect(() => {
-    const saved = readDraft(getWorkspaceStorage());
-    const cachedAnalysis = readJobAnalysisCache(
-      getWorkspaceStorage(),
-      saved.draft,
-    );
-    setDraft(saved.draft);
-    setAnalysis(cachedAnalysis);
-    setDraftNotice(
-      saved.state === "invalid"
-        ? "The saved job draft could not be restored. Return to Job description and save it again."
-        : saved.state === "unavailable"
-          ? "Browser storage is unavailable, so no saved job draft can be used."
-          : "",
-    );
-    setDraftReady(true);
-  }, [getWorkspaceStorage]);
+    let cancelled = false;
+    void (async () => {
+      try {
+        const jobs = await loadSavedJobs(getWorkspaceStorage());
+        if (cancelled) return;
+        setSavedJobs(jobs);
+        let storedId: string | null = null;
+        try {
+          storedId = getWorkspaceStorage().getItem(SELECTED_SAVED_JOB_KEY);
+        } catch {
+          storedId = null;
+        }
+        if (storedId && !jobs.some((job) => job.id === storedId)) {
+          clearSelectedJob(
+            "That saved job is no longer available. Choose another analyzed job.",
+          );
+          return;
+        }
+        const chosen = storedId
+          ? jobs.find((job) => job.id === storedId)
+          : jobs[0];
+        if (!chosen) {
+          clearSelectedJob("");
+          return;
+        }
+        const job = await readSavedJob(chosen.id);
+        if (cancelled) return;
+        showSavedJob(job);
+      } catch {
+        if (!cancelled) {
+          clearSelectedJob("Saved job analyses could not be loaded.");
+        }
+      } finally {
+        if (!cancelled) setDraftReady(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [clearSelectedJob, getWorkspaceStorage, showSavedJob]);
+
+  useEffect(() => {
+    const stored = readDraft(getWorkspaceStorage());
+    setBrowserDraft(stored.state === "restored" ? stored.draft : null);
+  }, [getWorkspaceStorage, draftReady, selectedJobId]);
 
   useEffect(() => {
     return () => {
@@ -459,6 +953,7 @@ export default function ResumeGenerator({ library, source }: Props) {
             `resume-changer.resume-session.v1.${source}`,
           ),
           JSON.stringify([
+            selectedJobId ?? "",
             draft.company,
             draft.roleTitle,
             draft.jobDescription,
@@ -470,7 +965,14 @@ export default function ResumeGenerator({ library, source }: Props) {
       /* Storage can be unavailable without blocking generation. */
     }
     setSessionReady(true);
-  }, [draftReady, sessionReady, source, draft, getWorkspaceStorage]);
+  }, [
+    draftReady,
+    sessionReady,
+    source,
+    draft,
+    selectedJobId,
+    getWorkspaceStorage,
+  ]);
 
   useEffect(() => {
     if (!sessionReady || !result || savedSession) return;
@@ -479,6 +981,7 @@ export default function ResumeGenerator({ library, source }: Props) {
         `resume-changer.resume-session.v1.${source}`,
         JSON.stringify({
           jobSignature: JSON.stringify([
+            selectedJobId ?? "",
             draft.company,
             draft.roleTitle,
             draft.jobDescription,
@@ -494,6 +997,7 @@ export default function ResumeGenerator({ library, source }: Props) {
     result,
     pdfBase64,
     draft,
+    selectedJobId,
     source,
     sessionReady,
     savedSession,
@@ -515,6 +1019,7 @@ export default function ResumeGenerator({ library, source }: Props) {
       compileAbortRef.current?.abort();
       selectionAbortRef.current?.abort();
       tailoringAbortRef.current?.abort();
+      generateAbortRef.current?.abort();
     },
     [],
   );
@@ -550,22 +1055,20 @@ export default function ResumeGenerator({ library, source }: Props) {
         ? selectedIds
         : [...selectedIds, id]
       : selectedIds.filter((selectedId) => selectedId !== id);
+    selectedIdsRef.current = nextIds;
     setSelectedIds(nextIds);
     if (!checked) {
       setApprovedTailoredIds((current) =>
         current.filter((selectedId) => selectedId !== id),
       );
     }
-    clearPdfOutput();
-    setResult(null);
     setCopyMessage("");
     setRequestError("");
   }
 
   function selectAll() {
+    selectedIdsRef.current = enabledIds;
     setSelectedIds(enabledIds);
-    clearPdfOutput();
-    setResult(null);
     setCopyMessage("");
     setRequestError("");
   }
@@ -576,15 +1079,14 @@ export default function ResumeGenerator({ library, source }: Props) {
   }
 
   function clearSelection() {
+    const listedSkillIds = library.skills
+      .filter((skill) => skill.isListedOnCurrentResume)
+      .map((skill) => skill.id);
+    selectedIdsRef.current = [];
+    selectedSkillIdsRef.current = listedSkillIds;
     setSelectedIds([]);
     clearTailoring();
-    setSelectedSkillIds(
-      library.skills
-        .filter((skill) => skill.isListedOnCurrentResume)
-        .map((skill) => skill.id),
-    );
-    clearPdfOutput();
-    setResult(null);
+    setSelectedSkillIds(listedSkillIds);
     setCopyMessage("");
     setRequestError("");
   }
@@ -594,11 +1096,11 @@ export default function ResumeGenerator({ library, source }: Props) {
     const nextIds = selectedIds.filter((id) => id !== replaceId);
     if (!nextIds.includes(achievementId)) nextIds.push(achievementId);
     clearTailoring();
+    selectedIdsRef.current = nextIds;
+    selectedSkillIdsRef.current = null;
     setSelectedIds(nextIds);
     setSelectedSkillIds(null);
     setApprovedTailoredIds([]);
-    clearPdfOutput();
-    setResult(null);
     setRequestError("");
     setAutoTailorStatus(
       "Source selection updated. Run Guided Tailor to review wording for these points.",
@@ -622,6 +1124,7 @@ export default function ResumeGenerator({ library, source }: Props) {
     selectionAbortRef.current?.abort();
     const controller = new AbortController();
     selectionAbortRef.current = controller;
+    const jobId = selectedJobIdRef.current;
     setIsRecommending(true);
     setSelectionError("");
     try {
@@ -633,16 +1136,18 @@ export default function ResumeGenerator({ library, source }: Props) {
           analysis,
         },
         controller.signal,
+        confirmFallback,
       );
+      if (controller.signal.aborted || selectedJobIdRef.current !== jobId)
+        return;
       if (!response.ok) {
-        const message =
-          payload &&
-          typeof payload === "object" &&
-          "error" in payload &&
-          typeof payload.error === "string"
-            ? payload.error
-            : "Achievement recommendations failed. Try again.";
-        throw new Error(message);
+        throw new Error(
+          responseErrorMessage(
+            response,
+            payload,
+            "Achievement recommendations failed. Try again.",
+          ),
+        );
       }
       const parsed = AchievementSelectionResponseSchema.safeParse(payload);
       if (!parsed.success) {
@@ -650,15 +1155,15 @@ export default function ResumeGenerator({ library, source }: Props) {
           "The recommendation service returned an invalid response. Try again.",
         );
       }
+      if (controller.signal.aborted || selectedJobIdRef.current !== jobId)
+        return;
 
       setRecommendation(parsed.data);
       clearTailoring();
-      setSelectedIds(
-        parsed.data.recommendations.selections.map(
-          (item) => item.achievementId,
-        ),
+      const recommendedPointIds = parsed.data.recommendations.selections.map(
+        (item) => item.achievementId,
       );
-      setSelectedSkillIds([
+      const recommendedSkills = [
         ...new Set([
           ...library.skills
             .filter((skill) => skill.isListedOnCurrentResume)
@@ -667,13 +1172,19 @@ export default function ResumeGenerator({ library, source }: Props) {
             (item) => item.skillId,
           ),
         ]),
-      ]);
+      ];
+      selectedIdsRef.current = recommendedPointIds;
+      selectedSkillIdsRef.current = recommendedSkills;
+      setSelectedIds(recommendedPointIds);
+      setSelectedSkillIds(recommendedSkills);
       clearPdfOutput();
       setResult(null);
+      setHistoryNotice("");
       setRequestError("");
       setCopyMessage("");
     } catch (error) {
-      if (controller.signal.aborted) return;
+      if (controller.signal.aborted || selectedJobIdRef.current !== jobId)
+        return;
       setSelectionError(
         error instanceof Error
           ? error.message
@@ -690,12 +1201,10 @@ export default function ResumeGenerator({ library, source }: Props) {
   function applyRecommendations() {
     if (!recommendation) return;
     clearTailoring();
-    setSelectedIds(
-      recommendation.recommendations.selections.map(
-        (item) => item.achievementId,
-      ),
+    const nextIds = recommendation.recommendations.selections.map(
+      (item) => item.achievementId,
     );
-    setSelectedSkillIds([
+    const nextSkills = [
       ...new Set([
         ...library.skills
           .filter((skill) => skill.isListedOnCurrentResume)
@@ -704,9 +1213,14 @@ export default function ResumeGenerator({ library, source }: Props) {
           (item) => item.skillId,
         ),
       ]),
-    ]);
+    ];
+    selectedIdsRef.current = nextIds;
+    selectedSkillIdsRef.current = nextSkills;
+    setSelectedIds(nextIds);
+    setSelectedSkillIds(nextSkills);
     clearPdfOutput();
     setResult(null);
+    setHistoryNotice("");
     setRequestError("");
     setCopyMessage("");
   }
@@ -728,6 +1242,8 @@ export default function ResumeGenerator({ library, source }: Props) {
     tailoringAbortRef.current?.abort();
     const controller = new AbortController();
     tailoringAbortRef.current = controller;
+    const jobId = selectedJobIdRef.current;
+    const submittedIds = [...selectedIds];
     setIsTailoring(true);
     setTailoringError("");
     setAutoTailorStatus("");
@@ -738,6 +1254,7 @@ export default function ResumeGenerator({ library, source }: Props) {
     setApprovedTailoredIds([]);
     clearPdfOutput();
     setResult(null);
+    setHistoryNotice("");
     setRequestError("");
 
     try {
@@ -753,6 +1270,8 @@ export default function ResumeGenerator({ library, source }: Props) {
           analysis,
         }),
       };
+      if (controller.signal.aborted || selectedJobIdRef.current !== jobId)
+        return;
       const { response, payload } = await postWithFallbackConsent(
         "/api/ai/tailor-achievements",
         {
@@ -761,19 +1280,21 @@ export default function ResumeGenerator({ library, source }: Props) {
           analysis,
           job,
           ...(recommendation ? { selectionContext: recommendation } : {}),
-          achievementIds: selectedIds,
+          achievementIds: submittedIds,
         },
         controller.signal,
+        confirmFallback,
       );
+      if (controller.signal.aborted || selectedJobIdRef.current !== jobId)
+        return;
       if (!response.ok) {
-        const message =
-          payload &&
-          typeof payload === "object" &&
-          "error" in payload &&
-          typeof payload.error === "string"
-            ? payload.error
-            : "Tailored wording could not be prepared. Try again.";
-        throw new Error(message);
+        throw new Error(
+          responseErrorMessage(
+            response,
+            payload,
+            "Tailored wording could not be prepared. Try again.",
+          ),
+        );
       }
       const parsed = TailorAchievementsResponseSchema.safeParse(payload);
       if (!parsed.success) {
@@ -781,6 +1302,8 @@ export default function ResumeGenerator({ library, source }: Props) {
           "The tailoring service returned an invalid response. Try again.",
         );
       }
+      if (controller.signal.aborted || selectedJobIdRef.current !== jobId)
+        return;
       setTailoring(parsed.data);
       setSummaryApproved(false);
       setTailoringWorkflow("guided");
@@ -793,7 +1316,8 @@ export default function ResumeGenerator({ library, source }: Props) {
         ),
       );
     } catch (error) {
-      if (controller.signal.aborted) return;
+      if (controller.signal.aborted || selectedJobIdRef.current !== jobId)
+        return;
       setTailoringError(
         error instanceof Error
           ? error.message
@@ -818,11 +1342,13 @@ export default function ResumeGenerator({ library, source }: Props) {
     clearTailoring();
     const controller = new AbortController();
     tailoringAbortRef.current = controller;
+    const jobId = selectedJobIdRef.current;
     setIsAutoTailoring(true);
     setTailoringError("");
     setAutoTailorStatus("Selecting evidence and drafting your resume…");
     clearPdfOutput();
     setResult(null);
+    setHistoryNotice("");
 
     try {
       const job = {
@@ -844,20 +1370,24 @@ export default function ResumeGenerator({ library, source }: Props) {
         analysis,
         job,
       };
+      if (controller.signal.aborted || selectedJobIdRef.current !== jobId)
+        return;
       const { response, payload } = await postWithFallbackConsent(
         "/api/ai/auto-tailor",
         requestBody,
         controller.signal,
+        confirmFallback,
       );
+      if (controller.signal.aborted || selectedJobIdRef.current !== jobId)
+        return;
       if (!response.ok) {
-        const message =
-          payload &&
-          typeof payload === "object" &&
-          "error" in payload &&
-          typeof payload.error === "string"
-            ? payload.error
-            : "Auto Tailor could not prepare this resume. Try again.";
-        throw new Error(message);
+        throw new Error(
+          responseErrorMessage(
+            response,
+            payload,
+            "Auto Tailor could not prepare this resume. Try again.",
+          ),
+        );
       }
       const parsed = AutoTailorResponseSchema.safeParse(payload);
       if (!parsed.success) {
@@ -866,6 +1396,8 @@ export default function ResumeGenerator({ library, source }: Props) {
         );
       }
 
+      if (controller.signal.aborted || selectedJobIdRef.current !== jobId)
+        return;
       const auto = parsed.data;
       const nextIds = auto.recommendation.recommendations.selections.map(
         (item) => item.achievementId,
@@ -877,6 +1409,8 @@ export default function ResumeGenerator({ library, source }: Props) {
         ]),
       );
       setRecommendation(auto.recommendation);
+      selectedIdsRef.current = nextIds;
+      selectedSkillIdsRef.current = auto.selectedSkillIds;
       setSelectedIds(nextIds);
       setSelectedSkillIds(auto.selectedSkillIds);
       setTailoring(auto.tailoring);
@@ -913,6 +1447,9 @@ export default function ResumeGenerator({ library, source }: Props) {
           "compiled",
           auto.compiled.pdfBase64,
         );
+        if (controller.signal.aborted || selectedJobIdRef.current !== jobId) {
+          return;
+        }
         setSelectedIds(generation.metadata.selectedAchievementIds);
         setPdfUrl(
           URL.createObjectURL(new Blob([bytes], { type: "application/pdf" })),
@@ -936,6 +1473,8 @@ export default function ResumeGenerator({ library, source }: Props) {
         return;
       }
 
+      if (controller.signal.aborted || selectedJobIdRef.current !== jobId)
+        return;
       const generated = await requestGeneration({
         selectedIds: nextIds,
         selectedSkillIds: auto.selectedSkillIds,
@@ -946,6 +1485,8 @@ export default function ResumeGenerator({ library, source }: Props) {
         tailoredText: nextTailoredText,
         workflow: "auto",
       });
+      if (controller.signal.aborted || selectedJobIdRef.current !== jobId)
+        return;
       if (!generated) {
         setAutoTailorStatus(
           "Auto Tailor selected and drafted the content, but LaTeX generation failed. Review the error below.",
@@ -953,7 +1494,11 @@ export default function ResumeGenerator({ library, source }: Props) {
         return;
       }
 
+      if (controller.signal.aborted || selectedJobIdRef.current !== jobId)
+        return;
       const pdfReady = await compilePdf(generated);
+      if (controller.signal.aborted || selectedJobIdRef.current !== jobId)
+        return;
       setAutoTailorStatus(
         pdfReady
           ? auto.draftingMode === "ai"
@@ -962,7 +1507,8 @@ export default function ResumeGenerator({ library, source }: Props) {
           : "LaTeX was prepared, but PDF compilation did not verify a one-page result. Review the compiler message.",
       );
     } catch (error) {
-      if (controller.signal.aborted) return;
+      if (controller.signal.aborted || selectedJobIdRef.current !== jobId)
+        return;
       setTailoringError(
         error instanceof Error
           ? error.message
@@ -1014,7 +1560,18 @@ export default function ResumeGenerator({ library, source }: Props) {
       setRequestError("Select at least one enabled achievement point.");
       return null;
     }
+    if (generateAbortRef.current && !generateAbortRef.current.signal.aborted) {
+      return null;
+    }
 
+    const submittedAchievementIds = [...options.selectedIds];
+    const submittedSkillIds = options.selectedSkillIds
+      ? [...options.selectedSkillIds]
+      : null;
+    const jobId = selectedJobIdRef.current;
+    generateAbortRef.current?.abort();
+    const controller = new AbortController();
+    generateAbortRef.current = controller;
     setIsGenerating(true);
     try {
       const requestBody = {
@@ -1030,11 +1587,9 @@ export default function ResumeGenerator({ library, source }: Props) {
               (options.workflow === "auto" || summaryApproved)
             ? { summaryOverride: options.tailoring.resumeSummary }
             : {}),
-        selectedAchievementIds: options.selectedIds,
+        selectedAchievementIds: submittedAchievementIds,
         sectionOrder: options.sectionOrder ?? library.preferences.sectionOrder,
-        ...(options.selectedSkillIds
-          ? { selectedSkillIds: options.selectedSkillIds }
-          : {}),
+        ...(submittedSkillIds ? { selectedSkillIds: submittedSkillIds } : {}),
         ...(options.achievementTextOverrides
           ? { achievementTextOverrides: options.achievementTextOverrides }
           : options.tailoring
@@ -1044,7 +1599,8 @@ export default function ResumeGenerator({ library, source }: Props) {
                     (proposal) =>
                       options.approvedTailoredIds.includes(
                         proposal.achievementId,
-                      ) && options.selectedIds.includes(proposal.achievementId),
+                      ) &&
+                      submittedAchievementIds.includes(proposal.achievementId),
                   )
                   .map((proposal) => ({
                     achievementId: proposal.achievementId,
@@ -1057,41 +1613,97 @@ export default function ResumeGenerator({ library, source }: Props) {
               }
             : {}),
       };
-      const response = await fetch("/api/generate", {
+      const response = await apiFetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(requestBody),
+        signal: controller.signal,
       });
-      const payload = (await response.json()) as ApiResponse;
-
-      if (!response.ok || !("latex" in payload)) {
+      const payload = await readJsonPayload(response);
+      if (controller.signal.aborted || selectedJobIdRef.current !== jobId) {
+        return null;
+      }
+      if (
+        !response.ok ||
+        !payload ||
+        typeof payload !== "object" ||
+        !("latex" in payload)
+      ) {
         setRequestError(
-          "error" in payload && payload.error
-            ? payload.error
-            : "The resume could not be generated. Try again.",
+          responseErrorMessage(
+            response,
+            payload,
+            "The resume could not be generated. Try again.",
+          ),
         );
         return null;
       }
 
-      payload.metadata.aiProvider =
+      const generated = payload as ManualGenerationResult;
+      const skillsNow = selectedSkillIdsRef.current;
+      if (
+        !generateResponseApplies({
+          requestedJobId: jobId,
+          currentJobId: selectedJobIdRef.current,
+          submittedAchievementIds,
+          currentAchievementIds: selectedIdsRef.current,
+          submittedSkillIds,
+          currentSkillIds: skillsNow,
+          aborted: controller.signal.aborted,
+        })
+      ) {
+        if (!controller.signal.aborted && selectedJobIdRef.current === jobId) {
+          setRequestError(
+            "The selection changed while generating, so that resume was not applied.",
+          );
+        }
+        return null;
+      }
+      if (
+        !sameSelectionIds(
+          generated.metadata.selectedAchievementIds,
+          submittedAchievementIds,
+        )
+      ) {
+        setRequestError(
+          "The resume did not match the points that were submitted. Generate LaTeX again.",
+        );
+        return null;
+      }
+
+      generated.metadata.aiProvider =
         options.workflow === "manual"
           ? null
           : (options.tailoring?.providerName ?? null);
       clearPdfOutput();
       setStudioSession((current) => current + 1);
-      setResult(payload);
-      await persistGeneration(payload, "drafted");
-      return payload;
-    } catch {
-      setRequestError("The server could not be reached. Try again.");
+      setResult(generated);
+      await persistGeneration(generated, "drafted");
+      return generated;
+    } catch (error) {
+      if (controller.signal.aborted || selectedJobIdRef.current !== jobId) {
+        return null;
+      }
+      setRequestError(
+        error instanceof ResponseReadError
+          ? error.message
+          : "The server could not be reached. Try again.",
+      );
       return null;
     } finally {
-      setIsGenerating(false);
+      if (generateAbortRef.current === controller) {
+        generateAbortRef.current = null;
+        setIsGenerating(false);
+      }
     }
   }
 
   async function handleGenerate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (result && studioPendingCount > 0) {
+      const accepted = await confirmReplaceResume();
+      if (!accepted) return;
+    }
     await requestGeneration();
   }
 
@@ -1107,6 +1719,7 @@ export default function ResumeGenerator({ library, source }: Props) {
       );
     const controller = new AbortController();
     compileAbortRef.current = controller;
+    const jobId = selectedJobIdRef.current;
     setIsCompiling(true);
     setCompileError(null);
     setCompileStatus("");
@@ -1114,7 +1727,7 @@ export default function ResumeGenerator({ library, source }: Props) {
 
     try {
       const requestBody = { latex: target.latex };
-      const response = await fetch("/api/compile", {
+      const response = await apiFetch("/api/compile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(requestBody),
@@ -1122,10 +1735,39 @@ export default function ResumeGenerator({ library, source }: Props) {
       });
 
       if (!response.ok) {
-        const payload = (await response.json()) as CompileErrorResponse;
+        let payload: unknown = null;
+        try {
+          payload = await readJsonPayload(response);
+        } catch (error) {
+          if (controller.signal.aborted || selectedJobIdRef.current !== jobId) {
+            return false;
+          }
+          setCompileError({
+            error:
+              error instanceof ResponseReadError
+                ? error.message
+                : "The PDF could not be created. Try again.",
+          });
+          persistFailure();
+          return false;
+        }
+        if (controller.signal.aborted || selectedJobIdRef.current !== jobId) {
+          return false;
+        }
+        const diagnostics =
+          payload &&
+          typeof payload === "object" &&
+          "diagnostics" in payload &&
+          typeof payload.diagnostics === "string"
+            ? payload.diagnostics
+            : undefined;
         setCompileError({
-          error: payload.error ?? "The PDF could not be created. Try again.",
-          diagnostics: payload.diagnostics,
+          error: responseErrorMessage(
+            response,
+            payload,
+            "The PDF could not be created. Try again.",
+          ),
+          diagnostics,
         });
         persistFailure();
         return false;
@@ -1135,6 +1777,9 @@ export default function ResumeGenerator({ library, source }: Props) {
         !response.headers.get("Content-Type")?.includes("application/pdf") ||
         readPageCount(response.headers.get("X-PDF-Pages")) !== 1
       ) {
+        if (controller.signal.aborted || selectedJobIdRef.current !== jobId) {
+          return false;
+        }
         setCompileError({
           error: "The server returned an unverified PDF. Try compiling again.",
         });
@@ -1143,18 +1788,31 @@ export default function ResumeGenerator({ library, source }: Props) {
       }
 
       const pdf = await response.blob();
-      if (controller.signal.aborted) return false;
+      if (controller.signal.aborted || selectedJobIdRef.current !== jobId) {
+        return false;
+      }
       if ((await pdf.slice(0, 5).text()) !== "%PDF-") {
+        if (controller.signal.aborted || selectedJobIdRef.current !== jobId) {
+          return false;
+        }
         setCompileError({
           error: "The server response was not a valid PDF. Try again.",
         });
         persistFailure();
         return false;
       }
-      if (controller.signal.aborted) return false;
+      if (controller.signal.aborted || selectedJobIdRef.current !== jobId) {
+        return false;
+      }
 
       const pageCount = readPageCount(response.headers.get("X-PDF-Pages"));
       setPdfUrl(URL.createObjectURL(pdf));
+      setOutputView("pdf");
+      setCompileStatus(describeCompiledPdf({ pageCount }));
+      if (compileAbortRef.current === controller) {
+        compileAbortRef.current = null;
+        setIsCompiling(false);
+      }
       const bytes = new Uint8Array(await pdf.arrayBuffer());
       let binary = "";
       for (let offset = 0; offset < bytes.length; offset += 32768)
@@ -1162,18 +1820,22 @@ export default function ResumeGenerator({ library, source }: Props) {
           ...bytes.subarray(offset, offset + 32768),
         );
       const compiledPdfBase64 = btoa(binary);
-      setPdfBase64(compiledPdfBase64);
-      await persistGeneration(target, "compiled", compiledPdfBase64);
-      setOutputView("pdf");
-      setCompileStatus(describeCompiledPdf({ pageCount }));
-      return true;
-    } catch {
-      if (!controller.signal.aborted) {
-        setCompileError({
-          error: "The PDF service could not be reached. Try again.",
-        });
-        persistFailure();
+      const stillCurrent =
+        !controller.signal.aborted && selectedJobIdRef.current === jobId;
+      if (stillCurrent) setPdfBase64(compiledPdfBase64);
+      void persistGeneration(target, "compiled", compiledPdfBase64);
+      return stillCurrent;
+    } catch (error) {
+      if (controller.signal.aborted || selectedJobIdRef.current !== jobId) {
+        return false;
       }
+      setCompileError({
+        error:
+          error instanceof ResponseReadError
+            ? error.message
+            : "The PDF service could not be reached. Try again.",
+      });
+      persistFailure();
       return false;
     } finally {
       if (compileAbortRef.current === controller) {
@@ -1325,13 +1987,28 @@ export default function ResumeGenerator({ library, source }: Props) {
               contentBudgetLines: 60,
             },
             selectedIds,
-            { renderedSkillIds: selectedSkillIds ?? undefined },
+            {
+              renderedSkillIds: skillIdsForCoverage(
+                result?.metadata.renderedSkillIds,
+                selectedSkillIds,
+              ),
+            },
           )
         : null,
-    [analysis, draft.jobDescription, library, selectedIds, selectedSkillIds],
+    [
+      analysis,
+      draft.jobDescription,
+      library,
+      result?.metadata.renderedSkillIds,
+      selectedIds,
+      selectedSkillIds,
+    ],
   );
   const finalCoverage = result?.metadata.finalCoverage;
+  const coverageFromRenderedSkills =
+    result?.metadata.renderedSkillIds != null ? currentCoverage : null;
   const coverageItems = (
+    coverageFromRenderedSkills ??
     finalCoverage ??
     currentCoverage ??
     recommendation?.recommendations.requirementCoverage ??
@@ -1400,6 +2077,12 @@ export default function ResumeGenerator({ library, source }: Props) {
   const hasUnapprovedBulkProposals = bulkApprovableIds.some(
     (id) => !approvedTailoredIds.includes(id),
   );
+  const hasRecommendationEdits =
+    JSON.stringify([...selectedIds].sort()) !==
+      JSON.stringify([...recommendedIds].sort()) ||
+    recommendedSkillIds.some(
+      (id) => selectedSkillIds !== null && !selectedSkillIds.includes(id),
+    );
   const requestedSkillCount =
     result?.metadata.studioDocument &&
     !result.metadata.studioDocument.sectionOrder.includes("skills")
@@ -1413,24 +2096,36 @@ export default function ResumeGenerator({ library, source }: Props) {
   const omittedSkillCount = result
     ? Math.max(0, requestedSkillCount - result.metadata.renderedSkillIds.length)
     : 0;
-  const hasRecommendationEdits =
-    JSON.stringify([...selectedIds].sort()) !==
-      JSON.stringify([...recommendedIds].sort()) ||
-    recommendedSkillIds.some(
-      (id) => selectedSkillIds !== null && !selectedSkillIds.includes(id),
-    );
+  const selectionStale = Boolean(
+    result &&
+    (!sameSelectionIds(selectedIds, result.metadata.selectedAchievementIds) ||
+      (selectedSkillIds !== null &&
+        !sameSelectionIds(
+          selectedSkillIds,
+          result.metadata.selectedSkillIds ??
+            library.skills
+              .filter((skill) => skill.isListedOnCurrentResume)
+              .map((skill) => skill.id),
+        ))),
+  );
+  const savedDescriptionDiffers = Boolean(
+    browserDraft && analysis && savedAnalysisDraftDiffers(browserDraft, draft),
+  );
+  const disabledPointCount = countDisabledAchievementPoints(library);
+  const libraryHref = source === "demo" ? "/library?source=demo" : "/library";
+  const compileControl = previewCompileControl({
+    isCompiling,
+    isGenerating,
+    hasPdf: Boolean(pdfUrl),
+    studioPending: Boolean(result) && studioPendingCount > 0,
+    selectionStale,
+  });
   /**
    * The compile control stays a single utility action: it creates the first
    * PDF, recompiles the current LaTeX once one exists, and reports the
    * pending state while the compiler runs.
    */
-  const compileActionLabel = isCompiling
-    ? pdfUrl
-      ? "Compiling…"
-      : "Creating PDF…"
-    : pdfUrl
-      ? "Recompile"
-      : "Create PDF";
+  const compileActionLabel = compileControl.label;
 
   return (
     <section className="generation-page" aria-labelledby="page-title">
@@ -1444,7 +2139,12 @@ export default function ResumeGenerator({ library, source }: Props) {
         <div>
           <p className="eyebrow">
             MANUAL GENERATION{" "}
-            <span className="generation-step-chip">02 / 04</span>
+            <span className="generation-step-chip">
+              {generationStepChip({
+                hasLatex: Boolean(result?.latex),
+                hasPdf: Boolean(pdfUrl),
+              })}
+            </span>
           </p>
           <h1 id="page-title">
             {result ? "Your next chapter." : "Build your resume."}
@@ -1488,6 +2188,9 @@ export default function ResumeGenerator({ library, source }: Props) {
               No saved job description. <Link href="/">Add job details</Link>
             </p>
           )}
+          {savedDescriptionDiffers && (
+            <p className="saved-job-unsaved">{SAVED_ANALYSIS_DIFFERS_NOTICE}</p>
+          )}
         </div>
         {/*
          * The source choice decides which library the builder loads, so it
@@ -1521,6 +2224,17 @@ export default function ResumeGenerator({ library, source }: Props) {
           )}
         </div>
       </div>
+      {savedJobs.length > 0 && (
+        <SavedJobList
+          jobs={savedJobs}
+          selectedId={selectedJobId}
+          title="Build for a saved job"
+          description="Choose the company and role. Suggestions and tailoring use that analysis."
+          titleId="builder-saved-jobs-title"
+          onSelect={(id) => void handleSelectSavedJob(id)}
+          onDelete={(job) => void handleDeleteSavedJob(job)}
+        />
+      )}
       {draftNotice && (
         <p className="generation-notice" role="status">
           {draftNotice}
@@ -1546,22 +2260,53 @@ export default function ResumeGenerator({ library, source }: Props) {
             onClick={() => {
               setResult(savedSession.generation);
               setPdfBase64(savedSession.pdfBase64);
+              const restored = restoredGenerationSelection(
+                savedSession.generation.metadata,
+              );
+              selectedIdsRef.current = restored.selectedIds;
+              selectedSkillIdsRef.current = restored.selectedSkillIds ?? null;
+              setSelectedIds(restored.selectedIds);
+              setSelectedSkillIds(restored.selectedSkillIds ?? null);
+              setRequestError("");
+              setCopyMessage("");
               void persistGeneration(
                 savedSession.generation,
                 savedSession.pdfBase64 ? "compiled" : "drafted",
                 savedSession.pdfBase64 ?? undefined,
               );
               if (savedSession.pdfBase64) {
-                const bytes = Uint8Array.from(
-                  atob(savedSession.pdfBase64),
-                  (character) => character.charCodeAt(0),
-                );
-                setPdfUrl(
-                  URL.createObjectURL(
-                    new Blob([bytes], { type: "application/pdf" }),
-                  ),
-                );
-                setOutputView("pdf");
+                try {
+                  const bytes = Uint8Array.from(
+                    atob(savedSession.pdfBase64),
+                    (character) => character.charCodeAt(0),
+                  );
+                  setPdfUrl(
+                    URL.createObjectURL(
+                      new Blob([bytes], { type: "application/pdf" }),
+                    ),
+                  );
+                  setOutputView("pdf");
+                  setCompileError(null);
+                  setCompileStatus(
+                    describeCompiledPdf({
+                      pageCount:
+                        savedSession.generation.metadata.layout?.pageCount ??
+                        null,
+                      utilization:
+                        savedSession.generation.metadata.layout?.utilization ??
+                        null,
+                    }),
+                  );
+                } catch {
+                  setPdfUrl(null);
+                  setOutputView("latex");
+                  setCompileStatus("");
+                }
+              } else {
+                setPdfUrl(null);
+                setOutputView("latex");
+                setCompileError(null);
+                setCompileStatus("");
               }
               setSavedSession(null);
             }}
@@ -1649,6 +2394,16 @@ export default function ResumeGenerator({ library, source }: Props) {
                             ? "Retry suggestions"
                             : "Suggest points"}
                       </button>
+                      {isRecommending && (
+                        <button
+                          aria-label="Cancel suggestions"
+                          className="generation-ai-button"
+                          onClick={() => selectionAbortRef.current?.abort()}
+                          type="button"
+                        >
+                          Cancel
+                        </button>
+                      )}
                       <button
                         className="generation-ai-button"
                         disabled={
@@ -1692,7 +2447,10 @@ export default function ResumeGenerator({ library, source }: Props) {
                     <div className="generation-selection-utilities">
                       <button
                         disabled={
-                          isRecommending || isTailoring || isAutoTailoring
+                          isRecommending ||
+                          isTailoring ||
+                          isAutoTailoring ||
+                          isGenerating
                         }
                         type="button"
                         onClick={selectAll}
@@ -1702,7 +2460,10 @@ export default function ResumeGenerator({ library, source }: Props) {
                       </button>
                       <button
                         disabled={
-                          isRecommending || isTailoring || isAutoTailoring
+                          isRecommending ||
+                          isTailoring ||
+                          isAutoTailoring ||
+                          isGenerating
                         }
                         type="button"
                         onClick={clearSelection}
@@ -1735,7 +2496,9 @@ export default function ResumeGenerator({ library, source }: Props) {
                       className={`selection-analysis-state is-${jobAnalysisState}`}
                     >
                       {jobAnalysisState === "ready"
-                        ? "Analyzed"
+                        ? savedDescriptionDiffers
+                          ? "Saved analysis"
+                          : "Analyzed"
                         : jobAnalysisState === "loading"
                           ? "Analyzing…"
                           : jobAnalysisState === "error"
@@ -1768,8 +2531,7 @@ export default function ResumeGenerator({ library, source }: Props) {
                         {coverageSummary.total} requirement
                         {coverageSummary.total === 1 ? "" : "s"} extracted.
                       </strong>{" "}
-                      The coverage below shows how selected evidence supports
-                      each one.
+                      {analysisCoverageSentence(Boolean(recommendation))}
                     </p>
                   ) : (
                     <p className="selection-analysis-detail">
@@ -1951,6 +2713,7 @@ export default function ResumeGenerator({ library, source }: Props) {
                                     selectedSkillIds?.includes(skill.id) ??
                                     false
                                   }
+                                  disabled={isGenerating}
                                   onChange={(event) => {
                                     setSelectedSkillIds((current) => {
                                       const base =
@@ -1961,12 +2724,12 @@ export default function ResumeGenerator({ library, source }: Props) {
                                               item.isListedOnCurrentResume,
                                           )
                                           .map((item) => item.id);
-                                      return event.target.checked
+                                      const next = event.target.checked
                                         ? [...new Set([...base, skill.id])]
                                         : base.filter((id) => id !== skill.id);
+                                      selectedSkillIdsRef.current = next;
+                                      return next;
                                     });
-                                    clearPdfOutput();
-                                    setResult(null);
                                     setRequestError("");
                                     setCopyMessage("");
                                   }}
@@ -2015,6 +2778,7 @@ export default function ResumeGenerator({ library, source }: Props) {
                                   onChange={(event) => {
                                     setSummaryApproved(event.target.checked);
                                     setResult(null);
+                                    setHistoryNotice("");
                                     clearPdfOutput();
                                   }}
                                 />{" "}
@@ -2053,6 +2817,7 @@ export default function ResumeGenerator({ library, source }: Props) {
                           ]);
                           clearPdfOutput();
                           setResult(null);
+                          setHistoryNotice("");
                         }}
                         type="button"
                       >
@@ -2064,6 +2829,7 @@ export default function ResumeGenerator({ library, source }: Props) {
                           setApprovedTailoredIds([]);
                           clearPdfOutput();
                           setResult(null);
+                          setHistoryNotice("");
                         }}
                         type="button"
                       >
@@ -2314,6 +3080,7 @@ export default function ResumeGenerator({ library, source }: Props) {
                                     );
                                     clearPdfOutput();
                                     setResult(null);
+                                    setHistoryNotice("");
                                     setRequestError("");
                                     setCopyMessage("");
                                   }}
@@ -2386,6 +3153,7 @@ export default function ResumeGenerator({ library, source }: Props) {
                                   );
                                   clearPdfOutput();
                                   setResult(null);
+                                  setHistoryNotice("");
                                   setRequestError("");
                                   setCopyMessage("");
                                 }}
@@ -2419,6 +3187,7 @@ export default function ResumeGenerator({ library, source }: Props) {
                 recommendedSkillIds={recommendedSkillIds}
                 qualityNotes={tailoring?.qualityNotes}
                 onSetup={() => setShowGenerationSettings((current) => !current)}
+                onPendingChange={reportStudioPending}
                 onApplied={(generation, base64) => {
                   const bytes = Uint8Array.from(atob(base64), (character) =>
                     character.charCodeAt(0),
@@ -2495,9 +3264,17 @@ export default function ResumeGenerator({ library, source }: Props) {
 
             {(!result || showGenerationSettings) &&
               (groups.length === 0 ? (
-                <p className="generation-empty" role="status">
-                  This library has no enabled achievement points.
-                </p>
+                disabledPointCount > 0 ? (
+                  <p className="generation-empty" role="status">
+                    {disabledAchievementPointsCopy(disabledPointCount)}{" "}
+                    <Link href={libraryHref}>Turn them on in the library</Link>{" "}
+                    before building a resume.
+                  </p>
+                ) : (
+                  <p className="generation-empty" role="status">
+                    This library has no achievement points.
+                  </p>
+                )
               ) : visibleGroups.length === 0 ? (
                 <p className="generation-no-matches" role="status">
                   No achievements match this search.
@@ -2535,7 +3312,10 @@ export default function ResumeGenerator({ library, source }: Props) {
                               aria-label={`Select achievement ${point.id}: ${point.text}`}
                               checked={selectedIds.includes(point.id)}
                               disabled={
-                                isRecommending || isTailoring || isAutoTailoring
+                                isRecommending ||
+                                isTailoring ||
+                                isAutoTailoring ||
+                                isGenerating
                               }
                               onChange={(event) =>
                                 changeSelection(point.id, event.target.checked)
@@ -2693,9 +3473,15 @@ export default function ResumeGenerator({ library, source }: Props) {
                   <button
                     aria-busy={isCompiling}
                     className="generation-action generation-action-compile"
-                    disabled={isCompiling || isGenerating}
+                    disabled={compileControl.disabled}
                     onClick={() => compilePdf()}
-                    title="Compile the current generated LaTeX into a PDF"
+                    title={
+                      selectionStale
+                        ? "Selection changed. Generate LaTeX to rebuild before compiling."
+                        : studioPendingCount > 0 && result
+                          ? "Apply Studio changes first. This would compile the last applied LaTeX, not the unapplied edits."
+                          : "Compile the current generated LaTeX into a PDF"
+                    }
                     type="button"
                   >
                     {compileActionLabel}
@@ -2755,6 +3541,15 @@ export default function ResumeGenerator({ library, source }: Props) {
               <p className="generation-notice" role="status">
                 {copyMessage}
               </p>
+            )}
+            {selectionStale && (
+              <StatusBanner
+                tone="caution"
+                role="status"
+                className="preview-status"
+              >
+                <p>{SELECTION_CHANGED_NOTICE}</p>
+              </StatusBanner>
             )}
             {requestError ? (
               <StatusBanner
@@ -3071,16 +3866,135 @@ export default function ResumeGenerator({ library, source }: Props) {
                 ? "Using your local resume data"
                 : "Using fictional demo data"}
             </span>
+            {selectionStale && (
+              <p className="generation-notice" role="status">
+                {SELECTION_CHANGED_NOTICE}
+              </p>
+            )}
+            {draftReady && !isGenerating && selectedIds.length === 0 && (
+              <p className="generation-notice" id="generate-needs-selection">
+                Select an achievement, or run Suggest points or Auto Tailor,
+                before generating.
+              </p>
+            )}
             <button
+              aria-busy={isGenerating}
+              aria-describedby={
+                draftReady && !isGenerating && selectedIds.length === 0
+                  ? "generate-needs-selection"
+                  : undefined
+              }
               className="primary-button"
-              disabled={isGenerating || isCompiling || !draftReady}
+              disabled={
+                isGenerating ||
+                isCompiling ||
+                !draftReady ||
+                selectedIds.length === 0
+              }
               type="submit"
             >
               {isGenerating ? "Generating…" : "Generate LaTeX"}
             </button>
+            {isGenerating && (
+              <button
+                aria-label="Cancel generation"
+                className="clear-button"
+                onClick={() => generateAbortRef.current?.abort()}
+                type="button"
+              >
+                Cancel
+              </button>
+            )}
+            {requestError && (
+              <p className="generation-error-message" role="alert">
+                {requestError}
+              </p>
+            )}
           </div>
         )}
       </form>
+      {fallbackPrompt && (
+        <StudioDialog
+          title="Continue without AI"
+          onClose={() => fallbackResolverRef.current?.(false)}
+        >
+          <p>{fallbackPrompt.error}</p>
+          <p>
+            The AI did not complete this step. Continue with{" "}
+            {fallbackPrompt.fallbackType}? No fallback will run unless you
+            choose OK.
+          </p>
+          <div className="studio-dialog-footer">
+            <button
+              data-studio-focus
+              onClick={() => fallbackResolverRef.current?.(false)}
+              type="button"
+            >
+              Cancel
+            </button>
+            <button
+              className="studio-primary"
+              onClick={() => fallbackResolverRef.current?.(true)}
+              type="button"
+            >
+              OK
+            </button>
+          </div>
+        </StudioDialog>
+      )}
+      {jobPendingDelete && (
+        <StudioDialog
+          title="Delete saved analysis"
+          onClose={() => setJobPendingDelete(null)}
+        >
+          <p>
+            {`Delete the saved analysis for ${jobPendingDelete.company}? Resumes already created stay in history.`}
+          </p>
+          <div className="studio-dialog-footer">
+            <button
+              data-studio-focus
+              onClick={() => setJobPendingDelete(null)}
+              type="button"
+            >
+              Cancel
+            </button>
+            <button
+              className="studio-primary"
+              onClick={() => void confirmDeleteSavedJob()}
+              type="button"
+            >
+              Delete
+            </button>
+          </div>
+        </StudioDialog>
+      )}
+      {replacePromptOpen && (
+        <StudioDialog
+          title="Replace this resume?"
+          onClose={() => settleReplaceResume(false)}
+        >
+          <p>
+            Studio has unsaved edits. Generate LaTeX replaces the current resume
+            and those edits.
+          </p>
+          <div className="studio-dialog-footer">
+            <button
+              data-studio-focus
+              onClick={() => settleReplaceResume(false)}
+              type="button"
+            >
+              Cancel
+            </button>
+            <button
+              className="studio-primary"
+              onClick={() => settleReplaceResume(true)}
+              type="button"
+            >
+              OK
+            </button>
+          </div>
+        </StudioDialog>
+      )}
     </section>
   );
 }

@@ -12,7 +12,12 @@ import {
   parseImaginationDraft,
   type ImaginationDraft,
 } from "@/lib/generation/imagination-draft";
-import { buildImaginationLibraryPoint } from "@/lib/generation/imagination-save";
+import {
+  buildImaginationLibraryPoint,
+  imaginationSaveCopy,
+  readImaginationPayload,
+  readableImaginationError,
+} from "@/lib/generation/imagination-save";
 import ImaginationCanvasLayout from "./imagination-canvas-layout";
 import ImaginationComposer, {
   type ImaginationComposerProps,
@@ -41,9 +46,7 @@ export default function ImaginationCanvas({
   const [groupId, setGroupId] = useState(studioGroups(library)[0]?.id ?? "");
   const getWorkspaceStorage = useWorkspaceStorage();
   const [text, setText] = useState("");
-  const [instruction, setInstruction] = useState(
-    DEFAULT_IMAGINATION_INSTRUCTION,
-  );
+  const [instruction, setInstruction] = useState("");
   const [writingMode, setWritingMode] = useState<AchievementWritingMode | null>(
     null,
   );
@@ -61,8 +64,15 @@ export default function ImaginationCanvas({
   const [storageReady, setStorageReady] = useState(false);
   const [showCreateNotice, setShowCreateNotice] = useState(true);
   const [savedDraft, setSavedDraft] = useState<ImaginationDraft | null>(null);
+  const [droppedAchievements, setDroppedAchievements] = useState<{
+    count: number;
+    groupId: string;
+    selectedIds: string[];
+  } | null>(null);
+  const [restoreConfirming, setRestoreConfirming] = useState(false);
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const controller = useRef<AbortController | null>(null);
+  const draftEdited = useRef(false);
   const points = [...library.jobs, ...library.projects].flatMap((group) =>
     group.points
       .filter((point) => point.enabled)
@@ -88,12 +98,11 @@ export default function ImaginationCanvas({
   }, []);
   useEffect(() => {
     try {
-      setSavedDraft(
-        parseImaginationDraft(
-          getWorkspaceStorage().getItem(storageKey),
-          library,
-        ),
+      const draft = parseImaginationDraft(
+        getWorkspaceStorage().getItem(storageKey),
+        library,
       );
+      if (!draftEdited.current) setSavedDraft(draft);
     } catch {
       setStorageError(
         "Browser storage is unavailable. Keep this page open until you save your achievement.",
@@ -136,6 +145,12 @@ export default function ImaginationCanvas({
     getWorkspaceStorage,
   ]);
 
+  function touchDraft() {
+    draftEdited.current = true;
+    setRestoreConfirming(false);
+    setSavedDraft(null);
+  }
+
   function invalidateSuggestion() {
     controller.current?.abort();
     setBusy(false);
@@ -156,11 +171,22 @@ export default function ImaginationCanvas({
     const next = [...new Set(ids)]
       .filter((id) => validIds.has(id))
       .slice(0, 10 - otherIds.length);
+    touchDraft();
     invalidateSuggestion();
     (kind === "achievement" ? setSelectedIds : setSkillIds)(next);
   }
 
   function restore(draft: ImaginationDraft) {
+    if (
+      text.trim() &&
+      text.trim() !== draft.text.trim() &&
+      !restoreConfirming
+    ) {
+      setRestoreConfirming(true);
+      return;
+    }
+    draftEdited.current = true;
+    setRestoreConfirming(false);
     invalidateSuggestion();
     setGroupId(draft.groupId);
     setText(draft.text);
@@ -173,11 +199,12 @@ export default function ImaginationCanvas({
   }
 
   async function imagine() {
+    const submittedInstruction =
+      instruction.trim() || DEFAULT_IMAGINATION_INSTRUCTION;
     if (
-      (!text.trim() && !selectedSources.length) ||
+      (!text.trim() && !selectedSources.length && !skillIds.length) ||
       !groupId ||
-      !instruction.trim() ||
-      instruction.length > 500
+      submittedInstruction.length > 500
     )
       return;
     controller.current?.abort();
@@ -200,25 +227,34 @@ export default function ImaginationCanvas({
           sources: selectedSources,
           skillIds,
           draftText: text,
-          instruction,
+          instruction: submittedInstruction,
           targetLines,
           ...(writingMode ? { writingMode } : {}),
         }),
       });
-      const payload = await response.json();
+      const payload = await readImaginationPayload(
+        response,
+        imaginationSaveCopy.unreadableResponse,
+      );
+      const suggestionText = payload.text;
+      const measured = payload.measuredLines;
       if (
         !response.ok ||
-        typeof payload.text !== "string" ||
-        !payload.text.trim()
+        typeof suggestionText !== "string" ||
+        !suggestionText.trim()
       )
         throw new Error(
-          payload.error ?? "No suggestion was returned. Try again.",
+          typeof payload.error === "string" && payload.error.trim()
+            ? payload.error
+            : "No suggestion was returned. Try again.",
         );
       if (!abort.signal.aborted) {
-        setProposed(payload.text);
+        setProposed(suggestionText);
         setMeasuredLines(
-          Number.isInteger(payload.measuredLines) && payload.measuredLines > 0
-            ? payload.measuredLines
+          typeof measured === "number" &&
+            Number.isInteger(measured) &&
+            measured > 0
+            ? measured
             : null,
         );
         setLayoutWarning(
@@ -230,9 +266,10 @@ export default function ImaginationCanvas({
     } catch (failure) {
       if (!abort.signal.aborted)
         setError(
-          failure instanceof Error
-            ? failure.message
-            : "Imagination is unavailable. Your draft is preserved.",
+          readableImaginationError(
+            failure,
+            imaginationSaveCopy.unreadableResponse,
+          ),
         );
     } finally {
       if (controller.current === abort) setBusy(false);
@@ -240,7 +277,16 @@ export default function ImaginationCanvas({
   }
 
   async function save() {
-    if (!text.trim() || !groupId || source !== "personal" || saving || busy)
+    const suggestionPending =
+      proposed.trim().length > 0 && proposed.trim() !== text.trim();
+    if (
+      !text.trim() ||
+      !groupId ||
+      source !== "personal" ||
+      saving ||
+      busy ||
+      suggestionPending
+    )
       return;
     setSaving(true);
     setSaveError("");
@@ -263,9 +309,16 @@ export default function ImaginationCanvas({
           }),
         ),
       });
-      const payload = await response.json();
+      const payload = await readImaginationPayload(
+        response,
+        imaginationSaveCopy.unreadableSave,
+      );
       if (!response.ok)
-        throw new Error(payload.error ?? "The achievement could not be saved.");
+        throw new Error(
+          typeof payload.error === "string" && payload.error.trim()
+            ? payload.error
+            : "The achievement could not be saved.",
+        );
       try {
         getWorkspaceStorage().removeItem(storageKey);
       } catch {
@@ -274,9 +327,7 @@ export default function ImaginationCanvas({
       onClose();
     } catch (failure) {
       setSaveError(
-        failure instanceof Error
-          ? failure.message
-          : "The achievement could not be saved.",
+        readableImaginationError(failure, imaginationSaveCopy.unreadableSave),
       );
     } finally {
       setSaving(false);
@@ -289,19 +340,42 @@ export default function ImaginationCanvas({
     connectedAchievementIds: selectedIds,
     value: text,
     onDestinationChange: (id, compatibleIds) => {
+      const dropped = selectedIds.filter(
+        (item) => !compatibleIds.includes(item),
+      );
+      setDroppedAchievements(
+        dropped.length
+          ? { count: dropped.length, groupId, selectedIds: [...selectedIds] }
+          : null,
+      );
+      touchDraft();
       invalidateSuggestion();
       setGroupId(id);
       setSelectedIds(compatibleIds);
     },
     onTextChange: (value) => {
+      touchDraft();
       invalidateSuggestion();
       setText(value);
+    },
+    disconnectedCount: droppedAchievements?.count ?? 0,
+    onUndoDestination: () => {
+      if (!droppedAchievements) return;
+      touchDraft();
+      invalidateSuggestion();
+      setGroupId(droppedAchievements.groupId);
+      setSelectedIds(droppedAchievements.selectedIds);
+      setDroppedAchievements(null);
     },
     createNotice: source === "personal" && showCreateNotice ? "library" : null,
     onDismissNotice: () => setShowCreateNotice(false),
     restoreDraft: savedDraft,
     onRestoreDraft: restore,
-    onDismissRestoreDraft: () => setSavedDraft(null),
+    restoreConfirming,
+    onDismissRestoreDraft: () => {
+      draftEdited.current = true;
+      setSavedDraft(null);
+    },
     composerRef,
   };
   const connectedItems = [
@@ -362,16 +436,19 @@ export default function ImaginationCanvas({
           <ImaginationWritingControls
             selectedMode={writingMode}
             onModeChange={(mode) => {
+              touchDraft();
               invalidateSuggestion();
               setWritingMode(mode);
             }}
             instruction={instruction}
             onInstructionChange={(value) => {
+              touchDraft();
               invalidateSuggestion();
               setInstruction(value);
             }}
             targetLines={targetLines}
             onTargetLinesChange={(value) => {
+              touchDraft();
               invalidateSuggestion();
               setTargetLines(value);
             }}
@@ -380,9 +457,18 @@ export default function ImaginationCanvas({
                 ? { status: "measured", lineCount: measuredLines }
                 : { status: "estimated" }
             }
+            blockedReason={
+              saving
+                ? "Wait for saving to finish before asking."
+                : !groupId
+                  ? imaginationSaveCopy.askNeedsJob
+                  : imaginationSaveCopy.askNeedsDraft
+            }
             canSubmit={
-              Boolean(groupId && (text.trim() || selectedSources.length)) &&
-              !saving
+              Boolean(
+                groupId &&
+                (text.trim() || selectedSources.length || skillIds.length),
+              ) && !saving
             }
             isLoading={busy}
             onSubmit={imagine}
@@ -418,7 +504,14 @@ export default function ImaginationCanvas({
                 setMeasuredLines(null);
               }}
               onUseSuggestion={(value) => {
+                touchDraft();
                 setText(value);
+                setSaveError("");
+              }}
+              onDismissSuggestion={() => {
+                setProposed("");
+                setMeasuredLines(null);
+                setLayoutWarning("");
                 setSaveError("");
               }}
               onRegenerate={imagine}
@@ -432,7 +525,15 @@ export default function ImaginationCanvas({
             allowResume={false}
             hasLibraryDestination={Boolean(groupId)}
             saveTo={source === "personal" && groupId ? "library" : null}
-            canSave={Boolean(text.trim() && groupId)}
+            canSave={
+              Boolean(text.trim() && groupId) &&
+              !(proposed.trim() && proposed.trim() !== text.trim())
+            }
+            disabledReason={
+              proposed.trim() && proposed.trim() !== text.trim()
+                ? imaginationSaveCopy.suggestionPending
+                : ""
+            }
             isBusy={busy}
             isSaving={saving}
             error={saveError}

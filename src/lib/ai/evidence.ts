@@ -117,9 +117,11 @@ export function buildAchievementEvidence(
 }
 
 export function evidenceText(item: AchievementEvidence) {
+  // Employer and project descriptions are context, not the achievement. Scoring
+  // a requirement from that boilerplate lets a job blurb cover a skill the
+  // bullet never states.
   return [
     item.text,
-    item.context,
     ...item.tags,
     ...(item.supportedSkills ?? []),
     ...(item.metrics ?? []).map(

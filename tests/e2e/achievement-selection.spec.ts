@@ -152,7 +152,8 @@ test("analyzes a saved JD, retries point suggestions, and allows grounded overri
   });
   await expect(recommendation).toContainText("Requirement coverage");
   await expect(recommendation).toContainText("AWS provisioning");
-  await expect(recommendation).toContainText("2 / 2 supported");
+  await expect(recommendation).toContainText("Required 1 of 1 covered");
+  await expect(recommendation).toContainText("Responsibilities 1 of 1 covered");
   await expect(
     recommendation.getByRole("progressbar", {
       name: "Requirements covered by selected achievements",
@@ -184,7 +185,8 @@ test("analyzes a saved JD, retries point suggestions, and allows grounded overri
   });
   await expect(suggestedSkill).toBeChecked();
   await page.getByLabel(`Select achievement ${cloudAchievementId}`).uncheck();
-  await expect(recommendation).toContainText("0 / 2 supported");
+  await expect(recommendation).toContainText("Required 0 of 1 covered");
+  await expect(recommendation).toContainText("Responsibilities 0 of 1 covered");
   await expect(recommendation).toContainText("Not selected");
   await expect(suggestedSkill).toBeEnabled();
   await expect(suggestedSkill).toBeChecked();
@@ -206,7 +208,9 @@ test("finds evidence by search and by experience without losing the selection", 
   await page.goto("/generate?source=demo");
 
   const search = page.getByRole("searchbox", { name: "Search achievements" });
-  const experience = page.getByLabel("Filter by experience");
+  const experience = page.getByRole("combobox", {
+    name: "Filter by experience",
+  });
   await expect(search).toBeVisible();
   await expect(experience).toBeVisible();
   await expect(page.locator(".generation-point")).toHaveCount(13);
@@ -288,11 +292,16 @@ test("reaches the search and the experience filter with the keyboard", async ({
   expect(focus.outlineStyle).not.toBe("none");
   expect(Number.parseFloat(focus.outlineWidth)).toBeGreaterThan(0);
 
-  // The experience filter takes the keyboard too.
-  await page.getByLabel("Filter by experience").focus();
+  // The experience filter takes the keyboard too. The first arrow opens the
+  // list on the current value, and the next arrow moves to a real experience.
+  const experience = page.getByRole("combobox", {
+    name: "Filter by experience",
+  });
+  await experience.focus();
+  await page.keyboard.press("ArrowDown");
   await page.keyboard.press("ArrowDown");
   await page.keyboard.press("Enter");
-  await expect(page.getByLabel("Filter by experience")).not.toHaveValue("");
+  await expect(experience).not.toHaveAttribute("data-value", "");
 });
 
 test("keeps the search row inside a narrow viewport", async ({ page }) => {

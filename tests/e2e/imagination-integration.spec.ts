@@ -2,6 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { copyFile, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { ResumeLibrary } from "../../src/lib/schemas/resume-data";
+import { chooseLibraryOption } from "./support/library-select";
 
 const libraryPath = () =>
   join(process.env.RESUME_LIBRARY_ROOT!, "data", "resume-library.json");
@@ -104,6 +105,11 @@ test("reviews the suggestion, saves only editor text and retains source/skill at
   await expect(
     page.getByRole("button", { name: "Save achievement", exact: true }),
   ).toBeDisabled();
+  await expect(
+    page.getByText(
+      "Use the suggestion in the editor, or dismiss it, before saving.",
+    ),
+  ).toBeVisible();
   expect(generatedBody).toMatchObject({
     skillIds: [skill.id],
     sources: [
@@ -121,6 +127,9 @@ test("reviews the suggestion, saves only editor text and retains source/skill at
     .getByRole("button", { name: "Use suggestion in editor", exact: true })
     .click();
   await expect(editor(page)).toBeFocused();
+  await page
+    .getByRole("button", { name: "Dismiss suggestion", exact: true })
+    .click();
   await editor(page).fill("The reviewed achievement actually being saved.");
   await page
     .getByRole("button", { name: "Save achievement", exact: true })
@@ -170,9 +179,7 @@ test("restores the draft/mode and reconciles destination context without losing 
     page.getByRole("button", { name: "More technical", exact: true }),
   ).toHaveAttribute("aria-pressed", "true");
   await expect(connections(page)).toContainText("2 / 10 connected");
-  await page
-    .getByLabel("Resume destination", { exact: true })
-    .selectOption(library.jobs[1].id);
+  await chooseLibraryOption(page, "Resume destination", library.jobs[1].id);
   await expect(connections(page)).toContainText("1 / 10 connected");
   await expect(connections(page)).toContainText(skill.name);
   await expect(

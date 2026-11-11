@@ -1,7 +1,15 @@
 "use client";
 
 import { Check, ChevronDown } from "lucide-react";
-import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
+import React, {
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type KeyboardEvent,
+} from "react";
 
 export type LibrarySelectOption = {
   label: string;
@@ -11,20 +19,52 @@ export type LibrarySelectOption = {
 type Props = {
   "aria-label": string;
   active?: boolean;
+  className?: string;
+  disabled?: boolean;
+  id?: string;
   onChange: (value: string) => void;
   options: LibrarySelectOption[];
   value: string;
 };
 
+const MENU_GAP = 6;
+const MENU_VIEWPORT_PADDING = 8;
+const MENU_MAX_HEIGHT = 300;
+
+/**
+ * Chooses whether the menu opens above or below the trigger.
+ * The side with more room wins, and the height stays inside the viewport.
+ */
+export function libraryMenuPlacement(
+  trigger: { top: number; bottom: number },
+  viewportHeight: number,
+) {
+  const spaceBelow = Math.max(
+    0,
+    viewportHeight - trigger.bottom - MENU_GAP - MENU_VIEWPORT_PADDING,
+  );
+  const spaceAbove = Math.max(
+    0,
+    trigger.top - MENU_GAP - MENU_VIEWPORT_PADDING,
+  );
+  const above = spaceAbove > spaceBelow;
+  const available = above ? spaceAbove : spaceBelow;
+  return { above, maxHeight: Math.min(MENU_MAX_HEIGHT, available) };
+}
+
 /** A theme-aware, keyboard-operable select used by the library workbench. */
 export default function LibrarySelect({
   "aria-label": label,
   active = false,
+  className,
+  disabled = false,
+  id: controlId,
   onChange,
   options,
   value,
 }: Props) {
   const rootRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const id = useId().replaceAll(":", "");
   const listboxId = `library-select-${id}`;
   const selectedIndex = Math.max(
@@ -33,6 +73,10 @@ export default function LibrarySelect({
   );
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(selectedIndex);
+  const [placement, setPlacement] = useState<{
+    above: boolean;
+    maxHeight: number;
+  } | null>(null);
   const selectedOption = options[selectedIndex];
 
   useEffect(() => {
@@ -55,8 +99,35 @@ export default function LibrarySelect({
     if (!open) return;
     document
       .getElementById(`${listboxId}-option-${activeIndex}`)
-      ?.scrollIntoView({ block: "nearest" });
+      ?.scrollIntoView?.({ block: "nearest" });
   }, [activeIndex, listboxId, open]);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    const trigger = triggerRef.current;
+    if (!trigger) return;
+    const button: HTMLButtonElement = trigger;
+
+    function update() {
+      const rect = button.getBoundingClientRect();
+      const next = libraryMenuPlacement(rect, window.innerHeight);
+      setPlacement((current) =>
+        current &&
+        current.above === next.above &&
+        current.maxHeight === next.maxHeight
+          ? current
+          : next,
+      );
+    }
+
+    update();
+    window.addEventListener("resize", update);
+    window.addEventListener("scroll", update, true);
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("scroll", update, true);
+    };
+  }, [open]);
 
   function choose(index: number) {
     const option = options[index];
@@ -109,7 +180,7 @@ export default function LibrarySelect({
 
   return (
     <div
-      className="library-select"
+      className={className ? `library-select ${className}` : "library-select"}
       data-open={open ? "true" : undefined}
       ref={rootRef}
     >
@@ -124,7 +195,11 @@ export default function LibrarySelect({
         className="library-select-trigger"
         data-active={active ? "true" : undefined}
         data-value={value}
+        id={controlId}
+        disabled={disabled}
+        ref={triggerRef}
         onClick={() => {
+          if (disabled) return;
           if (open) setOpen(false);
           else {
             setActiveIndex(selectedIndex);
@@ -146,9 +221,23 @@ export default function LibrarySelect({
         aria-label={`Options for ${label}`}
         aria-orientation="vertical"
         className="library-select-menu"
+        data-placement={
+          placement ? (placement.above ? "above" : "below") : undefined
+        }
         hidden={!open}
         id={listboxId}
         role="listbox"
+        style={
+          placement
+            ? ({
+                maxHeight: placement.maxHeight,
+                overflow: "auto",
+                ...(placement.above
+                  ? { top: "auto", bottom: `calc(100% + ${MENU_GAP}px)` }
+                  : { bottom: "auto" }),
+              } satisfies CSSProperties)
+            : undefined
+        }
       >
         {options.map((option, index) => (
           <div

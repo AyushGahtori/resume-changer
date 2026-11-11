@@ -6,13 +6,16 @@
 
 .header {
   display: grid;
+  justify-items: center;
   gap: 4px;
   min-width: 0;
+  text-align: center;
 }
 
 .titleRow {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 10px;
   min-width: 0;
 }
@@ -42,6 +45,7 @@
   color: var(--muted);
   font-size: 13px;
   line-height: 1.4;
+  text-align: center;
 }
 
 .notice {
@@ -82,10 +86,39 @@
 
 .destination {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  justify-content: center;
   gap: 12px;
-  max-width: 760px;
+  width: 100%;
+  max-width: none;
   min-width: 0;
+}
+
+.disconnect {
+  display: flex;
+  flex: 1 0 100%;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--ink);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.undo {
+  min-height: 28px;
+  padding: 2px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 .destinationLabel {
@@ -100,20 +133,20 @@
   width: auto;
   min-width: 260px;
   max-width: 460px;
-  padding: 6px 12px;
+}
+
+.destinationSelect :global(.library-select-trigger) {
+  min-height: 36px;
+  padding: 0 12px;
   border: 1px solid var(--line-strong);
-  border-radius: var(--radius-control);
   background: var(--surface-soft);
-  color: var(--ink);
-  font: inherit;
   font-size: 13px;
   line-height: 20px;
-  outline-color: var(--focus);
 }
 
 .destinationSelect:focus-visible,
 .textarea:focus-visible,
-.startButton:focus-visible,
+.undo:focus-visible,
 .restoreButton:focus-visible,
 .discardButton:focus-visible {
   outline: 2px solid var(--focus);
@@ -192,21 +225,6 @@
 .editorIcon {
   flex: 0 0 auto;
   color: var(--imagination);
-}
-
-.startButton {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  min-height: 22px;
-  padding: 2px 4px;
-  border: 0;
-  background: transparent;
-  color: var(--imagination-hover);
-  font: inherit;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
 }
 
 .textarea {

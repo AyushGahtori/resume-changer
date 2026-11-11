@@ -106,20 +106,10 @@ test("reports the coverage of the current job analysis and its source", async ({
 
   const analysis = page.getByRole("region", { name: "Job analysis" });
   await expect(analysis).toContainText("Analyzed");
-  await expect(analysis).toContainText(
-    "Compared with the saved job description",
-  );
-  await expect(analysis.locator(".selection-analysis-context dt")).toHaveText([
-    "Role",
-    "Seniority",
-    "Company",
-  ]);
-  await expect(analysis.locator(".selection-analysis-context dd")).toHaveText([
-    "Platform Engineer",
-    "Entry level",
-    "Example Cloud",
-  ]);
-  await expect(analysis).toContainText("3 requirements extracted.");
+  await expect(analysis).toContainText("Platform Engineer");
+  await expect(analysis).toContainText("Entry level");
+  await expect(analysis).toContainText("3 requirements");
+  await expect(analysis).not.toContainText("Not specified");
   await page.screenshot({
     path: test.info().outputPath("job-analysis-coverage.png"),
     fullPage: true,
@@ -131,11 +121,8 @@ test("reports the coverage of the current job analysis and its source", async ({
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBe(true);
-  await expect(analysis.locator(".selection-analysis-context dd")).toHaveText([
-    "Platform Engineer",
-    "Entry level",
-    "Example Cloud",
-  ]);
+  await expect(analysis).toContainText("Platform Engineer");
+  await expect(analysis).toContainText("Entry level");
   await page.screenshot({
     path: test.info().outputPath("job-analysis-coverage-mobile.png"),
     fullPage: true,
@@ -154,12 +141,13 @@ test("reports the coverage of the current job analysis and its source", async ({
 
   const coverage = page.getByRole("region", { name: "AI recommendations" });
   // Two of the three analyzed requirements are supported by the evidence.
-  await expect(coverage).toContainText("2 / 3 supported");
+  await expect(coverage).toContainText("Required 1 of 2 covered");
+  await expect(coverage).toContainText("Responsibilities 1 of 1 covered");
   await expect(coverage).toContainText(
     "3 job requirements analyzed from this job description.",
   );
-  await expect(coverage).toContainText("1 no match");
-  await expect(coverage).toContainText("No match found");
+  await expect(coverage).toContainText("1 Not found");
+  await expect(coverage).toContainText("Not found");
   await expect(
     coverage.getByRole("progressbar", {
       name: "Requirements covered by selected achievements",
@@ -189,8 +177,7 @@ test("reports a stale job analysis instead of an outdated one", async ({
 }) => {
   await saveJobDraft(page);
   await analyzeJob(page, baseAnalysis);
-  // The job description changes after the analysis, so the saved analysis no
-  // longer describes the current draft.
+  // Editing the draft leaves the saved analysis in place for the builder.
   await page
     .getByRole("textbox", { name: "Job description", exact: true })
     .fill("Build reliable Kubernetes platform services.");
@@ -200,13 +187,16 @@ test("reports a stale job analysis instead of an outdated one", async ({
   await openBuilder(page);
 
   const analysis = page.getByRole("region", { name: "Job analysis" });
-  await expect(analysis).toContainText("Not analyzed");
-  await expect(analysis).toContainText(
-    "No job analysis is available for this job description yet.",
+  await expect(analysis).toContainText("Saved analysis");
+  await expect(page.locator(".saved-job-unsaved")).toContainText(
+    "differs from the saved analysis",
   );
-  await expect(analysis.getByRole("link")).toHaveText(
-    "Analyze this job description",
+  await expect(page.locator(".generation-draft")).toContainText(
+    "Example Cloud",
   );
+  await expect(
+    page.getByRole("button", { name: "Suggest points" }),
+  ).toBeEnabled();
 });
 
 test("reports a failed request without claiming coverage", async ({ page }) => {

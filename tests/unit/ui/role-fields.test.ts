@@ -42,10 +42,10 @@ describe("role field descriptors", () => {
     expect(new Set(icons).size).toBe(3);
   });
 
-  it("does not mark the optional link field as required", () => {
-    // Company and role title stay optional, matching `validateDraft`.
-    expect(getRoleField("company")).not.toHaveProperty("required");
+  it("marks the company required for analysis while role and link stay optional", () => {
+    expect(getRoleField("company")).toHaveProperty("required", true);
     expect(getRoleField("roleTitle")).not.toHaveProperty("required");
+    expect(getRoleField("jobUrl")).not.toHaveProperty("required");
   });
 
   it("rejects an unknown field name", () => {

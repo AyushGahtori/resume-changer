@@ -105,6 +105,64 @@ describe("bounded measured resume fitting", () => {
     expect(result.generation.metadata.finalCoverage).toHaveLength(1);
     expect(result.generation.metadata.visibleWordCount).toBe(500);
   });
+  it("keeps an AI summary that does not cite a bullet removed for overflow", async () => {
+    const summary = "Platform engineer focused on reliable services.";
+    const compile = vi
+      .fn()
+      .mockRejectedValueOnce(
+        new PdfCompileError("Overflow", "PAGE_LIMIT_EXCEEDED"),
+      )
+      .mockResolvedValue({ pdf: Buffer.from("%PDF-test"), pageCount: 1 });
+    const result = await fitResumeToPage({
+      library: sample,
+      request: {
+        ...request,
+        selectedAchievementIds: ids.slice(0, 4),
+        summaryOverride: summary,
+      },
+      input,
+      scores: new Map(ids.map((id) => [id, 1])),
+      compile,
+      measure: async () => ({ layout: layout(0.97), text: "" }),
+    });
+    const decisions = result.generation.metadata.fitting?.decisions.join(" ");
+
+    expect(result.generation.metadata.resumeSummary).toBe(summary);
+    expect(decisions).toContain("overflow");
+    expect(decisions).not.toContain("cited a removed source");
+  });
+
+  it("replaces a summary that cites a bullet removed for overflow and records that decision", async () => {
+    const selected = ids.slice(0, 4);
+    const summary = `Selected evidence includes ${input.achievements
+      .filter((point) => selected.includes(point.id))
+      .map((point) => point.text)
+      .join(" ")}`;
+    const compile = vi
+      .fn()
+      .mockRejectedValueOnce(
+        new PdfCompileError("Overflow", "PAGE_LIMIT_EXCEEDED"),
+      )
+      .mockResolvedValue({ pdf: Buffer.from("%PDF-test"), pageCount: 1 });
+    const result = await fitResumeToPage({
+      library: sample,
+      request: {
+        ...request,
+        selectedAchievementIds: selected,
+        summaryOverride: summary,
+      },
+      input,
+      scores: new Map(ids.map((id) => [id, 1])),
+      compile,
+      measure: async () => ({ layout: layout(0.97), text: "" }),
+    });
+
+    expect(result.generation.metadata.resumeSummary).not.toBe(summary);
+    expect(result.generation.metadata.fitting?.decisions.join(" ")).toContain(
+      "Replaced the resume summary because it cited a removed source.",
+    );
+  });
+
   it("removes a whole low-value bullet after overflow while retaining one-page evidence", async () => {
     const compile = vi
       .fn()

@@ -388,6 +388,8 @@ a {
   padding: var(--space-24);
   border-right: 1px solid var(--line);
   background: var(--sidebar);
+  min-height: 0;
+  overflow-y: auto;
   transition:
     width 180ms ease,
     padding 180ms ease,
@@ -537,6 +539,7 @@ a {
   width: 72px;
   padding-right: 12px;
   padding-left: 12px;
+  overflow: visible;
 }
 
 .app-frame.is-sidebar-collapsed .sidebar-header {
@@ -1303,6 +1306,10 @@ h1 {
   opacity: 0.65;
 }
 
+.primary-button:disabled:not([aria-busy="true"]) {
+  cursor: not-allowed;
+}
+
 .home-action-button {
   display: inline-flex;
   min-width: 0;
@@ -1800,6 +1807,105 @@ a:focus-visible {
   color: var(--muted);
   font-size: 14px;
   line-height: 20px;
+}
+.field-label-row {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  min-height: 28px;
+  gap: 8px;
+}
+.saved-jobs {
+  margin: 0 0 16px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.saved-jobs-heading h2 {
+  margin: 0;
+  font-size: 16px;
+  line-height: 24px;
+}
+.saved-jobs-heading p,
+.saved-jobs-empty {
+  margin: 4px 0 0;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  line-height: 18px;
+}
+.saved-jobs-list {
+  display: grid;
+  gap: 8px;
+  max-height: 260px;
+  overflow-y: auto;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.saved-jobs-list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+.saved-job-open,
+.saved-job-delete {
+  color: var(--color-text-primary);
+  font: inherit;
+  text-align: left;
+}
+.saved-job-open {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-surface-alt);
+  cursor: pointer;
+}
+.saved-job-open[aria-current="true"] {
+  border-color: var(--color-violet);
+  background: var(--color-surface);
+}
+.saved-job-company,
+.saved-job-role,
+.saved-job-open time {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.saved-job-company {
+  font-size: 14px;
+  font-weight: 650;
+}
+.saved-job-role,
+.saved-job-open time {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  line-height: 16px;
+}
+.saved-job-delete {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+}
+.saved-job-delete:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-error-strong);
+}
+.saved-job-unsaved {
+  margin: 12px 0 0;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  line-height: 18px;
 }
 .ats-preview-empty {
   margin: 16px 0 0;
@@ -3864,6 +3970,11 @@ a:focus-visible {
   animation: library-select-open 120ms ease-out both;
 }
 
+.library-select-menu[data-placement="above"] {
+  top: auto;
+  bottom: calc(100% + 6px);
+}
+
 .library-sort .library-select-menu {
   right: 0;
   left: auto;
@@ -4063,12 +4174,6 @@ a:focus-visible {
   font-weight: 650;
 }
 
-@media (max-width: 1024px) {
-  .library-filter-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-
 .library-filter-row {
   display: flex;
   align-items: flex-end;
@@ -4081,6 +4186,14 @@ a:focus-visible {
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   gap: var(--space-12);
   min-width: 0;
+}
+
+/* This follows the base minmax(120px) track so it wins at 1024px.
+   160px keeps "All experience" plus the chevron inside the trigger. */
+@media (max-width: 1024px) {
+  .library-filter-grid {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr));
+  }
 }
 
 .library-workbench-footer {
@@ -4826,6 +4939,94 @@ a:focus-visible {
 }
 .skill-unlisted {
   color: var(--muted);
+}
+.skill-board {
+  margin-top: var(--space-12);
+}
+.skill-add {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--space-8);
+  margin-bottom: var(--space-16);
+}
+.skill-add .editor-field {
+  flex: 1 1 220px;
+}
+.skill-add-error {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--color-error-strong);
+  font-size: 12px;
+}
+.skill-groups {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+}
+.skill-group-label {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-8);
+  margin: 0 0 var(--space-8);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+.skill-group-label span {
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+.skill-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.skill-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid
+    color-mix(in srgb, var(--color-violet-strong) 32%, transparent);
+  border-radius: var(--radius-full);
+  background: var(--color-violet-subtle);
+  color: var(--color-violet-strong);
+  font-size: var(--type-body-size, 13px);
+  line-height: 1.3;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+.skill-chip.is-unlisted {
+  border-color: var(--color-border-strong);
+  background: transparent;
+  color: var(--color-text-secondary);
+}
+.skill-chip.is-listed::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: var(--teal);
+}
+.skill-chip[aria-pressed="true"] {
+  border-color: var(--color-violet);
+  background: var(--color-violet);
+  color: var(--color-text-inverse);
+}
+.skill-chip[aria-pressed="true"].is-listed::before {
+  background: var(--color-text-inverse);
+}
+.skill-chip:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
 }
 .library-error {
   width: min(100%, 760px);
@@ -6504,13 +6705,22 @@ a:focus-visible {
   outline-offset: 2px;
 }
 
+.generation-page > a[href="#builder-saved-jobs-title"] {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+}
+
 /* The return path only applies when the preview sits below the editor. */
 .preview-return-link {
   display: none;
+  align-items: center;
+  min-height: 24px;
   margin-top: 7px;
   color: var(--imagination);
   font-size: 10px;
   font-weight: 650;
+  line-height: 24px;
   text-decoration: underline;
   text-underline-offset: 2px;
 }
@@ -8087,6 +8297,7 @@ a:focus-visible {
   color: var(--muted);
   font-size: var(--type-body-large-size);
   line-height: var(--type-body-large-line-height);
+  white-space: pre-line;
 }
 
 @keyframes generation-bubble-float {
@@ -8121,7 +8332,7 @@ a:focus-visible {
   }
 
   .preview-return-link {
-    display: inline-block;
+    display: inline-flex;
   }
 }
 
@@ -8993,9 +9204,13 @@ a:focus-visible {
   display: flex !important;
   align-items: center !important;
   gap: 5px !important;
-  white-space: nowrap !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
+  min-width: 0 !important;
+  height: auto !important;
+  white-space: normal !important;
+  overflow: visible !important;
+  overflow-wrap: anywhere !important;
+  text-align: left !important;
+  text-overflow: clip !important;
   transition: all 0.15s ease !important;
 }
 .imagination-canvas-page .imagination-writing-preset svg {
@@ -9313,10 +9528,10 @@ a:focus-visible {
 .library-page-atmosphere {
   position: absolute;
   z-index: 0;
-  top: -14px;
-  right: 0;
-  width: min(100%, 440px);
-  height: 210px;
+  top: 8px;
+  left: 0;
+  width: min(210px, 32%);
+  height: 88px;
   overflow: hidden;
   pointer-events: none;
 }
@@ -9335,8 +9550,8 @@ a:focus-visible {
 }
 
 .library-bubble--warm {
-  top: 24px;
-  right: 28px;
+  top: 6px;
+  left: 88px;
   width: 68px;
   height: 68px;
   background: color-mix(
@@ -9349,8 +9564,8 @@ a:focus-visible {
 }
 
 .library-bubble--cool {
-  top: 104px;
-  right: 150px;
+  top: 46px;
+  left: 148px;
   width: 30px;
   height: 30px;
   background: color-mix(
@@ -9364,8 +9579,8 @@ a:focus-visible {
 }
 
 .library-bubble--ring {
-  top: 16px;
-  right: 232px;
+  top: 0;
+  left: 0;
   width: 78px;
   height: 78px;
   border: 1px solid
@@ -9381,8 +9596,8 @@ a:focus-visible {
 }
 
 .library-bubble--small {
-  top: 158px;
-  right: 72px;
+  top: 8px;
+  left: 166px;
   width: 22px;
   height: 22px;
   background: color-mix(
@@ -9435,36 +9650,9 @@ a:focus-visible {
   }
 }
 
-@media (max-width: 700px) {
+@media (max-width: 950px) {
   .library-page-atmosphere {
-    right: -8px;
-    width: min(100%, 290px);
-    height: 150px;
-  }
-
-  .library-bubble--warm {
-    right: 18px;
-    width: 50px;
-    height: 50px;
-  }
-
-  .library-bubble--cool {
-    right: 95px;
-    width: 23px;
-    height: 23px;
-  }
-
-  .library-bubble--ring {
-    right: 154px;
-    width: 56px;
-    height: 56px;
-  }
-
-  .library-bubble--small {
-    top: 126px;
-    right: 40px;
-    width: 17px;
-    height: 17px;
+    display: none;
   }
 }
 
