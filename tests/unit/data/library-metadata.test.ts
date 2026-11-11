@@ -66,9 +66,21 @@ describe("optional library metadata", () => {
       expect(blank.data.jobs[0].endDate).toBeUndefined();
     }
 
-    expect(JobSchema.safeParse({ id: "job-bad", startDate: "2024-05", endDate: "2024-04", points: [] }).success).toBe(false);
-    expect(JobSchema.safeParse({ id: "job-now", endDate: null, points: [] }).success).toBe(true);
-    expect(ProjectSchema.safeParse({ id: "project-now", endDate: null, points: [] }).success).toBe(true);
+    expect(
+      JobSchema.safeParse({
+        id: "job-bad",
+        startDate: "2024-05",
+        endDate: "2024-04",
+        points: [],
+      }).success,
+    ).toBe(false);
+    expect(
+      JobSchema.safeParse({ id: "job-now", endDate: null, points: [] }).success,
+    ).toBe(true);
+    expect(
+      ProjectSchema.safeParse({ id: "project-now", endDate: null, points: [] })
+        .success,
+    ).toBe(true);
     expect(
       JobSchema.safeParse({
         id: "job-month",
@@ -200,7 +212,9 @@ describe("metadata writers", () => {
     );
     expect(skills.changed).toBe(true);
     expect(
-      skills.skills.filter((skill) => skill.name.toLowerCase() === "fictional lattice"),
+      skills.skills.filter(
+        (skill) => skill.name.toLowerCase() === "fictional lattice",
+      ),
     ).toHaveLength(1);
     const saved = await readLibrary(file);
     expect(saved.credentials).toEqual(before.credentials);
@@ -211,7 +225,11 @@ describe("metadata writers", () => {
     const { root, file } = await createRoot();
     const projectId = (await readLibrary(file)).projects[0].id;
     await expect(
-      upsertJobMetadata(projectId, { changes: { company: "Other" } }, { rootDir: root }),
+      upsertJobMetadata(
+        projectId,
+        { changes: { company: "Other" } },
+        { rootDir: root },
+      ),
     ).rejects.toBeInstanceOf(LibraryWriteError);
   });
 

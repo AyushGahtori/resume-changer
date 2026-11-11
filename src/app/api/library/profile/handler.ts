@@ -1,9 +1,6 @@
 import { protectAccountRoute } from "@/lib/cloud/protect-route";
 import { NextResponse } from "next/server";
-import {
-  UpdateProfileInputSchema,
-  updateProfile,
-} from "@/lib/data/writers";
+import { UpdateProfileInputSchema, updateProfile } from "@/lib/data/writers";
 import { fieldError, invalidJson, metadataFailure } from "../metadata-response";
 
 export const runtime = "nodejs";

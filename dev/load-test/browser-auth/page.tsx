@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { isLoadTestRuntime } from "../runtime";
+import { isLoadTestRuntime } from "@/lib/load-test/runtime";
 import LoadTestAuthClient from "./load-test-auth-client";
 
 export const dynamic = "force-dynamic";

@@ -114,11 +114,14 @@ export async function changeCloudLibrary(
   change: (library: ResumeLibrary) => ResumeLibrary,
   expectedRevision?: number,
 ) {
-  const result = await mutateCloudLibrary((library) => ({
-    library: change(library),
-    value: undefined,
-    persist: true,
-  }), expectedRevision);
+  const result = await mutateCloudLibrary(
+    (library) => ({
+      library: change(library),
+      value: undefined,
+      persist: true,
+    }),
+    expectedRevision,
+  );
   return result.library;
 }
 

@@ -146,16 +146,9 @@ async function ensureTools() {
 
 async function mountLoadTestRoute() {
   await mkdir(authRouteDir, { recursive: true });
-  const page = await readFile(
+  await copyFile(
     path.join(devDir, "browser-auth", "page.tsx"),
-    "utf8",
-  );
-  await writeFile(
     path.join(authRouteDir, "page.tsx"),
-    page.replaceAll(
-      'from "../runtime"',
-      'from "../../../../dev/load-test/runtime"',
-    ),
   );
   await copyFile(
     path.join(devDir, "browser-auth", "load-test-auth-client.tsx"),

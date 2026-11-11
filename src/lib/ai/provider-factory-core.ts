@@ -1,4 +1,4 @@
-import { isLoadTestRuntime } from "../../../dev/load-test/runtime";
+import { isLoadTestRuntime } from "@/lib/load-test/runtime";
 import { AiProviderError } from "./provider";
 import {
   createGeminiProvider,

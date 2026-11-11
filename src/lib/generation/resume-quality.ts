@@ -119,8 +119,8 @@ export function assessResumeQuality(args: {
       ...library.jobs
         .filter((job) => groups.has(job.id))
         .flatMap((job) =>
-        [job.title, job.company].filter((label) => label.trim()),
-      ),
+          [job.title, job.company].filter((label) => label.trim()),
+        ),
       ...library.projects
         .filter((project) => groups.has(project.id))
         .map((project) => project.name)

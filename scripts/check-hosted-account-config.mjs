@@ -50,9 +50,7 @@ function assertPreviewServiceAccount(environment) {
 
 export function checkHostedAccountConfig(environment) {
   if (environment.RESUME_LOAD_TEST) {
-    throw new Error(
-      "Hosted builds cannot enable the local load-test runtime.",
-    );
+    throw new Error("Hosted builds cannot enable the local load-test runtime.");
   }
   if (environment.VERCEL !== "1") return;
   assertPreviewServiceAccount(environment);

@@ -5,7 +5,11 @@ import {
   UpsertJobMetadataInputSchema,
   upsertJobMetadata,
 } from "@/lib/data/writers";
-import { fieldError, invalidJson, metadataFailure } from "../../metadata-response";
+import {
+  fieldError,
+  invalidJson,
+  metadataFailure,
+} from "../../metadata-response";
 
 export const runtime = "nodejs";
 

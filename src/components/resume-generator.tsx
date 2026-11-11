@@ -1,9 +1,6 @@
 "use client";
 import { apiFetch } from "@/lib/cloud/api-fetch";
-import {
-  jobDisplayTitle,
-  projectDisplayName,
-} from "@/lib/data/library-labels";
+import { jobDisplayTitle, projectDisplayName } from "@/lib/data/library-labels";
 import { useWorkspaceStorage } from "./account-session";
 
 import Link from "next/link";

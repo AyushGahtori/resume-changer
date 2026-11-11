@@ -42,7 +42,9 @@ async function readResult(response: Response) {
   } | null;
   if (!response.ok) {
     const details = result?.issues?.map((issue) => issue.message).join(" ");
-    throw new Error(details || result?.error || "The library could not be saved.");
+    throw new Error(
+      details || result?.error || "The library could not be saved.",
+    );
   }
   return result;
 }
@@ -69,9 +71,7 @@ export default function LibraryMetadataEditor({
     return <SkillsForm onCancel={onCancel} onSaved={onSaved} />;
   }
   if (editor.kind === "job") {
-    return (
-      <JobForm job={editor.job} onCancel={onCancel} onSaved={onSaved} />
-    );
+    return <JobForm job={editor.job} onCancel={onCancel} onSaved={onSaved} />;
   }
   return (
     <ProjectForm
@@ -95,9 +95,7 @@ function useClose(dirty: boolean, pending: boolean, onCancel: () => void) {
     if (pending) return;
     if (
       dirty &&
-      !window.confirm(
-        "Leave this editor? Unsaved changes will be discarded.",
-      )
+      !window.confirm("Leave this editor? Unsaved changes will be discarded.")
     ) {
       return;
     }
@@ -150,9 +148,15 @@ function ProfileForm({
           }),
         }),
       );
-      onSaved(result?.changed ? "Saved profile." : "No profile changes to save.");
+      onSaved(
+        result?.changed ? "Saved profile." : "No profile changes to save.",
+      );
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "The profile could not be saved.");
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : "The profile could not be saved.",
+      );
       setPending(false);
     }
   }
@@ -243,7 +247,10 @@ function ProfileForm({
         <button
           className="ui-button ui-button--tertiary"
           onClick={() =>
-            setForm((current) => ({ ...current, links: [...current.links, ""] }))
+            setForm((current) => ({
+              ...current,
+              links: [...current.links, ""],
+            }))
           }
           type="button"
         >
@@ -343,7 +350,11 @@ function JobForm({
           : "No job changes to save.",
       );
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "The job could not be saved.");
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : "The job could not be saved.",
+      );
       setPending(false);
     }
   }
@@ -415,7 +426,10 @@ function JobForm({
         <input
           name="startDate"
           onChange={(event) =>
-            setForm((current) => ({ ...current, startDate: event.target.value }))
+            setForm((current) => ({
+              ...current,
+              startDate: event.target.value,
+            }))
           }
           type="month"
           value={form.startDate}
@@ -550,7 +564,9 @@ function ProjectForm({
       );
     } catch (reason) {
       setError(
-        reason instanceof Error ? reason.message : "The project could not be saved.",
+        reason instanceof Error
+          ? reason.message
+          : "The project could not be saved.",
       );
       setPending(false);
     }
@@ -617,7 +633,10 @@ function ProjectForm({
         <input
           name="startDate"
           onChange={(event) =>
-            setForm((current) => ({ ...current, startDate: event.target.value }))
+            setForm((current) => ({
+              ...current,
+              startDate: event.target.value,
+            }))
           }
           type="month"
           value={form.startDate}
@@ -708,7 +727,11 @@ function SkillsForm({
       );
       onSaved(result?.changed ? "Saved skills." : "No skill changes to save.");
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "The skills could not be saved.");
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : "The skills could not be saved.",
+      );
       setPending(false);
     }
   }

@@ -42,10 +42,10 @@ import { PATCH as updatePoint } from "@/app/api/library/points/[id]/handler";
 import { PATCH as updateProfile } from "@/app/api/library/profile/handler";
 import { PUT as upsertJob } from "@/app/api/library/jobs/[id]/handler";
 import { PUT as upsertProject } from "@/app/api/library/projects/[id]/handler";
-import { GET as loadTestSafety } from "../../../dev/load-test/safety-handler";
+import { GET as loadTestSafety } from "@/lib/load-test/safety-handler";
 import { POST as editResume } from "@/app/api/resume/edit/handler";
 import { GET as measureSkills } from "@/app/api/resume/skills/handler";
-import { loadTestForbidden } from "../../../dev/load-test/runtime";
+import { loadTestForbidden } from "@/lib/load-test/runtime";
 import { resolveGithubApiRoute } from "./github-routes";
 
 type ApiMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";

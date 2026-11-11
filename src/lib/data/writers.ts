@@ -153,7 +153,11 @@ const metadataEmploymentTypeSchema = z.enum([
 
 const clearableText = z.string().max(4_000);
 
-function optionalHttpUrl(value: string, context: z.RefinementCtx, path: (string | number)[]) {
+function optionalHttpUrl(
+  value: string,
+  context: z.RefinementCtx,
+  path: (string | number)[],
+) {
   const trimmed = value.trim();
   if (!trimmed) return;
   let parsed: URL;
@@ -227,19 +231,16 @@ export const JobMetadataChangesSchema = z
       .optional(),
     location: clearableText.optional(),
     startDate: optionalMonth.optional(),
-    endDate: z.union([YearMonthInputSchema, z.literal(""), z.null()]).optional(),
+    endDate: z
+      .union([YearMonthInputSchema, z.literal(""), z.null()])
+      .optional(),
     description: clearableText.optional(),
   })
   .strict()
   .superRefine((changes, context) => {
     const start = changes.startDate?.trim();
     const end = changes.endDate;
-    if (
-      start &&
-      typeof end === "string" &&
-      end &&
-      end < start
-    ) {
+    if (start && typeof end === "string" && end && end < start) {
       context.addIssue({
         code: "custom",
         path: ["endDate"],
@@ -259,7 +260,9 @@ export const ProjectMetadataChangesSchema = z
     url: z.string().max(2_000).optional(),
     description: clearableText.optional(),
     startDate: optionalMonth.optional(),
-    endDate: z.union([YearMonthInputSchema, z.literal(""), z.null()]).optional(),
+    endDate: z
+      .union([YearMonthInputSchema, z.literal(""), z.null()])
+      .optional(),
   })
   .strict()
   .superRefine((changes, context) => {
@@ -295,7 +298,9 @@ export const SkillBatchInputSchema = z
   .strict();
 
 export type UpdateProfileInput = z.infer<typeof UpdateProfileInputSchema>;
-export type UpsertJobMetadataInput = z.infer<typeof UpsertJobMetadataInputSchema>;
+export type UpsertJobMetadataInput = z.infer<
+  typeof UpsertJobMetadataInputSchema
+>;
 export type UpsertProjectMetadataInput = z.infer<
   typeof UpsertProjectMetadataInputSchema
 >;
@@ -847,8 +852,7 @@ function idIsTaken(
   ).length;
   if (occurrences === 0) return false;
   if (!except) return true;
-  const collection =
-    except.kind === "job" ? library.jobs : library.projects;
+  const collection = except.kind === "job" ? library.jobs : library.projects;
   const owns = collection.some((item) => item.id === except.id);
   return !owns || occurrences > 1;
 }
@@ -895,13 +899,13 @@ function jobHasMetadata(job: {
 }) {
   return Boolean(
     job.company?.trim() ||
-      job.title?.trim() ||
-      job.employmentType ||
-      job.location?.trim() ||
-      job.startDate ||
-      job.endDate === null ||
-      typeof job.endDate === "string" ||
-      job.description?.trim(),
+    job.title?.trim() ||
+    job.employmentType ||
+    job.location?.trim() ||
+    job.startDate ||
+    job.endDate === null ||
+    typeof job.endDate === "string" ||
+    job.description?.trim(),
   );
 }
 
@@ -915,12 +919,12 @@ function projectHasMetadata(project: {
 }) {
   return Boolean(
     project.name?.trim() ||
-      project.role?.trim() ||
-      project.url?.trim() ||
-      project.description?.trim() ||
-      project.startDate ||
-      project.endDate === null ||
-      typeof project.endDate === "string",
+    project.role?.trim() ||
+    project.url?.trim() ||
+    project.description?.trim() ||
+    project.startDate ||
+    project.endDate === null ||
+    typeof project.endDate === "string",
   );
 }
 
@@ -936,7 +940,8 @@ export async function updateProfile(
   let changed = false;
   const result = await commitLibraryMutation((current) => {
     const profile: Profile = { ...current.profile };
-    if (changes.fullName !== undefined) profile.fullName = changes.fullName.trim();
+    if (changes.fullName !== undefined)
+      profile.fullName = changes.fullName.trim();
     if (changes.headline !== undefined)
       profile.headline = clearedText(changes.headline);
     if (changes.email !== undefined) profile.email = clearedText(changes.email);
@@ -1045,7 +1050,11 @@ export async function upsertJobMetadata(
     job = nextJob;
     return { library: next, value: nextJob, persist: changed };
   }, options);
-  return { job: changed || created ? (result.value ?? job) : job, changed, created };
+  return {
+    job: changed || created ? (result.value ?? job) : job,
+    changed,
+    created,
+  };
 }
 
 export async function upsertProjectMetadata(

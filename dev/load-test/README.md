@@ -2,7 +2,7 @@
 
 Developer-only tooling for the local Firebase emulator traffic run. People using Resume Changer do not see this folder, and the deployed app does not include its sign-in helper.
 
-The runner copies `browser-auth/` into the app for the isolated local build, then deletes that copy. `src/app/e2e/load-test-auth/` is gitignored so a crashed build cannot leave the helper in the product.
+The runner copies `browser-auth/` into the app for the isolated local build, then deletes that copy. `src/app/e2e/load-test-auth/` is gitignored so a crashed build cannot leave the helper in the product. The server-side guard that refuses AI calls during that local run lives in `src/lib/load-test`, because the app build only typechecks files under `src`. It does nothing unless the local demo flag is set, and it does not add a page.
 
 ```bash
 npm run test:load:estimate -- --users 1000 --seed 42

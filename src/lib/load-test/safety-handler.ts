@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { loadTestSafetyBody } from "./runtime";
+import { loadTestSafetyBody } from "@/lib/load-test/runtime";
 
 export const runtime = "nodejs";
 

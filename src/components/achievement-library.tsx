@@ -594,7 +594,9 @@ export default function AchievementLibrary({ library, source }: Props) {
           <button
             className="ui-button ui-button--secondary library-action library-action--secondary"
             disabled={editor !== null}
-            onClick={(event) => openEditor({ mode: "profile" }, event.currentTarget)}
+            onClick={(event) =>
+              openEditor({ mode: "profile" }, event.currentTarget)
+            }
             type="button"
           >
             Edit profile
@@ -723,8 +725,7 @@ export default function AchievementLibrary({ library, source }: Props) {
                     canAttachGitHub={false}
                     onEditRecord={
                       canEdit
-                        ? (trigger) =>
-                            openEditor({ mode: "job", job }, trigger)
+                        ? (trigger) => openEditor({ mode: "job", job }, trigger)
                         : undefined
                     }
                     onSkill={(id) => updateFilter("skillId", id)}

@@ -5,7 +5,11 @@ import {
   UpsertProjectMetadataInputSchema,
   upsertProjectMetadata,
 } from "@/lib/data/writers";
-import { fieldError, invalidJson, metadataFailure } from "../../metadata-response";
+import {
+  fieldError,
+  invalidJson,
+  metadataFailure,
+} from "../../metadata-response";
 
 export const runtime = "nodejs";
 
@@ -42,10 +46,7 @@ async function PUTForAccount(
       { status: result.created ? 201 : 200 },
     );
   } catch (error) {
-    return metadataFailure(
-      error,
-      "The project could not be saved. Try again.",
-    );
+    return metadataFailure(error, "The project could not be saved. Try again.");
   }
 }
 
