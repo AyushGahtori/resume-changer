@@ -190,7 +190,7 @@ export function JobForm({
     <form
       aria-describedby={error ? errorId : undefined}
       aria-label={mode === "create" ? "Add job" : "Edit job"}
-      className="point-editor"
+      className="library-entry"
       onSubmit={save}
     >
       <div className="point-editor-heading">
@@ -358,7 +358,7 @@ export function ProjectForm({
     <form
       aria-describedby={error ? errorId : undefined}
       aria-label={mode === "create" ? "Add project" : "Edit project"}
-      className="point-editor"
+      className="library-entry"
       onSubmit={save}
     >
       <div className="point-editor-heading">
@@ -535,11 +535,12 @@ export function RemoveRecordButton({
   if (!confirming) {
     return (
       <button
+        aria-label={`Remove ${name}`}
         className="ui-button ui-button--tertiary ui-button--compact"
         onClick={() => setConfirming(true)}
         type="button"
       >
-        {`Remove ${name}`}
+        Remove
       </button>
     );
   }

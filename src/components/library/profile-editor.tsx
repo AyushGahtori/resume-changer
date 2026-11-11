@@ -126,7 +126,7 @@ export default function ProfileEditor({
   return (
     <form
       aria-label="Profile and contact"
-      className="point-editor"
+      className="library-entry"
       onSubmit={save}
     >
       <div className="point-editor-heading">

@@ -108,7 +108,7 @@ export function SkillPasteForm({ onSaved }: { onSaved: () => void }) {
   }
 
   return (
-    <form aria-label="Add skills" className="point-editor" onSubmit={submit}>
+    <form aria-label="Add skills" className="library-entry" onSubmit={submit}>
       <div className="point-editor-heading">
         <div>
           <p className="eyebrow">SKILLS</p>
@@ -215,7 +215,7 @@ export function EducationForm(props: EducationFormProps) {
     <form
       aria-describedby={error ? errorId : undefined}
       aria-label={props.mode === "create" ? "Add a degree" : "Edit degree"}
-      className="point-editor"
+      className="library-entry"
       onSubmit={submit}
     >
       <div className="point-editor-heading">
@@ -418,7 +418,7 @@ export function CredentialForm(props: CredentialFormProps) {
       aria-label={
         props.mode === "create" ? "Add a credential" : "Edit credential"
       }
-      className="point-editor"
+      className="library-entry"
       onSubmit={submit}
     >
       <div className="point-editor-heading">

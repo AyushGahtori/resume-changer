@@ -102,9 +102,7 @@ test("creates a personal library from an empty account and keeps it after reload
       .first(),
   ).toContainText("Built Python scripts to clean SQL exports");
 
-  const qualifications = page.locator("#library-credentials");
-  await qualifications.locator("summary").click();
-  await qualifications.getByRole("button", { name: "Add education" }).click();
+  await page.getByRole("button", { name: "Add education" }).click();
   const degreeForm = page.getByRole("form", { name: "Add a degree" });
   await degreeForm.getByLabel("Institution").fill("State University");
   await degreeForm.getByLabel("Degree").fill("BSc");
@@ -128,7 +126,6 @@ test("creates a personal library from an empty account and keeps it after reload
       .locator("article.library-point")
       .first(),
   ).toContainText("Built Python scripts to clean SQL exports");
-  await page.locator("#library-credentials summary").click();
   await expect(page.getByText("BSc · Statistics")).toBeVisible();
 
   const saved = JSON.parse(await readFile(personalLibraryPath, "utf8")) as {

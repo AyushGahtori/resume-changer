@@ -4373,8 +4373,8 @@ a:focus-visible {
   margin-top: var(--space-12);
 }
 
-.library-first-setup > .point-editor,
-.library-record-actions > .point-editor {
+.library-first-setup > .library-entry,
+.library-record-actions > .library-entry {
   flex: 1 1 100%;
 }
 
@@ -4384,6 +4384,34 @@ a:focus-visible {
   gap: var(--space-12);
   width: 100%;
   margin: var(--space-8) 0 var(--space-16);
+}
+
+.library-education {
+  display: grid;
+  gap: var(--space-12);
+  margin: var(--space-16) 0 var(--space-24);
+}
+
+.library-education h3 {
+  margin: 0;
+}
+
+.library-education-list {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.library-education-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-12);
+  padding: var(--space-12) 0;
+  border-top: var(--border-default);
 }
 
 .library-record-toolbar {
@@ -5307,7 +5335,8 @@ a:focus-visible {
   }
 }
 
-.point-editor {
+.point-editor,
+.library-entry {
   display: grid;
   gap: var(--space-16);
   margin: var(--space-16) 0 var(--space-24);
@@ -5323,7 +5352,8 @@ a:focus-visible {
 /* The editor opens inside the card it belongs to, so it keeps the card
    surface and is separated from the summary by a divider instead of
    becoming a second floating card. */
-.point-editor.is-inline {
+.point-editor.is-inline,
+.library-entry.is-inline {
   margin: 16px 0 0;
   padding: 16px 0 0;
   border: 0;
@@ -6037,7 +6067,8 @@ a:focus-visible {
     min-height: 44px;
   }
 
-  .point-editor {
+  .point-editor,
+  .library-entry {
     padding: var(--space-16);
   }
   .editor-grid {
@@ -6092,7 +6123,8 @@ a:focus-visible {
   }
   /* Insets step down a second time so the narrow layout keeps its content. */
   .library-overview,
-  .point-editor {
+  .point-editor,
+  .library-entry {
     padding: var(--space-12);
   }
   .library-filter-summary {

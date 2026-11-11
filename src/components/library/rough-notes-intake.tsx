@@ -55,7 +55,7 @@ export function RoughNotesIntake({
   }
 
   return (
-    <section className="rough-notes-intake point-editor is-inline">
+    <section className="rough-notes-intake library-entry is-inline">
       <div className="point-editor-heading">
         <div>
           <p className="eyebrow">ROUGH NOTES</p>

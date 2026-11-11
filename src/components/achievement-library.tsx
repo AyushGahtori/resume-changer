@@ -689,6 +689,74 @@ export default function AchievementLibrary({ library, source }: Props) {
           profile={library.profile}
         />
       ) : null}
+      {canEdit ? (
+        <section
+          className="library-education"
+          aria-labelledby="library-education-title"
+        >
+          <h3 id="library-education-title">Education</h3>
+          {canEdit && addingEducation ? (
+            <EducationForm
+              mode="create"
+              onCancel={() => setAddingEducation(false)}
+              onSaved={() => {
+                setAddingEducation(false);
+                savedLibrary("Saved education.");
+              }}
+            />
+          ) : null}
+          {canEdit && !addingEducation ? (
+            <button
+              className="ui-button ui-button--secondary"
+              onClick={() => setAddingEducation(true)}
+              type="button"
+            >
+              Add education
+            </button>
+          ) : null}
+          <ul className="library-education-list">
+            {library.profile.education.map((education) => (
+              <li key={education.id}>
+                {editingEducationId === education.id ? (
+                  <EducationForm
+                    education={education}
+                    mode="edit"
+                    onCancel={() => setEditingEducationId(null)}
+                    onSaved={() => {
+                      setEditingEducationId(null);
+                      savedLibrary("Saved education.");
+                    }}
+                  />
+                ) : (
+                  <>
+                    <div>
+                      <strong>
+                        {education.degree} · {education.fieldOfStudy}
+                      </strong>
+                      <span>{education.institutions.join(", ")}</span>
+                    </div>
+                    {canEdit ? (
+                      <div className="library-record-toolbar">
+                        <button
+                          className="ui-button ui-button--secondary ui-button--compact"
+                          onClick={() => setEditingEducationId(education.id)}
+                          type="button"
+                        >
+                          Edit
+                        </button>
+                        <RemoveEducationButton
+                          id={education.id}
+                          onRemoved={() => savedLibrary("Removed education.")}
+                        />
+                      </div>
+                    ) : null}
+                  </>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       {canEdit && editor?.mode === "create" ? (
         <AchievementPointEditor
@@ -960,75 +1028,6 @@ export default function AchievementLibrary({ library, source }: Props) {
                     Add credential
                   </button>
                 )
-              ) : null}
-              {library.profile.education.length || canEdit ? (
-                <div>
-                  <h3>Education</h3>
-                  {canEdit && addingEducation ? (
-                    <EducationForm
-                      mode="create"
-                      onCancel={() => setAddingEducation(false)}
-                      onSaved={() => {
-                        setAddingEducation(false);
-                        savedLibrary("Saved education.");
-                      }}
-                    />
-                  ) : null}
-                  {canEdit && !addingEducation ? (
-                    <button
-                      className="ui-button ui-button--secondary"
-                      onClick={() => setAddingEducation(true)}
-                      type="button"
-                    >
-                      Add education
-                    </button>
-                  ) : null}
-                  <ul className="credential-list">
-                    {library.profile.education.map((education) => (
-                      <li key={education.id}>
-                        {editingEducationId === education.id ? (
-                          <EducationForm
-                            education={education}
-                            mode="edit"
-                            onCancel={() => setEditingEducationId(null)}
-                            onSaved={() => {
-                              setEditingEducationId(null);
-                              savedLibrary("Saved education.");
-                            }}
-                          />
-                        ) : (
-                          <>
-                            <div>
-                              <strong>
-                                {education.degree} · {education.fieldOfStudy}
-                              </strong>
-                              <span>{education.institutions.join(", ")}</span>
-                            </div>
-                            {canEdit ? (
-                              <div className="library-record-toolbar">
-                                <button
-                                  className="ui-button ui-button--secondary ui-button--compact"
-                                  onClick={() =>
-                                    setEditingEducationId(education.id)
-                                  }
-                                  type="button"
-                                >
-                                  Edit
-                                </button>
-                                <RemoveEducationButton
-                                  id={education.id}
-                                  onRemoved={() =>
-                                    savedLibrary("Removed education.")
-                                  }
-                                />
-                              </div>
-                            ) : null}
-                          </>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
               ) : null}
               {result.credentials.length ? (
                 <ul className="credential-list">
