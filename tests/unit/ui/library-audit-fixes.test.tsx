@@ -466,8 +466,8 @@ describe("demo library editing", () => {
 
   it("closes an open editor when the source becomes demo and does not restore it", () => {
     render(page("personal"));
-    const edit = [...container.querySelectorAll("button")].find((button) =>
-      button.textContent?.includes("Edit"),
+    const edit = [...container.querySelectorAll("button")].find(
+      (button) => button.textContent?.trim() === "Edit",
     );
     act(() => edit?.click());
     expect(container.textContent).toContain("Save achievement");

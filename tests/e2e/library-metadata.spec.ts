@@ -20,7 +20,9 @@ test("optional library metadata saves partial records and rejects a bad email", 
   await expect(fields.first()).not.toHaveAttribute("aria-required", "true");
   await page.getByLabel("Resume contact email").fill("not-an-email");
   await page.getByRole("button", { name: "Save profile" }).click();
-  await expect(page.getByRole("alert")).toBeVisible();
+  await expect(
+    page.locator(".library-metadata-editor").getByRole("alert"),
+  ).toBeVisible();
   await expect(page.getByLabel("Resume contact email")).toHaveValue(
     "not-an-email",
   );
@@ -64,5 +66,5 @@ test("demo data does not open the optional metadata editors", async ({
     0,
   );
   await expect(page.getByRole("button", { name: "Add job" })).toHaveCount(0);
-  await expect(page.getByText("Read-only")).toBeVisible();
+  await expect(page.getByText("Read-only", { exact: true })).toBeVisible();
 });
