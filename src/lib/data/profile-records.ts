@@ -117,12 +117,19 @@ export async function updateResumeProfile(
       );
     }
 
+    const changed =
+      JSON.stringify(ProfileSchema.parse(current)) !==
+      JSON.stringify(checked.data);
     return {
       library: { ...library, profile: checked.data },
-      value: checked.data,
-      persist: true,
+      value: { profile: checked.data, changed },
+      persist: changed,
     };
   }, options);
 
-  return { library: result.library, profile: result.library.profile };
+  return {
+    library: result.library,
+    profile: result.value.profile,
+    changed: result.value.changed,
+  };
 }

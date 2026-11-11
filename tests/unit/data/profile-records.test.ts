@@ -44,6 +44,17 @@ describe("resume profile writer", () => {
     expect(saved.profile.links).toEqual(links);
   });
 
+  it("reports an identical profile save as a no-op", async () => {
+    const { root } = await createRoot();
+    const input = { fullName: "Avery Example", links: [] };
+    expect((await updateResumeProfile(input, { rootDir: root })).changed).toBe(
+      true,
+    );
+    expect((await updateResumeProfile(input, { rootDir: root })).changed).toBe(
+      false,
+    );
+  });
+
   it("updates the name and email, replaces links, and clears an empty phone", async () => {
     const { root, file } = await createRoot();
     const before = await readLibrary(file);
