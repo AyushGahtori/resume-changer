@@ -13,11 +13,27 @@ import {
   FolderGit2,
   Lock,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import AchievementPointEditor from "@/components/achievement-point-editor";
 import type { ParentOption } from "@/components/achievement-point-editor";
 import AchievementCard from "@/components/library/achievement-card";
 import SkillBoard from "@/components/library/skill-board";
+import ProfileEditor from "@/components/library/profile-editor";
+import {
+  AddJobButton,
+  AddProjectButton,
+  JobForm,
+  ProjectForm,
+  RemoveRecordButton,
+} from "@/components/library/experience-forms";
+import {
+  CredentialForm,
+  EducationForm,
+  RemoveCredentialButton,
+  RemoveEducationButton,
+  SkillPasteForm,
+} from "@/components/library/qualification-forms";
+import { RoughNotesIntake } from "@/components/library/rough-notes-intake";
 import ProfileSummary from "@/components/library/profile-summary";
 import LibrarySectionHeader from "@/components/library/library-section-header";
 import SearchWorkbench from "@/components/library/search-workbench";
@@ -44,13 +60,12 @@ import {
   formatExperienceRange,
   type ExperienceRange,
 } from "@/lib/data/experience-dates";
+import { LIBRARY_ACTIONS } from "@/lib/ui/library-actions";
 import {
   jobDisplayTitle,
   jobFilterLabel,
   projectDisplayName,
 } from "@/lib/data/library-labels";
-import { LIBRARY_ACTIONS } from "@/lib/ui/library-actions";
-import LibraryMetadataEditor from "@/components/library/metadata-editor";
 import type {
   AchievementPoint,
   Job,
@@ -64,13 +79,7 @@ import { useImportStatus } from "./library/import-status-provider";
 
 type Props = { library: ResumeLibrary; source: ResumeDataSource };
 type EditorState =
-  | { mode: "create" }
-  | { mode: "edit"; point: AchievementPoint }
-  | { mode: "profile" }
-  | { mode: "job"; job?: Job }
-  | { mode: "project"; project?: Project }
-  | { mode: "skills" }
-  | null;
+  { mode: "create" } | { mode: "edit"; point: AchievementPoint } | null;
 type EditorHandlers = { onCancel: () => void; onSaved: () => void };
 type InlineEditorState = {
   pointId: string;
@@ -121,13 +130,13 @@ function ExperienceGroup({
   onTag,
   onSkill,
   onEdit,
-  onEditRecord,
   onToggle,
   activeTag,
   activeSkillId,
   editor,
   parents,
   canAttachGitHub,
+  actions,
 }: {
   item: (Job | Project) & { points: AchievementPoint[] };
   kind: GroupKind;
@@ -136,13 +145,13 @@ function ExperienceGroup({
   onTag: (tag: string) => void;
   onSkill: (skillId: string) => void;
   onEdit?: (point: AchievementPoint, trigger: HTMLButtonElement) => void;
-  onEditRecord?: (trigger: HTMLButtonElement) => void;
   onToggle: (key: string) => void;
   activeTag: string;
   activeSkillId: string;
   editor?: InlineEditorState;
   parents: ParentOption[];
   canAttachGitHub: boolean;
+  actions?: ReactNode;
 }) {
   const isJob = kind === "job";
   const job = isJob ? (item as Job) : null;
@@ -150,7 +159,7 @@ function ExperienceGroup({
   const title = job
     ? jobDisplayTitle(job.title)
     : projectDisplayName(project?.name ?? "");
-  const organization = (job?.company ?? project?.role)?.trim();
+  const organization = job?.company ?? project?.role;
   const range = formatExperienceRange(
     job ? job.startDate : project?.startDate,
     job ? job.endDate : project?.endDate,
@@ -205,17 +214,6 @@ function ExperienceGroup({
           />
         </button>
       </h3>
-      {onEditRecord ? (
-        <div className="library-record-actions">
-          <button
-            className="ui-button ui-button--tertiary library-action library-action--tertiary"
-            onClick={(event) => onEditRecord(event.currentTarget)}
-            type="button"
-          >
-            {isJob ? "Edit job" : "Edit project"}
-          </button>
-        </div>
-      ) : null}
       {kind === "project" && canAttachGitHub ? (
         <div className={importNotificationStyles.projectAttachRow}>
           <Link
@@ -229,6 +227,7 @@ function ExperienceGroup({
         </div>
       ) : null}
       <div className="experience-panel" hidden={!expanded} id={panelId}>
+        {actions}
         {item.points.map((point) => (
           <AchievementCard
             key={point.id}
@@ -267,7 +266,17 @@ export default function AchievementLibrary({ library, source }: Props) {
   const [skillsNavOpen, setSkillsNavOpen] = useState(false);
   const [credentialsHeldOpen, setCredentialsHeldOpen] = useState(false);
   const [credentialsNavOpen, setCredentialsNavOpen] = useState(false);
-  const [createdParent, setCreatedParent] = useState<ParentOption | null>(null);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [editingJobId, setEditingJobId] = useState<string | null>(null);
+  const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
+  const [addingEducation, setAddingEducation] = useState(false);
+  const [editingEducationId, setEditingEducationId] = useState<string | null>(
+    null,
+  );
+  const [addingCredential, setAddingCredential] = useState(false);
+  const [editingCredentialId, setEditingCredentialId] = useState<string | null>(
+    null,
+  );
   if (editorSource !== source) {
     setEditorSource(source);
     setEditor(null);
@@ -320,18 +329,7 @@ export default function AchievementLibrary({ library, source }: Props) {
     ],
     [library.jobs, library.projects],
   );
-  const parentOptions = useMemo(() => {
-    if (
-      createdParent &&
-      !savedParents.some(
-        (parent) =>
-          parent.id === createdParent.id && parent.type === createdParent.type,
-      )
-    ) {
-      return [createdParent, ...savedParents];
-    }
-    return savedParents;
-  }, [createdParent, savedParents]);
+  const parentOptions = savedParents;
   const noParents = library.jobs.length === 0 && library.projects.length === 0;
   function updateFilter<Key extends keyof LibraryFilters>(
     key: Key,
@@ -358,18 +356,6 @@ export default function AchievementLibrary({ library, source }: Props) {
     editorTriggerRef.current = trigger;
     setEditor(next);
   }
-
-  useEffect(() => {
-    if (!createdParent) return;
-    if (
-      savedParents.some(
-        (parent) =>
-          parent.id === createdParent.id && parent.type === createdParent.type,
-      )
-    ) {
-      setCreatedParent(null);
-    }
-  }, [createdParent, savedParents]);
 
   useEffect(() => {
     if (editor) return;
@@ -416,52 +402,52 @@ export default function AchievementLibrary({ library, source }: Props) {
     });
   }
 
-  async function createParent(kind: "job" | "project", name: string) {
+  function savedLibrary(message: string) {
+    setSaveMessage(message);
+    router.refresh();
+  }
+
+  async function saveNotes(
+    parentType: "job" | "project",
+    parentId: string,
+    drafts: Array<{ text: string }>,
+    candidates: Array<{ name: string }>,
+  ) {
     let response: Response;
     try {
-      response = await apiFetch("/api/library/parents", {
+      response = await apiFetch("/api/library/notes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ kind, name }),
+        body: JSON.stringify({
+          parentType,
+          parentId,
+          notes: drafts.map((draft) => draft.text),
+          acceptSkillNames: candidates.map((candidate) => candidate.name),
+        }),
       });
     } catch {
-      throw new Error("Could not reach the local save service. Try again.");
+      throw new Error("Could not save this change. Try again.");
     }
-    let result: {
+    const result = (await response.json().catch(() => null)) as {
       error?: string;
-      parent?: { id: string; kind: "job" | "project"; label: string };
-    } = {};
-    try {
-      result = (await response.json()) as typeof result;
-    } catch {
-      result = {};
+      points?: unknown[];
+      skippedDuplicates?: number;
+    } | null;
+    if (!response.ok) {
+      throw new Error(result?.error ?? "The notes could not be saved.");
     }
-    if (!response.ok || !result.parent) {
-      throw new Error(result.error ?? "The job or project could not be saved.");
-    }
-    setCreatedParent({
-      id: result.parent.id,
-      type: result.parent.kind,
-      label: result.parent.label,
-    });
-    openEditor({ mode: "create" }, detailedEntryRef.current);
-    setSaveMessage(
-      kind === "job"
-        ? `Added ${name} as a job.`
-        : `Added ${name} as a project.`,
+    const count = Array.isArray(result?.points) ? result.points.length : 0;
+    const skipped = result?.skippedDuplicates ?? 0;
+    savedLibrary(
+      count === 0 && skipped > 0
+        ? "Those notes are already saved."
+        : `Saved ${count} ${count === 1 ? "achievement" : "achievements"}.`,
     );
-    router.refresh();
   }
 
   function saveEditor() {
     closeEditor();
     setSaveMessage("Saved to your local library.");
-    router.refresh();
-  }
-
-  function saveMetadata(message: string) {
-    closeEditor();
-    setSaveMessage(message);
     router.refresh();
   }
 
@@ -474,6 +460,105 @@ export default function AchievementLibrary({ library, source }: Props) {
           handlers: { onCancel: closeEditor, onSaved: saveEditor },
         }
       : undefined;
+  const noteIds = [
+    ...library.jobs.flatMap((job) => job.points.map((point) => point.id)),
+    ...library.projects.flatMap((project) =>
+      project.points.map((point) => point.id),
+    ),
+  ];
+  const skillHints = library.skills.map((skill) => ({
+    name: skill.name,
+    aliases: skill.aliases,
+  }));
+
+  function experienceActions(kind: "job" | "project", item: Job | Project) {
+    if (!canEdit) return null;
+    const isJob = kind === "job";
+    const editing = isJob
+      ? editingJobId === item.id
+      : editingProjectId === item.id;
+    return (
+      <div className="library-record-actions">
+        {editing && isJob ? (
+          <JobForm
+            initial={{
+              id: item.id,
+              company: (item as Job).company,
+              title: (item as Job).title,
+              employmentType: (item as Job).employmentType,
+              location: (item as Job).location,
+              startDate: (item as Job).startDate,
+              endDate: (item as Job).endDate,
+              description: (item as Job).description,
+              currentlyEmployed: (item as Job).endDate === null,
+            }}
+            mode="edit"
+            onCancel={() => setEditingJobId(null)}
+            onSaved={() => {
+              setEditingJobId(null);
+              savedLibrary("Saved the job.");
+            }}
+          />
+        ) : null}
+        {editing && !isJob ? (
+          <ProjectForm
+            initial={{
+              id: item.id,
+              name: (item as Project).name,
+              role: (item as Project).role,
+              url: (item as Project).url,
+              description: (item as Project).description,
+              startDate: (item as Project).startDate,
+              endDate: (item as Project).endDate,
+              ongoing: (item as Project).endDate === null,
+            }}
+            mode="edit"
+            onCancel={() => setEditingProjectId(null)}
+            onSaved={() => {
+              setEditingProjectId(null);
+              savedLibrary("Saved the project.");
+            }}
+          />
+        ) : null}
+        {editing ? null : (
+          <div className="library-record-toolbar">
+            <button
+              className="ui-button ui-button--secondary ui-button--compact"
+              onClick={() =>
+                isJob ? setEditingJobId(item.id) : setEditingProjectId(item.id)
+              }
+              type="button"
+            >
+              {isJob ? "Edit job" : "Edit project"}
+            </button>
+            <RemoveRecordButton
+              id={item.id}
+              kind={kind}
+              name={isJob ? (item as Job).title : (item as Project).name}
+              onRemoved={() =>
+                savedLibrary(
+                  isJob ? "Removed the job." : "Removed the project.",
+                )
+              }
+              pointCount={item.points.length}
+            />
+          </div>
+        )}
+        <RoughNotesIntake
+          existingSkills={skillHints}
+          onSave={(drafts, candidates) =>
+            saveNotes(kind, item.id, drafts, candidates)
+          }
+          parentLabel={
+            isJob
+              ? `Notes for ${(item as Job).title}`
+              : `Notes for ${(item as Project).name}`
+          }
+          usedIds={noteIds}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="library-page">
@@ -527,7 +612,9 @@ export default function AchievementLibrary({ library, source }: Props) {
                     onClick={() => {
                       if (noParents) {
                         document
-                          .getElementById("library-first-parent-name")
+                          .querySelector<HTMLButtonElement>(
+                            "#library-first-parent button",
+                          )
                           ?.focus();
                         return;
                       }
@@ -590,47 +677,92 @@ export default function AchievementLibrary({ library, source }: Props) {
       {!canEdit ? <LibraryReadOnlyNotice /> : null}
       <ProfileSummary library={library} source={source} />
       {canEdit ? (
-        <div className="library-record-actions">
+        <div className="library-edit-actions">
           <button
-            className="ui-button ui-button--secondary library-action library-action--secondary"
-            disabled={editor !== null}
-            onClick={(event) =>
-              openEditor({ mode: "profile" }, event.currentTarget)
-            }
+            className="ui-button ui-button--secondary"
+            onClick={() => setProfileOpen((open) => !open)}
             type="button"
           >
-            Edit profile
+            {profileOpen ? "Close profile" : "Edit profile"}
           </button>
         </div>
       ) : null}
-
-      {canEdit && editor?.mode === "profile" ? (
-        <LibraryMetadataEditor
-          editor={{ kind: "profile", profile: library.profile }}
-          onCancel={closeEditor}
-          onSaved={saveMetadata}
+      {canEdit && profileOpen ? (
+        <ProfileEditor
+          onSaved={() => {
+            setProfileOpen(false);
+            savedLibrary("Saved your resume profile.");
+          }}
+          profile={library.profile}
         />
       ) : null}
-      {canEdit && editor?.mode === "job" ? (
-        <LibraryMetadataEditor
-          editor={{ kind: "job", job: editor.job }}
-          onCancel={closeEditor}
-          onSaved={saveMetadata}
-        />
-      ) : null}
-      {canEdit && editor?.mode === "project" ? (
-        <LibraryMetadataEditor
-          editor={{ kind: "project", project: editor.project }}
-          onCancel={closeEditor}
-          onSaved={saveMetadata}
-        />
-      ) : null}
-      {canEdit && editor?.mode === "skills" ? (
-        <LibraryMetadataEditor
-          editor={{ kind: "skills" }}
-          onCancel={closeEditor}
-          onSaved={saveMetadata}
-        />
+      {canEdit ? (
+        <section
+          className="library-education"
+          aria-labelledby="library-education-title"
+        >
+          <h3 id="library-education-title">Education</h3>
+          {canEdit && addingEducation ? (
+            <EducationForm
+              mode="create"
+              onCancel={() => setAddingEducation(false)}
+              onSaved={() => {
+                setAddingEducation(false);
+                savedLibrary("Saved education.");
+              }}
+            />
+          ) : null}
+          {canEdit && !addingEducation ? (
+            <button
+              className="ui-button ui-button--secondary"
+              onClick={() => setAddingEducation(true)}
+              type="button"
+            >
+              Add education
+            </button>
+          ) : null}
+          <ul className="library-education-list">
+            {library.profile.education.map((education) => (
+              <li key={education.id}>
+                {editingEducationId === education.id ? (
+                  <EducationForm
+                    education={education}
+                    mode="edit"
+                    onCancel={() => setEditingEducationId(null)}
+                    onSaved={() => {
+                      setEditingEducationId(null);
+                      savedLibrary("Saved education.");
+                    }}
+                  />
+                ) : (
+                  <>
+                    <div>
+                      <strong>
+                        {education.degree} · {education.fieldOfStudy}
+                      </strong>
+                      <span>{education.institutions.join(", ")}</span>
+                    </div>
+                    {canEdit ? (
+                      <div className="library-record-toolbar">
+                        <button
+                          className="ui-button ui-button--secondary ui-button--compact"
+                          onClick={() => setEditingEducationId(education.id)}
+                          type="button"
+                        >
+                          Edit
+                        </button>
+                        <RemoveEducationButton
+                          id={education.id}
+                          onRemoved={() => savedLibrary("Removed education.")}
+                        />
+                      </div>
+                    ) : null}
+                  </>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
       ) : null}
 
       {canEdit && editor?.mode === "create" ? (
@@ -670,7 +802,30 @@ export default function AchievementLibrary({ library, source }: Props) {
                     )
                 : undefined
             }
-            onCreateParent={canEdit && noParents ? createParent : undefined}
+            setup={
+              canEdit && noParents ? (
+                <div className="library-first-setup" id="library-first-parent">
+                  <AddJobButton
+                    onSaved={(changed) =>
+                      savedLibrary(
+                        changed === false
+                          ? "No job changes to save."
+                          : "Added a job to your library.",
+                      )
+                    }
+                  />
+                  <AddProjectButton
+                    onSaved={(changed) =>
+                      savedLibrary(
+                        changed === false
+                          ? "No project changes to save."
+                          : "Added a project to your library.",
+                      )
+                    }
+                  />
+                </div>
+              ) : undefined
+            }
             totalPointCount={result.totalPointCount}
             variant="no-data"
           />
@@ -696,23 +851,23 @@ export default function AchievementLibrary({ library, source }: Props) {
                 titleId="library-section-jobs"
                 tone="jobs"
               />
-              {canEdit ? (
-                <button
-                  className="ui-button ui-button--secondary library-action library-action--secondary"
-                  disabled={editor !== null}
-                  onClick={(event) =>
-                    openEditor({ mode: "job" }, event.currentTarget)
-                  }
-                  type="button"
-                >
-                  Add job
-                </button>
-              ) : null}
             </div>
             <div className="library-section-body">
+              {canEdit ? (
+                <AddJobButton
+                  onSaved={(changed) =>
+                    savedLibrary(
+                      changed === false
+                        ? "No job changes to save."
+                        : "Added a job to your library.",
+                    )
+                  }
+                />
+              ) : null}
               {result.jobs.length > 0 ? (
                 result.jobs.map((job) => (
                   <ExperienceGroup
+                    actions={experienceActions("job", job)}
                     activeSkillId={filters.skillId}
                     activeTag={filters.tag}
                     collapsed={collapsedGroups.has(groupKey("job", job.id))}
@@ -723,11 +878,6 @@ export default function AchievementLibrary({ library, source }: Props) {
                     library={library}
                     parents={parentOptions}
                     canAttachGitHub={false}
-                    onEditRecord={
-                      canEdit
-                        ? (trigger) => openEditor({ mode: "job", job }, trigger)
-                        : undefined
-                    }
                     onSkill={(id) => updateFilter("skillId", id)}
                     onTag={(tag) => updateFilter("tag", tag)}
                     onToggle={toggleGroup}
@@ -762,23 +912,23 @@ export default function AchievementLibrary({ library, source }: Props) {
                 titleId="library-section-projects"
                 tone="projects"
               />
-              {canEdit ? (
-                <button
-                  className="ui-button ui-button--secondary library-action library-action--secondary"
-                  disabled={editor !== null}
-                  onClick={(event) =>
-                    openEditor({ mode: "project" }, event.currentTarget)
-                  }
-                  type="button"
-                >
-                  Add project
-                </button>
-              ) : null}
             </div>
             <div className="library-section-body">
+              {canEdit ? (
+                <AddProjectButton
+                  onSaved={(changed) =>
+                    savedLibrary(
+                      changed === false
+                        ? "No project changes to save."
+                        : "Added a project to your library.",
+                    )
+                  }
+                />
+              ) : null}
               {result.projects.length > 0 ? (
                 result.projects.map((project) => (
                   <ExperienceGroup
+                    actions={experienceActions("project", project)}
                     activeSkillId={filters.skillId}
                     activeTag={filters.tag}
                     collapsed={collapsedGroups.has(
@@ -791,12 +941,6 @@ export default function AchievementLibrary({ library, source }: Props) {
                     library={library}
                     parents={parentOptions}
                     canAttachGitHub={canEdit}
-                    onEditRecord={
-                      canEdit
-                        ? (trigger) =>
-                            openEditor({ mode: "project", project }, trigger)
-                        : undefined
-                    }
                     onSkill={(id) => updateFilter("skillId", id)}
                     onTag={(tag) => updateFilter("tag", tag)}
                     onToggle={toggleGroup}
@@ -847,18 +991,12 @@ export default function AchievementLibrary({ library, source }: Props) {
                 />
               </summary>
               {canEdit ? (
-                <div className="library-record-actions">
-                  <button
-                    className="ui-button ui-button--secondary library-action library-action--secondary"
-                    disabled={editor !== null}
-                    onClick={(event) =>
-                      openEditor({ mode: "skills" }, event.currentTarget)
-                    }
-                    type="button"
-                  >
-                    Add skills
-                  </button>
-                </div>
+                <SkillPasteForm
+                  onSaved={() => {
+                    setSkillsHeldOpen(true);
+                    savedLibrary("Saved skills to your library.");
+                  }}
+                />
               ) : null}
               <SkillBoard
                 activeSkillId={filters.skillId}
@@ -897,14 +1035,70 @@ export default function AchievementLibrary({ library, source }: Props) {
                   tone="credentials"
                 />
               </summary>
+              {canEdit ? (
+                addingCredential ? (
+                  <CredentialForm
+                    mode="create"
+                    onCancel={() => setAddingCredential(false)}
+                    onSaved={() => {
+                      setAddingCredential(false);
+                      setCredentialsHeldOpen(true);
+                      savedLibrary("Saved a credential.");
+                    }}
+                  />
+                ) : (
+                  <button
+                    className="ui-button ui-button--secondary"
+                    onClick={() => setAddingCredential(true)}
+                    type="button"
+                  >
+                    Add credential
+                  </button>
+                )
+              ) : null}
               {result.credentials.length ? (
                 <ul className="credential-list">
                   {result.credentials.map((credential) => (
                     <li key={credential.id}>
-                      <strong>{credential.name}</strong>
-                      <span>
-                        {credential.kind} · {credential.issuer}
-                      </span>
+                      {editingCredentialId === credential.id && canEdit ? (
+                        <CredentialForm
+                          credential={credential}
+                          mode="edit"
+                          onCancel={() => setEditingCredentialId(null)}
+                          onSaved={() => {
+                            setEditingCredentialId(null);
+                            savedLibrary("Saved the credential.");
+                          }}
+                        />
+                      ) : (
+                        <>
+                          <div>
+                            <strong>{credential.name}</strong>
+                            <span>
+                              {credential.kind} · {credential.issuer}
+                            </span>
+                          </div>
+                          {canEdit ? (
+                            <div className="library-record-toolbar">
+                              <button
+                                className="ui-button ui-button--secondary ui-button--compact"
+                                onClick={() =>
+                                  setEditingCredentialId(credential.id)
+                                }
+                                type="button"
+                              >
+                                Edit
+                              </button>
+                              <RemoveCredentialButton
+                                id={credential.id}
+                                onRemoved={() =>
+                                  savedLibrary("Removed the credential.")
+                                }
+                              />
+                            </div>
+                          ) : null}
+                        </>
+                      )}
                     </li>
                   ))}
                 </ul>

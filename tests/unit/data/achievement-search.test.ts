@@ -66,6 +66,67 @@ describe("achievement library search", () => {
     expect(result.visiblePointCount).toBe(result.totalPointCount);
   });
 
+  it("keeps a new job or project visible before it has achievements", () => {
+    const withEmptyParents = {
+      ...library,
+      jobs: [
+        ...library.jobs,
+        {
+          ...library.jobs[0],
+          id: "job-empty-parent",
+          company: "Harbor Labs",
+          title: "Researcher",
+          points: [],
+        },
+      ],
+      projects: [
+        ...library.projects,
+        {
+          ...library.projects[0],
+          id: "project-empty-parent",
+          name: "Empty Project",
+          points: [],
+        },
+      ],
+    } as ResumeLibrary;
+
+    const open = filterAchievementLibrary(
+      withEmptyParents,
+      EMPTY_LIBRARY_FILTERS,
+    );
+    expect(open.jobs.map((job) => job.id)).toContain("job-empty-parent");
+    expect(open.projects.map((project) => project.id)).toContain(
+      "project-empty-parent",
+    );
+
+    const narrowed = filterAchievementLibrary(
+      withEmptyParents,
+      filters({ query: "bounded retries" }),
+    );
+    expect(narrowed.jobs.map((job) => job.id)).not.toContain(
+      "job-empty-parent",
+    );
+    expect(narrowed.projects.map((project) => project.id)).not.toContain(
+      "project-empty-parent",
+    );
+
+    const byEmployer = filterAchievementLibrary(
+      withEmptyParents,
+      filters({ query: "harbor labs" }),
+    );
+    expect(byEmployer.jobs.map((job) => job.id)).toContain("job-empty-parent");
+    expect(byEmployer.projects.map((project) => project.id)).not.toContain(
+      "project-empty-parent",
+    );
+    const byProject = filterAchievementLibrary(
+      withEmptyParents,
+      filters({ query: "empty project" }),
+    );
+    expect(byProject.projects.map((project) => project.id)).toContain(
+      "project-empty-parent",
+    );
+  });
+
   it.each([
     ["point text", "bounded retries", "achievement-queueboard-worker-model"],
     ["tags", "geospatial", "achievement-fieldnotes-geospatial-search"],

@@ -71,7 +71,7 @@ test("says a library with no data is empty, not filtered", async ({ page }) => {
     page.getByRole("heading", { name: "No achievements saved yet" }),
   ).toBeVisible();
   await expect(page.locator(".library-state-message")).toHaveText(
-    "This library has no job or project yet. Name one so the first achievement has a place to belong, or open the demo library to see a full one.",
+    "This library has no job or project yet. Add one below, then paste what you worked on.",
   );
 
   // The filtered message is not shown, because nothing was filtered.
@@ -87,12 +87,25 @@ test("asks for a job or project before the first achievement", async ({
   await writeLibrary(emptyLibrary);
   await page.goto("/library");
 
-  await expect(page.getByLabel("Project name")).toBeVisible();
+  await expect(
+    page
+      .locator("#library-first-parent")
+      .getByRole("button", { name: "Add job" }),
+  ).toBeVisible();
+  await expect(
+    page
+      .locator("#library-first-parent")
+      .getByRole("button", { name: "Add project" }),
+  ).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "Add achievement" }),
   ).toHaveCount(0);
   await page.getByRole("button", { name: "Detailed entry" }).click();
-  await expect(page.getByLabel("Project name")).toBeFocused();
+  await expect(
+    page
+      .locator("#library-first-parent")
+      .getByRole("button", { name: "Add job" }),
+  ).toBeFocused();
   await expect(page.getByLabel("Achievement ID")).toHaveCount(0);
 });
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { FolderOpen, Info, SearchX } from "lucide-react";
-import { useId, useState, type FormEvent } from "react";
+import { useId, useState, type FormEvent, type ReactNode } from "react";
 
 /**
  * The notice that tells a reader the demo library cannot be changed.
@@ -41,6 +41,8 @@ type EmptyStateProps = {
    */
   needsParent?: boolean;
   onCreateParent?: (kind: "job" | "project", name: string) => Promise<void>;
+  /** Full job and project forms for a library that has neither yet. */
+  setup?: ReactNode;
   /** A filtered library can drop its filters again. */
   onReset?: () => void;
 };
@@ -144,6 +146,7 @@ export function LibraryEmptyState({
   onAdd,
   needsParent = false,
   onCreateParent,
+  setup,
   onReset,
 }: EmptyStateProps) {
   const headingId = useId();
@@ -166,11 +169,12 @@ export function LibraryEmptyState({
       <p className="library-state-message" role="status">
         {isNoData
           ? needsParent
-            ? "This library has no job or project yet. Name one so the first achievement has a place to belong, or open the demo library to see a full one."
+            ? "This library has no job or project yet. Add one below, then paste what you worked on."
             : "This library is empty. Add an achievement to start filling it, or open the demo library to see a full one."
           : `None of the ${totalPointCount} achievements in this library match the current search and filters.`}
       </p>
-      {isNoData && needsParent && onCreateParent ? (
+      {isNoData && needsParent && setup ? setup : null}
+      {isNoData && needsParent && !setup && onCreateParent ? (
         <FirstParentForm onCreateParent={onCreateParent} />
       ) : null}
       {isNoData && !needsParent && onAdd ? (
