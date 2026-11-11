@@ -36,3 +36,5 @@ pnpm-debug.log*
 /src/app/e2e/load-test-auth/
 # Generated so Firebase can see the rules from the repository root.
 /firebase.load-test.json
+# Left behind when an emulator is interrupted during export.
+/firebase-export-*/
