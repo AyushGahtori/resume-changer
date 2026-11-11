@@ -267,4 +267,59 @@ describe("RoughNotesIntake", () => {
       "The library rejected these notes.",
     );
   });
+
+  it("saves the edited paste instead of the earlier review", async () => {
+    const saved: string[][] = [];
+    render(
+      createElement(RoughNotesIntake, {
+        parentLabel: "Data analyst",
+        existingSkills: [],
+        usedIds: [],
+        onSave: async (drafts) => {
+          saved.push(drafts.map((draft) => draft.text));
+        },
+      }),
+    );
+    setNotes("- First draft\n- Second draft");
+    act(() => button("Review bullets").click());
+    expect(bulletTexts()).toEqual(["First draft", "Second draft"]);
+
+    setNotes("- Rewritten after review");
+    expect(bulletTexts()).toEqual(["Rewritten after review"]);
+    await act(async () => {
+      button("Save notes").click();
+    });
+    expect(saved).toEqual([["Rewritten after review"]]);
+  });
+
+  it("keeps a rejected skill unchecked after a merge", async () => {
+    const saved: string[][] = [];
+    render(
+      createElement(RoughNotesIntake, {
+        parentLabel: "Data analyst",
+        existingSkills: [],
+        usedIds: [],
+        onSave: async (_drafts, candidates) => {
+          saved.push(candidates.map((candidate) => candidate.name));
+        },
+      }),
+    );
+    setNotes("- Built Python scripts\n- Published the report");
+    act(() => button("Review bullets").click());
+    const python = [
+      ...container.querySelectorAll(".note-skill-picks label"),
+    ].find((label) => label.textContent?.includes("Python"));
+    const checkbox = python?.querySelector("input");
+    expect(checkbox).toBeInstanceOf(HTMLInputElement);
+    act(() => checkbox?.click());
+    act(() => button("Merge with next", 0).click());
+    const pythonAfter = [
+      ...container.querySelectorAll(".note-skill-picks label"),
+    ].find((label) => label.textContent?.includes("Python"));
+    expect(pythonAfter?.querySelector("input")?.checked).toBe(false);
+    await act(async () => {
+      button("Save notes").click();
+    });
+    expect(saved).toEqual([[]]);
+  });
 });

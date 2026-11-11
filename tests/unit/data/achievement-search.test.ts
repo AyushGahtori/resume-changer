@@ -109,6 +109,22 @@ describe("achievement library search", () => {
     expect(narrowed.projects.map((project) => project.id)).not.toContain(
       "project-empty-parent",
     );
+
+    const byEmployer = filterAchievementLibrary(
+      withEmptyParents,
+      filters({ query: "harbor labs" }),
+    );
+    expect(byEmployer.jobs.map((job) => job.id)).toContain("job-empty-parent");
+    expect(byEmployer.projects.map((project) => project.id)).not.toContain(
+      "project-empty-parent",
+    );
+    const byProject = filterAchievementLibrary(
+      withEmptyParents,
+      filters({ query: "empty project" }),
+    );
+    expect(byProject.projects.map((project) => project.id)).toContain(
+      "project-empty-parent",
+    );
   });
 
   it.each([

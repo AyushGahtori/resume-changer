@@ -337,7 +337,12 @@ function nextInstitutions(
   existing?: string[],
 ): string[] | undefined {
   if (input.institutions) return input.institutions;
-  if (input.institution) return [input.institution];
+  if (input.institution) {
+    const rest = (existing ?? [])
+      .slice(1)
+      .filter((institution) => institution !== input.institution);
+    return [input.institution, ...rest];
+  }
   return existing;
 }
 

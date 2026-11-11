@@ -424,15 +424,17 @@ export default function AchievementLibrary({ library, source }: Props) {
     const result = (await response.json().catch(() => null)) as {
       error?: string;
       points?: unknown[];
+      skippedDuplicates?: number;
     } | null;
     if (!response.ok) {
       throw new Error(result?.error ?? "The notes could not be saved.");
     }
-    const count = Array.isArray(result?.points)
-      ? result.points.length
-      : drafts.length;
+    const count = Array.isArray(result?.points) ? result.points.length : 0;
+    const skipped = result?.skippedDuplicates ?? 0;
     savedLibrary(
-      `Saved ${count} ${count === 1 ? "achievement" : "achievements"}.`,
+      count === 0 && skipped > 0
+        ? "Those notes are already saved."
+        : `Saved ${count} ${count === 1 ? "achievement" : "achievements"}.`,
     );
   }
 

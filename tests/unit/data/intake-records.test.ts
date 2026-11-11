@@ -126,6 +126,37 @@ describe("rough note intake", () => {
     expect(saved.createdSkills).toHaveLength(0);
   });
 
+  it("does not create a second achievement for the same note", async () => {
+    const { root, file } = await createRoot();
+    const created = await createExperienceRecord(
+      { kind: "project", name: "Reporting tools" },
+      { rootDir: root },
+    );
+    const input = {
+      parentType: "project" as const,
+      parentId: created.record.id,
+      notes: [
+        "Built Python scripts to clean SQL exports",
+        "Built Python scripts to clean SQL exports",
+      ],
+      acceptSkillNames: ["Python"],
+    };
+    const first = await saveRoughNotes(input, { rootDir: root });
+    const second = await saveRoughNotes(input, { rootDir: root });
+    const library = JSON.parse(await readFile(file, "utf8")) as {
+      projects: Array<{ points: unknown[] }>;
+      skills: Array<{ name: string }>;
+    };
+
+    expect(first.points).toHaveLength(1);
+    expect(second.points).toHaveLength(0);
+    expect(second.skippedDuplicates).toBe(2);
+    expect(library.projects[0]?.points).toHaveLength(1);
+    expect(
+      library.skills.filter((skill) => skill.name === "Python"),
+    ).toHaveLength(1);
+  });
+
   it("rejects a missing parent", async () => {
     const { root } = await createRoot();
     await expect(

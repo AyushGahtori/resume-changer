@@ -104,6 +104,37 @@ function pointMatches(
   );
 }
 
+function emptyParentMatchesSearch<T extends Job | Project>(
+  item: T,
+  kind: "job" | "project",
+  filters: LibraryFilters,
+) {
+  const query = normalize(filters.query);
+  const identity = includesQuery(
+    kind === "job"
+      ? [
+          (item as Job).company,
+          (item as Job).title,
+          (item as Job).location,
+          (item as Job).description,
+        ]
+      : [
+          (item as Project).name,
+          (item as Project).role,
+          (item as Project).description,
+        ],
+    query,
+  );
+  if (!query || !identity) return false;
+  return (
+    !filters.sourceType &&
+    !filters.skillId &&
+    !filters.tag &&
+    !filters.experienceId &&
+    filters.status === "all"
+  );
+}
+
 function filtersNarrowTheLibrary(filters: LibraryFilters) {
   return Boolean(
     filters.query ||
@@ -133,6 +164,8 @@ function filterExperiences<T extends Job | Project>(
     );
 
     if (points.length > 0 || keepEmptyParents) return [{ ...item, points }];
+    if (emptyParentMatchesSearch(item, kind, filters))
+      return [{ ...item, points }];
     return [];
   });
 }

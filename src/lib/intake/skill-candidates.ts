@@ -166,6 +166,9 @@ function bounded(text: string, start: number, length: number): boolean {
   if (start > 0 && isWordChar(text[start - 1] ?? "")) return false;
   const end = start + length;
   if (end < text.length && isWordChar(text[end] ?? "")) return false;
+  // A hyphen keeps the token inside one compound, so "go" is not "go-live".
+  if (start > 0 && text[start - 1] === "-") return false;
+  if (end < text.length && text[end] === "-") return false;
   return true;
 }
 

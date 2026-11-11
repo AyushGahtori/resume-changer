@@ -450,6 +450,31 @@ describe("experience records", () => {
     expect(saved.jobs).toEqual([]);
   });
 
+  it("does not delete a project through the job removal path", async () => {
+    const { root, file } = await createEmptyRoot();
+    const created = await createExperienceRecord(
+      { kind: "project", name: "Field kit" },
+      { rootDir: root },
+    );
+
+    await expect(
+      removeExperienceRecord(created.record.id, { rootDir: root, kind: "job" }),
+    ).rejects.toMatchObject({ code: "not-found" });
+    await expect(
+      updateExperienceRecord(
+        created.record.id,
+        { title: "Renamed" },
+        { rootDir: root, kind: "job" },
+      ),
+    ).rejects.toMatchObject({ code: "not-found" });
+
+    const saved = await readLibrary(file);
+    expect(saved.projects.map((project) => project.id)).toEqual([
+      created.record.id,
+    ]);
+    expect(saved.jobs).toEqual([]);
+  });
+
   it("reports a missing record without changing the library", async () => {
     const { root, file, original } = await createRoot();
 

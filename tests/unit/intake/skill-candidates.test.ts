@@ -101,6 +101,18 @@ describe("detectSkillCandidates", () => {
     expect(detectSkillCandidates.length).toBe(2);
   });
 
+  it("does not treat a go-live as the Go language", () => {
+    expect(
+      detectSkillCandidates(["Led the go-live for the billing cutover"], []),
+    ).toEqual([]);
+    expect(
+      detectSkillCandidates(
+        ["Wrote Go services for the billing cutover"],
+        [],
+      ).map((candidate) => candidate.name),
+    ).toEqual(["Go"]);
+  });
+
   it("does not match a skill inside a longer word", () => {
     expect(detectSkillCandidates(["GitHub made it excellent"], [])).toEqual([]);
     expect(

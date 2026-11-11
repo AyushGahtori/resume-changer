@@ -65,7 +65,9 @@ async function PATCHForAccount(
   }
 
   try {
-    const { record } = await updateExperienceRecord(id, parsed.data);
+    const { record } = await updateExperienceRecord(id, parsed.data, {
+      kind: "project",
+    });
     return NextResponse.json({ record });
   } catch (error) {
     return failureResponse(error, "The project could not be saved. Try again.");
@@ -78,7 +80,7 @@ async function DELETEForAccount(
 ) {
   const { id } = await context.params;
   try {
-    const removed = await removeExperienceRecord(id);
+    const removed = await removeExperienceRecord(id, { kind: "project" });
     return NextResponse.json({ removed });
   } catch (error) {
     return failureResponse(

@@ -206,6 +206,33 @@ describe("qualification records", () => {
     expect(library.skills).toEqual([]);
   });
 
+  it("keeps the other institutions when a joint degree is edited", async () => {
+    const { root, file } = await createRoot();
+    const created = await createEducation(
+      {
+        institutions: ["University of Milan", "University of Pavia"],
+        degree: "Joint doctorate",
+        fieldOfStudy: "History",
+      },
+      { rootDir: root },
+    );
+
+    const updated = await updateEducation(
+      created.education.id,
+      { institution: "University of Milan", degree: "Joint PhD" },
+      { rootDir: root },
+    );
+
+    expect(updated.education.institutions).toEqual([
+      "University of Milan",
+      "University of Pavia",
+    ]);
+    expect(updated.education.degree).toBe("Joint PhD");
+    expect((await readLibrary(file)).profile.education[0].institutions).toEqual(
+      ["University of Milan", "University of Pavia"],
+    );
+  });
+
   it("stores current study with no end date", async () => {
     const { root, file } = await createRoot();
 

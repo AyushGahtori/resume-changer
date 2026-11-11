@@ -178,8 +178,15 @@ export function EducationForm(props: EducationFormProps) {
     if (!canSave) return;
     setSaving(true);
     setError("");
+    const firstInstitution = institution.trim();
+    const keptInstitutions =
+      props.mode === "edit"
+        ? props.education.institutions
+            .slice(1)
+            .filter((name) => name !== firstInstitution)
+        : [];
     const payload = {
-      institution: institution.trim(),
+      institutions: [firstInstitution, ...keptInstitutions],
       degree: degree.trim(),
       fieldOfStudy: fieldOfStudy.trim(),
       programName: programName.trim() || null,
@@ -229,6 +236,11 @@ export function EducationForm(props: EducationFormProps) {
             value={institution}
           />
         </LabeledControl>
+        {props.mode === "edit" && props.education.institutions.length > 1 ? (
+          <p className="editor-span secondary-empty">
+            Also listed: {props.education.institutions.slice(1).join(", ")}
+          </p>
+        ) : null}
         <LabeledControl label="Degree">
           <input
             onChange={(event) => setDegree(event.target.value)}

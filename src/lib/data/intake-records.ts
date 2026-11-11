@@ -66,14 +66,33 @@ export async function saveRoughNotes(
     }
 
     const used = new Set(collectEntityIds(current));
-    const points = achievementDrafts(notes, used).map((draft) => ({
+    const seen = new Set(parent.points.map((point) => point.text.trim()));
+    const freshNotes: string[] = [];
+    let skippedDuplicates = 0;
+    for (const note of notes) {
+      const text = note.trim();
+      if (!text || seen.has(text)) {
+        skippedDuplicates += 1;
+        continue;
+      }
+      seen.add(text);
+      freshNotes.push(text);
+    }
+    if (freshNotes.length === 0) {
+      return {
+        library: current,
+        value: { points: [], createdSkills: [] as Skill[], skippedDuplicates },
+        persist: false,
+      };
+    }
+    const points = achievementDrafts(freshNotes, used).map((draft) => ({
       ...draft,
       skillIds: [] as string[],
     }));
     for (const point of points) used.add(point.id);
 
     const candidates = detectSkillCandidates(
-      notes,
+      freshNotes,
       current.skills.map((skill) => ({
         name: skill.name,
         aliases: skill.aliases,
@@ -137,7 +156,7 @@ export async function saveRoughNotes(
         projects,
         skills,
       },
-      value: { points, createdSkills },
+      value: { points, createdSkills, skippedDuplicates },
       persist: true,
     };
   }, options);

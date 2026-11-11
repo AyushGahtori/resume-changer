@@ -515,10 +515,13 @@ export async function createExperienceRecord(
 export async function updateExperienceRecord(
   id: string,
   input: unknown,
-  options?: WriteOptions,
+  options?: WriteOptions & { kind?: "job" | "project" },
 ): Promise<{ library: NormalizedResumeLibrary; record: JobV2 | ProjectV2 }> {
   const result = await commitLibraryMutation<JobV2 | ProjectV2>((library) => {
-    const job = library.jobs.find((item) => item.id === id);
+    const job =
+      options?.kind === "project"
+        ? undefined
+        : library.jobs.find((item) => item.id === id);
     if (job) {
       const parsed = UpdateJobInputSchema.safeParse(input);
       if (!parsed.success) {
@@ -537,7 +540,10 @@ export async function updateExperienceRecord(
       };
     }
 
-    const project = library.projects.find((item) => item.id === id);
+    const project =
+      options?.kind === "job"
+        ? undefined
+        : library.projects.find((item) => item.id === id);
     if (!project) {
       throw new LibraryWriteError(
         "not-found",
@@ -568,13 +574,19 @@ export async function updateExperienceRecord(
 
 export async function removeExperienceRecord(
   id: string,
-  options?: WriteOptions,
+  options?: WriteOptions & { kind?: "job" | "project" },
 ): Promise<RemovedExperienceRecord> {
   const result = await commitLibraryMutation((library) => {
-    const job = library.jobs.find((item) => item.id === id);
-    const project = job
-      ? undefined
-      : library.projects.find((item) => item.id === id);
+    const job =
+      options?.kind === "project"
+        ? undefined
+        : library.jobs.find((item) => item.id === id);
+    const project =
+      options?.kind === "job"
+        ? undefined
+        : job
+          ? undefined
+          : library.projects.find((item) => item.id === id);
     const record = job ?? project;
     if (!record) {
       throw new LibraryWriteError(

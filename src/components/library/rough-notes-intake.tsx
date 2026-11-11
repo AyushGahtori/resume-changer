@@ -65,7 +65,13 @@ export function RoughNotesIntake({
       <label className="editor-field">
         <span>Paste what you worked on</span>
         <textarea
-          onChange={(event) => setText(event.target.value)}
+          onChange={(event) => {
+            const next = event.target.value;
+            setText(next);
+            setNotes((current) =>
+              current === null ? null : splitRoughNotes(next),
+            );
+          }}
           placeholder="One line per bullet. Dashes and numbers are fine."
           rows={5}
           value={text}
@@ -92,7 +98,6 @@ export function RoughNotesIntake({
                   disabled={saving || index === notes.length - 1}
                   onClick={() => {
                     setNotes(mergeNotes(notes, index));
-                    setDeclined([]);
                     setError(null);
                   }}
                   type="button"
@@ -104,7 +109,6 @@ export function RoughNotesIntake({
                   disabled={saving || splitNote(notes, index) === notes}
                   onClick={() => {
                     setNotes(splitNote(notes, index));
-                    setDeclined([]);
                     setError(null);
                   }}
                   type="button"
