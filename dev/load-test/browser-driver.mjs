@@ -244,18 +244,27 @@ export async function runBrowserUser({
     await sleep(thinkMs(rng, false), signal);
     await clickLibraryAction(page, "Edit profile");
     const profile = assignment.profile;
-    await page.getByLabel("Name", { exact: true }).fill(profile.fullName);
+    await page
+      .getByLabel("Preferred name", { exact: true })
+      .fill(profile.fullName);
     await page.getByLabel("Headline", { exact: true }).fill(profile.headline);
-    await page.getByLabel("Resume contact email").fill(profile.email);
+    await page.getByLabel("Professional email").fill(profile.email);
     await page.getByLabel("Phone", { exact: true }).fill(profile.phone);
     await page.getByLabel("Location", { exact: true }).fill(profile.location);
     if (profile.links[0]?.url) {
-      if ((await page.getByLabel("Link URL").count()) === 0) {
+      if ((await page.getByLabel(/^Link \d+ URL$/).count()) === 0) {
         await page
           .getByRole("button", { name: "Add link", exact: true })
           .click();
       }
-      await page.getByLabel("Link URL").first().fill(profile.links[0].url);
+      await page
+        .getByLabel(/^Link \d+ label$/)
+        .first()
+        .fill("Portfolio");
+      await page
+        .getByLabel(/^Link \d+ URL$/)
+        .first()
+        .fill(profile.links[0].url);
     }
     const profileBody = await saveAndRead(
       page,
@@ -271,23 +280,23 @@ export async function runBrowserUser({
     if (!(await skillsSection.evaluate((element) => element.open))) {
       await skillsSection.locator("summary").click();
     }
-    await clickLibraryAction(page, "Add skills");
     await page
-      .getByLabel("Skill names")
+      .getByLabel("Skills", { exact: true })
       .fill(assignment.skills.map((skill) => skill.name).join("\n"));
     const skillsBody = await saveAndRead(
       page,
-      "Save skills",
-      (url, method) => url.endsWith("/api/library/skills") && method === "PUT",
+      "Add skills",
+      (url, method) =>
+        url.endsWith("/api/library/skills/bulk") && method === "POST",
     );
-    if (skillsBody?.changed) logicalWrites += 1;
-    recordIds.skills = (skillsBody?.skills ?? []).map((skill) => skill.id);
+    if (skillsBody?.created?.length) logicalWrites += 1;
+    recordIds.skills = (skillsBody?.created ?? []).map((skill) => skill.id);
 
     for (const [index, job] of assignment.jobs.entries()) {
       await sleep(thinkMs(rng, false), signal);
       await clickLibraryAction(page, "Add job");
       await page
-        .getByLabel("Company", { exact: true })
+        .getByLabel("Employer", { exact: true })
         .fill(job.changes.company);
       await page.getByLabel("Title", { exact: true }).fill(job.changes.title);
       if (job.changes.employmentType) {
@@ -301,12 +310,14 @@ export async function runBrowserUser({
           .fill(job.changes.location);
       }
       if (job.changes.startDate) {
-        await page.getByLabel("Start month").fill(job.changes.startDate);
+        await page.getByLabel("Start date").fill(job.changes.startDate);
       }
       if (job.changes.endDate === null) {
-        await page.getByRole("checkbox", { name: "Current role" }).check();
+        await page
+          .getByRole("checkbox", { name: "I currently work here" })
+          .check();
       } else if (job.changes.endDate) {
-        await page.getByLabel("End month").fill(job.changes.endDate);
+        await page.getByLabel("End date").fill(job.changes.endDate);
       }
       if (job.changes.description) {
         await page
@@ -335,7 +346,9 @@ export async function runBrowserUser({
     for (const [index, project] of assignment.projects.entries()) {
       await sleep(thinkMs(rng, false), signal);
       await clickLibraryAction(page, "Add project");
-      await page.getByLabel("Name", { exact: true }).fill(project.changes.name);
+      await page
+        .getByLabel("Project name", { exact: true })
+        .fill(project.changes.name);
       if (project.changes.role) {
         await page
           .getByLabel("Role", { exact: true })
@@ -350,12 +363,14 @@ export async function runBrowserUser({
           .fill(project.changes.description);
       }
       if (project.changes.startDate) {
-        await page.getByLabel("Start month").fill(project.changes.startDate);
+        await page.getByLabel("Start date").fill(project.changes.startDate);
       }
       if (project.changes.endDate === null) {
-        await page.getByRole("checkbox", { name: "Ongoing project" }).check();
+        await page
+          .getByRole("checkbox", { name: "This project is ongoing" })
+          .check();
       } else if (project.changes.endDate) {
-        await page.getByLabel("End month").fill(project.changes.endDate);
+        await page.getByLabel("End date").fill(project.changes.endDate);
       }
       const body = await saveAndRead(
         page,

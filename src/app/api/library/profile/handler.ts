@@ -80,8 +80,8 @@ async function PATCHForAccount(request: Request) {
   }
 
   try {
-    const { profile } = await updateResumeProfile(parsed.data);
-    return NextResponse.json({ profile }, { status: 200 });
+    const { profile, changed } = await updateResumeProfile(parsed.data);
+    return NextResponse.json({ profile, changed }, { status: 200 });
   } catch (error) {
     return failureResponse(error);
   }
