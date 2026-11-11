@@ -226,6 +226,7 @@ export function verifyLibrary(library, expected) {
       if (pointIds.has(expectedPoint.id))
         errors.push(`duplicate ${expectedPoint.id}`);
       pointIds.add(expectedPoint.id);
+      if (!point) continue;
       for (const skillId of expectedPoint.skillIds ?? []) {
         if (!(point.skillIds ?? []).includes(skillId)) {
           errors.push(`skill reference ${skillId}`);
@@ -253,6 +254,7 @@ export function verifyLibrary(library, expected) {
       if (pointIds.has(expectedPoint.id))
         errors.push(`duplicate ${expectedPoint.id}`);
       pointIds.add(expectedPoint.id);
+      if (!point) continue;
       for (const skillId of expectedPoint.skillIds ?? []) {
         if (!(point.skillIds ?? []).includes(skillId)) {
           errors.push(`skill reference ${skillId}`);

@@ -10,7 +10,12 @@ import { replayEvents, resolveRunDirectory } from "./artifacts.mjs";
 import { isClientAbort } from "./browser-driver.mjs";
 import { parseArgs, resolveRunConfig } from "./config.mjs";
 import { estimateRun } from "./estimate.mjs";
-import { assignUser, loadCatalog, userSeed } from "./fixtures.mjs";
+import {
+  assignUser,
+  loadCatalog,
+  userSeed,
+  verifyLibrary,
+} from "./fixtures.mjs";
 import { observeLibrary, reconcileMutation } from "./reconcile.mjs";
 import { percentile, summarizeRun, windowHealth } from "./report.mjs";
 import { assertLoadTestEnvironment, assertLoopbackTarget } from "./safety.mjs";
@@ -240,6 +245,47 @@ describe("load-test reconciliation and estimates", () => {
     );
     expect(() => resolveRunDirectory(root, "..")).toThrow(/invalid/i);
     expect(() => resolveRunDirectory(root, "nested/path")).toThrow(/invalid/i);
+  });
+
+  it("reports a missing achievement instead of throwing", () => {
+    const profile = {
+      fullName: "A",
+      headline: "",
+      email: "",
+      phone: "",
+      location: "",
+      links: [],
+    };
+    const errors = verifyLibrary(
+      {
+        profile,
+        skills: [],
+        jobs: [{ id: "job-1", points: [] }],
+        projects: [
+          {
+            id: "project-1",
+            points: [{ id: "p1", text: "t", skillIds: [] }],
+          },
+        ],
+      },
+      {
+        profile,
+        skillNames: [],
+        jobs: [
+          {
+            id: "job-1",
+            points: [{ id: "missing", text: "t", skillIds: ["skill-1"] }],
+          },
+        ],
+        projects: [
+          {
+            id: "project-1",
+            points: [{ id: "p1", text: "t", skillIds: [] }],
+          },
+        ],
+      },
+    );
+    expect(errors).toContain("point missing");
   });
 
   it("ignores browser session refreshes cancelled by a later navigation", () => {

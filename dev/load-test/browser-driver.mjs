@@ -24,11 +24,24 @@ async function chooseParent(page, parentType, parentId) {
   const control = page.getByRole("combobox", {
     name: "Job or project for this achievement",
   });
-  await control.click();
-  await control
-    .locator("xpath=..")
-    .locator(`.library-select-option[data-value="${value}"]`)
-    .click();
+  const option = () =>
+    control
+      .locator("xpath=..")
+      .locator(`.library-select-option[data-value="${value}"]`);
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    if ((await control.getAttribute("data-value")) === value) return;
+    await control.click();
+    const choice = option();
+    await choice.waitFor({ state: "visible" });
+    if (attempt === 0) await choice.click();
+    else await choice.evaluate((node) => node.click());
+  }
+  if ((await control.getAttribute("data-value")) !== value) {
+    throw Object.assign(
+      new Error("The achievement was not attached to the requested record."),
+      { code: "failed" },
+    );
+  }
 }
 
 async function saveAndRead(page, buttonName, match) {
