@@ -7,6 +7,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import { replayEvents, resolveRunDirectory } from "./artifacts.mjs";
+import { isClientAbort } from "./browser-driver.mjs";
 import { parseArgs, resolveRunConfig } from "./config.mjs";
 import { estimateRun } from "./estimate.mjs";
 import { assignUser, loadCatalog, userSeed } from "./fixtures.mjs";
@@ -239,6 +240,13 @@ describe("load-test reconciliation and estimates", () => {
     );
     expect(() => resolveRunDirectory(root, "..")).toThrow(/invalid/i);
     expect(() => resolveRunDirectory(root, "nested/path")).toThrow(/invalid/i);
+  });
+
+  it("ignores browser session refreshes cancelled by a later navigation", () => {
+    expect(isClientAbort("net::ERR_ABORTED")).toBe(true);
+    expect(isClientAbort("net::ERR_BLOCKED_BY_CLIENT.Inspector")).toBe(false);
+    expect(isClientAbort("net::ERR_CONNECTION_REFUSED")).toBe(false);
+    expect(isClientAbort(undefined)).toBe(false);
   });
 
   it("replays checkpoint events without credentials", () => {

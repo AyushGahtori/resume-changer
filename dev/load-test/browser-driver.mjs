@@ -2,6 +2,14 @@ import path from "node:path";
 import { expectedLibrary, verifyLibrary } from "./fixtures.mjs";
 import { sleep, thinkMs } from "./timing.mjs";
 
+// The library refreshes after each save and aborts the previous session POST.
+// Chromium reports that cancellation as net::ERR_ABORTED. It is not an
+// application failure, and a successful replacement request is recorded
+// separately.
+export function isClientAbort(errorText) {
+  return typeof errorText === "string" && errorText.includes("ERR_ABORTED");
+}
+
 function googleToken(assignment) {
   return JSON.stringify({
     sub: assignment.subject,
@@ -102,6 +110,7 @@ export async function runBrowserUser({
     if (!url.pathname.startsWith("/api/")) return;
     const meta = apiStarted.get(request);
     apiStarted.delete(request);
+    if (isClientAbort(request.failure()?.errorText)) return;
     void onEvent?.({
       type: "transport",
       user: assignment.userNumber,
@@ -227,7 +236,13 @@ export async function runBrowserUser({
     await page.getByRole("status").last().waitFor();
 
     await sleep(thinkMs(rng, false), signal);
-    await page.getByRole("button", { name: "Add skills", exact: true }).click();
+    const skillsSection = page.locator("#library-skills");
+    if (!(await skillsSection.evaluate((element) => element.open))) {
+      await skillsSection.locator("summary").click();
+    }
+    await skillsSection
+      .getByRole("button", { name: "Add skills", exact: true })
+      .click();
     await page
       .getByLabel("Skill names")
       .fill(assignment.skills.map((skill) => skill.name).join("\n"));
@@ -347,6 +362,11 @@ export async function runBrowserUser({
       })),
     ];
     const skillNames = assignment.skills.slice(0, 2).map((skill) => skill.name);
+    await page
+      .getByText(assignment.jobs[0].changes.company)
+      .filter({ visible: true })
+      .first()
+      .waitFor();
     for (const parent of parents) {
       for (const point of parent.points) {
         if (signal?.aborted) {
