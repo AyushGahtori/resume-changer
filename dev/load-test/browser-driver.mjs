@@ -44,13 +44,30 @@ async function chooseParent(page, parentType, parentId) {
   }
 }
 
+async function clickLibraryAction(page, name) {
+  const button = page.getByRole("button", { name, exact: true }).first();
+  await button.waitFor({ state: "visible", timeout: 20_000 });
+  if (!(await button.isEnabled())) {
+    const cancel = page.getByRole("button", { name: "Cancel", exact: true });
+    if ((await cancel.count()) > 0) await cancel.click({ force: true });
+  }
+  if (!(await button.isEnabled())) {
+    throw Object.assign(new Error(`${name} stayed disabled.`), {
+      code: "failed",
+    });
+  }
+  await button.click({ force: true, timeout: 20_000 });
+}
+
 async function saveAndRead(page, buttonName, match) {
   const responsePromise = page.waitForResponse(
     (response) =>
       match(response.url(), response.request().method()) &&
       response.request().method() !== "OPTIONS",
   );
-  await page.getByRole("button", { name: buttonName, exact: true }).click();
+  await page
+    .getByRole("button", { name: buttonName, exact: true })
+    .click({ force: true });
   const response = await responsePromise;
   const body = await response.json().catch(() => null);
   if (!response.ok()) {
@@ -80,6 +97,9 @@ export async function runBrowserUser({
     baseURL,
   });
   const page = await context.newPage();
+  page.on("dialog", (dialog) => {
+    void dialog.accept();
+  });
   page.setDefaultTimeout(30_000);
   page.setDefaultNavigationTimeout(45_000);
   let logicalWrites = 0;
@@ -222,9 +242,7 @@ export async function runBrowserUser({
     }
 
     await sleep(thinkMs(rng, false), signal);
-    await page
-      .getByRole("button", { name: "Edit profile", exact: true })
-      .click();
+    await clickLibraryAction(page, "Edit profile");
     const profile = assignment.profile;
     await page.getByLabel("Name", { exact: true }).fill(profile.fullName);
     await page.getByLabel("Headline", { exact: true }).fill(profile.headline);
@@ -253,9 +271,7 @@ export async function runBrowserUser({
     if (!(await skillsSection.evaluate((element) => element.open))) {
       await skillsSection.locator("summary").click();
     }
-    await skillsSection
-      .getByRole("button", { name: "Add skills", exact: true })
-      .click();
+    await clickLibraryAction(page, "Add skills");
     await page
       .getByLabel("Skill names")
       .fill(assignment.skills.map((skill) => skill.name).join("\n"));
@@ -269,7 +285,7 @@ export async function runBrowserUser({
 
     for (const [index, job] of assignment.jobs.entries()) {
       await sleep(thinkMs(rng, false), signal);
-      await page.getByRole("button", { name: "Add job", exact: true }).click();
+      await clickLibraryAction(page, "Add job");
       await page
         .getByLabel("Company", { exact: true })
         .fill(job.changes.company);
@@ -318,9 +334,7 @@ export async function runBrowserUser({
 
     for (const [index, project] of assignment.projects.entries()) {
       await sleep(thinkMs(rng, false), signal);
-      await page
-        .getByRole("button", { name: "Add project", exact: true })
-        .click();
+      await clickLibraryAction(page, "Add project");
       await page.getByLabel("Name", { exact: true }).fill(project.changes.name);
       if (project.changes.role) {
         await page
@@ -383,9 +397,7 @@ export async function runBrowserUser({
           });
         }
         await sleep(thinkMs(rng, false), signal);
-        await page
-          .getByRole("button", { name: "Detailed entry", exact: true })
-          .click();
+        await clickLibraryAction(page, "Detailed entry");
         await page.getByLabel("Achievement ID").fill(point.id);
         await chooseParent(page, parent.type, parent.id);
         await page.getByLabel("Achievement text").fill(point.text);
