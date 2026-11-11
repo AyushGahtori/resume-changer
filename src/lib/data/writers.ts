@@ -13,6 +13,9 @@ import {
   ResumeLibraryV2Schema,
   StableIdSchema,
   type AchievementPoint,
+  type Job,
+  type Profile,
+  type Project,
   type Skill,
   type GithubAchievementEvidence,
   type GithubImportApproval,
@@ -138,6 +141,165 @@ export const CreateSkillInputSchema = z
       .max(80, "Use a skill name of 80 characters or fewer."),
   })
   .strict();
+
+const metadataEmploymentTypeSchema = z.enum([
+  "full-time",
+  "part-time",
+  "contract",
+  "internship",
+  "freelance",
+  "other",
+]);
+
+const clearableText = z.string().max(4_000);
+
+function optionalHttpUrl(value: string, context: z.RefinementCtx, path: (string | number)[]) {
+  const trimmed = value.trim();
+  if (!trimmed) return;
+  let parsed: URL;
+  try {
+    parsed = new URL(trimmed);
+  } catch {
+    context.addIssue({
+      code: "custom",
+      path,
+      message: "Enter an HTTP or HTTPS URL.",
+    });
+    return;
+  }
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    context.addIssue({
+      code: "custom",
+      path,
+      message: "Enter an HTTP or HTTPS URL.",
+    });
+  }
+}
+
+export const ProfileChangesSchema = z
+  .object({
+    fullName: clearableText.optional(),
+    headline: clearableText.optional(),
+    email: clearableText.optional(),
+    phone: clearableText.optional(),
+    location: clearableText.optional(),
+    links: z
+      .array(
+        z
+          .object({
+            url: z.string().max(2_000),
+            label: z.string().max(200).optional(),
+          })
+          .strict(),
+      )
+      .max(20)
+      .optional(),
+  })
+  .strict()
+  .superRefine((changes, context) => {
+    if (changes.email?.trim()) {
+      const email = z.email().safeParse(changes.email.trim());
+      if (!email.success) {
+        context.addIssue({
+          code: "custom",
+          path: ["email"],
+          message: "Enter a valid email address.",
+        });
+      }
+    }
+    changes.links?.forEach((link, index) => {
+      optionalHttpUrl(link.url, context, ["links", index, "url"]);
+    });
+  });
+
+export const UpdateProfileInputSchema = z
+  .object({ changes: ProfileChangesSchema })
+  .strict();
+
+const optionalMonth = z.union([YearMonthInputSchema, z.literal("")]);
+
+export const JobMetadataChangesSchema = z
+  .object({
+    company: clearableText.optional(),
+    title: clearableText.optional(),
+    employmentType: z
+      .union([metadataEmploymentTypeSchema, z.literal("")])
+      .optional(),
+    location: clearableText.optional(),
+    startDate: optionalMonth.optional(),
+    endDate: z.union([YearMonthInputSchema, z.literal(""), z.null()]).optional(),
+    description: clearableText.optional(),
+  })
+  .strict()
+  .superRefine((changes, context) => {
+    const start = changes.startDate?.trim();
+    const end = changes.endDate;
+    if (
+      start &&
+      typeof end === "string" &&
+      end &&
+      end < start
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["endDate"],
+        message: "End date must be the same as or later than start date.",
+      });
+    }
+  });
+
+export const UpsertJobMetadataInputSchema = z
+  .object({ changes: JobMetadataChangesSchema })
+  .strict();
+
+export const ProjectMetadataChangesSchema = z
+  .object({
+    name: clearableText.optional(),
+    role: clearableText.optional(),
+    url: z.string().max(2_000).optional(),
+    description: clearableText.optional(),
+    startDate: optionalMonth.optional(),
+    endDate: z.union([YearMonthInputSchema, z.literal(""), z.null()]).optional(),
+  })
+  .strict()
+  .superRefine((changes, context) => {
+    if (changes.url) optionalHttpUrl(changes.url, context, ["url"]);
+    const start = changes.startDate?.trim();
+    const end = changes.endDate;
+    if (start && typeof end === "string" && end && end < start) {
+      context.addIssue({
+        code: "custom",
+        path: ["endDate"],
+        message: "End date must be the same as or later than start date.",
+      });
+    }
+  });
+
+export const UpsertProjectMetadataInputSchema = z
+  .object({ changes: ProjectMetadataChangesSchema })
+  .strict();
+
+export const SkillBatchInputSchema = z
+  .object({
+    items: z
+      .array(
+        z
+          .object({
+            id: StableIdSchema,
+            name: z.string().max(80),
+          })
+          .strict(),
+      )
+      .max(100),
+  })
+  .strict();
+
+export type UpdateProfileInput = z.infer<typeof UpdateProfileInputSchema>;
+export type UpsertJobMetadataInput = z.infer<typeof UpsertJobMetadataInputSchema>;
+export type UpsertProjectMetadataInput = z.infer<
+  typeof UpsertProjectMetadataInputSchema
+>;
+export type SkillBatchInput = z.infer<typeof SkillBatchInputSchema>;
 
 export const CreateLibraryParentInputSchema = z
   .object({
@@ -356,14 +518,19 @@ async function commitLibraryMutation<T>(
   if (getAppMode() === "firebase") {
     if (options.rootDir !== undefined)
       throw new Error("Hosted account writes cannot use a filesystem root.");
-    const { changeCloudLibrary } = await import("../cloud/library-store");
-    let value!: T;
-    const library = await changeCloudLibrary((current) => {
+    const { mutateCloudLibrary } = await import("../cloud/library-store");
+    const result = await mutateCloudLibrary((current) => {
       const mutation = change(normalizeResumeLibrary(current));
-      value = mutation.value;
-      return ResumeLibraryV2Schema.parse(mutation.library);
+      return {
+        library: ResumeLibraryV2Schema.parse(mutation.library),
+        value: mutation.value,
+        persist: mutation.persist,
+      };
     });
-    return { library: normalizeResumeLibrary(library), value };
+    return {
+      library: normalizeResumeLibrary(result.library),
+      value: result.value,
+    };
   }
   const rootDir = getPersonalDataRoot(options.rootDir);
   const lockPath = join(rootDir, "data", "resume-library.json.lock");
@@ -661,6 +828,362 @@ export async function createLibraryParent(
     };
   }, options);
   return { library, parent: created! };
+}
+
+function librariesDiffer(
+  left: NormalizedResumeLibrary,
+  right: NormalizedResumeLibrary,
+) {
+  return canonical(left) !== canonical(right);
+}
+
+function idIsTaken(
+  library: NormalizedResumeLibrary,
+  id: string,
+  except?: { kind: "job" | "project"; id: string },
+) {
+  const occurrences = collectEntityIds(library).filter(
+    (existing) => existing === id,
+  ).length;
+  if (occurrences === 0) return false;
+  if (!except) return true;
+  const collection =
+    except.kind === "job" ? library.jobs : library.projects;
+  const owns = collection.some((item) => item.id === except.id);
+  return !owns || occurrences > 1;
+}
+
+function rejectIdCollision() {
+  throw new LibraryWriteError(
+    "version-conflict",
+    "That ID is already used by a different record.",
+  );
+}
+
+function clearedText(value: string | undefined) {
+  const trimmed = value?.trim() ?? "";
+  return trimmed || undefined;
+}
+
+function applyOptionalMonth(
+  current: string | undefined,
+  incoming: string | undefined,
+) {
+  if (incoming === undefined) return current;
+  const trimmed = incoming.trim();
+  return trimmed || undefined;
+}
+
+function applyEndDate(
+  current: string | null | undefined,
+  incoming: string | null | undefined,
+) {
+  if (incoming === undefined) return current;
+  if (incoming === null) return null;
+  const trimmed = incoming.trim();
+  return trimmed || undefined;
+}
+
+function jobHasMetadata(job: {
+  company?: string;
+  title?: string;
+  employmentType?: string;
+  location?: string;
+  startDate?: string;
+  endDate?: string | null;
+  description?: string;
+}) {
+  return Boolean(
+    job.company?.trim() ||
+      job.title?.trim() ||
+      job.employmentType ||
+      job.location?.trim() ||
+      job.startDate ||
+      job.endDate === null ||
+      typeof job.endDate === "string" ||
+      job.description?.trim(),
+  );
+}
+
+function projectHasMetadata(project: {
+  name?: string;
+  role?: string;
+  url?: string;
+  description?: string;
+  startDate?: string;
+  endDate?: string | null;
+}) {
+  return Boolean(
+    project.name?.trim() ||
+      project.role?.trim() ||
+      project.url?.trim() ||
+      project.description?.trim() ||
+      project.startDate ||
+      project.endDate === null ||
+      typeof project.endDate === "string",
+  );
+}
+
+export async function updateProfile(
+  input: UpdateProfileInput,
+  options?: WriteOptions,
+): Promise<{ profile: Profile; changed: boolean }> {
+  const parsed = UpdateProfileInputSchema.safeParse(input);
+  if (!parsed.success) {
+    throw new LibraryWriteError("invalid-input", "Check the profile fields.");
+  }
+  const changes = parsed.data.changes;
+  let changed = false;
+  const result = await commitLibraryMutation((current) => {
+    const profile: Profile = { ...current.profile };
+    if (changes.fullName !== undefined) profile.fullName = changes.fullName.trim();
+    if (changes.headline !== undefined)
+      profile.headline = clearedText(changes.headline);
+    if (changes.email !== undefined) profile.email = clearedText(changes.email);
+    if (changes.phone !== undefined) profile.phone = clearedText(changes.phone);
+    if (changes.location !== undefined)
+      profile.location = clearedText(changes.location);
+    if (changes.links) {
+      profile.links = changes.links.flatMap((link) => {
+        const url = link.url.trim();
+        if (!url) return [];
+        const existing = current.profile.links.find((item) => item.url === url);
+        return [
+          {
+            label: existing?.label ?? new URL(url).hostname,
+            url,
+          },
+        ];
+      });
+    }
+    const next = { ...current, profile };
+    changed = librariesDiffer(current, next);
+    return { library: next, value: next.profile, persist: changed };
+  }, options);
+  return { profile: result.value, changed };
+}
+
+export async function upsertJobMetadata(
+  id: string,
+  input: UpsertJobMetadataInput,
+  options?: WriteOptions,
+): Promise<{ job: Job | null; changed: boolean; created: boolean }> {
+  const parsedId = StableIdSchema.safeParse(id);
+  const parsed = UpsertJobMetadataInputSchema.safeParse(input);
+  if (!parsedId.success || !parsed.success) {
+    throw new LibraryWriteError("invalid-input", "Check the job fields.");
+  }
+  const changes = parsed.data.changes;
+  let created = false;
+  let changed = false;
+  let job: Job | null = null;
+  const result = await commitLibraryMutation((current) => {
+    if (idIsTaken(current, parsedId.data, { kind: "job", id: parsedId.data })) {
+      rejectIdCollision();
+    }
+    const existing = current.jobs.find((item) => item.id === parsedId.data);
+    const draft = {
+      company: existing?.company ?? "",
+      title: existing?.title ?? "",
+      employmentType: existing?.employmentType,
+      location: existing?.location,
+      startDate: existing?.startDate,
+      endDate: existing?.endDate,
+      description: existing?.description,
+    };
+    if (changes.company !== undefined) draft.company = changes.company.trim();
+    if (changes.title !== undefined) draft.title = changes.title.trim();
+    if (changes.employmentType !== undefined) {
+      draft.employmentType = changes.employmentType || undefined;
+    }
+    if (changes.location !== undefined)
+      draft.location = clearedText(changes.location);
+    if (changes.startDate !== undefined) {
+      draft.startDate = applyOptionalMonth(draft.startDate, changes.startDate);
+    }
+    if (changes.endDate !== undefined) {
+      draft.endDate = applyEndDate(draft.endDate, changes.endDate);
+    }
+    if (changes.description !== undefined) {
+      draft.description = clearedText(changes.description);
+    }
+    if (!existing && !jobHasMetadata(draft)) {
+      created = false;
+      changed = false;
+      job = null;
+      return { library: current, value: null, persist: false };
+    }
+    const nextJob = {
+      ...(existing ?? {
+        id: parsedId.data,
+        company: "",
+        title: "",
+        points: [],
+      }),
+      id: parsedId.data,
+      company: draft.company,
+      title: draft.title,
+      points: existing?.points ?? [],
+    };
+    if (draft.employmentType) nextJob.employmentType = draft.employmentType;
+    else delete nextJob.employmentType;
+    if (draft.location) nextJob.location = draft.location;
+    else delete nextJob.location;
+    if (draft.startDate) nextJob.startDate = draft.startDate;
+    else delete nextJob.startDate;
+    if (draft.endDate === null || typeof draft.endDate === "string") {
+      nextJob.endDate = draft.endDate;
+    } else delete nextJob.endDate;
+    if (draft.description) nextJob.description = draft.description;
+    else delete nextJob.description;
+    const jobs = existing
+      ? current.jobs.map((item) => (item.id === nextJob.id ? nextJob : item))
+      : [...current.jobs, nextJob];
+    const next = { ...current, jobs };
+    created = !existing;
+    changed = librariesDiffer(current, next);
+    job = nextJob;
+    return { library: next, value: nextJob, persist: changed };
+  }, options);
+  return { job: changed || created ? (result.value ?? job) : job, changed, created };
+}
+
+export async function upsertProjectMetadata(
+  id: string,
+  input: UpsertProjectMetadataInput,
+  options?: WriteOptions,
+): Promise<{ project: Project | null; changed: boolean; created: boolean }> {
+  const parsedId = StableIdSchema.safeParse(id);
+  const parsed = UpsertProjectMetadataInputSchema.safeParse(input);
+  if (!parsedId.success || !parsed.success) {
+    throw new LibraryWriteError("invalid-input", "Check the project fields.");
+  }
+  const changes = parsed.data.changes;
+  let created = false;
+  let changed = false;
+  let project: Project | null = null;
+  const result = await commitLibraryMutation((current) => {
+    if (
+      idIsTaken(current, parsedId.data, {
+        kind: "project",
+        id: parsedId.data,
+      })
+    ) {
+      rejectIdCollision();
+    }
+    const existing = current.projects.find((item) => item.id === parsedId.data);
+    const draft = {
+      name: existing?.name ?? "",
+      role: existing?.role,
+      url: existing?.url,
+      description: existing?.description,
+      startDate: existing?.startDate,
+      endDate: existing?.endDate,
+    };
+    if (changes.name !== undefined) draft.name = changes.name.trim();
+    if (changes.role !== undefined) draft.role = clearedText(changes.role);
+    if (changes.url !== undefined) draft.url = clearedText(changes.url);
+    if (changes.description !== undefined) {
+      draft.description = clearedText(changes.description);
+    }
+    if (changes.startDate !== undefined) {
+      draft.startDate = applyOptionalMonth(draft.startDate, changes.startDate);
+    }
+    if (changes.endDate !== undefined) {
+      draft.endDate = applyEndDate(draft.endDate, changes.endDate);
+    }
+    if (!existing && !projectHasMetadata(draft)) {
+      created = false;
+      changed = false;
+      project = null;
+      return { library: current, value: null, persist: false };
+    }
+    const nextProject = {
+      ...(existing ?? {
+        id: parsedId.data,
+        name: "",
+        repositoryAttachments: [],
+        points: [],
+      }),
+      id: parsedId.data,
+      name: draft.name,
+      repositoryAttachments: existing?.repositoryAttachments ?? [],
+      points: existing?.points ?? [],
+    };
+    if (draft.role) nextProject.role = draft.role;
+    else delete nextProject.role;
+    if (draft.url) nextProject.url = draft.url;
+    else delete nextProject.url;
+    if (draft.description) nextProject.description = draft.description;
+    else delete nextProject.description;
+    if (draft.startDate) nextProject.startDate = draft.startDate;
+    else delete nextProject.startDate;
+    if (draft.endDate === null || typeof draft.endDate === "string") {
+      nextProject.endDate = draft.endDate;
+    } else delete nextProject.endDate;
+    const projects = existing
+      ? current.projects.map((item) =>
+          item.id === nextProject.id ? nextProject : item,
+        )
+      : [...current.projects, nextProject];
+    const next = { ...current, projects };
+    created = !existing;
+    changed = librariesDiffer(current, next);
+    project = nextProject;
+    return { library: next, value: nextProject, persist: changed };
+  }, options);
+  return {
+    project: changed || created ? (result.value ?? project) : project,
+    changed,
+    created,
+  };
+}
+
+export async function mergeSkills(
+  input: SkillBatchInput,
+  options?: WriteOptions,
+): Promise<{ skills: Skill[]; changed: boolean }> {
+  const parsed = SkillBatchInputSchema.safeParse(input);
+  if (!parsed.success) {
+    throw new LibraryWriteError("invalid-input", "Check the skill names.");
+  }
+  let changed = false;
+  const result = await commitLibraryMutation((current) => {
+    const additions: Skill[] = [];
+    const seen = new Set<string>();
+    const reserved = new Set<string>();
+    for (const item of parsed.data.items) {
+      const name = item.name.trim();
+      if (!name) continue;
+      const key = name.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const existing = current.skills.find(
+        (skill) => skill.name.toLowerCase() === key,
+      );
+      if (existing) continue;
+      if (reserved.has(item.id) || idIsTaken(current, item.id)) {
+        rejectIdCollision();
+      }
+      reserved.add(item.id);
+      additions.push({
+        id: item.id,
+        name,
+        aliases: [],
+        sources: ["direct-user"],
+        isListedOnCurrentResume: false,
+        evidenceAchievementIds: [],
+      });
+    }
+    if (additions.length === 0) {
+      changed = false;
+      return { library: current, value: current.skills, persist: false };
+    }
+    const next = { ...current, skills: [...current.skills, ...additions] };
+    changed = true;
+    return { library: next, value: next.skills, persist: true };
+  }, options);
+  return { skills: result.value, changed };
 }
 
 function skillIdForName(name: string, used: Set<string>): string {

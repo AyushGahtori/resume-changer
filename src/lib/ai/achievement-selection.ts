@@ -758,7 +758,7 @@ export async function recommendAchievements(args: {
     return {
       achievementId: evidence.id,
       section: evidence.section,
-      groupTitle: evidence.groupTitle,
+      groupTitle: evidence.groupTitle ?? "",
       text: evidence.text,
       localScore: score?.score ?? 0,
       matchingRequirements: [...(score?.matches.keys() ?? [])],

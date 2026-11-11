@@ -73,6 +73,8 @@ export function buildAchievementEvidence(
                 reason: `Inferred from the declared ${s.name} skill and a compatible neural-network method; project framework usage is not directly recorded.`,
               }))
           : [];
+        const groupTitle = group.title.trim();
+        const groupSubtitle = group.subtitle?.trim() ?? "";
         return {
           id: point.id,
           text: point.text,
@@ -90,8 +92,8 @@ export function buildAchievementEvidence(
             undefined,
           section: group.section,
           groupId: group.id,
-          groupTitle: group.title,
-          groupSubtitle: group.subtitle,
+          ...(groupTitle ? { groupTitle } : {}),
+          ...(groupSubtitle ? { groupSubtitle } : {}),
         };
       });
   return [

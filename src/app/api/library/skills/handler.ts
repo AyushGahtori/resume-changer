@@ -5,7 +5,9 @@ import { DataLoadError } from "@/lib/data/loaders";
 import {
   CreateSkillInputSchema,
   LibraryWriteError,
+  SkillBatchInputSchema,
   createSkill,
+  mergeSkills,
 } from "@/lib/data/writers";
 
 export const runtime = "nodejs";
@@ -20,7 +22,7 @@ function failureResponse(error: unknown) {
     const status =
       error.code === "not-found"
         ? 404
-        : error.code === "locked"
+        : error.code === "locked" || error.code === "version-conflict"
           ? 409
           : error.code === "invalid-library" || error.code === "invalid-input"
             ? 400
@@ -69,4 +71,36 @@ async function POSTForAccount(request: Request) {
   }
 }
 
+async function PUTForAccount(request: Request) {
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json(
+      { error: "Request body must be valid JSON." },
+      { status: 400 },
+    );
+  }
+  const parsed = SkillBatchInputSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      {
+        error: "Check the skill names and try again.",
+        issues: parsed.error.issues.map((issue) => ({
+          path: issue.path.map(String).join("."),
+          message: issue.message,
+        })),
+      },
+      { status: 400 },
+    );
+  }
+  try {
+    const result = await mergeSkills(parsed.data);
+    return NextResponse.json(result);
+  } catch (error) {
+    return failureResponse(error);
+  }
+}
+
 export const POST = protectAccountRoute(POSTForAccount);
+export const PUT = protectAccountRoute(PUTForAccount);

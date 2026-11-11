@@ -44,7 +44,13 @@ import {
   formatExperienceRange,
   type ExperienceRange,
 } from "@/lib/data/experience-dates";
+import {
+  jobDisplayTitle,
+  jobFilterLabel,
+  projectDisplayName,
+} from "@/lib/data/library-labels";
 import { LIBRARY_ACTIONS } from "@/lib/ui/library-actions";
+import LibraryMetadataEditor from "@/components/library/metadata-editor";
 import type {
   AchievementPoint,
   Job,
@@ -58,7 +64,13 @@ import { useImportStatus } from "./library/import-status-provider";
 
 type Props = { library: ResumeLibrary; source: ResumeDataSource };
 type EditorState =
-  { mode: "create" } | { mode: "edit"; point: AchievementPoint } | null;
+  | { mode: "create" }
+  | { mode: "edit"; point: AchievementPoint }
+  | { mode: "profile" }
+  | { mode: "job"; job?: Job }
+  | { mode: "project"; project?: Project }
+  | { mode: "skills" }
+  | null;
 type EditorHandlers = { onCancel: () => void; onSaved: () => void };
 type InlineEditorState = {
   pointId: string;
@@ -109,6 +121,7 @@ function ExperienceGroup({
   onTag,
   onSkill,
   onEdit,
+  onEditRecord,
   onToggle,
   activeTag,
   activeSkillId,
@@ -123,6 +136,7 @@ function ExperienceGroup({
   onTag: (tag: string) => void;
   onSkill: (skillId: string) => void;
   onEdit?: (point: AchievementPoint, trigger: HTMLButtonElement) => void;
+  onEditRecord?: (trigger: HTMLButtonElement) => void;
   onToggle: (key: string) => void;
   activeTag: string;
   activeSkillId: string;
@@ -133,8 +147,10 @@ function ExperienceGroup({
   const isJob = kind === "job";
   const job = isJob ? (item as Job) : null;
   const project = isJob ? null : (item as Project);
-  const title = job?.title ?? project?.name ?? "";
-  const organization = job?.company ?? project?.role;
+  const title = job
+    ? jobDisplayTitle(job.title)
+    : projectDisplayName(project?.name ?? "");
+  const organization = (job?.company ?? project?.role)?.trim();
   const range = formatExperienceRange(
     job ? job.startDate : project?.startDate,
     job ? job.endDate : project?.endDate,
@@ -189,6 +205,17 @@ function ExperienceGroup({
           />
         </button>
       </h3>
+      {onEditRecord ? (
+        <div className="library-record-actions">
+          <button
+            className="ui-button ui-button--tertiary library-action library-action--tertiary"
+            onClick={(event) => onEditRecord(event.currentTarget)}
+            type="button"
+          >
+            {isJob ? "Edit job" : "Edit project"}
+          </button>
+        </div>
+      ) : null}
       {kind === "project" && canAttachGitHub ? (
         <div className={importNotificationStyles.projectAttachRow}>
           <Link
@@ -282,12 +309,12 @@ export default function AchievementLibrary({ library, source }: Props) {
     () => [
       ...library.jobs.map((job) => ({
         id: job.id,
-        label: `${job.title} · ${job.company}`,
+        label: jobFilterLabel(job),
         type: "job" as const,
       })),
       ...library.projects.map((project) => ({
         id: project.id,
-        label: project.name,
+        label: projectDisplayName(project.name),
         type: "project" as const,
       })),
     ],
@@ -432,6 +459,12 @@ export default function AchievementLibrary({ library, source }: Props) {
     router.refresh();
   }
 
+  function saveMetadata(message: string) {
+    closeEditor();
+    setSaveMessage(message);
+    router.refresh();
+  }
+
   const inlineEditor: InlineEditorState | undefined =
     canEdit && editor?.mode === "edit"
       ? {
@@ -556,6 +589,47 @@ export default function AchievementLibrary({ library, source }: Props) {
       ) : null}
       {!canEdit ? <LibraryReadOnlyNotice /> : null}
       <ProfileSummary library={library} source={source} />
+      {canEdit ? (
+        <div className="library-record-actions">
+          <button
+            className="ui-button ui-button--secondary library-action library-action--secondary"
+            disabled={editor !== null}
+            onClick={(event) => openEditor({ mode: "profile" }, event.currentTarget)}
+            type="button"
+          >
+            Edit profile
+          </button>
+        </div>
+      ) : null}
+
+      {canEdit && editor?.mode === "profile" ? (
+        <LibraryMetadataEditor
+          editor={{ kind: "profile", profile: library.profile }}
+          onCancel={closeEditor}
+          onSaved={saveMetadata}
+        />
+      ) : null}
+      {canEdit && editor?.mode === "job" ? (
+        <LibraryMetadataEditor
+          editor={{ kind: "job", job: editor.job }}
+          onCancel={closeEditor}
+          onSaved={saveMetadata}
+        />
+      ) : null}
+      {canEdit && editor?.mode === "project" ? (
+        <LibraryMetadataEditor
+          editor={{ kind: "project", project: editor.project }}
+          onCancel={closeEditor}
+          onSaved={saveMetadata}
+        />
+      ) : null}
+      {canEdit && editor?.mode === "skills" ? (
+        <LibraryMetadataEditor
+          editor={{ kind: "skills" }}
+          onCancel={closeEditor}
+          onSaved={saveMetadata}
+        />
+      ) : null}
 
       {canEdit && editor?.mode === "create" ? (
         <AchievementPointEditor
@@ -620,6 +694,18 @@ export default function AchievementLibrary({ library, source }: Props) {
                 titleId="library-section-jobs"
                 tone="jobs"
               />
+              {canEdit ? (
+                <button
+                  className="ui-button ui-button--secondary library-action library-action--secondary"
+                  disabled={editor !== null}
+                  onClick={(event) =>
+                    openEditor({ mode: "job" }, event.currentTarget)
+                  }
+                  type="button"
+                >
+                  Add job
+                </button>
+              ) : null}
             </div>
             <div className="library-section-body">
               {result.jobs.length > 0 ? (
@@ -635,6 +721,12 @@ export default function AchievementLibrary({ library, source }: Props) {
                     library={library}
                     parents={parentOptions}
                     canAttachGitHub={false}
+                    onEditRecord={
+                      canEdit
+                        ? (trigger) =>
+                            openEditor({ mode: "job", job }, trigger)
+                        : undefined
+                    }
                     onSkill={(id) => updateFilter("skillId", id)}
                     onTag={(tag) => updateFilter("tag", tag)}
                     onToggle={toggleGroup}
@@ -669,6 +761,18 @@ export default function AchievementLibrary({ library, source }: Props) {
                 titleId="library-section-projects"
                 tone="projects"
               />
+              {canEdit ? (
+                <button
+                  className="ui-button ui-button--secondary library-action library-action--secondary"
+                  disabled={editor !== null}
+                  onClick={(event) =>
+                    openEditor({ mode: "project" }, event.currentTarget)
+                  }
+                  type="button"
+                >
+                  Add project
+                </button>
+              ) : null}
             </div>
             <div className="library-section-body">
               {result.projects.length > 0 ? (
@@ -686,6 +790,12 @@ export default function AchievementLibrary({ library, source }: Props) {
                     library={library}
                     parents={parentOptions}
                     canAttachGitHub={canEdit}
+                    onEditRecord={
+                      canEdit
+                        ? (trigger) =>
+                            openEditor({ mode: "project", project }, trigger)
+                        : undefined
+                    }
                     onSkill={(id) => updateFilter("skillId", id)}
                     onTag={(tag) => updateFilter("tag", tag)}
                     onToggle={toggleGroup}
@@ -735,6 +845,20 @@ export default function AchievementLibrary({ library, source }: Props) {
                   tone="skills"
                 />
               </summary>
+              {canEdit ? (
+                <div className="library-record-actions">
+                  <button
+                    className="ui-button ui-button--secondary library-action library-action--secondary"
+                    disabled={editor !== null}
+                    onClick={(event) =>
+                      openEditor({ mode: "skills" }, event.currentTarget)
+                    }
+                    type="button"
+                  >
+                    Add skills
+                  </button>
+                </div>
+              ) : null}
               <SkillBoard
                 activeSkillId={filters.skillId}
                 canEdit={canEdit}

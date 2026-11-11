@@ -6,6 +6,7 @@ import type {
   ResumeLibrary,
   Skill,
 } from "../schemas/resume-data";
+import { jobDisplayTitle, projectDisplayName } from "./library-labels";
 
 export type LibraryFilters = {
   query: string;
@@ -217,24 +218,30 @@ type Recency = {
 };
 
 /**
- * How recent an experience is. An ongoing role is the most recent one and is
- * ordered by the month it started, a finished role is as recent as its end
- * date, and an experience without any date has no recency at all.
+ * How recent an experience is. Only an explicit null end date is current.
+ * A finished role is as recent as its end month. A start without an end is
+ * dated, not current. An experience with no date has no recency at all.
  */
 function experienceRecency(item: Job | Project): Recency | null {
-  // A missing end date means the experience is still running, which is how
-  // the library shows it as "Present".
-  if (!item.endDate) {
-    if (item.startDate) {
-      return { group: 0, month: monthIndex(item.startDate) };
-    }
-    return null;
+  if (item.endDate === null) {
+    return {
+      group: 0,
+      month: item.startDate
+        ? monthIndex(item.startDate)
+        : Number.NEGATIVE_INFINITY,
+    };
   }
-  return { group: 1, month: monthIndex(item.endDate) };
+  if (typeof item.endDate === "string") {
+    return { group: 1, month: monthIndex(item.endDate) };
+  }
+  if (item.startDate) return { group: 1, month: monthIndex(item.startDate) };
+  return null;
 }
 
 function experienceTitle(item: Job | Project) {
-  return "title" in item ? item.title : item.name;
+  return "title" in item
+    ? jobDisplayTitle(item.title)
+    : projectDisplayName(item.name);
 }
 
 /**

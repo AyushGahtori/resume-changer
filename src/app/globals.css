@@ -4331,6 +4331,35 @@ a:focus-visible {
   border-bottom: 1px solid var(--line);
 }
 
+.library-section-header > .library-action {
+  margin-left: auto;
+}
+
+.library-record-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+  margin: var(--space-12) 0;
+}
+
+.library-metadata-editor {
+  min-width: 0;
+}
+
+.library-metadata-editor .editor-field input[type="checkbox"] {
+  width: 1.1rem;
+  min-height: 1.1rem;
+}
+
+.library-metadata-links {
+  display: grid;
+  gap: var(--space-8);
+  min-width: 0;
+  margin: 0;
+  border: 0;
+  padding: 0;
+}
+
 .library-section-heading {
   margin: 0;
   font-size: 20px;

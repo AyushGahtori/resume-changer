@@ -11,6 +11,7 @@ import {
   type LibraryFilters,
   type LibrarySort,
 } from "@/lib/data/achievement-search";
+import { jobFilterLabel, projectFilterLabel } from "@/lib/data/library-labels";
 import type { ResumeLibrary, Skill } from "@/lib/schemas/resume-data";
 
 type Props = {
@@ -174,11 +175,11 @@ export default function SearchWorkbench({
               options={[
                 { label: "All experience", value: "" },
                 ...library.jobs.map((job) => ({
-                  label: `${job.title} · ${job.company}`,
+                  label: jobFilterLabel(job),
                   value: `job:${job.id}`,
                 })),
                 ...library.projects.map((project) => ({
-                  label: project.name,
+                  label: projectFilterLabel(project),
                   value: `project:${project.id}`,
                 })),
               ]}

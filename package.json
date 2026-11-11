@@ -11,7 +11,7 @@
     "test:worker-smoke": "node scripts/test-github-worker-smoke.mjs",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\" \"tests/**/*.{ts,tsx}\" \"scripts/**/*.mjs\" \"docs/**/*.md\" \".github/**/*.yml\" \"*.{json,mjs,ts,md}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\" \"tests/**/*.{ts,tsx}\" \"scripts/**/*.mjs\" \"dev/load-test/**/*.{mjs,cjs,ts,tsx,md,json}\" \"docs/**/*.md\" \".github/**/*.yml\" \"*.{json,mjs,ts,md}\"",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:ai-live": "node scripts/test-gemini-live.mjs",
@@ -19,7 +19,11 @@
     "test:pdf-bundled": "node scripts/test-pdf-bundled.mjs",
     "test:e2e": "playwright test",
     "test:github-journey": "node scripts/test-github-journey.mjs",
-    "test:security": "npx -y firebase-tools@15.34.1 emulators:exec --only auth,firestore --project demo-resume-changer-security --config firebase.security.json \"node node_modules/vitest/vitest.mjs run --config vitest.security.config.ts && node scripts/test-account-http.mjs\""
+    "test:security": "npx -y firebase-tools@15.34.1 emulators:exec --only auth,firestore --project demo-resume-changer-security --config firebase.security.json \"node node_modules/vitest/vitest.mjs run --config vitest.security.config.ts && node scripts/test-account-http.mjs\"",
+    "test:load:estimate": "node dev/load-test/run.mjs estimate",
+    "test:load:smoke": "node dev/load-test/run.mjs smoke",
+    "test:load": "node dev/load-test/run.mjs run",
+    "test:load:cleanup": "node dev/load-test/run.mjs cleanup"
   },
   "dependencies": {
     "@google/genai": "^2.29.1",

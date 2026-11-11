@@ -9,10 +9,16 @@ describe("library action descriptors", () => {
   it("covers every library action with a label, icon, size, and variant", () => {
     expect(Object.keys(LIBRARY_ACTIONS).sort()).toEqual([
       "add-achievement",
+      "add-job",
       "add-metric",
+      "add-project",
+      "add-skills",
       "close-editor",
       "detailed-entry",
+      "edit-job",
       "edit-point",
+      "edit-profile",
+      "edit-project",
       "remove-metric",
     ]);
 
@@ -34,6 +40,12 @@ describe("library action descriptors", () => {
     expect(getLibraryAction("add-metric").label).toBe("Add metric");
     expect(getLibraryAction("remove-metric").label).toBe("Remove metric");
     expect(getLibraryAction("close-editor").label).toBe("Cancel editing");
+    expect(getLibraryAction("add-job").label).toBe("Add job");
+    expect(getLibraryAction("edit-job").label).toBe("Edit job");
+    expect(getLibraryAction("add-project").label).toBe("Add project");
+    expect(getLibraryAction("edit-project").label).toBe("Edit project");
+    expect(getLibraryAction("edit-profile").label).toBe("Edit profile");
+    expect(getLibraryAction("add-skills").label).toBe("Add skills");
   });
 
   it("gives the surface one primary action and a neutral hierarchy below it", () => {

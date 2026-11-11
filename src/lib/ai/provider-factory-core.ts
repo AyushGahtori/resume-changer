@@ -1,3 +1,4 @@
+import { isLoadTestRuntime } from "../../../dev/load-test/runtime";
 import { AiProviderError } from "./provider";
 import {
   createGeminiProvider,
@@ -21,6 +22,12 @@ export function createAiProvider(
     GEMINI_REQUEST_TIMEOUT_MS: process.env.GEMINI_REQUEST_TIMEOUT_MS,
   },
 ): AiProvider {
+  if (isLoadTestRuntime()) {
+    throw new AiProviderError(
+      "AI providers are disabled for the local load test.",
+      "REQUEST_FAILED",
+    );
+  }
   const selectedProvider = environment.AI_PROVIDER ?? "gemini";
   if (selectedProvider === "mock") return mockAiProvider;
   if (selectedProvider !== "gemini") {

@@ -31,3 +31,6 @@ pnpm-debug.log*
 .vscode/
 /.swc
 /src/app/.well-known/workflow/
+
+# Copied into the app only while the local load-test build runs.
+/src/app/e2e/load-test-auth/

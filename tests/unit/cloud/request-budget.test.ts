@@ -3,7 +3,10 @@ import {
   remainingRequestTime,
   withRequestBudget,
 } from "../../../src/lib/cloud/request-budget";
-import { contentSecurityPolicy } from "../../../src/lib/cloud/headers";
+import {
+  contentSecurityPolicy,
+  emulatorConnectOrigins,
+} from "../../../src/lib/cloud/headers";
 afterEach(() => vi.useRealTimers());
 describe("production response hardening", () => {
   it("isolates simultaneous deadlines and clamps expired work to zero", async () => {
@@ -32,5 +35,14 @@ describe("production response hardening", () => {
     expect(() =>
       contentSecurityPolicy("bad'; script-src *", false, false),
     ).toThrow();
+    const local = contentSecurityPolicy("Zm9vYmFy", false, true, [
+      "127.0.0.1:9098",
+      "203.0.113.8:9098",
+    ]);
+    expect(local).toContain("http://127.0.0.1:9098");
+    expect(local).not.toContain("203.0.113.8");
+    expect(emulatorConnectOrigins(["127.0.0.1:8088"])).toContain(
+      "http://127.0.0.1:8088",
+    );
   });
 });

@@ -94,7 +94,7 @@ export const AchievementEvidenceSchema = z
       .optional(),
     section: z.enum(["experience", "projects"]),
     groupId: StableIdSchema,
-    groupTitle: shortText,
+    groupTitle: shortText.optional(),
     groupSubtitle: shortText.optional(),
   })
   .strict();

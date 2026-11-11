@@ -120,11 +120,13 @@ describe("ResumeLibrarySchema", () => {
     expect(ResumeLibrarySchema.safeParse(validLibrary()).success).toBe(true);
   });
 
-  it("rejects a missing required profile field", () => {
+  it("normalizes a missing profile name to an empty string", () => {
     const library = validLibrary();
     delete (library.profile as Partial<typeof library.profile>).fullName;
 
-    expect(ResumeLibrarySchema.safeParse(library).success).toBe(false);
+    const result = ResumeLibrarySchema.safeParse(library);
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.profile.fullName).toBe("");
   });
 
   it("rejects invalid month values and reversed job dates", () => {

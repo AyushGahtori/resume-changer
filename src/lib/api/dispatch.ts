@@ -34,10 +34,18 @@ import {
 } from "@/app/api/job-analyses/[id]/handler";
 import { POST as createParent } from "@/app/api/library/parents/handler";
 import { POST as createPoint } from "@/app/api/library/points/handler";
-import { POST as createSkill } from "@/app/api/library/skills/handler";
+import {
+  POST as createSkill,
+  PUT as mergeSkillBatch,
+} from "@/app/api/library/skills/handler";
 import { PATCH as updatePoint } from "@/app/api/library/points/[id]/handler";
+import { PATCH as updateProfile } from "@/app/api/library/profile/handler";
+import { PUT as upsertJob } from "@/app/api/library/jobs/[id]/handler";
+import { PUT as upsertProject } from "@/app/api/library/projects/[id]/handler";
+import { GET as loadTestSafety } from "../../../dev/load-test/safety-handler";
 import { POST as editResume } from "@/app/api/resume/edit/handler";
 import { GET as measureSkills } from "@/app/api/resume/skills/handler";
+import { loadTestForbidden } from "../../../dev/load-test/runtime";
 import { resolveGithubApiRoute } from "./github-routes";
 
 type ApiMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
@@ -88,7 +96,9 @@ const staticRoutes: Record<string, ApiMethods> = {
   },
   "library/parents": { POST: direct(createParent) },
   "library/points": { POST: direct(createPoint) },
-  "library/skills": { POST: direct(createSkill) },
+  "library/profile": { PATCH: direct(updateProfile) },
+  "load-test/safety": { GET: direct(loadTestSafety) },
+  "library/skills": { POST: direct(createSkill), PUT: direct(mergeSkillBatch) },
   "resume/edit": { POST: direct(editResume) },
   "resume/skills": { GET: direct(measureSkills) },
 };
@@ -169,6 +179,19 @@ export function resolveApiRequest(pathname: string): ApiRouteMatch | null {
       context: { params: Promise.resolve({ id: routePath[2] }) },
     };
 
+  if (
+    routePath.length === 3 &&
+    routePath[0] === "library" &&
+    (routePath[1] === "jobs" || routePath[1] === "projects") &&
+    routePath[2]
+  )
+    return {
+      methods: {
+        PUT: withId(routePath[1] === "jobs" ? upsertJob : upsertProject),
+      },
+      context: { params: Promise.resolve({ id: routePath[2] }) },
+    };
+
   return null;
 }
 
@@ -200,6 +223,15 @@ export function optionsForApiRequest(request: Request): Response {
 
 export async function dispatchApiRequest(request: Request): Promise<Response> {
   const path = new URL(request.url).pathname;
+  if (loadTestForbidden(path, request.method.toUpperCase())) {
+    return Response.json(
+      {
+        error: "This operation is disabled for the local load test.",
+        code: "load-test-forbidden",
+      },
+      { status: 403, headers: { "Cache-Control": "no-store" } },
+    );
+  }
   if (
     (/^\/api\/github\/(?:imports(?:\/|$)|jobs(?:\/|$))/.test(path) ||
       path.startsWith("/api/library/notifications")) &&

@@ -198,7 +198,14 @@ export function buildEvidenceSummary(
     ? `${role} with skills in ${skills.join(", ")}.`
     : "";
   if (metrics.length)
-    return `${opening} Achievements include ${metrics.map(({ metric, source }) => `${formatMetric(metric)} (${source.groupSubtitle ?? source.groupTitle})`).join("; ")}.`.trim();
+    return `${opening} Achievements include ${metrics
+      .map(({ metric, source }) => {
+        const scope = source.groupSubtitle ?? source.groupTitle;
+        return scope
+          ? `${formatMetric(metric)} (${scope})`
+          : formatMetric(metric);
+      })
+      .join("; ")}.`.trim();
   const strongest = [...input.achievements].sort(
     (a, b) => b.text.length - a.text.length,
   )[0];

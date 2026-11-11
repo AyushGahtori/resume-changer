@@ -22,7 +22,13 @@ export type LibraryActionName =
   | "edit-point"
   | "add-metric"
   | "remove-metric"
-  | "close-editor";
+  | "close-editor"
+  | "add-job"
+  | "edit-job"
+  | "add-project"
+  | "edit-project"
+  | "edit-profile"
+  | "add-skills";
 
 export type LibraryActionVariant = "primary" | "secondary" | "tertiary";
 
@@ -79,6 +85,42 @@ export const LIBRARY_ACTIONS: Readonly<
     icon: X,
     iconSize: 18,
     variant: "tertiary",
+  },
+  "add-job": {
+    label: "Add job",
+    icon: Plus,
+    iconSize: 16,
+    variant: "secondary",
+  },
+  "edit-job": {
+    label: "Edit job",
+    icon: Pencil,
+    iconSize: 16,
+    variant: "tertiary",
+  },
+  "add-project": {
+    label: "Add project",
+    icon: Plus,
+    iconSize: 16,
+    variant: "secondary",
+  },
+  "edit-project": {
+    label: "Edit project",
+    icon: Pencil,
+    iconSize: 16,
+    variant: "tertiary",
+  },
+  "edit-profile": {
+    label: "Edit profile",
+    icon: Pencil,
+    iconSize: 16,
+    variant: "secondary",
+  },
+  "add-skills": {
+    label: "Add skills",
+    icon: Plus,
+    iconSize: 16,
+    variant: "secondary",
   },
 };
 

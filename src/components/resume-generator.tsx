@@ -1,5 +1,9 @@
 "use client";
 import { apiFetch } from "@/lib/cloud/api-fetch";
+import {
+  jobDisplayTitle,
+  projectDisplayName,
+} from "@/lib/data/library-labels";
 import { useWorkspaceStorage } from "./account-session";
 
 import Link from "next/link";
@@ -158,15 +162,15 @@ function getPointGroups(library: ResumeLibrary): PointGroup[] {
     ...library.jobs.map((job) => ({
       id: job.id,
       kind: "JOB" as const,
-      title: job.title,
-      subtitle: job.company,
+      title: jobDisplayTitle(job.title),
+      subtitle: job.company.trim(),
       points: job.points.filter((point) => point.enabled),
     })),
     ...library.projects.map((project) => ({
       id: project.id,
       kind: "PROJECT" as const,
-      title: project.name,
-      subtitle: project.role ?? "",
+      title: projectDisplayName(project.name),
+      subtitle: project.role?.trim() ?? "",
       points: project.points.filter((point) => point.enabled),
     })),
   ].filter((group) => group.points.length > 0);
