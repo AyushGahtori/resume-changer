@@ -19,8 +19,9 @@ jobs:
     runs-on: ubuntu-latest
     # A free-tier request can take up to two minutes, and a run walks the
     # provider's model chain when one model has no daily quota left. The
-    # budget covers a full chain walk for the three live tests.
-    timeout-minutes: 40
+    # budget covers two full chain walks per test if an upstream outage
+    # requires the one bounded live-check retry.
+    timeout-minutes: 65
     env:
       # The free tier caps requests per model per day, so the live check
       # leaves the model unset and lets the provider walk its model chain.

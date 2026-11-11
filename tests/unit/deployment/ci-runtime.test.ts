@@ -31,7 +31,7 @@ describe("CI runtime contracts", () => {
     expect(live).toContain("Acquire::Retries=5");
     expect(live).toContain("run: npm run test:pdf-live");
   });
-  it("lets every live test outlast the provider's ten-minute request budget", () => {
+  it("bounds both live attempts and gives the workflow time to finish the suite", () => {
     const tests = readFileSync("tests/unit/ai/gemini-live.test.ts", "utf8");
     const provider = readFileSync("src/lib/ai/gemini-provider-core.ts", "utf8");
     const budget = Number(
@@ -42,8 +42,9 @@ describe("CI runtime contracts", () => {
     const timeout = Number(
       tests.match(/LIVE_TEST_TIMEOUT_MS = ([\d_]+)/)![1].replaceAll("_", ""),
     );
-    expect(timeout).toBeGreaterThan(budget);
-    expect(live).toContain("timeout-minutes: 40");
+    expect(timeout).toBeGreaterThan(budget * 2 + 20_000);
+    const workflowMinutes = Number(live.match(/timeout-minutes: (\d+)/)![1]);
+    expect(workflowMinutes * 60_000).toBeGreaterThan(timeout * 3);
     expect(live).toContain("npm run test:ai-live");
   });
 });
