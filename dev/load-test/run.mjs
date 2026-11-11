@@ -144,6 +144,17 @@ async function ensureTools() {
   }
 }
 
+async function writeEmulatorConfig() {
+  const target = path.join(root, "firebase.load-test.json");
+  const source = JSON.parse(
+    await readFile(path.join(devDir, "firebase.json"), "utf8"),
+  );
+  source.firestore.rules = "firestore.rules";
+  source.firestore.indexes = "firestore.indexes.json";
+  await writeFile(target, `${JSON.stringify(source, null, 2)}\n`);
+  return target;
+}
+
 async function mountLoadTestRoute() {
   await mkdir(authRouteDir, { recursive: true });
   await copyFile(
@@ -278,7 +289,7 @@ async function executeRun(config, runId, { resume = false } = {}) {
     "--project",
     "demo-resume-changer-loadtest",
     "--config",
-    path.join(devDir, "firebase.json"),
+    await writeEmulatorConfig(),
     "--export-on-exit",
     path.join(directory, "emulator"),
   ];
@@ -370,6 +381,7 @@ async function executeRun(config, runId, { resume = false } = {}) {
     for (const child of children) {
       if (child.exitCode === null) child.kill("SIGKILL");
     }
+    await rm(path.join(root, "firebase.load-test.json"), { force: true });
   }
 }
 
