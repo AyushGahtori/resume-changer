@@ -47,9 +47,12 @@ test("optional library metadata saves partial records and rejects a bad email", 
   );
   await page.getByRole("button", { name: "Save job" }).click();
   expect((await saved).ok()).toBeTruthy();
-  await expect(page.getByText("Fictional Partial Company")).toBeVisible();
+  const savedCompany = page
+    .getByRole("region", { name: "Jobs" })
+    .getByText("Fictional Partial Company", { exact: true });
+  await expect(savedCompany).toBeVisible();
   await page.reload();
-  await expect(page.getByText("Fictional Partial Company")).toBeVisible();
+  await expect(savedCompany).toBeVisible();
 
   await page.setViewportSize({ width: 390, height: 844 });
   const overflow = await page.evaluate(

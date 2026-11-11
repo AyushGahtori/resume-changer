@@ -69,6 +69,8 @@ export default function SearchWorkbench({
     credentials: result.credentials.length,
     all: result.visiblePointCount,
   };
+  // A skill filter removes credentials, so a zero count is the filtered
+  // result. Other filters do not apply to credentials, and the chip says so.
   const credentialsUnfiltered =
     !filters.skillId &&
     Boolean(

@@ -39,7 +39,7 @@ describe("library category counts", () => {
     expect(marked).toContain(">unfiltered<");
   });
 
-  it("marks credentials unfiltered when a skill filter is active", () => {
+  it("drops credentials for a skill filter without calling that count unfiltered", () => {
     const filters = { ...EMPTY_LIBRARY_FILTERS, skillId: "skill-python" };
     const result = sortFilteredLibrary(
       filterAchievementLibrary(studioLibrary, filters),
@@ -59,7 +59,8 @@ describe("library category counts", () => {
       }),
     );
 
-    expect(markup).toContain("unfiltered");
+    expect(markup).toContain('aria-label="Credentials, 0 credentials"');
+    expect(markup).not.toContain("unfiltered");
     expect(markup).toContain(`${result.visiblePointCount} achievement points`);
     expect(markup).not.toContain("No save destination is available");
   });

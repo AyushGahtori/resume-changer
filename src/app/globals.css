@@ -8502,9 +8502,15 @@ a:focus-visible {
     line-height: var(--type-helper-line-height);
   }
 
+  .generation-heading {
+    margin-bottom: 10px;
+  }
+
   .generation-footer {
     align-items: flex-start;
     flex-direction: column;
+    margin-top: 4px;
+    padding-top: 8px;
   }
 }
 

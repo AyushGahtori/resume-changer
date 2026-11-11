@@ -242,9 +242,12 @@ test("maps the builder palette onto the shared app-wide tokens", async ({
   await checkbox.check();
   await expect(checkbox).toBeChecked();
 
-  // Focus carries the shared focus ring.
-  await page.keyboard.press("Tab");
-  await primary.focus();
+  // Focus carries the shared focus ring. Script focus has to request the
+  // keyboard ring; a plain focus() call does not match :focus-visible.
+  await primary.evaluate((element) => {
+    if (!(element instanceof HTMLElement)) return;
+    element.focus({ focusVisible: true });
+  });
   const outline = await primary.evaluate((element) => {
     const style = getComputedStyle(element);
     return {
@@ -300,9 +303,13 @@ test("keeps the builder palette in the dark theme on the same tokens", async ({
     "accent-color",
     rgbString(normalized["--color-violet"]),
   );
+  await checkbox.check();
+  await expect(primary).toBeEnabled();
 
-  await page.keyboard.press("Tab");
-  await primary.focus();
+  await primary.evaluate((element) => {
+    if (!(element instanceof HTMLElement)) return;
+    element.focus({ focusVisible: true });
+  });
   const outline = await primary.evaluate((element) => {
     const style = getComputedStyle(element);
     return { color: style.outlineColor, style: style.outlineStyle };

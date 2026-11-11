@@ -105,6 +105,61 @@ function pointMatches(
   );
 }
 
+function hasPointLevelFilter(filters: LibraryFilters) {
+  return Boolean(
+    filters.skillId ||
+    filters.tag ||
+    filters.sourceType ||
+    filters.status !== "all",
+  );
+}
+
+function hasExperienceMetadata(item: Job | Project, kind: "job" | "project") {
+  if (kind === "job") {
+    const job = item as Job;
+    return Boolean(
+      job.company.trim() ||
+      job.title.trim() ||
+      job.employmentType ||
+      job.location?.trim() ||
+      job.startDate ||
+      job.endDate === null ||
+      typeof job.endDate === "string" ||
+      job.description?.trim(),
+    );
+  }
+  const project = item as Project;
+  return Boolean(
+    project.name.trim() ||
+    project.role?.trim() ||
+    project.url?.trim() ||
+    project.description?.trim() ||
+    project.startDate ||
+    project.endDate === null ||
+    typeof project.endDate === "string",
+  );
+}
+
+function metadataMatchesQuery(
+  item: Job | Project,
+  kind: "job" | "project",
+  query: string,
+) {
+  if (!query) return true;
+  if (kind === "job") {
+    const job = item as Job;
+    return includesQuery(
+      [job.title, job.company, job.location, job.description],
+      query,
+    );
+  }
+  const project = item as Project;
+  return includesQuery(
+    [project.name, project.role, project.description, project.url],
+    query,
+  );
+}
+
 function filterExperiences<T extends Job | Project>(
   items: T[],
   kind: "job" | "project",
@@ -121,7 +176,15 @@ function filterExperiences<T extends Job | Project>(
       pointMatches(point, experienceName, experienceId, skillsById, filters),
     );
 
-    return points.length > 0 ? [{ ...item, points }] : [];
+    if (points.length > 0) return [{ ...item, points }];
+    // A saved job or project can exist before its first achievement.
+    // Point-level filters still hide it, because it has nothing that matches.
+    if (hasPointLevelFilter(filters)) return [];
+    if (filters.experienceId && filters.experienceId !== experienceId)
+      return [];
+    if (!hasExperienceMetadata(item, kind)) return [];
+    if (!metadataMatchesQuery(item, kind, normalize(filters.query))) return [];
+    return [{ ...item, points }];
   });
 }
 
