@@ -362,11 +362,6 @@ export async function runBrowserUser({
       })),
     ];
     const skillNames = assignment.skills.slice(0, 2).map((skill) => skill.name);
-    await page
-      .getByText(assignment.jobs[0].changes.company)
-      .filter({ visible: true })
-      .first()
-      .waitFor();
     for (const parent of parents) {
       for (const point of parent.points) {
         if (signal?.aborted) {
