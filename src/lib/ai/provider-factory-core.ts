@@ -28,6 +28,15 @@ export function createAiProvider(
       "REQUEST_FAILED",
     );
   }
+  if (
+    process.env.RESUME_SIMULATION_MODE === "1" &&
+    environment.AI_PROVIDER !== "mock"
+  ) {
+    throw new AiProviderError(
+      "AI providers are disabled for the user simulation.",
+      "REQUEST_FAILED",
+    );
+  }
   const selectedProvider = environment.AI_PROVIDER ?? "gemini";
   if (selectedProvider === "mock") return mockAiProvider;
   if (selectedProvider !== "gemini") {

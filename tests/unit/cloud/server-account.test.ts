@@ -175,4 +175,62 @@ describe("server Firebase identity verification", () => {
     );
     expect(results).toEqual(["alice", "bob"]);
   });
+  it("accepts a signed custom simulation identity only in the validated preview runtime", async () => {
+    const runId = "sim-20261111-001";
+    const uid = `sim-${runId}-u0001`;
+    const custom = {
+      sub: uid,
+      aud: "resume-changer-simulation-test",
+      iss: "https://securetoken.google.com/resume-changer-simulation-test",
+      email: "user-1@example.test",
+      email_verified: false,
+      simulation: true,
+      simulationRunId: runId,
+      firebase: { sign_in_provider: "custom" },
+    };
+    await expect(verifyToken(await token(custom))).rejects.toMatchObject({
+      status: 401,
+    });
+    expect(fetch).not.toHaveBeenCalled();
+
+    vi.stubEnv(
+      "NEXT_PUBLIC_FIREBASE_PROJECT_ID",
+      "resume-changer-simulation-test",
+    );
+    vi.stubEnv("RESUME_SIMULATION_MODE", "1");
+    vi.stubEnv("RESUME_APP_MODE", "firebase");
+    vi.stubEnv("AI_PROVIDER", "mock");
+    vi.stubEnv("VERCEL", "1");
+    vi.stubEnv("VERCEL_ENV", "preview");
+    vi.stubEnv("RESUME_SIMULATION_RUN_ID", runId);
+    vi.stubEnv(
+      "RESUME_SIMULATION_RUNNER_KEY",
+      "0123456789abcdef0123456789abcdef",
+    );
+    vi.stubEnv(
+      "RESUME_SIMULATION_ORIGIN",
+      "https://resume-changer-abc123.vercel.app",
+    );
+    vi.stubEnv(
+      "RESUME_SIMULATION_FIREBASE_PROJECT_ID",
+      "resume-changer-simulation-test",
+    );
+    vi.stubEnv("NEXT_PUBLIC_FIREBASE_DATABASE_ID", "(default)");
+    vi.mocked(fetch).mockResolvedValueOnce(
+      Response.json({
+        users: [
+          {
+            localId: uid,
+            email: "user-1@example.test",
+            emailVerified: false,
+            validSince: "0",
+          },
+        ],
+      }),
+    );
+    await expect(verifyToken(await token(custom))).resolves.toMatchObject({
+      uid,
+      email: "user-1@example.test",
+    });
+  });
 });

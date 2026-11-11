@@ -23,7 +23,8 @@
     "test:load:estimate": "node dev/load-test/run.mjs estimate",
     "test:load:smoke": "node dev/load-test/run.mjs smoke",
     "test:load": "node dev/load-test/run.mjs run",
-    "test:load:cleanup": "node dev/load-test/run.mjs cleanup"
+    "test:load:cleanup": "node dev/load-test/run.mjs cleanup",
+    "simulate:users": "node scripts/user-simulation.mjs"
   },
   "dependencies": {
     "@google/genai": "^2.29.1",
