@@ -1,6 +1,7 @@
 "use client";
 
 import { Info, Pencil, Sparkles, X } from "lucide-react";
+import Link from "next/link";
 import * as React from "react";
 import type { ResumeLibrary } from "@/lib/schemas/resume-data";
 import { studioGroups } from "@/lib/generation/studio-document";
@@ -209,6 +210,12 @@ export default function ImaginationComposer({
               }
               value={selectedDestinationId}
             />
+            {destinations.length === 0 ? (
+              <p>
+                <Link href="/library">Add a job or project</Link> before saving
+                an achievement.
+              </p>
+            ) : null}
             {disconnectCopy && (
               <p className={styles.disconnect} role="status">
                 <span>{disconnectCopy}</span>

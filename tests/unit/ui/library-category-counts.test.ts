@@ -39,28 +39,56 @@ describe("library category counts", () => {
     expect(marked).toContain(">unfiltered<");
   });
 
-  it("marks credentials unfiltered when a skill filter is active", () => {
-    const filters = { ...EMPTY_LIBRARY_FILTERS, skillId: "skill-python" };
-    const result = sortFilteredLibrary(
-      filterAchievementLibrary(studioLibrary, filters),
+  it("marks credentials unfiltered only when the filter leaves that list whole", () => {
+    const skillFilters = { ...EMPTY_LIBRARY_FILTERS, skillId: "skill-python" };
+    const skillResult = sortFilteredLibrary(
+      filterAchievementLibrary(studioLibrary, skillFilters),
       "most-recent",
     );
-    const markup = renderToStaticMarkup(
+    const skillMarkup = renderToStaticMarkup(
       createElement(SearchWorkbench, {
-        filters,
+        filters: skillFilters,
         hasFilters: true,
         library: studioLibrary,
         onFilterChange: () => undefined,
         onReset: () => undefined,
         onSortChange: () => undefined,
         options: { skills: studioLibrary.skills, tags: [] },
-        result,
+        result: skillResult,
         sort: "most-recent",
       }),
     );
 
-    expect(markup).toContain("unfiltered");
-    expect(markup).toContain(`${result.visiblePointCount} achievement points`);
-    expect(markup).not.toContain("No save destination is available");
+    expect(skillMarkup).not.toContain(">unfiltered<");
+    expect(skillMarkup).toContain('aria-label="Credentials, 0 credentials"');
+    expect(skillMarkup).toContain(
+      `${skillResult.visiblePointCount} achievement points`,
+    );
+
+    const statusFilters = {
+      ...EMPTY_LIBRARY_FILTERS,
+      status: "enabled" as const,
+    };
+    const statusResult = sortFilteredLibrary(
+      filterAchievementLibrary(studioLibrary, statusFilters),
+      "most-recent",
+    );
+    const statusMarkup = renderToStaticMarkup(
+      createElement(SearchWorkbench, {
+        filters: statusFilters,
+        hasFilters: true,
+        library: studioLibrary,
+        onFilterChange: () => undefined,
+        onReset: () => undefined,
+        onSortChange: () => undefined,
+        options: { skills: studioLibrary.skills, tags: [] },
+        result: statusResult,
+        sort: "most-recent",
+      }),
+    );
+
+    expect(statusMarkup).toContain(
+      'aria-label="Credentials, 2 credentials, unfiltered"',
+    );
   });
 });

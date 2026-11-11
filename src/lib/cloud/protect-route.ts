@@ -34,11 +34,15 @@ function assertJsonMutation(request: Request): void {
   const raw = request.headers.get("content-type");
   if (!raw) {
     if (request.method === "DELETE") return;
-    throw new AccountAccessError("Send a JSON request.", "FORBIDDEN", 403);
+    throw new AccountAccessError(
+      "Send a JSON request.",
+      "INVALID_REQUEST",
+      400,
+    );
   }
   const mediaType = raw.split(";", 1)[0]?.trim().toLowerCase();
   if (mediaType === "application/json") return;
-  throw new AccountAccessError("Send a JSON request.", "FORBIDDEN", 403);
+  throw new AccountAccessError("Send a JSON request.", "INVALID_REQUEST", 400);
 }
 
 export function privateResponse(response: Response): Response {

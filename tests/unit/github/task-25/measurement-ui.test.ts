@@ -18,6 +18,13 @@ import type {
 } from "../../../../src/lib/github/contracts";
 import { METRIC_CATALOG } from "../../../../src/lib/github/measurement-catalog";
 
+async function settle(ready: () => boolean) {
+  const deadline = Date.now() + 1000;
+  while (!ready() && Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  }
+}
+
 let createRoot: typeof import("react-dom/client").createRoot;
 let MeasurementFields: typeof import("../../../../src/components/github-import/measurement-fields").MeasurementFields;
 
@@ -470,7 +477,7 @@ describe("MeasurementFields", () => {
     click(host, "Preview measurement");
 
     await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 0));
+      await settle(() => onAnswer.mock.calls.length === 1);
     });
 
     expect(onAnswer).toHaveBeenCalledTimes(1);
@@ -542,7 +549,7 @@ describe("MeasurementFields", () => {
     );
     click(host, "Preview measurement");
     await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 0));
+      await settle(() => onAnswer.mock.calls.length === 1);
     });
 
     expect(onAnswer).toHaveBeenCalledTimes(1);

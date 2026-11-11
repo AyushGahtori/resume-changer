@@ -36,6 +36,29 @@ import { POST as createParent } from "@/app/api/library/parents/handler";
 import { POST as createPoint } from "@/app/api/library/points/handler";
 import { POST as createSkill } from "@/app/api/library/skills/handler";
 import { PATCH as updatePoint } from "@/app/api/library/points/[id]/handler";
+import { PATCH as updateProfile } from "@/app/api/library/profile/handler";
+import { POST as createSkillsBulk } from "@/app/api/library/skills/bulk-handler";
+import { POST as createEducation } from "@/app/api/library/education/handler";
+import {
+  DELETE as deleteEducation,
+  PATCH as updateEducation,
+} from "@/app/api/library/education/item-handler";
+import { POST as createCredential } from "@/app/api/library/credentials/handler";
+import {
+  DELETE as deleteCredential,
+  PATCH as updateCredential,
+} from "@/app/api/library/credentials/item-handler";
+import { POST as createJob } from "@/app/api/library/jobs/handler";
+import {
+  DELETE as deleteJob,
+  PATCH as updateJob,
+} from "@/app/api/library/jobs/item-handler";
+import { POST as createProject } from "@/app/api/library/projects/handler";
+import {
+  DELETE as deleteProject,
+  PATCH as updateProject,
+} from "@/app/api/library/projects/item-handler";
+import { POST as saveNotes } from "@/app/api/library/notes/handler";
 import { POST as editResume } from "@/app/api/resume/edit/handler";
 import { GET as measureSkills } from "@/app/api/resume/skills/handler";
 import { resolveGithubApiRoute } from "./github-routes";
@@ -89,6 +112,13 @@ const staticRoutes: Record<string, ApiMethods> = {
   "library/parents": { POST: direct(createParent) },
   "library/points": { POST: direct(createPoint) },
   "library/skills": { POST: direct(createSkill) },
+  "library/skills/bulk": { POST: direct(createSkillsBulk) },
+  "library/profile": { PATCH: direct(updateProfile) },
+  "library/education": { POST: direct(createEducation) },
+  "library/credentials": { POST: direct(createCredential) },
+  "library/jobs": { POST: direct(createJob) },
+  "library/projects": { POST: direct(createProject) },
+  "library/notes": { POST: direct(saveNotes) },
   "resume/edit": { POST: direct(editResume) },
   "resume/skills": { GET: direct(measureSkills) },
 };
@@ -168,6 +198,27 @@ export function resolveApiRequest(pathname: string): ApiRouteMatch | null {
       methods: { PATCH: withId(updatePoint) },
       context: { params: Promise.resolve({ id: routePath[2] }) },
     };
+
+  if (routePath.length === 3 && routePath[0] === "library" && routePath[2]) {
+    const context = { params: Promise.resolve({ id: routePath[2] }) };
+    const recordRoutes: Record<string, ApiMethods> = {
+      jobs: { PATCH: withId(updateJob), DELETE: withId(deleteJob) },
+      projects: {
+        PATCH: withId(updateProject),
+        DELETE: withId(deleteProject),
+      },
+      education: {
+        PATCH: withId(updateEducation),
+        DELETE: withId(deleteEducation),
+      },
+      credentials: {
+        PATCH: withId(updateCredential),
+        DELETE: withId(deleteCredential),
+      },
+    };
+    const methods = recordRoutes[routePath[1]];
+    if (methods) return { methods, context };
+  }
 
   return null;
 }

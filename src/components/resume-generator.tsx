@@ -3871,6 +3871,14 @@ export default function ResumeGenerator({ library, source }: Props) {
                 {SELECTION_CHANGED_NOTICE}
               </p>
             )}
+            {source === "personal" &&
+            library.jobs.length === 0 &&
+            library.projects.length === 0 ? (
+              <p className="generation-notice">
+                <Link href="/library">Add your first job or project</Link>{" "}
+                before generating a resume.
+              </p>
+            ) : null}
             {draftReady && !isGenerating && selectedIds.length === 0 && (
               <p className="generation-notice" id="generate-needs-selection">
                 Select an achievement, or run Suggest points or Auto Tailor,

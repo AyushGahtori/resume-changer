@@ -14,6 +14,7 @@ import {
 import type { ResumeLibrary } from "../../../src/lib/schemas/resume-data";
 import { createTailoringResponse } from "../../../src/lib/ai/tailor-achievements";
 import { createResumeDraftHandoff } from "../../helpers/resume-draft-handoff";
+import { withLiveAiRetry } from "../../helpers/live-ai-retry";
 
 const liveTestEnabled = process.env.GEMINI_LIVE_TEST === "1";
 
@@ -24,11 +25,11 @@ const liveTestEnabled = process.env.GEMINI_LIVE_TEST === "1";
  * reaches one that does. The budget leaves room for a chain walk and still
  * fails the test when the provider genuinely cannot answer.
  */
-const LIVE_TEST_TIMEOUT_MS = 240_000;
+const LIVE_TEST_TIMEOUT_MS = 1_240_000;
 // Achievement selection may spend the provider's full 10-minute fallback
-// budget across several free-tier models. Keep this above that bound; the
-// workflow itself has a 30-minute cap for the complete live suite.
-const LIVE_SELECTION_TIMEOUT_MS = 620_000;
+// budget across several free-tier models. Allow one outage retry with a
+// delay; the workflow bounds the complete suite to 65 minutes.
+const LIVE_SELECTION_TIMEOUT_MS = LIVE_TEST_TIMEOUT_MS;
 
 describe.skipIf(!liveTestEnabled)("Gemini live integration", () => {
   it(
@@ -44,15 +45,17 @@ describe.skipIf(!liveTestEnabled)("Gemini live integration", () => {
         // model would exhaust the whole daily budget on the first run.
         model: process.env.GEMINI_LIVE_MODEL,
       });
-      const result = await provider.analyzeJobDescription({
-        company: "Example AI",
-        roleTitle: "Machine Learning Platform Engineer",
-        jobDescription: `Role: Machine Learning Platform Engineer, early career.
+      const result = await withLiveAiRetry(() =>
+        provider.analyzeJobDescription({
+          company: "Example AI",
+          roleTitle: "Machine Learning Platform Engineer",
+          jobDescription: `Role: Machine Learning Platform Engineer, early career.
 Required qualifications: Python programming and distributed systems experience.
 Preferred qualifications: familiarity with Kubernetes.
 Responsibilities: Build scalable production ML infrastructure and optimize GPU model serving latency.
 Tools: Python and Kubernetes.`,
-      });
+        }),
+      );
       const validated = JobAnalysisResultSchema.parse(result);
 
       expect(validated.targetTitle.toLowerCase()).toContain("machine learning");
@@ -139,7 +142,7 @@ Tools: Python and Kubernetes.`,
         }),
       };
       const result = ResumeDraftResultSchema.parse(
-        await provider.draftResume(draftInput),
+        await withLiveAiRetry(() => provider.draftResume(draftInput)),
       );
       // The live check exercises the same path the tailoring API uses. A model
       // that adds a number the source never recorded is corrected from the
@@ -227,7 +230,8 @@ Tools: Python and Kubernetes.`,
       });
       const recommendation = await recommendAchievements({
         input,
-        selectWithAi: () => provider.selectAchievements(input),
+        selectWithAi: () =>
+          withLiveAiRetry(() => provider.selectAchievements(input)),
       });
       expect(recommendation.mode).toBe("ai");
       const result = AchievementSelectionResultSchema.parse(

@@ -2,6 +2,7 @@
 import { apiFetch as fetch } from "@/lib/cloud/api-fetch";
 import { useWorkspaceAccount, useWorkspaceStorage } from "./account-session";
 
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { AnalysisState } from "@/components/home/job-analysis-panel";
 import { ATSAnalysisPreview } from "@/components/home/ats-analysis-preview";
@@ -958,7 +959,10 @@ export default function JDWorkspace({
               className={`form-save-feedback${saveFeedbackError ? " is-error" : ""}`}
               role="status"
             >
-              {saveFeedback}
+              {saveFeedback}{" "}
+              {!saveFeedbackError && saveFeedback.includes("Resume builder") ? (
+                <Link href="/generate">Continue to your resume</Link>
+              ) : null}
             </p>
           )}
           {analysisOutOfDate && (
