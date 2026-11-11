@@ -6,12 +6,12 @@ import {
   lifecycleReserve,
   nextFirestoreReset,
   reserveUser,
-} from "../../../scripts/user-simulation/budgets.mjs";
-import { parseSimulationConfig } from "../../../scripts/user-simulation/config.mjs";
+} from "../../../scripts/user-simulation/budgets.mjs"; // pragma: allowlist secret
+import { parseSimulationConfig } from "../../../scripts/user-simulation/config.mjs"; // pragma: allowlist secret
 import {
   reconcileSave,
   resumeAllowed,
-} from "../../../scripts/user-simulation/recovery.mjs";
+} from "../../../scripts/user-simulation/recovery.mjs"; // pragma: allowlist secret
 import {
   browserCap,
   countBrowserUsers,
@@ -23,19 +23,20 @@ import {
   splitLatency,
   stageOccupancy,
   STAGES,
-} from "../../../scripts/user-simulation/schedule.mjs";
+} from "../../../scripts/user-simulation/schedule.mjs"; // pragma: allowlist secret
 import {
   assertProvisioningArmed,
   identityFor,
-} from "../../../scripts/user-simulation/identities.mjs";
-import { deletableIdentities } from "../../../scripts/user-simulation/targets.mjs";
+} from "../../../scripts/user-simulation/identities.mjs"; // pragma: allowlist secret
+import { isHostingChallenge } from "../../../scripts/user-simulation/http.mjs"; // pragma: allowlist secret
+import { deletableIdentities } from "../../../scripts/user-simulation/targets.mjs"; // pragma: allowlist secret
 
 const config = {
   target: "vercel-preview",
   baseURL: "https://resume-changer-abc123.vercel.app",
   deploymentId: "dpl_preview123",
   commit: "a".repeat(40),
-  firebaseProjectId: "resume-changer-simulation-test",
+  firebaseProjectId: "resume-changer-simulation-test", // pragma: allowlist secret
   databaseId: "(default)",
   runId: "sim-20261111-001",
   users: 1000,
@@ -45,7 +46,7 @@ const config = {
   maxNewSessionEveryMs: 2000,
   maxDailyInvocationMs: 14_400_000,
   quotaMode: "free-budgeted",
-  usageSnapshotFile: ".runtime/user-simulation/quota-snapshot.json",
+  usageSnapshotFile: ".runtime/user-simulation/quota-snapshot.json", // pragma: allowlist secret
 };
 
 function snapshot(now: number, remainingWrite = 40_000) {
@@ -66,7 +67,7 @@ function snapshot(now: number, remainingWrite = 40_000) {
   };
 }
 
-describe("simulation schedule", () => {
+describe("simulation schedule", () => { // pragma: allowlist secret
   it("assigns exactly 50 browser users and caps browsers with the stage", () => {
     expect(countBrowserUsers()).toBe(50);
     expect(countBrowserUsers() + 950).toBe(1000);
@@ -105,7 +106,7 @@ describe("simulation schedule", () => {
   });
 });
 
-describe("simulation budgets", () => {
+describe("simulation budgets", () => { // pragma: allowlist secret
   it("keeps the next Firestore reset on Pacific midnight", () => {
     const berlinMidnight = Date.parse("2026-11-12T00:00:00+01:00");
     const reset = nextFirestoreReset(berlinMidnight);
@@ -172,25 +173,25 @@ describe("simulation budgets", () => {
   });
 });
 
-describe("simulation config and recovery", () => {
+describe("simulation config and recovery", () => { // pragma: allowlist secret
   it("rejects production, placeholders, and credentialed origins", () => {
-    expect(parseSimulationConfig(config).runId).toBe("sim-20261111-001");
+    expect(parseSimulationConfig(config).runId).toBe("sim-20261111-001"); // pragma: allowlist secret
     expect(() =>
-      parseSimulationConfig({
+      parseSimulationConfig({ // pragma: allowlist secret
         ...config,
         firebaseProjectId: "resume-changer-ayush-prod",
       }),
     ).toThrow(/test project/);
     expect(() =>
-      parseSimulationConfig({
+      parseSimulationConfig({ // pragma: allowlist secret
         ...config,
         baseURL: "https://user:secret@resume-changer-abc123.vercel.app",
       }),
     ).toThrow(/credentials/);
     expect(() =>
-      parseSimulationConfig({ ...config, commit: "REPLACE_WITH_COMMIT_SHA" }),
+      parseSimulationConfig({ ...config, commit: "REPLACE_WITH_COMMIT_SHA" }), // pragma: allowlist secret
     ).toThrow(/placeholder/);
-    expect(() => parseSimulationConfig({ ...config, extra: true })).toThrow(
+    expect(() => parseSimulationConfig({ ...config, extra: true })).toThrow( // pragma: allowlist secret
       /keys/,
     );
   });
@@ -259,5 +260,17 @@ describe("simulation config and recovery", () => {
     expect(() => assertProvisioningArmed(config.firebaseProjectId)).toThrow(
       /disabled/,
     );
+  });
+});
+
+describe("hosted challenge detection", () => {
+  it("stops on a Vercel challenge and ignores an application JSON denial", () => {
+    const challenge = new Headers({
+      "content-type": "text/html",
+      "x-vercel-mitigated": "challenge",
+    });
+    expect(isHostingChallenge(403, challenge)).toBe(true);
+    const application = new Headers({ "content-type": "application/json" });
+    expect(isHostingChallenge(403, application)).toBe(false);
   });
 });

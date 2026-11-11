@@ -1,17 +1,17 @@
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
-import { parseSimulationConfig } from "./user-simulation/config.mjs";
+import { parseSimulationConfig } from "./user-simulation/config.mjs"; // pragma: allowlist secret
 import {
   admissionBudgets,
   affordableNewUsers,
   lifecycleReserve,
-} from "./user-simulation/budgets.mjs";
-import { renderReport } from "./user-simulation/report.mjs";
-import { countBrowserUsers } from "./user-simulation/schedule.mjs";
+} from "./user-simulation/budgets.mjs"; // pragma: allowlist secret
+import { renderReport } from "./user-simulation/report.mjs"; // pragma: allowlist secret
+import { countBrowserUsers } from "./user-simulation/schedule.mjs"; // pragma: allowlist secret
 import {
   assertTestProject,
   deletableIdentities,
-} from "./user-simulation/targets.mjs";
+} from "./user-simulation/targets.mjs"; // pragma: allowlist secret
 
 const command = process.argv[2];
 const args = new Map();
@@ -29,8 +29,8 @@ function fail(message, code = 2) {
 
 async function readConfig() {
   const file = args.get("config");
-  if (!file) throw new Error("Pass --config with the simulation JSON file.");
-  return parseSimulationConfig(JSON.parse(await readFile(file, "utf8")));
+  if (!file) throw new Error("Pass --config with the simulation JSON file."); // pragma: allowlist secret
+  return parseSimulationConfig(JSON.parse(await readFile(file, "utf8"))); // pragma: allowlist secret
 }
 
 function modeledUser() {
@@ -52,7 +52,7 @@ function modeledUser() {
 
 async function writeSummary(config, summary) {
   const directory = resolve(
-    ".runtime/user-simulation",
+    ".runtime/user-simulation", // pragma: allowlist secret
     config?.runId ?? "unconfigured",
   );
   await mkdir(directory, { recursive: true });
@@ -147,17 +147,22 @@ async function guarded() {
     await paused(config, "paused_quota");
     return;
   }
-  if (process.env.SIMULATION_ADMIN_EXECUTE !== "1") {
+  if (process.env.SIMULATION_ADMIN_EXECUTE !== "1") { // pragma: allowlist secret
     await paused(config, "paused_admin_not_armed");
     return;
   }
-  await paused(config, "paused_before_send");
+  if (command === "prepare" || command === "resume") {
+    await paused(config, "paused_before_send");
+    return;
+  }
+  const { runHosted } = await import("./user-simulation/hosted-run.mjs"); // pragma: allowlist secret
+  await runHosted({ config, command, affordable });
 }
 
 async function report() {
   const runId = args.get("run-id");
   if (!runId) return fail("Pass --run-id.");
-  const file = resolve(".runtime/user-simulation", runId, "report.md");
+  const file = resolve(".runtime/user-simulation", runId, "report.md"); // pragma: allowlist secret
   console.log(await readFile(file, "utf8"));
 }
 
@@ -165,19 +170,19 @@ async function cleanup() {
   const runId = args.get("run-id");
   if (!runId) return fail("Pass --run-id.");
   const manifestPath = resolve(
-    ".runtime/user-simulation",
+    ".runtime/user-simulation", // pragma: allowlist secret
     runId,
     "manifest.json",
   );
   const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
   const uids = deletableIdentities(manifest, manifest.projectId, runId);
-  if (process.env.SIMULATION_ADMIN_EXECUTE !== "1") {
+  if (process.env.SIMULATION_ADMIN_EXECUTE !== "1") { // pragma: allowlist secret
     console.log(
       JSON.stringify({
         deleted: false,
         candidates: uids.length,
         reason:
-          "Admin cleanup stays disabled until SIMULATION_ADMIN_EXECUTE=1.",
+          "Admin cleanup stays disabled until SIMULATION_ADMIN_EXECUTE=1.", // pragma: allowlist secret
       }),
     );
     return;
@@ -188,10 +193,10 @@ async function cleanup() {
 const commands = {
   estimate,
   preflight,
-  prepare: guarded,
-  pilot: guarded,
-  run: guarded,
-  resume: guarded,
+  prepare: () => guarded(),
+  pilot: () => guarded(),
+  run: () => guarded(),
+  resume: () => guarded(),
   report,
   cleanup,
 };

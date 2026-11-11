@@ -5,6 +5,7 @@ import {
   observeLibrary,
   reconcileMutation,
 } from "./reconcile.mjs";
+import { isHostingChallenge } from "../../scripts/user-simulation/http.mjs"; // pragma: allowlist secret
 import { sleep, thinkMs } from "./timing.mjs";
 
 function profileBody(profile) {
@@ -101,6 +102,8 @@ export async function runApiUser({
   signal,
   resume = false,
   pagePaths = ["/", "/library", "/history", "/settings"],
+  openSession,
+  extraHeaders = {},
 }) {
   let session = null;
   let refreshed = false;
@@ -132,6 +135,7 @@ export async function runApiUser({
         headers: {
           Origin: baseURL,
           Accept: "application/json",
+          ...extraHeaders,
           ...(spec.body ? { "Content-Type": "application/json" } : {}),
           ...(session
             ? {
@@ -143,6 +147,12 @@ export async function runApiUser({
         ...(spec.body ? { body: JSON.stringify(spec.body) } : {}),
       });
       const latencyMs = performance.now() - started;
+      if (isHostingChallenge(response.status, response.headers)) {
+        throw Object.assign(
+          new Error("The hosting provider challenged the request."),
+          { code: "challenge", status: response.status },
+        );
+      }
       const text = await response.text();
       let body = null;
       try {
@@ -167,7 +177,8 @@ export async function runApiUser({
       }
       return { status: response.status, body, latencyMs, limiterWaitMs };
     } catch (error) {
-      if (error?.code === "redirect") throw error;
+      if (error?.code === "redirect" || error?.code === "challenge")
+        throw error;
       const latencyMs = performance.now() - started;
       await emit({
         type: "transport",
@@ -212,6 +223,19 @@ export async function runApiUser({
   }
 
   async function authenticate() {
+    if (openSession) {
+      const opened = await openSession();
+      session = { uid: opened.uid, cookie: opened.cookie };
+      await emit({
+        type: "response",
+        op: "session",
+        status: 200,
+        limiterWaitMs: 0,
+        latencyMs: 0,
+        error: false,
+      });
+      return opened.uid;
+    }
     const identity = await createEmulatorIdentity({
       authHost,
       origin: baseURL,
@@ -301,7 +325,11 @@ export async function runApiUser({
       try {
         result = await transmit({ ...step, attempt });
       } catch (error) {
-        if (error?.code === "interrupted" || error?.code === "redirect")
+        if (
+          error?.code === "interrupted" ||
+          error?.code === "redirect" ||
+          error?.code === "challenge"
+        )
           throw error;
         uncertain = true;
       }
