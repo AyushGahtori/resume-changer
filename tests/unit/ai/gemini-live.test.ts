@@ -24,10 +24,10 @@ const liveTestEnabled = process.env.GEMINI_LIVE_TEST === "1";
  * reaches one that does. The budget leaves room for a chain walk and still
  * fails the test when the provider genuinely cannot answer.
  */
-const LIVE_TEST_TIMEOUT_MS = 240_000;
+const LIVE_TEST_TIMEOUT_MS = 620_000;
 // Achievement selection may spend the provider's full 10-minute fallback
 // budget across several free-tier models. Keep this above that bound; the
-// workflow itself has a 30-minute cap for the complete live suite.
+// workflow itself has a 40-minute cap for the complete live suite.
 const LIVE_SELECTION_TIMEOUT_MS = 620_000;
 
 describe.skipIf(!liveTestEnabled)("Gemini live integration", () => {
