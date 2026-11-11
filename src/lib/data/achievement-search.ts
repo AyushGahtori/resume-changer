@@ -104,12 +104,24 @@ function pointMatches(
   );
 }
 
+function filtersNarrowTheLibrary(filters: LibraryFilters) {
+  return Boolean(
+    filters.query ||
+    filters.sourceType ||
+    filters.skillId ||
+    filters.tag ||
+    filters.experienceId ||
+    filters.status !== "all",
+  );
+}
+
 function filterExperiences<T extends Job | Project>(
   items: T[],
   kind: "job" | "project",
   skillsById: Map<string, Skill>,
   filters: LibraryFilters,
 ): FilteredExperience<T>[] {
+  const keepEmptyParents = !filtersNarrowTheLibrary(filters);
   return items.flatMap((item) => {
     const experienceId = `${kind}:${item.id}`;
     const experienceName =
@@ -120,7 +132,8 @@ function filterExperiences<T extends Job | Project>(
       pointMatches(point, experienceName, experienceId, skillsById, filters),
     );
 
-    return points.length > 0 ? [{ ...item, points }] : [];
+    if (points.length > 0 || keepEmptyParents) return [{ ...item, points }];
+    return [];
   });
 }
 

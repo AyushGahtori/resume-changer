@@ -193,7 +193,7 @@ export class LibraryWriteError extends Error {
   }
 }
 
-type WriteOptions = {
+export type WriteOptions = {
   rootDir?: string;
   renameFile?: typeof rename;
 };
@@ -349,7 +349,7 @@ type LibraryMutation<T> = {
   persist: boolean;
 };
 
-async function commitLibraryMutation<T>(
+export async function commitLibraryMutation<T>(
   change: (library: NormalizedResumeLibrary) => LibraryMutation<T>,
   options: WriteOptions = {},
 ): Promise<{ library: NormalizedResumeLibrary; value: T }> {
@@ -579,12 +579,12 @@ export async function createSkill(
   return { library, skill: created! };
 }
 
-function currentYearMonth(now = new Date()) {
+export function currentYearMonth(now = new Date()) {
   const month = String(now.getUTCMonth() + 1).padStart(2, "0");
   return `${now.getUTCFullYear()}-${month}`;
 }
 
-function parentIdForName(
+export function parentIdForName(
   kind: "job" | "project",
   name: string,
   used: Set<string>,
@@ -663,7 +663,7 @@ export async function createLibraryParent(
   return { library, parent: created! };
 }
 
-function skillIdForName(name: string, used: Set<string>): string {
+export function skillIdForName(name: string, used: Set<string>): string {
   const folded = name
     .replace(/c\+\+/gi, "cplusplus")
     .replace(/c#/gi, "csharp")
@@ -703,7 +703,7 @@ function sha256(value: string) {
   return createHash("sha256").update(value).digest("hex");
 }
 
-function collectEntityIds(value: unknown): string[] {
+export function collectEntityIds(value: unknown): string[] {
   if (Array.isArray(value)) return value.flatMap(collectEntityIds);
   if (!value || typeof value !== "object") return [];
   const entries = Object.entries(value);

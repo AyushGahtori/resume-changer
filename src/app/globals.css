@@ -4359,6 +4359,27 @@ a:focus-visible {
   min-width: 0;
 }
 
+.library-section-body > .primary-button {
+  align-self: flex-start;
+  margin: 0 0 12px;
+}
+
+.library-first-setup,
+.library-record-actions {
+  display: grid;
+  justify-items: start;
+  gap: 12px;
+  width: min(100%, 40rem);
+}
+
+.library-first-setup {
+  margin-top: 12px;
+}
+
+.library-record-actions {
+  margin-bottom: 12px;
+}
+
 .library-section-icon {
   display: inline-flex;
   width: 32px;
