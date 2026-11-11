@@ -140,9 +140,11 @@ describe("simulation budgets", () => {
       },
       null,
     );
-    expect(lifecycleReserve(perUser, { firebaseWriteUnits: 40 })).toMatchObject({
-      firebaseWriteUnits: 80,
-    });
+    expect(lifecycleReserve(perUser, { firebaseWriteUnits: 40 })).toMatchObject(
+      {
+        firebaseWriteUnits: 80,
+      },
+    );
     expect(affordableNewUsers(open.admission, perUser)).toBeGreaterThan(0);
     const ledger = reserveUser(emptyLedger(), perUser);
     expect(ledger.users).toBe(1);
