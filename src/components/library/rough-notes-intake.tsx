@@ -55,63 +55,75 @@ export function RoughNotesIntake({
   }
 
   return (
-    <section className="rough-notes-intake">
-      <p>{parentLabel}</p>
+    <section className="rough-notes-intake point-editor is-inline">
+      <div className="point-editor-heading">
+        <div>
+          <p className="eyebrow">ROUGH NOTES</p>
+          <h2>{parentLabel}</h2>
+        </div>
+      </div>
       <label className="editor-field">
         <span>Paste what you worked on</span>
         <textarea
           onChange={(event) => setText(event.target.value)}
-          rows={6}
+          placeholder="One line per bullet. Dashes and numbers are fine."
+          rows={5}
           value={text}
         />
       </label>
-      <button
-        className="ui-button ui-button--secondary"
-        disabled={saving}
-        onClick={review}
-        type="button"
-      >
-        Review bullets
-      </button>
+      <div className="editor-actions">
+        <button
+          className="ui-button ui-button--secondary"
+          disabled={saving}
+          onClick={review}
+          type="button"
+        >
+          Review bullets
+        </button>
+      </div>
       {notes && notes.length > 0 ? (
-        <ul>
+        <ul className="note-review-list">
           {notes.map((note, index) => (
             <li key={`${index}-${note}`}>
               <p>{note}</p>
-              <button
-                className="ui-button ui-button--secondary"
-                disabled={saving || index === notes.length - 1}
-                onClick={() => {
-                  setNotes(mergeNotes(notes, index));
-                  setDeclined([]);
-                  setError(null);
-                }}
-                type="button"
-              >
-                Merge with next
-              </button>
-              <button
-                className="ui-button ui-button--secondary"
-                disabled={saving || splitNote(notes, index) === notes}
-                onClick={() => {
-                  setNotes(splitNote(notes, index));
-                  setDeclined([]);
-                  setError(null);
-                }}
-                type="button"
-              >
-                Split
-              </button>
+              <div className="library-record-toolbar">
+                <button
+                  className="ui-button ui-button--tertiary ui-button--compact"
+                  disabled={saving || index === notes.length - 1}
+                  onClick={() => {
+                    setNotes(mergeNotes(notes, index));
+                    setDeclined([]);
+                    setError(null);
+                  }}
+                  type="button"
+                >
+                  Merge with next
+                </button>
+                <button
+                  className="ui-button ui-button--tertiary ui-button--compact"
+                  disabled={saving || splitNote(notes, index) === notes}
+                  onClick={() => {
+                    setNotes(splitNote(notes, index));
+                    setDeclined([]);
+                    setError(null);
+                  }}
+                  type="button"
+                >
+                  Split
+                </button>
+              </div>
             </li>
           ))}
         </ul>
       ) : null}
-      {notes && notes.length === 0 ? <p>No bullets to review.</p> : null}
+      {notes && notes.length === 0 ? (
+        <p className="secondary-empty">No bullets to review.</p>
+      ) : null}
       {candidates.length > 0 ? (
-        <fieldset>
+        <fieldset className="note-skill-picks">
           <legend>Skills found in these notes</legend>
           {candidates.map((candidate) => (
-            <label key={candidate.name}>
+            <label className="editor-enabled" key={candidate.name}>
               <input
                 checked={!declined.includes(candidate.name)}
                 onChange={(event) => {
@@ -133,14 +145,16 @@ export function RoughNotesIntake({
           {error}
         </p>
       ) : null}
-      <button
-        className="ui-button ui-button--primary"
-        disabled={saving || notes === null || notes.length === 0}
-        onClick={() => void save()}
-        type="button"
-      >
-        Save
-      </button>
+      <div className="editor-actions">
+        <button
+          className="ui-button ui-button--primary"
+          disabled={saving || notes === null || notes.length === 0}
+          onClick={() => void save()}
+          type="button"
+        >
+          {saving ? "Saving…" : "Save notes"}
+        </button>
+      </div>
     </section>
   );
 }

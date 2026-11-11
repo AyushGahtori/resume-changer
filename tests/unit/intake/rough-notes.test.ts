@@ -192,12 +192,12 @@ describe("RoughNotesIntake", () => {
 
     expect(container.textContent).toContain("Data analyst");
     expect(container.textContent).toContain("Paste what you worked on");
-    expect(button("Save").disabled).toBe(true);
+    expect(button("Save notes").disabled).toBe(true);
     expect(container.querySelector(".editor-field")).not.toBeNull();
     expect(button("Review bullets").className).toContain(
       "ui-button--secondary",
     );
-    expect(button("Save").className).toContain("ui-button--primary");
+    expect(button("Save notes").className).toContain("ui-button--primary");
 
     setNotes(
       [
@@ -233,7 +233,7 @@ describe("RoughNotesIntake", () => {
     ]);
 
     await act(async () => {
-      button("Save").click();
+      button("Save notes").click();
     });
     expect(saved).toEqual([
       {
@@ -261,7 +261,7 @@ describe("RoughNotesIntake", () => {
     setNotes("- kept the metric");
     act(() => button("Review bullets").click());
     await act(async () => {
-      button("Save").click();
+      button("Save notes").click();
     });
     expect(container.querySelector(".editor-error")?.textContent).toBe(
       "The library rejected these notes.",

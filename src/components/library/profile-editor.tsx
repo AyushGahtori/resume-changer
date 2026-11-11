@@ -124,8 +124,18 @@ export default function ProfileEditor({
   }
 
   return (
-    <div>
-      <form aria-label="Profile and contact" onSubmit={save}>
+    <form
+      aria-label="Profile and contact"
+      className="point-editor"
+      onSubmit={save}
+    >
+      <div className="point-editor-heading">
+        <div>
+          <p className="eyebrow">RESUME PROFILE</p>
+          <h2>Contact details</h2>
+        </div>
+      </div>
+      <div className="editor-grid">
         <label className="editor-field">
           <span>Preferred name</span>
           <input
@@ -173,91 +183,94 @@ export default function ProfileEditor({
             value={headline}
           />
         </label>
-        <label className="editor-field">
-          <span>Summary</span>
-          <textarea
-            name="summary"
-            onChange={(event) => setSummary(event.target.value)}
-            rows={4}
-            value={summary}
-          />
-        </label>
-        <div>
-          <p id="profile-links-label">Links</p>
-          <div aria-labelledby="profile-links-label" role="group">
-            {links.map((link, index) => (
-              <div key={link.key}>
-                <label className="editor-field">
-                  <span>{`Link ${index + 1} label`}</span>
-                  <input
-                    onChange={(event) =>
-                      updateLink(link.key, "label", event.target.value)
-                    }
-                    value={link.label}
-                  />
-                </label>
-                <label className="editor-field">
-                  <span>{`Link ${index + 1} URL`}</span>
-                  <input
-                    inputMode="url"
-                    onChange={(event) =>
-                      updateLink(link.key, "url", event.target.value)
-                    }
-                    value={link.url}
-                  />
-                </label>
-                <button
-                  aria-label={`Remove link ${index + 1}`}
-                  className="ui-button ui-button--secondary"
-                  disabled={saving}
-                  onClick={() =>
-                    setLinks((current) =>
-                      current.filter((item) => item.key !== link.key),
-                    )
+      </div>
+      <label className="editor-field">
+        <span>Summary</span>
+        <textarea
+          name="summary"
+          onChange={(event) => setSummary(event.target.value)}
+          rows={4}
+          value={summary}
+        />
+      </label>
+      <div className="profile-links">
+        <p className="eyebrow" id="profile-links-label">
+          Links
+        </p>
+        <div aria-labelledby="profile-links-label" role="group">
+          {links.map((link, index) => (
+            <div className="editor-grid profile-link-row" key={link.key}>
+              <label className="editor-field">
+                <span>{`Link ${index + 1} label`}</span>
+                <input
+                  onChange={(event) =>
+                    updateLink(link.key, "label", event.target.value)
                   }
-                  type="button"
-                >
-                  Remove link
-                </button>
-              </div>
-            ))}
-          </div>
+                  value={link.label}
+                />
+              </label>
+              <label className="editor-field">
+                <span>{`Link ${index + 1} URL`}</span>
+                <input
+                  inputMode="url"
+                  onChange={(event) =>
+                    updateLink(link.key, "url", event.target.value)
+                  }
+                  value={link.url}
+                />
+              </label>
+              <button
+                aria-label={`Remove link ${index + 1}`}
+                className="ui-button ui-button--tertiary ui-button--compact"
+                disabled={saving}
+                onClick={() =>
+                  setLinks((current) =>
+                    current.filter((item) => item.key !== link.key),
+                  )
+                }
+                type="button"
+              >
+                Remove link
+              </button>
+            </div>
+          ))}
         </div>
-        {error ? (
-          <p className="editor-error" role="alert">
-            {error}
-          </p>
-        ) : null}
-        <div className="library-edit-actions">
-          <button
-            className="ui-button ui-button--secondary"
-            disabled={saving || links.length >= maxLinks}
-            onClick={() =>
-              setLinks((current) =>
-                current.length >= maxLinks
-                  ? current
-                  : [
-                      ...current,
-                      { key: crypto.randomUUID(), label: "", url: "" },
-                    ],
-              )
-            }
-            type="button"
-          >
-            Add link
-          </button>
-          <button
-            className="ui-button ui-button--primary"
-            disabled={saving}
-            type="submit"
-          >
-            {saving ? "Saving…" : "Save profile"}
-          </button>
-        </div>
-      </form>
-      <section aria-label="Header preview">
-        <p>{preview}</p>
+      </div>
+      {error ? (
+        <p className="editor-error" role="alert">
+          {error}
+        </p>
+      ) : null}
+      <div className="editor-actions">
+        <button
+          className="ui-button ui-button--secondary"
+          disabled={saving || links.length >= maxLinks}
+          onClick={() =>
+            setLinks((current) =>
+              current.length >= maxLinks
+                ? current
+                : [
+                    ...current,
+                    { key: crypto.randomUUID(), label: "", url: "" },
+                  ],
+            )
+          }
+          type="button"
+        >
+          Add link
+        </button>
+        <button
+          className="ui-button ui-button--primary"
+          disabled={saving}
+          type="submit"
+        >
+          {saving ? "Saving…" : "Save profile"}
+        </button>
+      </div>
+      <section aria-label="Header preview" className="profile-header-preview">
+        <p className="eyebrow">Header preview</p>
+        <p>{preview || "Your name and links will appear here."}</p>
       </section>
-    </div>
+    </form>
   );
 }

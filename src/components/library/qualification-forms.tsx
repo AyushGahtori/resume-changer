@@ -108,7 +108,13 @@ export function SkillPasteForm({ onSaved }: { onSaved: () => void }) {
   }
 
   return (
-    <form aria-label="Add skills" onSubmit={submit}>
+    <form aria-label="Add skills" className="point-editor" onSubmit={submit}>
+      <div className="point-editor-heading">
+        <div>
+          <p className="eyebrow">SKILLS</p>
+          <h2>Add skills</h2>
+        </div>
+      </div>
       <LabeledControl label="Skills">
         <textarea
           aria-describedby={error ? errorId : undefined}
@@ -124,7 +130,7 @@ export function SkillPasteForm({ onSaved }: { onSaved: () => void }) {
       </LabeledControl>
       <FormError id={errorId} message={error} />
       {summary ? <p role="status">{summary}</p> : null}
-      <div className="library-edit-actions">
+      <div className="editor-actions">
         <button
           className="ui-button ui-button--primary"
           disabled={saving || !hasSkillText(text)}
@@ -202,67 +208,82 @@ export function EducationForm(props: EducationFormProps) {
     <form
       aria-describedby={error ? errorId : undefined}
       aria-label={props.mode === "create" ? "Add a degree" : "Edit degree"}
+      className="point-editor"
       onSubmit={submit}
     >
-      <LabeledControl label="Institution">
-        <input
-          onChange={(event) => setInstitution(event.target.value)}
-          required
-          value={institution}
-        />
-      </LabeledControl>
-      <LabeledControl label="Degree">
-        <input
-          onChange={(event) => setDegree(event.target.value)}
-          required
-          value={degree}
-        />
-      </LabeledControl>
-      <LabeledControl label="Field of study">
-        <input
-          onChange={(event) => setFieldOfStudy(event.target.value)}
-          required
-          value={fieldOfStudy}
-        />
-      </LabeledControl>
-      <LabeledControl label="Program (optional)">
-        <input
-          onChange={(event) => setProgramName(event.target.value)}
-          value={programName}
-        />
-      </LabeledControl>
-      <LabeledControl label="Start month (optional)">
-        <input
-          onChange={(event) => setStartDate(event.target.value)}
-          type="month"
-          value={startDate}
-        />
-      </LabeledControl>
-      <label className="editor-field">
+      <div className="point-editor-heading">
+        <div>
+          <p className="eyebrow">
+            {props.mode === "create" ? "NEW EDUCATION" : "UPDATE EDUCATION"}
+          </p>
+          <h2>
+            {props.mode === "create" ? "Add education" : "Edit education"}
+          </h2>
+        </div>
+      </div>
+      <div className="editor-grid">
+        <LabeledControl label="Institution">
+          <input
+            onChange={(event) => setInstitution(event.target.value)}
+            required
+            value={institution}
+          />
+        </LabeledControl>
+        <LabeledControl label="Degree">
+          <input
+            onChange={(event) => setDegree(event.target.value)}
+            required
+            value={degree}
+          />
+        </LabeledControl>
+        <LabeledControl label="Field of study">
+          <input
+            onChange={(event) => setFieldOfStudy(event.target.value)}
+            required
+            value={fieldOfStudy}
+          />
+        </LabeledControl>
+        <LabeledControl label="Program (optional)">
+          <input
+            onChange={(event) => setProgramName(event.target.value)}
+            value={programName}
+          />
+        </LabeledControl>
+        <LabeledControl label="Start month (optional)">
+          <input
+            onChange={(event) => setStartDate(event.target.value)}
+            type="month"
+            value={startDate}
+          />
+        </LabeledControl>
+      </div>
+      <label className="editor-enabled">
         <input
           checked={currentlyStudying}
           onChange={(event) => setCurrentlyStudying(event.target.checked)}
           type="checkbox"
         />
-        <span>I currently study here</span>
+        I currently study here
       </label>
-      <LabeledControl label="End month (optional)">
-        <input
-          disabled={currentlyStudying}
-          onChange={(event) => setEndDate(event.target.value)}
-          type="month"
-          value={currentlyStudying ? "" : (endDate ?? "")}
-        />
-      </LabeledControl>
-      <LabeledControl label="Description (optional)">
-        <textarea
-          onChange={(event) => setDescription(event.target.value)}
-          rows={3}
-          value={description}
-        />
-      </LabeledControl>
+      <div className="editor-grid">
+        <LabeledControl label="End month (optional)">
+          <input
+            disabled={currentlyStudying}
+            onChange={(event) => setEndDate(event.target.value)}
+            type="month"
+            value={currentlyStudying ? "" : (endDate ?? "")}
+          />
+        </LabeledControl>
+        <LabeledControl label="Description (optional)">
+          <textarea
+            onChange={(event) => setDescription(event.target.value)}
+            rows={3}
+            value={description}
+          />
+        </LabeledControl>
+      </div>
       <FormError id={errorId} message={error} />
-      <div className="library-edit-actions">
+      <div className="editor-actions">
         {props.onCancel ? (
           <button
             className="ui-button ui-button--secondary"
@@ -312,9 +333,9 @@ export function RemoveEducationButton({
   }
 
   return (
-    <div className="library-edit-actions">
+    <>
       <button
-        className="ui-button ui-button--secondary"
+        className="ui-button ui-button--tertiary ui-button--compact"
         disabled={removing}
         onClick={remove}
         type="button"
@@ -322,7 +343,7 @@ export function RemoveEducationButton({
         {removing ? "Removing…" : "Remove degree"}
       </button>
       <FormError id={errorId} message={error} />
-    </div>
+    </>
   );
 }
 
@@ -385,64 +406,78 @@ export function CredentialForm(props: CredentialFormProps) {
       aria-label={
         props.mode === "create" ? "Add a credential" : "Edit credential"
       }
+      className="point-editor"
       onSubmit={submit}
     >
-      <LabeledControl label="Name">
-        <input
-          onChange={(event) => setName(event.target.value)}
-          required
-          value={name}
-        />
-      </LabeledControl>
-      <LabeledControl label="Issuer">
-        <input
-          onChange={(event) => setIssuer(event.target.value)}
-          required
-          value={issuer}
-        />
-      </LabeledControl>
-      <LabeledControl label="Kind">
-        <select
-          onChange={(event) => {
-            const value = event.target.value;
-            if (value === "license" || value === "certificate") setKind(value);
-          }}
-          value={kind}
-        >
-          <option value="certificate">Certificate</option>
-          <option value="license">License</option>
-        </select>
-      </LabeledControl>
-      <LabeledControl label="Issued date (optional)">
-        <input
-          onChange={(event) => setIssuedDate(event.target.value)}
-          type="date"
-          value={issuedDate}
-        />
-      </LabeledControl>
-      <LabeledControl label="Expires (optional)">
-        <input
-          onChange={(event) => setExpiresDate(event.target.value)}
-          type="date"
-          value={expiresDate}
-        />
-      </LabeledControl>
-      <LabeledControl label="Credential ID (optional)">
-        <input
-          autoComplete="off"
-          onChange={(event) => setCredentialId(event.target.value)}
-          value={credentialId}
-        />
-      </LabeledControl>
-      <LabeledControl label="Verification URL (optional)">
-        <input
-          onChange={(event) => setUrl(event.target.value)}
-          type="url"
-          value={url}
-        />
-      </LabeledControl>
+      <div className="point-editor-heading">
+        <div>
+          <p className="eyebrow">
+            {props.mode === "create" ? "NEW CREDENTIAL" : "UPDATE CREDENTIAL"}
+          </p>
+          <h2>
+            {props.mode === "create" ? "Add a credential" : "Edit credential"}
+          </h2>
+        </div>
+      </div>
+      <div className="editor-grid">
+        <LabeledControl label="Name">
+          <input
+            onChange={(event) => setName(event.target.value)}
+            required
+            value={name}
+          />
+        </LabeledControl>
+        <LabeledControl label="Issuer">
+          <input
+            onChange={(event) => setIssuer(event.target.value)}
+            required
+            value={issuer}
+          />
+        </LabeledControl>
+        <LabeledControl label="Kind">
+          <select
+            onChange={(event) => {
+              const value = event.target.value;
+              if (value === "license" || value === "certificate")
+                setKind(value);
+            }}
+            value={kind}
+          >
+            <option value="certificate">Certificate</option>
+            <option value="license">License</option>
+          </select>
+        </LabeledControl>
+        <LabeledControl label="Issued date (optional)">
+          <input
+            onChange={(event) => setIssuedDate(event.target.value)}
+            type="date"
+            value={issuedDate}
+          />
+        </LabeledControl>
+        <LabeledControl label="Expires (optional)">
+          <input
+            onChange={(event) => setExpiresDate(event.target.value)}
+            type="date"
+            value={expiresDate}
+          />
+        </LabeledControl>
+        <LabeledControl label="Credential ID (optional)">
+          <input
+            autoComplete="off"
+            onChange={(event) => setCredentialId(event.target.value)}
+            value={credentialId}
+          />
+        </LabeledControl>
+        <LabeledControl label="Verification URL (optional)">
+          <input
+            onChange={(event) => setUrl(event.target.value)}
+            type="url"
+            value={url}
+          />
+        </LabeledControl>
+      </div>
       <FormError id={errorId} message={error} />
-      <div className="library-edit-actions">
+      <div className="editor-actions">
         {props.onCancel ? (
           <button
             className="ui-button ui-button--secondary"
@@ -492,9 +527,9 @@ export function RemoveCredentialButton({
   }
 
   return (
-    <div className="library-edit-actions">
+    <>
       <button
-        className="ui-button ui-button--secondary"
+        className="ui-button ui-button--tertiary ui-button--compact"
         disabled={removing}
         onClick={remove}
         type="button"
@@ -502,6 +537,6 @@ export function RemoveCredentialButton({
         {removing ? "Removing…" : "Remove credential"}
       </button>
       <FormError id={errorId} message={error} />
-    </div>
+    </>
   );
 }

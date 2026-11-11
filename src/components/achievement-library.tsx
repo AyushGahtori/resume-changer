@@ -512,25 +512,29 @@ export default function AchievementLibrary({ library, source }: Props) {
           />
         ) : null}
         {editing ? null : (
-          <button
-            className="ui-button ui-button--secondary"
-            onClick={() =>
-              isJob ? setEditingJobId(item.id) : setEditingProjectId(item.id)
-            }
-            type="button"
-          >
-            {isJob ? "Edit job" : "Edit project"}
-          </button>
+          <div className="library-record-toolbar">
+            <button
+              className="ui-button ui-button--secondary ui-button--compact"
+              onClick={() =>
+                isJob ? setEditingJobId(item.id) : setEditingProjectId(item.id)
+              }
+              type="button"
+            >
+              {isJob ? "Edit job" : "Edit project"}
+            </button>
+            <RemoveRecordButton
+              id={item.id}
+              kind={kind}
+              name={isJob ? (item as Job).title : (item as Project).name}
+              onRemoved={() =>
+                savedLibrary(
+                  isJob ? "Removed the job." : "Removed the project.",
+                )
+              }
+              pointCount={item.points.length}
+            />
+          </div>
         )}
-        <RemoveRecordButton
-          id={item.id}
-          kind={kind}
-          name={isJob ? (item as Job).title : (item as Project).name}
-          onRemoved={() =>
-            savedLibrary(isJob ? "Removed the job." : "Removed the project.")
-          }
-          pointCount={item.points.length}
-        />
         <RoughNotesIntake
           existingSkills={skillHints}
           onSave={(drafts, candidates) =>
@@ -992,28 +996,30 @@ export default function AchievementLibrary({ library, source }: Props) {
                           />
                         ) : (
                           <>
-                            <strong>
-                              {education.degree} · {education.fieldOfStudy}
-                            </strong>
-                            <span>{education.institutions.join(", ")}</span>
+                            <div>
+                              <strong>
+                                {education.degree} · {education.fieldOfStudy}
+                              </strong>
+                              <span>{education.institutions.join(", ")}</span>
+                            </div>
                             {canEdit ? (
-                              <button
-                                className="ui-button ui-button--secondary"
-                                onClick={() =>
-                                  setEditingEducationId(education.id)
-                                }
-                                type="button"
-                              >
-                                Edit education
-                              </button>
-                            ) : null}
-                            {canEdit ? (
-                              <RemoveEducationButton
-                                id={education.id}
-                                onRemoved={() =>
-                                  savedLibrary("Removed education.")
-                                }
-                              />
+                              <div className="library-record-toolbar">
+                                <button
+                                  className="ui-button ui-button--secondary ui-button--compact"
+                                  onClick={() =>
+                                    setEditingEducationId(education.id)
+                                  }
+                                  type="button"
+                                >
+                                  Edit
+                                </button>
+                                <RemoveEducationButton
+                                  id={education.id}
+                                  onRemoved={() =>
+                                    savedLibrary("Removed education.")
+                                  }
+                                />
+                              </div>
                             ) : null}
                           </>
                         )}
@@ -1038,28 +1044,30 @@ export default function AchievementLibrary({ library, source }: Props) {
                         />
                       ) : (
                         <>
-                          <strong>{credential.name}</strong>
-                          <span>
-                            {credential.kind} · {credential.issuer}
-                          </span>
+                          <div>
+                            <strong>{credential.name}</strong>
+                            <span>
+                              {credential.kind} · {credential.issuer}
+                            </span>
+                          </div>
                           {canEdit ? (
-                            <button
-                              className="ui-button ui-button--secondary"
-                              onClick={() =>
-                                setEditingCredentialId(credential.id)
-                              }
-                              type="button"
-                            >
-                              Edit credential
-                            </button>
-                          ) : null}
-                          {canEdit ? (
-                            <RemoveCredentialButton
-                              id={credential.id}
-                              onRemoved={() =>
-                                savedLibrary("Removed the credential.")
-                              }
-                            />
+                            <div className="library-record-toolbar">
+                              <button
+                                className="ui-button ui-button--secondary ui-button--compact"
+                                onClick={() =>
+                                  setEditingCredentialId(credential.id)
+                                }
+                                type="button"
+                              >
+                                Edit
+                              </button>
+                              <RemoveCredentialButton
+                                id={credential.id}
+                                onRemoved={() =>
+                                  savedLibrary("Removed the credential.")
+                                }
+                              />
+                            </div>
                           ) : null}
                         </>
                       )}

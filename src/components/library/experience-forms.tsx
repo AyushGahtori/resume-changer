@@ -1,5 +1,6 @@
 "use client";
 
+import { Plus } from "lucide-react";
 import { useId, useState, type FormEvent, type ReactNode } from "react";
 import { apiFetch } from "@/lib/cloud/api-fetch";
 
@@ -99,7 +100,7 @@ function FormActions({
   onCancel?: () => void;
 }) {
   return (
-    <div className="library-edit-actions">
+    <div className="editor-actions">
       {onCancel ? (
         <button
           className="ui-button ui-button--secondary"
@@ -189,77 +190,88 @@ export function JobForm({
     <form
       aria-describedby={error ? errorId : undefined}
       aria-label={mode === "create" ? "Add job" : "Edit job"}
+      className="point-editor"
       onSubmit={save}
     >
-      <Field label="Employer">
-        <input
-          autoComplete="organization"
-          name="company"
-          onChange={(event) => setCompany(event.target.value)}
-          required
-          value={company}
-        />
-      </Field>
-      <Field label="Title">
-        <input
-          autoComplete="organization-title"
-          name="title"
-          onChange={(event) => setTitle(event.target.value)}
-          required
-          value={title}
-        />
-      </Field>
-      <Field label="Employment type">
-        <select
-          name="employmentType"
-          onChange={(event) => {
-            if (isEmploymentType(event.target.value)) {
-              setEmploymentType(event.target.value);
-            }
-          }}
-          value={employmentType}
-        >
-          {employmentTypes.map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </select>
-      </Field>
-      <Field label="Location">
-        <input
-          autoComplete="address-level2"
-          name="location"
-          onChange={(event) => setLocation(event.target.value)}
-          value={location}
-        />
-      </Field>
-      <Field label="Start date">
-        <input
-          name="startDate"
-          onChange={(event) => setStartDate(event.target.value)}
-          required
-          type="month"
-          value={startDate}
-        />
-      </Field>
-      <Field label="End date">
-        <input
-          disabled={currentlyEmployed}
-          name="endDate"
-          onChange={(event) => setEndDate(event.target.value)}
-          required={!currentlyEmployed}
-          type="month"
-          value={endDate}
-        />
-      </Field>
-      <label>
+      <div className="point-editor-heading">
+        <div>
+          <p className="eyebrow">
+            {mode === "create" ? "NEW JOB" : "UPDATE JOB"}
+          </p>
+          <h2>{mode === "create" ? "Add a job" : "Edit job"}</h2>
+        </div>
+      </div>
+      <div className="editor-grid">
+        <Field label="Employer">
+          <input
+            autoComplete="organization"
+            name="company"
+            onChange={(event) => setCompany(event.target.value)}
+            required
+            value={company}
+          />
+        </Field>
+        <Field label="Title">
+          <input
+            autoComplete="organization-title"
+            name="title"
+            onChange={(event) => setTitle(event.target.value)}
+            required
+            value={title}
+          />
+        </Field>
+        <Field label="Employment type">
+          <select
+            name="employmentType"
+            onChange={(event) => {
+              if (isEmploymentType(event.target.value)) {
+                setEmploymentType(event.target.value);
+              }
+            }}
+            value={employmentType}
+          >
+            {employmentTypes.map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Location">
+          <input
+            autoComplete="address-level2"
+            name="location"
+            onChange={(event) => setLocation(event.target.value)}
+            value={location}
+          />
+        </Field>
+        <Field label="Start date">
+          <input
+            name="startDate"
+            onChange={(event) => setStartDate(event.target.value)}
+            required
+            type="month"
+            value={startDate}
+          />
+        </Field>
+        <Field label="End date">
+          <input
+            disabled={currentlyEmployed}
+            name="endDate"
+            onChange={(event) => setEndDate(event.target.value)}
+            required={!currentlyEmployed}
+            type="month"
+            value={endDate}
+          />
+        </Field>
+      </div>
+      <label className="editor-enabled">
         <input
           checked={currentlyEmployed}
           name="currentlyEmployed"
           onChange={(event) => setCurrentlyEmployed(event.target.checked)}
           type="checkbox"
-        />{" "}
+        />
         I currently work here
       </label>
       <Field label="Description">
@@ -346,64 +358,75 @@ export function ProjectForm({
     <form
       aria-describedby={error ? errorId : undefined}
       aria-label={mode === "create" ? "Add project" : "Edit project"}
+      className="point-editor"
       onSubmit={save}
     >
-      <Field label="Project name">
-        <input
-          name="name"
-          onChange={(event) => setName(event.target.value)}
-          required
-          value={name}
-        />
-      </Field>
-      <Field label="Role">
-        <input
-          name="role"
-          onChange={(event) => setRole(event.target.value)}
-          value={role}
-        />
-      </Field>
-      <Field label="URL">
-        <input
-          inputMode="url"
-          name="url"
-          onChange={(event) => setUrl(event.target.value)}
-          type="url"
-          value={url}
-        />
-      </Field>
-      <Field label="Description">
-        <textarea
-          name="description"
-          onChange={(event) => setDescription(event.target.value)}
-          rows={3}
-          value={description}
-        />
-      </Field>
-      <Field label="Start date">
-        <input
-          name="startDate"
-          onChange={(event) => setStartDate(event.target.value)}
-          type="month"
-          value={startDate}
-        />
-      </Field>
-      <Field label="End date">
-        <input
-          disabled={ongoing}
-          name="endDate"
-          onChange={(event) => setEndDate(event.target.value)}
-          type="month"
-          value={endDate}
-        />
-      </Field>
-      <label>
+      <div className="point-editor-heading">
+        <div>
+          <p className="eyebrow">
+            {mode === "create" ? "NEW PROJECT" : "UPDATE PROJECT"}
+          </p>
+          <h2>{mode === "create" ? "Add a project" : "Edit project"}</h2>
+        </div>
+      </div>
+      <div className="editor-grid">
+        <Field label="Project name">
+          <input
+            name="name"
+            onChange={(event) => setName(event.target.value)}
+            required
+            value={name}
+          />
+        </Field>
+        <Field label="Role">
+          <input
+            name="role"
+            onChange={(event) => setRole(event.target.value)}
+            value={role}
+          />
+        </Field>
+        <Field label="URL">
+          <input
+            inputMode="url"
+            name="url"
+            onChange={(event) => setUrl(event.target.value)}
+            type="url"
+            value={url}
+          />
+        </Field>
+        <Field label="Description">
+          <textarea
+            name="description"
+            onChange={(event) => setDescription(event.target.value)}
+            rows={3}
+            value={description}
+          />
+        </Field>
+        <Field label="Start date">
+          <input
+            name="startDate"
+            onChange={(event) => setStartDate(event.target.value)}
+            type="month"
+            value={startDate}
+          />
+        </Field>
+        <Field label="End date">
+          <input
+            disabled={ongoing}
+            name="endDate"
+            onChange={(event) => setEndDate(event.target.value)}
+            type="month"
+            value={endDate}
+          />
+        </Field>
+      </div>
+      <label className="editor-enabled">
         <input
           checked={ongoing}
           name="ongoing"
           onChange={(event) => setOngoing(event.target.checked)}
           type="checkbox"
-        />{" "}
+        />
         This project is ongoing
       </label>
       <FormError id={errorId} message={error} />
@@ -421,10 +444,11 @@ export function AddJobButton({ onSaved }: { onSaved: () => void }) {
   if (!open) {
     return (
       <button
-        className="primary-button"
+        className="ui-button ui-button--secondary"
         onClick={() => setOpen(true)}
         type="button"
       >
+        <Plus aria-hidden="true" size={16} strokeWidth={2} />
         Add job
       </button>
     );
@@ -446,10 +470,11 @@ export function AddProjectButton({ onSaved }: { onSaved: () => void }) {
   if (!open) {
     return (
       <button
-        className="primary-button"
+        className="ui-button ui-button--secondary"
         onClick={() => setOpen(true)}
         type="button"
       >
+        <Plus aria-hidden="true" size={16} strokeWidth={2} />
         Add project
       </button>
     );
@@ -510,7 +535,7 @@ export function RemoveRecordButton({
   if (!confirming) {
     return (
       <button
-        className="ui-button ui-button--secondary"
+        className="ui-button ui-button--tertiary ui-button--compact"
         onClick={() => setConfirming(true)}
         type="button"
       >
@@ -525,7 +550,7 @@ export function RemoveRecordButton({
         {`Removing ${name} also removes its ${pointCount} achievements and cannot be undone.`}
       </p>
       <FormError id={errorId} message={error} />
-      <div className="library-edit-actions">
+      <div className="editor-actions">
         <button
           className="ui-button ui-button--secondary"
           disabled={removing}
